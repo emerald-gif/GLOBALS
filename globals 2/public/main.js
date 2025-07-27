@@ -1535,9 +1535,6 @@ async function initiateTransfer(accNum, bankCode, account_name, amount) {
 
 
 
-document.getElementById("withdrawTabBtn").addEventListener("click", () => {
-  fetchBanks();
-});
 
 
 
