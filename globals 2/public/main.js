@@ -1484,85 +1484,69 @@ var swiper = new Swiper(".mySwiper", {
   
                                                                         //WITHDRAW FUNCTION(also check SERVER)
   
-  
-  const BACKEND_URL = "https://globals-myzv.onrender.com"; // ✅ Set your deployed backend URL here
 
-// Fetch banks on load
-async function loadBanks() {
+const backendURL = "https://globals-myzv.onrender.com"; // ✅ LIVE backend
+
+// Fetch banks
+async function fetchBanks() {
   try {
-    const res = await fetch("https://globals-myzv.onrender.com");
-    const data = await res.json();
-    const select = document.getElementById("withdrawBankSelect");
-    select.innerHTML = "";
-    data.forEach(bank => {
-      const opt = document.createElement("option");
-      opt.value = bank.code;
-      opt.text = bank.name;
-      select.appendChild(opt);
-    });
+    const res = await fetch(`${backendURL}/api/get-banks`);
+    const banks = await res.json();
+    // populate your bank dropdown
+    console.log(banks);
   } catch (err) {
-    console.error("Failed to load banks:", err);
-    alert("Could not load banks. Please try again later.");
+    alert("❌ Failed to load banks.");
   }
 }
-
-window.onload = loadBanks;
 
 // Verify account number
-async function verifyAccount() {
+async function verifyAccount(accNum, bankCode) {
   try {
-    const accNum = document.getElementById("accountNumberInput").value;
-    const bankCode = document.getElementById("withdrawBankSelect").value;
-
-    const res = await fetch("https://globals-myzv.onrender.com", {
+    const res = await fetch(`${backendURL}/api/verify-account`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ accNum, bankCode }),
     });
-
     const data = await res.json();
-    console.log("Verified:", data);
-    alert("Account Verified: " + data.account_name);
-    document.getElementById("accountNameInput").value = data.account_name;
+    return data;
   } catch (err) {
-    console.error("Verification error:", err);
-    alert("Failed to verify account.");
+    return { status: "fail" };
   }
 }
 
-// Initiate withdrawal
-async function initiateWithdrawal() {
+// Initiate transfer
+async function initiateTransfer(accNum, bankCode, account_name, amount) {
   try {
-    const accNum = document.getElementById("accountNumberInput").value;
-    const bankCode = document.getElementById("withdrawBankSelect").value;
-    const amount = parseFloat(document.getElementById("amountInput").value);
-    const account_name = document.getElementById("accountNameInput").value;
-
-    const res = await fetch("https://globals-myzv.onrender.com", {
+    const res = await fetch(`${backendURL}/api/initiate-transfer`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ accNum, bankCode, account_name, amount }),
     });
-
     const data = await res.json();
-    console.log("Transfer response:", data);
-
-    if (data.status === "success") {
-      alert("Transfer successful!");
-    } else {
-      alert("Transfer failed: " + data.message);
-    }
+    return data;
   } catch (err) {
-    console.error("Transfer error:", err);
-    alert("Failed to process withdrawal.");
+    return { status: "fail" };
   }
 }
+
+
+
+document.getElementById("withdrawTabBtn").addEventListener("click", () => {
+  fetchBanks();
+});
+
+
+
+
+
+
+
+
   
-
-
-
-
-
 
                                                                  // SERVICE FUNCTION
 
