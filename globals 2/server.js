@@ -1,80 +1,94 @@
+// server.js
+require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
-const dotenv = require("dotenv");
-const path = require("path");
-
-dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve static frontend files
-app.use(express.static(path.join(__dirname, "public")));
+const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET;
 
-// Routes
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "dashboard.html"));
-});
-
+// GET list of banks
 app.get("/api/get-banks", async (req, res) => {
   try {
     const response = await axios.get("https://api.paystack.co/bank", {
-      headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET}`
-      }
+      headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` }
     });
-    res.json(response.data);
+    res.json(response.data.data);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch banks" });
   }
 });
 
+// POST verify bank account
 app.post("/api/verify-account", async (req, res) => {
-  const { account_number, bank_code } = req.body;
-
+  const { accNum, bankCode } = req.body;
   try {
-    const response = await axios.get(
-      `https://api.paystack.co/bank/resolve?account_number=${account_number}&bank_code=${bank_code}`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.PAYSTACK_SECRET}`
-        }
-      }
-    );
-    res.json(response.data);
+    const verify = await axios.get(`https://api.paystack.co/bank/resolve`, {
+      headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` },
+      params: { account_number: accNum, bank_code: bankCode }
+    });
+
+    if (verify.data.status) {
+      res.json({ status: "success", account_name: verify.data.data.account_name });
+    } else {
+      res.json({ status: "fail" });
+    }
   } catch (err) {
-    res.status(500).json({ error: "Failed to verify account" });
+    res.status(500).json({ status: "fail", error: "Account verification failed" });
   }
 });
 
+// POST initiate transfer
 app.post("/api/initiate-transfer", async (req, res) => {
-  const { amount, recipient_code } = req.body;
+  const { accNum, bankCode, account_name, amount } = req.body;
 
   try {
-    const response = await axios.post(
-      "https://api.paystack.co/transfer",
-      {
-        source: "balance",
-        amount,
-        recipient: recipient_code,
-        reason: "Payment from Globals"
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.PAYSTACK_SECRET}`,
-          "Content-Type": "application/json"
-        }
+    const recipient = await axios.post("https://api.paystack.co/transferrecipient", {
+      type: "nuban",
+      name: account_name,
+      account_number: accNum,
+      bank_code: bankCode,
+      currency: "NGN"
+    }, {
+      headers: {
+        Authorization: `Bearer ${PAYSTACK_SECRET}`,
+        "Content-Type": "application/json"
       }
-    );
-    res.json(response.data);
+    });
+
+    if (!recipient.data.status) {
+      return res.json({ status: "fail", message: "Recipient creation failed" });
+    }
+
+    const recipient_code = recipient.data.data.recipient_code;
+
+    const transfer = await axios.post("https://api.paystack.co/transfer", {
+      source: "balance",
+      reason: "User Withdrawal",
+      amount: amount * 100,
+      recipient: recipient_code
+    }, {
+      headers: {
+        Authorization: `Bearer ${PAYSTACK_SECRET}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (transfer.data.status) {
+      res.json({ status: "success" });
+    } else {
+      res.json({ status: "fail", message: transfer.data.message });
+    }
+
   } catch (err) {
-    res.status(500).json({ error: "Failed to initiate transfer" });
+    res.status(500).json({ status: "fail", error: "Transfer failed" });
   }
 });
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
+
