@@ -1485,55 +1485,78 @@ var swiper = new Swiper(".mySwiper", {
                                                                         //WITHDRAW FUNCTION(also check SERVER)
   
   
-  // Fetch banks on load
+  const BACKEND_URL = "https://globals-myzv.onrender.com"; // ✅ Set your deployed backend URL here
+
+// Fetch banks on load
 async function loadBanks() {
-  const res = await fetch("http://localhost:4000/api/get-banks"); // or your deployed backend URL
-  const data = await res.json();
-  const select = document.getElementById("withdrawBankSelect");
-  select.innerHTML = "";
-  data.forEach(bank => {
-    const opt = document.createElement("option");
-    opt.value = bank.code;
-    opt.text = bank.name;
-    select.appendChild(opt);
-  });
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/get-banks`);
+    const data = await res.json();
+    const select = document.getElementById("withdrawBankSelect");
+    select.innerHTML = "";
+    data.forEach(bank => {
+      const opt = document.createElement("option");
+      opt.value = bank.code;
+      opt.text = bank.name;
+      select.appendChild(opt);
+    });
+  } catch (err) {
+    console.error("Failed to load banks:", err);
+    alert("Could not load banks. Please try again later.");
+  }
 }
 
 window.onload = loadBanks;
 
-// Example for verifying account (you can call this on a button click)
+// Verify account number
 async function verifyAccount() {
-  const accNum = document.getElementById("accountNumberInput").value;
-  const bankCode = document.getElementById("withdrawBankSelect").value;
+  try {
+    const accNum = document.getElementById("accountNumberInput").value;
+    const bankCode = document.getElementById("withdrawBankSelect").value;
 
-  const res = await fetch("http://localhost:4000/api/verify-account", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ accNum, bankCode })
-  });
+    const res = await fetch(`${BACKEND_URL}/api/verify-account`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accNum, bankCode }),
+    });
 
-  const data = await res.json();
-  console.log("Verified:", data);
+    const data = await res.json();
+    console.log("Verified:", data);
+    alert("Account Verified: " + data.account_name);
+    document.getElementById("accountNameInput").value = data.account_name;
+  } catch (err) {
+    console.error("Verification error:", err);
+    alert("Failed to verify account.");
+  }
 }
 
-// Example to initiate withdrawal
+// Initiate withdrawal
 async function initiateWithdrawal() {
-  const accNum = document.getElementById("accountNumberInput").value;
-  const bankCode = document.getElementById("withdrawBankSelect").value;
-  const amount = parseFloat(document.getElementById("amountInput").value);
-  const account_name = document.getElementById("accountNameInput").value;
+  try {
+    const accNum = document.getElementById("accountNumberInput").value;
+    const bankCode = document.getElementById("withdrawBankSelect").value;
+    const amount = parseFloat(document.getElementById("amountInput").value);
+    const account_name = document.getElementById("accountNameInput").value;
 
-  const res = await fetch("http://localhost:4000/api/initiate-transfer", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ accNum, bankCode, account_name, amount })
-  });
+    const res = await fetch(`${BACKEND_URL}/api/initiate-transfer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accNum, bankCode, account_name, amount }),
+    });
 
-  const data = await res.json();
-  console.log("Transfer response:", data);
+    const data = await res.json();
+    console.log("Transfer response:", data);
+
+    if (data.status === "success") {
+      alert("Transfer successful!");
+    } else {
+      alert("Transfer failed: " + data.message);
+    }
+  } catch (err) {
+    console.error("Transfer error:", err);
+    alert("Failed to process withdrawal.");
+  }
 }
-
-  
   
 
 
