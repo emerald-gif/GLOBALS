@@ -1490,7 +1490,7 @@ var swiper = new Swiper(".mySwiper", {
 // Fetch banks on load
 async function loadBanks() {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/get-banks`);
+    const res = await fetch("https://globals-myzv.onrender.com");
     const data = await res.json();
     const select = document.getElementById("withdrawBankSelect");
     select.innerHTML = "";
@@ -1514,7 +1514,7 @@ async function verifyAccount() {
     const accNum = document.getElementById("accountNumberInput").value;
     const bankCode = document.getElementById("withdrawBankSelect").value;
 
-    const res = await fetch(`${BACKEND_URL}/api/verify-account`, {
+    const res = await fetch("https://globals-myzv.onrender.com", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ accNum, bankCode }),
@@ -1538,7 +1538,7 @@ async function initiateWithdrawal() {
     const amount = parseFloat(document.getElementById("amountInput").value);
     const account_name = document.getElementById("accountNameInput").value;
 
-    const res = await fetch(`${BACKEND_URL}/api/initiate-transfer`, {
+    const res = await fetch("https://globals-myzv.onrender.com", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ accNum, bankCode, account_name, amount }),
