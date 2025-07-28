@@ -103,3 +103,41 @@ app.get("*", (req, res) => {
 // ========== START SERVER ==========
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
+
+
+
+
+
+
+
+
+// server.js FOR DEPOSIT
+
+
+
+app.post("/api/deposit", async (req, res) => {
+  const { amount, email } = req.body;
+
+  try {
+    const response = await axios.post("https://api.paystack.co/transaction/initialize", {
+      amount: amount * 100,
+      email: email,
+      callback_url: "https://globals-myzv.onrender.com" // Replace with your actual frontend URL
+    }, {
+      headers: {
+        Authorization: `Bearer ${PAYSTACK_SECRET}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (response.data.status) {
+      res.json({ authorization_url: response.data.data.authorization_url });
+    } else {
+      res.status(500).json({ error: "Payment initiation failed" });
+    }
+  } catch (err) {
+    res.status(500).json({ error: "Server error during payment" });
+  }
+});
+
