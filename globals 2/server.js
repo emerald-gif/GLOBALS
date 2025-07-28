@@ -3,12 +3,18 @@ require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
+const path = require("path");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Serve static files (like dashboard.html, main.js, etc.)
+app.use(express.static(path.join(__dirname, "public"))); // <-- put all frontend files in a folder called "public"
+
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET;
+
+// ========== PAYSTACK ENDPOINTS ==========
 
 // GET list of banks
 app.get("/api/get-banks", async (req, res) => {
@@ -26,7 +32,7 @@ app.get("/api/get-banks", async (req, res) => {
 app.post("/api/verify-account", async (req, res) => {
   const { accNum, bankCode } = req.body;
   try {
-    const verify = await axios.get(`https://api.paystack.co/bank/resolve`, {
+    const verify = await axios.get("https://api.paystack.co/bank/resolve", {
       headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` },
       params: { account_number: accNum, bank_code: bankCode }
     });
@@ -88,7 +94,12 @@ app.post("/api/initiate-transfer", async (req, res) => {
   }
 });
 
+// ========== CATCH ALL ROUTES ==========
+// For preventing "Cannot GET /dashboard.html"
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "dashboard.html"));
+});
+
+// ========== START SERVER ==========
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
-
-
