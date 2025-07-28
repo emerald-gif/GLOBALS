@@ -1586,6 +1586,43 @@ async function submitWithdrawal() {
 
 
 
+//DEPOSIT FUNCTION(also check SERVER)
+
+
+function initiateDeposit() {
+  const amount = document.getElementById("depositAmount").value;
+  const email = document.getElementById("userEmail").value;
+
+  if (!amount || !email) {
+    alert("Please enter amount and email.");
+    return;
+  }
+
+  fetch("https://globals-myzv.onrender.com/api/deposit", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ amount, email })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.authorization_url) {
+        window.location.href = data.authorization_url;
+      } else {
+        alert("Failed to initiate payment.");
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Error initiating payment.");
+    });
+}
+
+
+
+
+
 
   
 
