@@ -1485,54 +1485,31 @@ var swiper = new Swiper(".mySwiper", {
                                                                         //WITHDRAW FUNCTION(also check SERVER)
   
 
-const backendURL = "https://globals-myzv.onrender.com"; // ✅ LIVE backend
+const SERVER_BASE_URL = "https://globals-myzv.onrender.com"; // your render backend URL
 
-// Fetch banks
 async function fetchBanks() {
-  try {
-    const res = await fetch(`${backendURL}/api/get-banks`);
-    const banks = await res.json();
-    // populate your bank dropdown
-    console.log(banks);
-  } catch (err) {
-    alert("❌ Failed to load banks.");
-  }
+  const res = await fetch(`${SERVER_BASE_URL}/api/get-banks`);
+  const data = await res.json();
+  // populate the banks dropdown
 }
 
-// Verify account number
 async function verifyAccount(accNum, bankCode) {
-  try {
-    const res = await fetch(`${backendURL}/api/verify-account`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ accNum, bankCode }),
-    });
-    const data = await res.json();
-    return data;
-  } catch (err) {
-    return { status: "fail" };
-  }
+  const res = await fetch(`${SERVER_BASE_URL}/api/verify-account`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accNum, bankCode })
+  });
+  return await res.json();
 }
 
-// Initiate transfer
 async function initiateTransfer(accNum, bankCode, account_name, amount) {
-  try {
-    const res = await fetch(`${backendURL}/api/initiate-transfer`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ accNum, bankCode, account_name, amount }),
-    });
-    const data = await res.json();
-    return data;
-  } catch (err) {
-    return { status: "fail" };
-  }
+  const res = await fetch(`${SERVER_BASE_URL}/api/initiate-transfer`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accNum, bankCode, account_name, amount })
+  });
+  return await res.json();
 }
-
 
 
 
