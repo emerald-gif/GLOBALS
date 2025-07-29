@@ -1,0 +1,165 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Signup | Globals</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
+  <style>
+    body {
+      background: linear-gradient(135deg, #e0f2fe, #fff);
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(15px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+    .glow {
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+    }
+  </style>
+</head>
+<body class="flex items-center justify-center min-h-screen px-4">
+
+  <div class="w-full max-w-md glass p-6 rounded-2xl animate-fade-in">
+    <div class="mb-6 text-center">
+      <h2 class="text-3xl font-extrabold text-blue-700 animate-bounce">🌍 Join Globals</h2>
+      <p class="text-sm text-gray-600 mt-2">Start earning instantly with your new account.</p>
+    </div>
+
+    <form id="signupForm" class="space-y-4">
+      <input type="text" id="fullName" placeholder="Full Name" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" required />
+      <input type="text" id="username" placeholder="Username" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" required />
+      <input type="tel" id="phone" placeholder="Phone Number" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" required />
+      <input type="email" id="email" placeholder="Email" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" required />
+      <input type="password" id="password" placeholder="Password" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" required />
+      <input type="text" id="referrer" placeholder="Referral Username (Optional)" class="w-full p-3 rounded-lg border border-gray-300" />
+      <div>
+        <input type="text" id="coupon" placeholder="Coupon Code" class="w-full p-2 border border-gray-300 rounded uppercase" required />
+        <p class="text-xs text-gray-600 mt-1">🎟️ Don’t have a coupon code? <a href="https://wa.link/7u8ob7" class="text-blue-600 hover:underline" target="_blank">GET NOW</a></p>
+      </div>
+
+      <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 glow">🚀 Sign Up</button>
+    </form>
+
+    <p class="mt-5 text-sm text-center">Already have an account? <a href="login.html" class="text-blue-600 font-medium hover:underline">Login here</a></p>
+    <div id="message" class="text-center mt-4 text-sm font-medium"></div>
+
+ <!-- Footer & Credits -->
+  <footer class="mt-10 text-center text-xs text-gray-500 space-y-2">
+    <p>🚀 Powered by <span class="text-blue-700 font-bold">Globals</span> — Nigeria’s No. 1 earning platform</p>
+    <p>&copy; 2025 Globals. All rights reserved.</p>
+    <p>Designed by Team Globals | Empowering users with modern digital income</p>
+  </footer>
+
+
+  
+  </div>
+
+     
+
+
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <!-- SwiperJS for future slider if needed -->
+  <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+  
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
+      authDomain: "globals-17bf7.firebaseapp.com",
+      projectId: "globals-17bf7",
+      storageBucket: "globals-17bf7.appspot.com",
+      messagingSenderId: "603274362994",
+      appId: "1:603274362994:web:c312c10cf0a42938e882eb"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+  </script>
+
+  <script>
+    const form = document.getElementById('signupForm');
+    const messageDiv = document.getElementById('message');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fullName = document.getElementById('fullName').value.trim();
+      const username = document.getElementById('username').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const coupon = document.getElementById('coupon').value.trim().toUpperCase();
+      const referrerUsername = document.getElementById('referrer').value.trim();
+
+      messageDiv.textContent = "";
+      messageDiv.className = "";
+
+      if (!coupon) {
+        messageDiv.textContent = "❌ Please enter a coupon code.";
+        messageDiv.className = "text-red-600";
+        return;
+      }
+
+      try {
+        const couponDoc = await db.collection("coupons").doc(coupon).get();
+        if (!couponDoc.exists || !couponDoc.data().valid) {
+          messageDiv.textContent = "❌ Invalid or already used coupon code.";
+          messageDiv.className = "text-red-600";
+          return;
+        }
+
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const userId = userCredential.user.uid;
+
+        const userData = {
+          fullName,
+          username,
+          phone,
+          email,
+          joinedAt: new Date(),
+          normalBalance: 1000,
+          nftBalance: 0,
+          salesBalance: 0,
+          referrer: referrerUsername || null
+        };
+
+        await db.collection("users").doc(userId).set(userData);
+        await db.collection("coupons").doc(coupon).update({ valid: false, usedBy: userId, usedAt: new Date() });
+
+        if (referrerUsername) {
+          const refQuery = await db.collection("users").where("username", "==", referrerUsername).get();
+          if (!refQuery.empty) {
+            const refDoc = refQuery.docs[0];
+            const refId = refDoc.id;
+            await db.collection("users").doc(refId).update({ salesBalance: firebase.firestore.FieldValue.increment(1700) });
+            const secondLevelRef = refDoc.data().referrer;
+            if (secondLevelRef) {
+              const secondQuery = await db.collection("users").where("username", "==", secondLevelRef).get();
+              if (!secondQuery.empty) {
+                const secondId = secondQuery.docs[0].id;
+                await db.collection("users").doc(secondId).update({ salesBalance: firebase.firestore.FieldValue.increment(300) });
+              }
+            }
+          }
+        }
+
+        alert("🎉 Signup successful! You’ve been rewarded ₦1,000.");
+        window.location.href = "dashboard.html";
+      } catch (error) {
+        console.error(error);
+        messageDiv.textContent = "❌ " + error.message;
+        messageDiv.className = "text-red-600";
+      }
+    });
+  </script>
+</body>
+
+ 
+</html>
+ 
