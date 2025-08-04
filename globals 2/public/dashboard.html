@@ -1,0 +1,2649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard | Globals</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gray-50 pb-32 text-gray-800">
+
+
+
+
+<!-- ✅ Top Navbar -->
+<div id="topNavbar" class="bg-white shadow-md px-4 py-3 flex justify-between items-center sticky top-0 z-10">
+  <!-- LEFT SIDE -->
+  <div class="flex items-center gap-2">
+    <!-- 📱 Hamburger Menu Toggle -->
+    <button id="hamburgerBtn" class="text-2xl focus:outline-none">
+      <svg id="hamburgerIcon" xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+	
+	 <span class="text-gray-800 text-sm font-medium">Welcome Back</span>
+  </div>
+
+  <!-- RIGHT SIDE -->
+  <div class="flex items-center gap-4">
+    
+    
+   
+
+    <!-- AI Chat -->
+    <button onclick="activateTab('aiHelpCenter')" class="text-gray-700 hover:text-blue-600 transition">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+    </button>
+
+    <!-- Notifications -->
+    <button onclick="activateTab('notifications')" class="relative text-gray-700 hover:text-blue-600 transition">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 00-4 0v.341C8.67 6.165 8 7.388 8 8.75v5.408a2.032 2.032 0 01-.595 1.437L6 17h5"/>
+      </svg>
+      <span class="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full animate-pulse">3</span>
+    </button>
+  </div>
+</div>
+
+<!-- 📱 Slide-out Sidebar -->
+<div id="sidebar" class="fixed top-0 left-0 w-64 h-full bg-white shadow-lg transform -translate-x-full transition-transform duration-300 z-50">
+  <div class="p-4 border-b text-lg font-bold">GLOBALS</div>
+  <ul class="p-4 space-y-3">
+    <!-- Navigation Links with Icons -->
+	
+	
+	
+	<li><a href="#" onclick="switchTab('me'); activeTab(this)" class="flex items-center gap-3 hover:bg-gray-100 px-4 py-2 rounded-lg">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A4 4 0 017 15h10a4 4 0 011.879.804M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg> My Profile</a></li>
+	
+    <li><a href="#" onclick="switchTab('postTaskSection'); activeTab(this)" class="flex items-center gap-3 hover:bg-gray-100 px-4 py-2 rounded-lg">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path d="M3 12l2-2m0 0l7-7 7 7M13 5v6h6m4 4v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6" />
+      </svg> Post Task Job</a></li>
+	  
+    <li><a href="#" onclick="switchTab('afffiliateJobFormSection'); activeTab(this)" class="flex items-center gap-3 hover:bg-gray-100 px-4 py-2 rounded-lg">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path d="M12 8c-2.21 0-4 1.79-4 4 0 2.21 1.79 4 4 4s4-1.79 4-4M5 20h14a2 2 0 002-2v-4H3v4a2 2 0 002 2zM3 8h18" />
+      </svg> Post Affiliate Job</a></li>
+	  
+    <li><a href="#" onclick="switchTab('payment'); activeTab(this)" class="flex items-center gap-3 hover:bg-gray-100 px-4 py-2 rounded-lg">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a4 4 0 00-8 0v2m8 0a4 4 0 01-8 0m8 0H5m12 0v10a2 2 0 01-2 2H7a2 2 0 01-2-2V9h12z"/>
+      </svg> Payment</a></li>
+	  
+	
+    
+    <li><a href="#" onclick="switchTab('all-categories-screen'); activeTab(this)" class="flex items-center gap-3 hover:bg-gray-100 px-4 py-2 rounded-lg">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path d="M13 2v10h7l-7 10V12H3l7-10z" />
+      </svg> Pay Bills</a></li>
+	  
+    <li><a href="#" onclick="switchTab('affiliate-tasks'); activeTab(this)" class="flex items-center gap-3 hover:bg-gray-100 px-4 py-2 rounded-lg">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path d="M3 5h18M3 10h18M3 15h18M3 20h18"/>
+      </svg> Affiliate tasks</a></li>
+	  
+	  
+	  <li onclick="switchTab('myJobsSection')" class="flex items-center gap-2 px-4 py-3 hover:bg-gray-100 cursor-pointer">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18" />
+  </svg>
+  <span class="text-sm font-medium text-gray-700">My Jobs</span>
+</li>
+	  
+	  
+	  
+	
+	  
+  </ul>
+  
+  <div class="absolute bottom-0 w-full text-center py-4 border-t text-gray-500 text-sm">© 2025 Globals</div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- ✅ Back Arrow Bar (Only visible on inner screens) -->
+<div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
+    ← Back
+  </button>
+</div>
+
+
+
+
+                                                               <!-- ✅ All Screens -->
+															   
+<div id="dashboard" class="tab-section ">
+
+
+
+<!-- ✨ Upgraded Earnings Carousel (2025 Fintech Design) -->
+<div class="w-full max-w-xs mx-auto mt-8 space-y-6 relative">
+  
+
+  <!-- 🚀 Earnings Swiper -->
+  <div class="swiper earnings-swiper relative z-10 rounded-2xl shadow-2xl overflow-hidden p-1 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700">
+    <div class="swiper-wrapper">
+      <!-- 💰 Slide: Normal Earnings -->
+      <div class="swiper-slide h-20 rounded-2xl bg-blue-950/70 backdrop-blur-md p-5 flex flex-col justify-between text-yellow-100 shadow-inner ring-1 ring-blue-800">
+        <div>
+          <h3 class="text-xs font-semibold opacity-80">Normal Earnings</h3>
+          <p id="normalEarnings" class="text-2xl font-bold mt-1 tracking-wide">₦0</p>
+        </div>
+        <button onclick="switchTab('affiliate-tasks')" class="self-start mt-3 bg-yellow-500 hover:bg-yellow-600 text-white-900 text-xs font-bold py-1 px-3 rounded-full transition-all duration-300 shadow-md">
+          Earn More
+        </button>
+      </div>
+
+     
+    </div>
+
+   
+  </div>
+</div>
+
+
+
+
+
+
+
+
+<!-- Services Swiper (Upgraded with Light Glow & Soft Gradient Backgrounds) -->
+<div class="px-4 pt-6">
+  <!-- Swiper Header -->
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-base font-semibold text-neutral-900">Services</h2>
+    <button onclick="openAllCategories()" class="text-sm font-medium text-blue-700 hover:underline hover:text-blue-900 transition duration-200">
+      View All <span class="text-blue-800 text-xl">›</span>
+    </button>
+  </div>
+
+  <!-- Swiper Container -->
+  <div class="flex space-x-4 overflow-x-auto hide-scrollbar pb-2">
+
+    <!-- 🔵 Airtime Card -->
+    <div onclick="activateTab('airtime-screen')" class="flex-shrink-0 w-28 h-28 rounded-2xl bg-gradient-to-br from-blue-100 via-white to-blue-50 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-blue-700 backdrop-blur-md" >
+      <div class="bg-blue-200 p-3 rounded-full shadow-sm mb-2">
+        <img src="airtime-icon.png" class="w-8 h-8" alt="Airtime">
+      </div>
+      <p class="text-sm font-semibold text-blue-900">Airtime</p>
+    </div>
+
+    <!-- 🟣 Data Card -->
+    <div onclick="activateTab('data-screen')" class="flex-shrink-0 w-28 h-28 rounded-2xl bg-gradient-to-br from-purple-100 via-white to-blue-50 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-purple-700 backdrop-blur-md" >
+      <div class="bg-purple-200 p-3 rounded-full shadow-sm mb-2">
+        <img src="data-icon.png" class="w-8 h-8" alt="Data">
+      </div>
+      <p class="text-sm font-semibold text-blue-900">Data</p>
+    </div>
+	
+	
+	<!-- 🟡 ELECTRICITY Card -->
+    <div onclick="activateTab('electricity-screen')" class="flex-shrink-0 w-28 h-28 rounded-2xl bg-gradient-to-br from-pink-100 via-white to-blue-50 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-pink-700 backdrop-blur-md" >
+      <div class="bg-yellow-200 p-3 rounded-full shadow-sm mb-2">
+        <img src="electricity-icon.png" class="w-8 h-8" alt="electricity">
+      </div>
+      <p class="text-sm font-semibold text-blue-900">Electricity</p>
+    </div>
+	
+	
+
+    <!-- 🟡 Betting Card -->
+    <div onclick="activateTab('betting-screen')" class="flex-shrink-0 w-28 h-28 rounded-2xl bg-gradient-to-br from-yellow-100 via-white to-blue-50 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-yellow-700 backdrop-blur-md" >
+      <div class="bg-yellow-200 p-3 rounded-full shadow-sm mb-2">
+        <img src="betting-icon.png" class="w-8 h-8" alt="Betting">
+      </div>
+      <p class="text-sm font-semibold text-blue-900">Betting</p>
+    </div>
+
+    <!-- 🔴 TV Sub -->
+    <div onclick="activateTab('tv-screen')" class="flex-shrink-0 w-28 h-28 rounded-2xl bg-gradient-to-br from-red-100 via-white to-blue-50 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-red-700 backdrop-blur-md" >
+      <div class="bg-red-200 p-3 rounded-full shadow-sm mb-2">
+        <img src="tv-icon.png" class="w-8 h-8" alt="TV">
+      </div>
+      <p class="text-sm font-semibold text-blue-900">TV</p>
+    </div>
+
+  </div>
+</div>
+
+
+
+
+
+
+
+<!-- ✅ 2025 Upgraded Available Tasks Section -->
+<div id="tasks" class="max-w-6xl mx-auto mt-10 px-4">
+  <h2 class="text-xl font-semibold text-gray-800 mb-6">Available Tasks</h2>
+  <div class="grid grid-cols-2 gap-4 sm:gap-6">
+    
+    <!-- 🔥 High-Paying Affiliate Tasks -->
+    <a href="#affiliate-tasks" onclick="activateTab('affiliate-tasks')" class="task-box bg-gradient-to-br from-yellow-50 via-white to-yellow-100 hover:from-yellow-100 hover:to-yellow-200 shadow-md rounded-2xl p-5 transition-all duration-300 transform hover:scale-105 relative">
+      <div class="flex items-center space-x-3 mb-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m4 0V9a4 4 0 10-8 0v3a4 4 0 008 0z" />
+        </svg>
+        <h3 class="text-base font-bold text-yellow-800">Affiliate Tasks</h3>
+      </div>
+      <div class="absolute top-0 left-0 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-br-xl shadow-sm z-10">HOT</div>
+    </a>
+
+    <!-- 📲 Install & Earn Bonus -->
+    <a href="#app-install-tasks" onclick="activateTab('task-jobs')" class="task-box bg-gradient-to-br from-blue-50 via-white to-blue-100 hover:from-blue-100 hover:to-blue-200 shadow-md rounded-2xl p-5 transition-all duration-300 transform hover:scale-105 relative">
+      <div class="flex items-center space-x-3 mb-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v16h16V4H4z" />
+        </svg>
+        <h3 class="text-base font-bold text-blue-800">Install & Earn</h3>
+      </div>
+    </a>
+
+    <!-- 🌍 Social Tasks -->
+    <a href="#social-tasks" onclick="activateTab('social-tasks-main')" class="task-box bg-gradient-to-br from-green-50 via-white to-green-100 hover:from-green-100 hover:to-green-200 shadow-md rounded-2xl p-5 transition-all duration-300 transform hover:scale-105 relative">
+      <div class="flex items-center space-x-3 mb-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5V4H2v16h5m10 0v-4a4 4 0 10-8 0v4m8 0H9" />
+        </svg>
+        <h3 class="text-base font-bold text-green-800">Social Tasks</h3>
+      </div>
+    </a>
+
+    <!-- 🎓 Buy eBook -->
+    <a href="#buy-earn" onclick="activateTab('buy')" class="task-box bg-gradient-to-br from-pink-50 via-white to-pink-100 hover:from-pink-100 hover:to-pink-200 shadow-md rounded-2xl p-5 transition-all duration-300 transform hover:scale-105 relative">
+      <div class="flex items-center space-x-3 mb-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-pink-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 20l9-5-9-5-9 5 9 5z" />
+        </svg>
+        <h3 class="text-base font-bold text-pink-800">Buy eBook & Earn</h3>
+      </div>
+    </a>
+
+    <!-- 🎮 Referrals -->
+    <a href="#team" onclick="activateTab('team')" class="task-box bg-gradient-to-br from-red-50 via-white to-red-100 hover:from-red-100 hover:to-red-200 shadow-md rounded-2xl p-5 transition-all duration-300 transform hover:scale-105 relative">
+      <div class="flex items-center space-x-3 mb-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h8m-8 4h6" />
+        </svg>
+        <h3 class="text-base font-bold text-red-800">Refer & Earn</h3>
+      </div>
+    </a>
+
+    <!-- 🏅 NFT Badge Rewards -->
+    <a href="#nft-badges" onclick="activateTab('task-nft')" class="task-box bg-gradient-to-br from-purple-50 via-white to-purple-100 hover:from-purple-100 hover:to-purple-200 shadow-md rounded-2xl p-5 transition-all duration-300 transform hover:scale-105 relative">
+      <div class="flex items-center space-x-3 mb-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7 21h10a2 2 0 002-2v-5a2 2 0 00-2-2H7a2 2 0 00-2 2v5a2 2 0 002 2z" />
+        </svg>
+        <h3 class="text-base font-bold text-purple-800">NFT Rewards</h3>
+      </div>
+    </a>
+
+  </div>
+</div>
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                               <!-- VIEW ALL SERVICE PAGE TEMPLATE -->
+									  
+									  
+<div id="all-categories-screen" class="tab-section hidden fixed inset-0 z-50 bg-white p-4 overflow-y-auto">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-bold">All Categories</h2>
+    <button onclick="activateTab('dashboard')" class="text-red-600 text-sm">Close</button>
+	
+  </div>
+  
+  
+  
+  <div class="grid grid-cols-3 gap-4">
+  
+    <!-- Duplicate category blocks as needed -->
+    
+<!-- Airtime Swiper Card -->
+<div onclick="activateTab('airtime-screen')" class="flex-shrink-0 w-24 h-24 bg-blue-100 rounded-xl flex flex-col items-center justify-center text-blue-700 shadow-sm hover:bg-blue-200 cursor-pointer">
+  <img src="airtime-icon.png" class="w-10 h-10 mx-auto mb-2" />
+  <p class="text-sm font-medium text-blue-900">Airtime</p>
+</div>
+
+
+	<div onclick="activateTab('data-screen')" class="flex-shrink-0 w-24 h-24 bg-green-100 rounded-xl flex flex-col items-center justify-center text-green-700 shadow-sm hover:bg-green-200 cursor-pointer">
+  <img src="data-icon.png" class="w-10 h-10 mx-auto mb-2" />
+  <p class="text-sm font-medium text-blue-900">Data</p>
+</div>
+
+    <div onclick="openService('electricity-screen')" class="flex-shrink-0 w-24 h-24 bg-yellow-100 rounded-xl flex flex-col items-center justify-center text-yellow-700 shadow-sm hover:bg-yellow-200 cursor-pointer">
+      <img src="icons/electricity.png" class="w-8 h-8 mb-1" />
+      <span class="text-sm font-medium">Electricity</span>
+    </div>
+	
+	
+	<div onclick="openService('betting-screen')" class="flex-shrink-0 w-24 h-24 bg-pink-100 rounded-xl flex flex-col items-center justify-center text-pink-700 shadow-sm hover:bg-pink-200 cursor-pointer">
+      <img src="icons/bet.png" class="w-8 h-8 mb-1" />
+      <span class="text-sm font-medium">Betting</span>
+    </div>
+	
+
+    <div onclick="openService('tv-screen')" class="flex-shrink-0 w-24 h-24 bg-purple-100 rounded-xl flex flex-col items-center justify-center text-purple-700 shadow-sm hover:bg-purple-200 cursor-pointer">
+      <img src="icons/tv.png" class="w-8 h-8 mb-1" />
+      <span class="text-sm font-medium">TV</span>
+    </div>
+
+   
+	
+    
+  </div>
+</div>
+
+
+
+
+
+                                                           <!-- 📱 Airtime Screen -->
+
+<!-- Airtime Screen -->
+<div id="airtime-screen" class="tab-section hidden bg-white min-h-screen">
+<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Airtime</button>
+  <!-- Header -->
+  <div class="flex items-center justify-between p-4 border-b">
+    <h2 class="text-lg font-semibold text-blue-700">Airtime</h2>
+    <button onclick="activateTab('dashboard')" class="text-blue-500 text-sm">← Back</button>
+  </div>
+
+  <!-- Banner -->
+  <div class="p-4">
+    <div class="rounded-xl overflow-hidden mb-4">
+      <img src="optimus.jpg" alt="Banner" class="w-full h-24 object-cover rounded-xl" />
+    </div>
+
+    <div class="flex items-center justify-between gap-4 mt-6">
+  <!-- Network Dropdown -->
+  <div class="relative w-1/2">
+    <label for="network" class="block text-sm text-gray-600 mb-1"></label>
+    <select id="airtime-network" class="w-full border rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <option value="">Network</option>
+      <option value="mtn">MTN</option>
+      <option value="glo">GLO</option>
+      <option value="airtel">Airtel</option>
+      <option value="9mobile">9mobile</option>
+    </select>
+  </div>
+
+  <!-- Phone Number Input -->
+  <div class="w-1/2">
+    <label for="airtime-phone" class="block text-sm text-gray-600 mb-1"></label>
+    <input type="tel" id="airtime-phone" maxlength="11" placeholder="0**********" class="w-full border rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+  </div>
+</div>
+	
+	
+	
+	<!-- Top-Up Grid -->
+<div class="mb-4">
+  <h3 class="text-sm font-semibold text-gray-700 mb-2">Top up</h3>
+  <div class="grid grid-cols-3 gap-3">
+    <button onclick="setAmount(50)" class="bg-blue-50 text-blue-800 text-sm rounded-lg p-2 text-center">
+      <span class="text-base font-bold">₦50</span>
+    </button>
+    <button onclick="setAmount(100)" class="bg-blue-50 text-blue-800 text-sm rounded-lg p-2 text-center">
+      <span class="text-base font-bold">₦100</span>
+    </button>
+    <button onclick="setAmount(200)" class="bg-blue-50 text-blue-800 text-sm rounded-lg p-2 text-center">
+      <span class="text-base font-bold">₦200</span>
+    </button>
+    <button onclick="setAmount(500)" class="bg-blue-50 text-blue-800 text-sm rounded-lg p-2 text-center">
+      <span class="text-base font-bold">₦500</span>
+    </button>
+    <button onclick="setAmount(1000)" class="bg-blue-50 text-blue-800 text-sm rounded-lg p-2 text-center">
+      <span class="text-base font-bold">₦1,000</span>
+    </button>
+    <button onclick="setAmount(2000)" class="bg-blue-50 text-blue-800 text-sm rounded-lg p-2 text-center">
+      <span class="text-base font-bold">₦2,000</span>
+    </button>
+  </div>
+</div>
+
+
+
+
+
+<!-- Manual Input -->
+    <div class="mb-4">
+      <input
+        id="airtime-amount"
+        type="number"
+        min="50"
+        max="500000"
+        class="w-full border border-gray-300 rounded p-2 text-sm"
+        placeholder="₦ 50 - 500,000"
+      />
+      <button onclick="continueAirtimePurchase()" class="w-1/4 mt-2 py-2 bg-blue-600 text- white font-semibold rounded text-sm ">
+        
+      
+        Continue</button>
+    </div>
+
+    <!-- Airtime Service (Dummy Section) -->
+    <div class="mt-6">
+      <h3 class="text-sm font-semibold text-gray-700 mb-2">Airtime Service</h3>
+	  
+	  
+      <div class="bg-white rounded-lg p-3 flex items-center justify-between border">
+        <div class="flex items-center space-x-2">
+          <img src="icons/ussd.png" alt="ussd" class="w-5 h-5" />
+          <div>
+            <p class="text-sm font-medium">Airtime To Cash</p>
+            <p class="text-xs text-gray-500">Turn your excess airtime to cash now</p>
+          </div>
+        </div>
+        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
+    </div>
+	
+	
+
+    <!-- Dummy More Events -->
+    <div class="mt-4">
+      <h3 class="text-sm font-semibold text-gray-700 mb-2">More Events</h3>
+      <div class="bg-white rounded-lg p-3 border">
+        <p class="text-sm text-gray-600"> OPEN MYSTRY BOX NOW!!! <li> Up to 70GB free data! </li> <li> 5K instant cash </li> </p>
+		
+      </div>
+    </div>
+
+    <!-- Response Box -->
+    <div id="airtime-response" class="mt-4 text-sm text-center text-green-600 font-medium"></div>
+  </div>
+</div>
+
+
+
+
+
+
+                                                                  <!-- Data Screen -->
+<div id="data-screen" class="tab-section hidden bg-white min-h-screen">
+<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Data</button>
+  <!-- Header -->
+  <div class="flex items-center justify-between p-4 border-b">
+    <h2 class="text-lg font-semibold text-blue-700">Data</h2>
+    <button onclick="activateTab('dashboard')" class="text-blue-500 text-sm">← Back</button>
+  </div>
+
+  <!-- Banner -->
+  <div class="p-4">
+    <div class="rounded-xl overflow-hidden mb-4">
+      <img src="YOUR_BANNER_IMAGE_HERE.jpg" alt="Banner" class="w-full h-24 object-cover rounded-xl" />
+    </div>
+
+    
+ 
+  <select id="data-network">
+  <option value="">Select Network</option>
+  <option value="mtn">MTN</option>
+  <option value="glo">GLO</option>
+  <option value="airtel">Airtel</option>
+  <option value="9mobile">9Mobile</option>
+</select>
+
+<input id="data-phone" placeholder="Enter phone number" />
+<input type="hidden" id="selected-package" />
+<input type="hidden" id="data-amount" />
+
+<div id="data-packages" class="hidden mt-4 space-y-2"></div>
+
+<div id="data-response" class="mt-2 text-sm text-green-600"></div>
+
+
+
+   
+   
+   
+   
+   <!-- Package Selection (Live from VTpass) -->
+<div id="data-packages" class="mt-4 grid grid-cols-2 gap-3 hidden">
+  <!-- Filled dynamically -->
+</div>
+
+<input type="hidden" id="selected-package" />
+   
+   
+   
+   
+   
+
+    
+      <button onclick="continueDataPurchase()"
+        class="w-1/4 mt-2 py-2 bg-blue-600 text-white font-semibold rounded text-sm"
+      >
+        Continue</button>
+    
+
+    <!-- Airtime Service (Dummy Section) -->
+    <div class="mt-6">
+      <h3 class="text-sm font-semibold text-gray-700 mb-2">Data Services</h3>
+      <div class="bg-white rounded-lg p-3 flex items-center justify-between border">
+        <div class="flex items-center space-x-2">
+          <img src="icons/ussd.png" alt="ussd" class="w-5 h-5" />
+          <div>
+            <p class="text-sm font-medium">Check Data Balance</p>
+            <p class="text-xs text-gray-500">USSD Code & Balance Check</p>
+          </div>
+        </div>
+        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
+    </div>
+
+    <!-- Dummy More Events -->
+    <div class="mt-4">
+      <h3 class="text-sm font-semibold text-gray-700 mb-2">More Offers</h3>
+      <div class="bg-white rounded-lg p-3 border">
+        <p class="text-sm text-gray-600">Double your data when you recharge! 🚀</p>
+      </div>
+    </div>
+
+    <!-- Response Box -->
+    <div id="data-response" class="mt-4 text-sm text-center text-green-600 font-medium"></div>
+  </div>
+</div>
+
+
+
+
+
+
+                                            <!-- 🔓 PAYMENT DRAWER  -->
+<div id="paymentDrawer" class="hidden fixed inset-0 z-50 bg-black bg-opacity-50 ">
+  <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl p-6 shadow-lg">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-bold">Confirm Payment</h2>
+      <button onclick="closePaymentDrawer()" class="text-red-500 text-sm">Close</button>
+    </div>
+
+    <div class="mb-4">
+      <p class="text-sm text-gray-600">Available Balance: <span id="availableBalance" class="font-bold text-green-600">₦0</span></p>
+      <p class="text-sm text-gray-600">Amount to Pay: <span id="amountToPay" class="font-bold text-blue-600">₦0</span></p>
+    </div>
+
+    <button id="payNowBtn" onclick="verifyAndProcessPayment()" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold mt-4 disabled:opacity-40" disabled>Pay Now</button>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                   <!-- Post a Task Section | TailwindCSS + JS -->
+
+<section id="postTaskSection" class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6">
+<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Task Job</button>
+
+<div class="max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow-xl space-y-6">
+  <h2 class="text-2xl font-bold text-center text-gray-800">Post a Job Task</h2>
+
+  <!-- 1. Category -->
+  <div>
+    <label class="block text-sm font-semibold mb-1">Category</label>
+    <select id="category" class="w-full p-2 border rounded-lg" onchange="populateSubcategories()">
+      <option value="">Select a category</option>
+      <option value="whatsapp">WhatsApp / Telegram</option>
+      <option value="instagram">Instagram / TikTok</option>
+	  <option value="app">App</option>
+      <option value="youtube">YouTube</option>
+      <option value="facebook">Facebook</option>
+      <option value="twitter">Twitter</option>
+      <option value="website">Website</option>
+      <option value="vote">Vote</option>
+      <option value="music">Music Player</option>
+    </select>
+  </div>
+
+  <!-- 2. Subcategory (conditional) -->
+  <div>
+    <label class="block text-sm font-semibold mb-1">Subcategory</label>
+    <select id="subcategory" class="w-full p-2 border rounded-lg" onchange="updateWorkerEarn()">
+      <option value="">Select subcategory</option>
+    </select>
+  </div>
+  
+  
+  <!-- 2.5. Task Title -->
+<div>
+  <label for="taskTitle" class="block text-sm font-semibold mb-1">Task Title</label>
+  <input type="text" id="taskTitle" class="w-full p-2 border rounded-lg" placeholder="task tittle" />
+</div>
+  
+  
+
+  <!-- 3. Description + Link -->
+  <div>
+    <label class="block text-sm font-semibold mb-1">Description & Link</label>
+    <textarea class="w-full p-2 border rounded-lg" rows="3" placeholder="Describe what you want the worker to do and add a link if needed"></textarea>
+  </div>
+
+  <!-- 4. Required Proof -->
+  <div>
+    <label class="block text-sm font-semibold mb-1">Required Proof</label>
+    <textarea id="proof" class="w-full p-2 border rounded-lg" rows="2" placeholder="Write out the proof workers are to submit"></textarea>
+  </div>
+
+  <!-- 5. Proof Files Checkbox -->
+  <label for="proofFileCount" class="block mt-4 text-sm font-medium text-gray-700">How many proof uploads should workers submit?</label>
+<select id="proofFileCount" class="w-full p-2 border border-gray-300 rounded-lg mt-1">
+  <option value="1">Require 1 proof upload</option>
+  <option value="2">Require 2 proof uploads</option>
+  <option value="3">Require 3 proof uploads</option>
+</select>
+
+
+  <!-- 6. Upload Screenshot Example -->
+  <div>
+    <label class="block text-sm font-semibold mb-1">Upload Screenshot Example (required)</label>
+    <input type="file" class="w-full border p-2 rounded-lg" accept="image/*">
+  </div>
+
+  <!-- 7. Number of Workers -->
+  <div>
+    <label class="block text-sm font-semibold mb-1">Number of Workers</label>
+    <input id="workerCount" type="number" min="10" class="w-full p-2 border rounded-lg" placeholder="Minimum 10 workers" oninput="updateTotal()">
+  </div>
+
+  <!-- 8. Worker Earn -->
+  <div>
+    <label class="block text-sm font-semibold mb-1">Worker Earn (₦)</label>
+    <input id="workerEarn" type="number" class="w-full p-2 border rounded-lg" oninput="validateWorkerEarn()">
+    <p class="text-xs text-gray-600 mt-1">Note: Price payout can increase to attract workers. Reducing subcategory price isn't allowed.</p>
+    <p id="earnWarning" class="text-sm text-red-600 hidden mt-1">You cannot reduce the default subcategory price.</p>
+  </div>
+
+  <!-- 9. Recommended -->
+  <div>
+    <label class="flex items-center space-x-2">
+      <input type="checkbox" id="makePremium" onchange="updateTotal()">
+      <span>Make your job premium (Cost ₦100)</span>
+    </label>
+  </div>
+
+  <!-- 10. Approval Fee Note -->
+  <div class="text-sm text-gray-700">
+    Note: Company review & approval task fee is ₦200
+  </div>
+
+  <!-- 11. TOTAL -->
+  <div class="mt-4">
+    <div class="flex justify-between items-center font-semibold text-lg">
+      <span>Total:</span>
+      <span id="totalCost">₦0</span>
+    </div>
+    <button class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl mt-4 font-bold transition" onclick="submitTask()">Post Job</button>
+  </div>
+</div>
+
+
+</section>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- Affiliate Job Submission Form -->
+<section id="afffiliateJobFormSection" class="tab-section hidden">
+<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Affiliate Job</button>
+  <div class="max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow-xl space-y-6">
+    <h2 class="text-2xl font-bold text-center text-gray-800">Submit an Affiliate Campaign</h2>
+
+    <!-- 1. Category -->
+    <div>
+      <label class="block text-sm font-semibold mb-1">Category</label>
+      <select id="affiliateCategory" class="w-full p-2 border rounded-lg">
+        <option value="">Select a category</option>
+        <option value="tech">Tech</option>
+        <option value="fashion">Fashion</option>
+        <option value="business">Business</option>
+        <option value="education">Education</option>
+      </select>
+    </div>
+
+    <!-- 2. Campaign Title -->
+    <div>
+      <label class="block text-sm font-semibold mb-1">Campaign Title</label>
+      <input type="text" id="campaignTitle" class="w-full p-2 border rounded-lg" placeholder="e.g. Follow our page and get paid">
+    </div>
+
+    <!-- 3. Instructions for Workers -->
+    <div>
+      <label class="block text-sm font-semibold mb-1">Instructions for Workers</label>
+      <textarea id="workerInstructions" class="w-full p-2 border rounded-lg" rows="4" placeholder="Step-by-step guide workers should follow"></textarea>
+    </div>
+
+    <!-- 4. Target Link -->
+    <div>
+      <label class="block text-sm font-semibold mb-1">Target Link</label>
+      <input type="url" id="targetLink" class="w-full p-2 border rounded-lg" placeholder="https://yourlink.com">
+    </div>
+
+    <!-- 5. Required Proof -->
+    <div>
+      <label class="block text-sm font-semibold mb-1">Proof Required</label>
+      <textarea id="proofRequired" class="w-full p-2 border rounded-lg" placeholder="What proof should workers submit?"></textarea>
+	</div>  
+	  
+      <label for="proofFileCount" class="block mt-4 text-sm font-medium text-gray-700">How many proof uploads should workers submit?</label>
+<select id="proofFileCount" class="w-full p-2 border border-gray-300 rounded-lg mt-1">
+  <option value="1">Require 1 proof upload</option>
+  <option value="2">Require 2 proof uploads</option>
+  <option value="3">Require 3 proof uploads</option>
+</select>
+    
+
+    <!-- 6. Number of Workers -->
+    <div>
+      <label class="block text-sm font-semibold mb-1">Number of Workers</label>
+      <input id="numWorkers" type="number" class="w-full p-2 border rounded-lg" placeholder="Minimum 20 workers" min="20" oninput="updateTotal()">
+    </div>
+
+    <!-- 7. Worker Pay -->
+    <div>
+      <label class="block text-sm font-semibold mb-1">Amount to Pay Each Worker (₦)</label>
+      <input id="workerPay" type="number" class="w-full p-2 border rounded-lg" placeholder="Minimum ₦100" min="100" oninput="updateTotal()">
+    </div>
+
+    <!-- 8. Optional Video Ad -->
+    <div>
+      <label class="flex items-center space-x-2">
+        <input type="checkbox" id="videoAdCheck" onchange="toggleVideoUpload(); updateTotal();">
+        <span>Promote with a Video Ad (₦1,000)</span>
+      </label>
+      <div id="videoUploadSection" class="mt-2 hidden">
+        <input type="file" id="videoAdFile" accept="video/*" class="w-full border p-2 rounded-lg">
+      </div>
+    </div>
+
+    <!-- 9. Optional Picture Ad -->
+    <div>
+      <label class="flex items-center space-x-2">
+        <input type="checkbox" id="pictureAdCheck" onchange="togglePictureUpload(); updateTotal();">
+        <span>Promote with a Picture Ad (₦500)</span>
+      </label>
+      <div id="pictureUploadSection" class="mt-2 hidden">
+        <input type="file" id="pictureAdFile" accept="image/*" class="w-full border p-2 rounded-lg">
+      </div>
+    </div>
+
+    <!-- 10. Approval Fee Note -->
+    <div class="text-sm text-gray-700">
+      Note: A fixed ₦300 approval fee applies to every campaign.
+    </div>
+
+    <!-- 11. Total + Post Job -->
+    <div class="mt-4">
+      <div class="flex justify-between items-center font-semibold text-lg">
+        <span>Total:</span>
+        <span id="affiliateJobTotal">₦0</span>
+      </div>
+      <button class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl mt-4 font-bold transition" onclick="submitAffiliateJob()">Post Job</button>
+    </div>
+  </div>
+</section>
+
+
+
+
+
+
+
+
+
+
+<!-- 📂 My Jobs Section (2025 UIUX Design) -->
+<section id="myJobsSection" class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6">
+<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← My job tasks</button>
+  <div class="max-w-4xl mx-auto space-y-6">
+    <h2 class="text-2xl font-bold text-center text-gray-800">My Job Posts</h2>
+
+    <!-- 🔁 Firebase Loop to Render Job Cards -->
+    <div id="jobList" class="space-y-4">
+      <!-- Each job card will be injected here via JavaScript -->
+    </div>
+  </div>
+</section>
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                         <!-- Affiliate Task Section -->
+
+
+<!-- Trending Tasks Section -->
+<section id="affiliate-tasks" class="tab-section hidden pt-10 px-4 space-y-6 bg-white min-h-screen">
+<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Affiliate Task</button>
+  <div class="p-4">
+    <!-- Header -->
+    <div class="text-center mb-4">
+      <h2 class="text-2xl font-semibold text-gray-800">🔥 Trending Affiliate Tasks</h2>
+      <p class="text-gray-500 text-sm">Complete these tasks to earn instant cash</p>
+    </div>
+	
+	
+
+    <!-- Task Cards major block-->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+   
+ <div class="bg-gray-100 p-4 rounded-2xl shadow-md flex flex-col justify-between">
+        <img src="globals 2/optimus.jpg" alt="Affiliate Task" class="rounded-xl w-full h-32 object-cover mb-3" />
+        <div>
+          <h3 class="text-lg font-bold text-gray-900">Register on Earncrip </h3>
+          <p class="text-sm text-gray-600 mt-1 font-medium">Earn ₦100 instantly for each new signup</p>
+        </div>
+        <div class="flex justify-between items-center mt-4">
+          <span class="text-blue-600 font-bold">₦100</span>
+          <button onclick="openTaskDrawer('taskDrawer1','https://example.com')" class="bg-blue-600 text-white px-4 py-2 rounded-full text-sm hover:bg-blue-700 transition">Start Task</button>
+        </div>
+      </div>
+ 
+ 
+ 
+ 
+ <div class="bg-gray-100 p-4 rounded-2xl shadow-md flex flex-col justify-between">
+        <img src="globals 2/optimus.jpg" alt="Affiliate Task" class="rounded-xl w-full h-32 object-cover mb-3" />
+        <div>
+          <h3 class="text-lg font-bold text-gray-900">Register on Social Earning</h3>
+          <p class="text-sm text-gray-600 mt-1 font-medium">Earn ₦200 instantly for each new signup</p>
+        </div>
+        <div class="flex justify-between items-center mt-4">
+          <span class="text-blue-600 font-bold">₦200</span>
+          <button onclick="openTaskDrawer('taskDrawer2','https://example.com')" class="bg-blue-600 text-white px-4 py-2 rounded-full text-sm hover:bg-blue-700 transition">Start Task</button>
+        </div>
+      </div>
+ 
+ 
+ 
+ 
+ <div class="bg-gray-100 p-4 rounded-2xl shadow-md flex flex-col justify-between">
+        <img src="globals 2/optimus.jpg" alt="Affiliate Task" class="rounded-xl w-full h-32 object-cover mb-3" />
+        <div>
+          <h3 class="text-lg font-bold text-gray-900">Register on optimus</h3>
+          <p class="text-sm text-gray-600 mt-1 font-medium">Earn ₦500 instantly for each new signup</p>
+        </div>
+        <div class="flex justify-between items-center mt-4">
+          <span class="text-blue-600 font-bold">₦300</span>
+          <button onclick="openTaskDrawer('taskDrawer3','https://example.com')" class="bg-blue-600 text-white px-4 py-2 rounded-full text-sm hover:bg-blue-700 transition">Start Task</button>
+        </div>
+      </div>
+ 
+ 
+ 
+ 
+ 
+ <div class="bg-gray-100 p-4 rounded-2xl shadow-md flex flex-col justify-between">
+        <img src="globals 2/optimus.jpg" alt="Affiliate Task" class="rounded-xl w-full h-32 object-cover mb-3" />
+        <div>
+          <h3 class="text-lg font-bold text-gray-900">Register on piggyvest </h3>
+          <p class="text-sm text-gray-600 mt-1 font-medium">Earn ₦500 instantly for each new signup</p>
+        </div>
+        <div class="flex justify-between items-center mt-4">
+          <span class="text-blue-600 font-bold">₦500</span>
+          <button onclick="openTaskDrawer('taskDrawer4','https://example.com')" class="bg-blue-600 text-white px-4 py-2 rounded-full text-sm hover:bg-blue-700 transition">Start Task</button>
+        </div>
+      </div>
+ 
+ 
+ 
+ 
+ <div class="bg-gray-100 p-4 rounded-2xl shadow-md flex flex-col justify-between">
+        <img src="globals 2/optimus.jpg" alt="Affiliate Task" class="rounded-xl w-full h-32 object-cover mb-3" />
+        <div>
+          <h3 class="text-lg font-bold text-gray-900">Register on globals</h3>
+          <p class="text-sm text-gray-600 mt-1 font-medium">Earn ₦500 instantly for each new signup</p>
+        </div>
+        <div class="flex justify-between items-center mt-4">
+          <span class="text-blue-600 font-bold">₦500</span>
+          <button onclick="openTaskDrawer('taskDrawer5','https://example.com')" class="bg-blue-600 text-white px-4 py-2 rounded-full text-sm hover:bg-blue-700 transition">Start Task</button>
+        </div>
+      </div>
+ 
+ 
+
+      <!-- Duplicate the above card for more tasks, just change the title/image/link -->
+    </div>
+	</div>
+</section>
+
+  
+<!-- Drawer: Task Info Modal -->
+
+<div id="taskDrawer1" class="fixed bottom-0 left-0 right-0 bg-white z-50 rounded-t-3xl shadow-lg p-6 transform translate-y-full transition-transform duration-300 ease-in-out">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-bold">Task Details</h2>
+    <button onclick="closeTaskDrawer('taskDrawer1')" class="text-gray-500 hover:text-red-500 text-lg">&times;</button>
+  </div>
+  <p class="text-sm text-gray-700 mb-6">
+    <li> Complete the registration using your phone number and</li> 
+	<li> verify your identity with a valid ID. Ensure you use a real device and not VPN.</li>
+  </p>
+  <button id="doTaskBtn" class="w-full bg-blue-600 text-white py-3 rounded-xl text-center font-semibold hover:bg-blue-700 transition">Do Task</button>
+</div>
+
+
+
+
+<div id="taskDrawer2" class="fixed bottom-0 left-0 right-0 bg-white z-50 rounded-t-3xl shadow-lg p-6 transform translate-y-full transition-transform duration-300 ease-in-out">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-bold">Task Details</h2>
+    <button onclick="closeTaskDrawer('taskDrawer2')" class="text-gray-500 hover:text-red-500 text-lg">&times;</button>
+  </div>
+  <p class="text-sm text-gray-700 mb-6">
+    Complete the registration using your phone number and verify your identity with a valid ID
+  </p>
+  <button id="doTaskBtn" class="w-full bg-blue-600 text-white py-3 rounded-xl text-center font-semibold hover:bg-blue-700 transition">Do Task</button>
+</div>
+
+
+
+
+
+
+
+<div id="taskDrawer3" class="fixed bottom-0 left-0 right-0 bg-white z-50 rounded-t-3xl shadow-lg p-6 transform translate-y-full transition-transform duration-300 ease-in-out">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-bold">Task Details</h2>
+    <button onclick="closeTaskDrawer('taskDrawer3')" class="text-gray-500 hover:text-red-500 text-lg">&times;</button>
+  </div>
+  <p class="text-sm text-gray-700 mb-6">
+    Complete the registration using your phone number and verify your identity with a valid ID
+  </p>
+  <button id="doTaskBtn" class="w-full bg-blue-600 text-white py-3 rounded-xl text-center font-semibold hover:bg-blue-700 transition">Do Task</button>
+</div>
+
+
+
+<div id="taskDrawer4" class="fixed bottom-0 left-0 right-0 bg-white z-50 rounded-t-3xl shadow-lg p-6 transform translate-y-full transition-transform duration-300 ease-in-out">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-bold">Task Details</h2>
+    <button onclick="closeTaskDrawer('taskDrawer4')" class="text-gray-500 hover:text-red-500 text-lg">&times;</button>
+  </div>
+  <p class="text-sm text-gray-700 mb-6">
+    Complete the registration using your phone number and verify your identity with a valid ID
+  </p>
+  <button id="doTaskBtn" class="w-full bg-blue-600 text-white py-3 rounded-xl text-center font-semibold hover:bg-blue-700 transition">Do Task</button>
+</div>
+
+
+
+
+
+<div id="taskDrawer5" class="fixed bottom-0 left-0 right-0 bg-white z-50 rounded-t-3xl shadow-lg p-6 transform translate-y-full transition-transform duration-300 ease-in-out">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-bold">Task Details</h2>
+    <button onclick="closeTaskDrawer('taskDrawer5')" class="text-gray-500 hover:text-red-500 text-lg">&times;</button>
+  </div>
+  <p class="text-sm text-gray-700 mb-6">
+    Complete the registration using your phone number and verify your identity with a valid ID
+  </p>
+  <button id="doTaskBtn" class="w-full bg-blue-600 text-white py-3 rounded-xl text-center font-semibold hover:bg-blue-700 transition">Do Task</button>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                               <!-- INSTALL AND EARN --> 
+
+
+
+<!-- 📲 Install & Earn Section -->
+<div id="task-jobs" class="tab-section hidden bg-gray-50 min-h-screen p-4 pb-24">
+
+
+</div>
+
+
+
+
+
+
+
+
+                                               
+
+
+
+
+                                                      <!-- 🌍 Social Tasks Main Screen -->
+
+
+
+<!-- 🌍 Social Tasks Main Screen -->
+<div id="social-tasks-main" class="tab-section hidden">
+<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Social Tasks</button>
+  <h2 class="text-2xl font-bold text-center my-6">📢 Social Task Arena</h2>
+  <p class="text-center text-gray-600 mb-6">Choose a platform below to begin your promotional task</p>
+
+  <div class="grid grid-cols-2 sm:grid-cols-2 gap-6 px-4">
+    <!-- TikTok/Instagram -->
+    <div class="bg-pink-100 p-6 rounded-2xl shadow-md">
+      <h3 class="text-xl font-bold text-pink-700 mb-2">🎬 TikTok / Instagram</h3>
+      <p class="text-sm text-pink-600 mb-4">Promote us with a 30s video, tag us & upload proof.</p>
+      <button onclick="showTask('tiktok-task')" class="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-lg w-full">Do Task</button>
+    </div>
+
+    <!-- WhatsApp -->
+    <div class="bg-green-100 p-6 rounded-2xl shadow-md">
+      <h3 class="text-xl font-bold text-green-700 mb-2">📲 WhatsApp Promo</h3>
+      <p class="text-sm text-green-600 mb-4">Send to 3 groups + status for 24 hrs with screenshots.</p>
+      <button onclick="showTask('whatsapp-task')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg w-full">Do Task</button>
+    </div>
+
+    <!-- Telegram -->
+    <div class="bg-blue-100 p-6 rounded-2xl shadow-md">
+      <h3 class="text-xl font-bold text-blue-700 mb-2">📢 Telegram Groups</h3>
+      <p class="text-sm text-blue-600 mb-4">Forward our promo text to 3 Telegram groups.</p>
+      <button onclick="showTask('telegram-task')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg w-full">Do Task</button>
+    </div>
+
+    <!-- Coming Soon -->
+    <div class="bg-gray-100 p-6 rounded-2xl shadow-md opacity-70">
+      <h3 class="text-xl font-bold text-gray-500 mb-2">🕒 Coming Soon</h3>
+      <p class="text-sm text-gray-400 mb-4">More exciting tasks will be added here soon.</p>
+      <button class="bg-gray-400 text-white px-4 py-2 rounded-lg w-full" disabled>Coming Soon</button>
+    </div>
+  </div>
+</div>
+
+<!-- 🟣 TikTok Task Section -->
+<div id="tiktok-task" class="tab-section hidden p-4">
+
+<button onclick="activateTab('social-tasks-main')" class="text-blue-500 text-lg">← Tiktok task</button>
+
+  <h3 class="text-2xl font-bold mb-4 text-pink-700">🎬 TikTok / Instagram Task</h3>
+  <ul class="list-disc ml-6 mb-4 text-gray-700">
+    <li>Record a 30-second video promoting our platform.</li>
+    <li>Use 1 of the 3 provided images below in your video.</li>
+    <li>Tag <strong>@globalsnigeria</strong> in your post.</li>
+    <li>Post on TikTok or Instagram and upload proof below.</li>
+  </ul>
+
+  <div class="grid grid-cols-3 gap-4 mb-4">
+    <img src="image1.jpg" class="rounded-lg shadow-md" onclick="window.open(this.src)" />
+    <img src="image2.jpg" class="rounded-lg shadow-md" onclick="window.open(this.src)" />
+    <img src="image3.jpg" class="rounded-lg shadow-md" onclick="window.open(this.src)" />
+  </div>
+
+  <input type="text" placeholder="Enter your TikTok/Instagram username" class="w-full mb-3 p-2 border rounded-md" />
+  <input type="file" accept="image/*" class="w-full mb-3" />
+  <button onclick="submitTikTok()" class="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-lg w-full">Submit for Review</button>
+  <p id="tiktok-confirmation" class="hidden text-green-600 text-center mt-4">✅ Review submitted. Await admin approval.</p>
+</div>
+
+<!-- 🟢 WhatsApp Task Section -->
+<div id="whatsapp-task" class="tab-section hidden p-4">
+
+<button onclick="activateTab('social-tasks-main')" class="text-blue-500 text-lg">← Whatsapp tasks</button>
+
+  <h3 class="text-2xl font-bold mb-4 text-green-700">📲 WhatsApp Task</h3>
+  <p class="text-sm text-gray-700 mb-2">📌 Send the text below to 3 active WhatsApp groups and post on your status for 24 hours.</p>
+  
+  <div class="bg-green-50 p-4 rounded-lg mb-2">
+    <p id="whatsapp-text" class="text-sm text-gray-800 leading-relaxed">
+      🚀 Join Globals Nigeria today and start earning daily by completing simple tasks online. <br>
+      🔗 Sign up now: https://globalsnigeria.com <br>
+      💸 Invite friends and earn bonuses instantly. <br>
+      🎯 Easy-to-use dashboard, real jobs, NFT badges & more! <br>
+      💬 Chat support available 24/7. Join us now! <br>
+      🔥 This is your moment to grow with us. Don't miss out!
+    </p>
+    <button onclick="copyToClipboard('whatsapp-text')" class="bg-green-500 text-white px-4 py-1 rounded mt-2">Copy Message</button>
+  </div>
+
+  <input type="text" placeholder="Your WhatsApp Number" class="w-full mb-3 p-2 border rounded-md" />
+  <p class="text-sm text-red-600 mb-2">⚠️ Make sure not to delete the post after screenshot. Deleting may lead to ban.</p>
+
+  <div class="space-y-2 mb-4">
+    <input type="file" class="w-full" />
+    <input type="file" class="w-full" />
+    <input type="file" class="w-full" />
+    <input type="file" class="w-full" />
+  </div>
+
+  <button onclick="submitWhatsApp()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg w-full">Submit for Review</button>
+  <p id="whatsapp-confirmation" class="hidden text-green-600 text-center mt-4">✅ Review submitted. Await admin approval.</p>
+</div>
+
+<!-- 🔵 Telegram Task Section -->
+<div id="telegram-task" class="tab-section hidden p-4">
+
+<button onclick="activateTab('social-tasks-main')" class="text-blue-500 text-lg">← Telegram tasks</button>
+
+  <h3 class="text-2xl font-bold mb-4 text-blue-700">📢 Telegram Task</h3>
+  <p class="text-sm text-gray-700 mb-2">📌 Forward the message below to 3 active Telegram groups for at least 24 hours.</p>
+
+  <div class="bg-blue-50 p-4 rounded-lg mb-2">
+    <p id="telegram-text" class="text-sm text-gray-800 leading-relaxed">
+      🚀 Join Globals Nigeria today and start earning daily by completing simple tasks online. <br>
+      🔗 Sign up now: https://globalsnigeria.com <br>
+      💸 Invite friends and earn bonuses instantly. <br>
+      🎯 Easy-to-use dashboard, real jobs, NFT badges & more! <br>
+      💬 Chat support available 24/7. Join us now! <br>
+      🔥 This is your moment to grow with us. Don't miss out!
+    </p>
+    <button onclick="copyToClipboard('telegram-text')" class="bg-blue-500 text-white px-4 py-1 rounded mt-2">Copy Message</button>
+  </div>
+
+  <input type="text" placeholder="Your Telegram Username" class="w-full mb-3 p-2 border rounded-md" />
+  <p class="text-sm text-red-600 mb-2">⚠️ Do not delete your forwarded messages. Our system detects removed links.</p>
+
+  <div class="space-y-2 mb-4">
+    <input type="file" class="w-full" />
+    <input type="file" class="w-full" />
+    <input type="file" class="w-full" />
+  </div>
+
+  <button onclick="submitTelegram()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg w-full">Submit for Review</button>
+  <p id="telegram-confirmation" class="hidden text-green-600 text-center mt-4">✅ Review submitted. Await admin approval.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                             
+															 <!-- 🔔 Notifications Tab Section -->
+															 
+															 
+<div id="notifications" class="tab-section hidden px-4 pt-6 pb-24 max-w-2xl mx-auto">
+
+
+<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← notification</button>
+
+  <h1 class="text-1xl font-bold text-blue-700 mb-6 "> 
+  
+  <svg xmlns="http://www.w3.org/2000/svg"  class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 00-4 0v.341C8.67 6.165 8 7.388 8 8.75v5.408a2.032 2.032 0 01-.595 1.437L6 17h5"/>
+      </svg> Notifications</h1>
+
+  <div class="space-y-4">
+    <!-- Notification 1 -->
+    <div class="bg-white rounded-xl p-4 shadow-md border-l-4 border-green-400 animate-fade-in">
+      <p class="text-gray-800 font-semibold">You earned ₦1,700 from a referral!</p>
+      <p class="text-xs text-gray-500">2 minutes ago</p>
+    </div>
+
+    <!-- Notification 2 -->
+    <div class="bg-white rounded-xl p-4 shadow-md border-l-4 border-purple-400 animate-fade-in">
+      <p class="text-gray-800 font-semibold">You unlocked the “Top Referrer” NFT Badge!</p>
+      <p class="text-xs text-gray-500">Today at 10:00 AM</p>
+    </div>
+
+    <!-- Notification 3 -->
+    <div class="bg-white rounded-xl p-4 shadow-md border-l-4 border-blue-400 animate-fade-in">
+      <p class="text-gray-800 font-semibold">New task available: TikTok Promo!</p>
+      <p class="text-xs text-gray-500">5 hours ago</p>
+    </div>
+
+    <!-- Coming Soon -->
+    <div class="bg-gray-50 border-dashed border-2 border-gray-300 rounded-xl p-4 text-center text-gray-400">
+      More notifications coming soon...
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+                                                    <!-- PAYMENT HISTORY-->
+
+<!-- 🔵 PAYMENT SECTION -->
+<div id="payment" class="tab-section hidden max-w-md mx-auto px-4 py-6 space-y-6">
+
+<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Payment</button>
+
+  <!-- 💰 Wallet Balance Card -->
+  <div class="bg-gradient-to-br from-white to-gray-100 rounded-2xl shadow-lg p-4 space-y-3 border border-gray-200">
+    <h2 class="text-xs font-medium text-gray-500">WALLET BALANCE</h2>
+    <p class="text-xl font-bold text-gray-800 tracking-wide">₦10,500</p>
+
+    <div class="flex justify-between gap-3 mt-3">
+      <button onclick="activateTab('withdrawFundsSection')" class="w-full bg-red-500 hover:bg-red-600 text-white text-xs font-medium py-2 rounded-xl shadow-md">
+        Withdraw
+      </button>
+      <button onclick="activateTab('depositSection')" class="w-full bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium py-2 rounded-xl shadow-md">
+        Deposit
+      </button>
+    </div>
+  </div>
+
+  <!-- 🧾 Post a Task -->
+  <div id="postTaskSection" class="bg-white border border-gray-200 rounded-xl shadow-sm px-4 py-3 text-center">
+    <h3 class="text-sm font-medium text-gray-700 mb-1">Have a Job for Users?</h3>
+    <button onclick="postTaskSection" class="text-xs text-white bg-indigo-500 hover:bg-indigo-600 px-3 py-1 rounded-lg font-medium shadow">
+      Post a Task
+    </button>
+  </div>
+
+  <!-- 🚀 Swiper Cards -->
+  <div class="swiper mySwiper space-y-2">
+    <div class="swiper-wrapper">
+      <div class="swiper-slide bg-gradient-to-br from-blue-200 to-blue-300 p-4 rounded-xl shadow text-sm font-medium text-gray-800">
+        Refer & Earn
+      </div>
+      <div class="swiper-slide bg-gradient-to-br from-green-200 to-green-300 p-4 rounded-xl shadow text-sm font-medium text-gray-800">
+        Learn More
+      </div>
+      <div class="swiper-slide bg-gradient-to-br from-purple-200 to-purple-300 p-4 rounded-xl shadow text-sm font-medium text-gray-800">
+        Post a Task
+      </div>
+    </div>
+  </div>
+
+  <!-- 📄 Transaction History -->
+  <div class="bg-white rounded-2xl shadow-xl p-4 space-y-4 border border-gray-200">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="text-base font-semibold text-gray-800">Transaction History</h2>
+      <select id="transactionFilter" class="bg-gray-100 text-xs rounded-md px-2 py-1 border border-gray-300">
+        <option value="all">All</option>
+        <option value="successful">✅ Successful</option>
+        <option value="pending">⏳ Pending</option>
+      </select>
+    </div>
+
+    <div id="transactionList" class="space-y-3">
+      <!-- Example 1 -->
+      <div class="flex items-center justify-between bg-gray-50 px-4 py-3 rounded-xl shadow-sm">
+        <div>
+          <h3 class="font-medium text-sm text-gray-700">Deposit via Paystack</h3>
+          <p class="text-xs text-gray-400">July 25, 2025</p>
+        </div>
+        <div class="text-right">
+          <p class="font-bold text-green-500 text-sm">+₦5,000</p>
+          <span class="text-xs text-green-600 font-medium">✅ Successful</span>
+        </div>
+      </div>
+
+      <!-- Example 2 -->
+      <div class="flex items-center justify-between bg-gray-50 px-4 py-3 rounded-xl shadow-sm">
+        <div>
+          <h3 class="font-medium text-sm text-gray-700">Withdrawal to Bank</h3>
+          <p class="text-xs text-gray-400">July 24, 2025</p>
+        </div>
+        <div class="text-right">
+          <p class="font-bold text-red-500 text-sm">−₦3,000</p>
+          <span class="text-xs text-yellow-500 font-medium">⏳ Pending</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+<!-- Withdrawal Section -->
+
+<div id="withdrawFundsSection" class="tab-section hidden p-6 max-w-md mx-auto rounded-xl shadow-lg bg-white mt-8 space-y-6">
+<button onclick="activateTab('payment')" class="text-blue-500 text-lg">← Withdraw</button>
+  <h2 class="text-2xl font-bold text-center text-gray-800">Withdraw Funds</h2>
+
+  <input id="withdrawAccountNumber" type="number" placeholder="Account Number"
+    class="w-full px-4 py-2 border rounded-lg" />
+
+  <select id="withdrawBankSelect"
+    class="w-full px-4 py-2 border rounded-lg bg-white text-gray-700">
+    <option value="">Loading Banks...</option>
+  </select>
+
+  <div id="accountNameStatus" class="text-sm text-blue-600 hidden">🔄 Verifying Account...</div>
+  <div id="accountNameDisplay" class="text-sm text-green-600 hidden"></div>
+
+  <input id="withdrawAmount" type="number" placeholder="Amount (min ₦1000)"
+    class="w-full px-4 py-2 border rounded-lg" />
+
+  <input id="withdrawPassword" type="password" placeholder="Confirm Password"
+    class="w-full px-4 py-2 border rounded-lg" />
+
+  <button onclick="submitWithdrawal()"
+    class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-xl font-semibold transition">
+    Withdraw Now
+  </button>
+</div>
+
+
+
+
+
+
+<!-- Deposit Section -->
+<div id="depositSection" class="tab-section hidden p-6 max-w-md mx-auto rounded-xl shadow-lg bg-white mt-8 space-y-6">
+<button onclick="activateTab('payment')" class="text-blue-500 text-lg">← Deposit</button>
+  <h2 class="text-2xl font-bold text-center text-gray-800">Deposit Funds</h2>
+
+  <div>
+    <label class="block text-gray-600 mb-1">Email</label>
+    <input id="depositEmail" type="email" placeholder="you@example.com" readonly
+  class="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+    <p id="emailError" class="text-red-500 text-sm hidden mt-1">Please enter a valid email</p>
+  </div>
+
+  <div>
+    <label class="block text-gray-600 mb-1">Amount (₦)</label>
+    <input id="depositAmount" type="number" placeholder="Minimum ₦100"
+      class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+    <p id="amountError" class="text-red-500 text-sm hidden mt-1">Please enter an amount above ₦100</p>
+  </div>
+
+  <button onclick="handleDeposit()"
+    class="w-full bg-blue-600 hover:bg-blue-700 transition duration-300 text-white py-3 rounded-lg font-semibold">
+    Proceed to Paystack Checkout
+  </button>
+</div>
+
+<!-- REQUIRED Paystack Script -->
+<script src="https://js.paystack.co/v1/inline.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                           <!-- TRANSACTION HISTORY -->
+
+
+<div id="transaction" class="tab-section hidden px-4 py-6 max-w-2xl mx-auto">
+  <h2 class="text-2xl font-bold text-gray-800 mb-6">📜 Transaction History</h2>
+
+  <!-- Filter (UI only for now) -->
+  <div class="flex items-center justify-between mb-4">
+    <select class="text-sm border border-gray-300 rounded px-3 py-1">
+      <option>All Categories</option>
+      <option>Referrals</option>
+      <option>Tasks</option>
+      <option>eBook Purchases</option>
+      <option>NFT Rewards</option>
+    </select>
+    <select class="text-sm border border-gray-300 rounded px-3 py-1">
+      <option>All Status</option>
+      <option>Successful</option>
+      <option>Pending</option>
+    </select>
+  </div>
+
+  <!-- Date Group -->
+  <div class="mb-4">
+    <p class="text-sm font-semibold text-gray-500 mb-2">July 2025</p>
+
+    <!-- Example Transactions -->
+    <div class="space-y-3">
+
+      <!-- ✅ Earned Task -->
+      <div class="bg-white rounded-lg p-4 shadow-sm border flex items-start justify-between">
+        <div>
+          <p class="font-medium text-gray-800">App Install - Palmpay</p>
+          <p class="text-sm text-gray-500 mt-1">July 10, 2025 · 10:23 AM</p>
+        </div>
+        <div class="text-right">
+          <p class="text-green-600 font-semibold text-sm">+₦100</p>
+          <span class="text-xs text-green-500">Successful</span>
+        </div>
+      </div>
+
+      <!-- ✅ Referral Bonus -->
+      <div class="bg-white rounded-lg p-4 shadow-sm border flex items-start justify-between">
+        <div>
+          <p class="font-medium text-gray-800">Referral Bonus - Level 1</p>
+          <p class="text-sm text-gray-500 mt-1">July 9, 2025 · 03:45 PM</p>
+        </div>
+        <div class="text-right">
+          <p class="text-green-600 font-semibold text-sm">+₦1,700</p>
+          <span class="text-xs text-green-500">Successful</span>
+        </div>
+      </div>
+
+      <!-- ✅ NFT Badge Reward -->
+      <div class="bg-white rounded-lg p-4 shadow-sm border flex items-start justify-between">
+        <div>
+          <p class="font-medium text-gray-800">NFT Badge - Bronze</p>
+          <p class="text-sm text-gray-500 mt-1">July 8, 2025 · 01:12 PM</p>
+        </div>
+        <div class="text-right">
+          <p class="text-green-600 font-semibold text-sm">+₦300</p>
+          <span class="text-xs text-green-500">Successful</span>
+        </div>
+      </div>
+
+      <!-- ❌ eBook Purchase -->
+      <div class="bg-white rounded-lg p-4 shadow-sm border flex items-start justify-between">
+        <div>
+          <p class="font-medium text-gray-800">eBook Purchase - Affiliate Guide</p>
+          <p class="text-sm text-gray-500 mt-1">July 7, 2025 · 11:42 AM</p>
+        </div>
+        <div class="text-right">
+          <p class="text-red-500 font-semibold text-sm">-₦3,000</p>
+          <span class="text-xs text-green-500">Successful</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+                                                               <!-- NFT BADGE-->
+
+<div id="task-nft" class="tab-section hidden">
+<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Nft Badges</button>
+  <div class="max-w-5xl mx-auto mt-10 px-4">
+    <h2 class="text-2xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-500 to-blue-500 mb-10 ">🏅 Your NFT Badge Rewards</h2>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      
+      <!-- 🥇 Top Referrer Badge -->
+      <div class="badge-card bg-gradient-to-br from-white via-purple-50 to-white rounded-3xl p-5 shadow-xl relative overflow-hidden hover:scale-105 transition-transform duration-300">
+        <div class="absolute top-0 right-0 m-2 text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded-full animate-bounce">NFT Badge</div>
+        <div class="flex items-center gap-4">
+          <img src="badge1.png" class="w-14 h-14 animate-spin-slow" />
+          <div>
+            <h3 class="font-bold text-xl text-purple-800">Top Referrer</h3>
+            <p class="text-gray-600 text-sm">Refer 10 people to unlock</p>
+          </div>
+        </div>
+        <div class="mt-4">
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-purple-600 h-2 rounded-full transition-all duration-500" style="width: 60%;"></div>
+          </div>
+          <p class="text-sm mt-1 text-purple-700">6/10 referrals</p>
+        </div>
+        <div class="mt-4 flex items-center justify-between">
+          <span class="text-sm text-green-600 font-semibold">Reward: ₦300</span>
+          <span class="text-xs text-gray-500">Status: <b class="text-red-500">Locked 🔒</b></span>
+        </div>
+      </div>
+
+      <!-- 🗓️ Login Streak Badge -->
+      <div class="badge-card bg-gradient-to-br from-white via-blue-50 to-white rounded-3xl p-5 shadow-xl relative overflow-hidden hover:scale-105 transition-transform duration-300">
+        <div class="absolute top-0 right-0 m-2 text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full animate-bounce">NFT Badge</div>
+        <div class="flex items-center gap-4">
+          <img src="badge2.png" class="w-14 h-14 animate-spin-slow" />
+          <div>
+            <h3 class="font-bold text-xl text-blue-800">Login Streak</h3>
+            <p class="text-gray-600 text-sm">Login for 7 days in a row</p>
+          </div>
+        </div>
+        <div class="mt-4">
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-blue-600 h-2 rounded-full transition-all duration-500" style="width: 85%;"></div>
+          </div>
+          <p class="text-sm mt-1 text-blue-700">6/7 days completed</p>
+        </div>
+        <div class="mt-4 flex items-center justify-between">
+          <span class="text-sm text-green-600 font-semibold">Reward: ₦500</span>
+          <span class="text-xs text-gray-500">Status: <b class="text-red-500">Locked 🔒</b></span>
+        </div>
+      </div>
+
+      <!-- 📱 App Task Legend Badge -->
+      <div class="badge-card bg-gradient-to-br from-white via-green-50 to-white rounded-3xl p-5 shadow-xl relative overflow-hidden hover:scale-105 transition-transform duration-300">
+        <div class="absolute top-0 right-0 m-2 text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full animate-bounce">NFT Badge</div>
+        <div class="flex items-center gap-4">
+          <img src="badge3.png" class="w-14 h-14 animate-spin-slow" />
+          <div>
+            <h3 class="font-bold text-xl text-green-800">Task Legend</h3>
+            <p class="text-gray-600 text-sm">Complete 20 paid tasks</p>
+          </div>
+        </div>
+        <div class="mt-4">
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-green-600 h-2 rounded-full transition-all duration-500" style="width: 60%;"></div>
+          </div>
+          <p class="text-sm mt-1 text-green-700">12/20 tasks completed</p>
+        </div>
+        <div class="mt-4 flex items-center justify-between">
+          <span class="text-sm text-green-600 font-semibold">Reward: ₦1,000</span>
+          <span class="text-xs text-gray-500">Status: <b class="text-red-500">Locked 🔒</b></span>
+        </div>
+      </div>
+
+      <!-- 📚 Ebook Seller Badge -->
+      <div class="badge-card bg-gradient-to-br from-white via-pink-50 to-white rounded-3xl p-5 shadow-xl relative overflow-hidden hover:scale-105 transition-transform duration-300">
+        <div class="absolute top-0 right-0 m-2 text-xs bg-pink-200 text-pink-800 px-2 py-1 rounded-full animate-bounce">NFT Badge</div>
+        <div class="flex items-center gap-4">
+          <img src="badge4.png" class="w-14 h-14 animate-spin-slow" />
+          <div>
+            <h3 class="font-bold text-xl text-pink-800">eBook Seller</h3>
+            <p class="text-gray-600 text-sm">Sell ₦10,000 worth of eBooks</p>
+          </div>
+        </div>
+        <div class="mt-4">
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-pink-600 h-2 rounded-full transition-all duration-500" style="width: 10%;"></div>
+          </div>
+          <p class="text-sm mt-1 text-pink-700">₦1,000/₦10,000</p>
+        </div>
+        <div class="mt-4 flex items-center justify-between">
+          <span class="text-sm text-green-600 font-semibold">Reward: ₦2,000</span>
+          <span class="text-xs text-gray-500">Status: <b class="text-red-500">Locked 🔒</b></span>
+        </div>
+      </div>
+
+      <!-- 🎥 Viral Star Badge -->
+      <div class="badge-card bg-gradient-to-br from-white via-indigo-50 to-white rounded-3xl p-5 shadow-xl relative overflow-hidden hover:scale-105 transition-transform duration-300">
+        <div class="absolute top-0 right-0 m-2 text-xs bg-indigo-200 text-indigo-800 px-2 py-1 rounded-full animate-bounce">NFT Badge</div>
+        <div class="flex items-center gap-4">
+          <img src="badge5.png" class="w-14 h-14 animate-spin-slow" />
+          <div>
+            <h3 class="font-bold text-xl text-indigo-800">Viral Star</h3>
+            <p class="text-gray-600 text-sm">Get 1,000 views on promo video</p>
+          </div>
+        </div>
+        <div class="mt-4">
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-indigo-600 h-2 rounded-full transition-all duration-500" style="width: 30%;"></div>
+          </div>
+          <p class="text-sm mt-1 text-indigo-700">300/1,000 views</p>
+        </div>
+        <div class="mt-4 flex items-center justify-between">
+          <span class="text-sm text-green-600 font-semibold">Reward: Free NFT Frame</span>
+          <span class="text-xs text-gray-500">Status: <b class="text-red-500">Locked 🔒</b></span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <p class="text-center text-sm text-gray-400 mt-8 animate-fade-in">🚧 More NFT badge rewards dropping soon… Stay active!</p>
+  </div>
+
+
+
+</div>
+
+
+
+
+
+
+
+                                                               <!-- ✅ Globals Games -->
+
+
+<!-- ✅ Globals Games Section (hidden by default until tab is clicked) -->
+<div id="games" class="hidden tab-section max-w-3xl mx-auto px-4 pt-8 space-y-8">
+
+
+
+  <!-- Header -->
+  <h2 class="text-3xl md:text-4xl font-extrabold text-center text-blue-800 mb-6">🏆 Globals Games</h2>
+
+  <!-- Timeline Styled List -->
+  <div class="relative border-l-4 border-blue-200 space-y-8">
+
+    <!-- 🟩 Mystery Box Arena -->
+<!-- 🔥 Mystery Box Arena Card -->
+<div class="relative bg-gradient-to-br from-yellow-50 via-white to-yellow-100 rounded-2xl p-5 shadow-lg hover:shadow-l transition-transform transform hover:scale-100 cursor-pointer" onclick="showMysteryBoxGame()">
+  
+  <!-- 🔥 HOT badge -->
+  <div class="absolute top-0 left-0 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-br-2xl z-10 shadow-md">
+    🔥 HOT
+  </div>
+
+  <!-- Card Content -->
+  <h3 class="text-xl font-bold text-yellow-800 mb-2">🎁 Mystery Box</h3>
+  <p class="text-sm text-yellow-700">Pay ₦200, pick the right box & win up to ₦5,000 instantly.</p>
+  <button onclick="switchTab('mystery-box')" class="mt-auto bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-4 rounded-lg transition-all">
+    Play Now
+  </button>
+</div>
+
+
+
+     <!-- ⚡ Speed Tapper Showdown -->
+    <div class="ml-4 relative">
+      <div class="absolute -left-6 top-2 w-4 h-4 rounded-full bg-pink-500 border-4 border-white shadow-md"></div>
+      <div class="bg-white shadow-lg p-5 rounded-2xl">
+        <h3 class="text-xl font-bold text-pink-700">⚡ Speed Tapper Showdown</h3>
+        <p class="text-gray-600 text-sm mb-2">Tapping game to earn GlobalsCoin and exchange for naira. Can you beat the tap king?</p>
+        <div class="flex items-center justify-between mt-2">
+          <span class="text-sm text-gray-500">₦100 Entry</span>
+          <!-- Coming Soon Box -->
+         <div class="mt-6 flex justify-center">
+         <div class="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-6 py-3 rounded-full shadow-lg text-lg font-semibold animate-pulse">
+         	🚀 Coming Soon
+       </div>
+        </div>
+
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- 🧠 IQ Arena -->
+    <div class="ml-4 relative">
+      <div class="absolute -left-6 top-2 w-4 h-4 rounded-full bg-blue-400 border-4 border-white shadow-md"></div>
+      <div class="bg-white shadow-lg p-5 rounded-2xl">
+        <h3 class="text-xl font-bold text-blue-700">🧠 IQ Arena - Quiz</h3>
+        <p class="text-gray-600 text-sm mb-2">10 timed questions. Beat the clock, beat the leaderboard.</p>
+        <div class="flex items-center justify-between mt-2">
+          <span class="text-sm text-gray-500">₦200 Entry</span>
+          <button class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700 transition">Start Quiz</button>
+        </div>
+      </div>
+    </div>
+	
+	
+	
+
+    <!-- 👑 Task King Challenge -->
+    <div class="ml-4 relative">
+      <div class="absolute -left-6 top-2 w-4 h-4 rounded-full bg-yellow-400 border-4 border-white shadow-md"></div>
+      <div class="bg-white shadow-lg p-5 rounded-2xl">
+        <h3 class="text-xl font-bold text-yellow-700">👑 Task King Challenge</h3>
+        <p class="text-gray-600 text-sm mb-2">Top earners of the week become the King. Complete more, win more.</p>
+        <div class="flex items-center justify-between mt-2">
+          <span class="text-sm text-gray-500">₦300 Entry</span>
+          <button class="bg-yellow-500 text-white px-4 py-2 rounded-xl text-sm hover:bg-yellow-600 transition">Join Now</button>
+        </div>
+      </div>
+    </div>
+  
+
+    <!-- 🆕 Extra Game Ideas -->
+    <div class="ml-4 relative">
+      <div class="absolute -left-6 top-2 w-4 h-4 rounded-full bg-green-400 border-4 border-white shadow-md"></div>
+      <div class="bg-white shadow-lg p-5 rounded-2xl">
+        <h3 class="text-xl font-bold text-green-700">🧊 Crypto Trivia Rush</h3>
+        <p class="text-gray-600 text-sm mb-2">5 trivia rounds about crypto & tech. First correct answers get reward.</p>
+        <div class="flex items-center justify-between mt-2">
+          <span class="text-sm text-gray-500">Free</span>
+          <button class="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">Join Free</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ml-4 relative">
+      <div class="absolute -left-6 top-2 w-4 h-4 rounded-full bg-indigo-400 border-4 border-white shadow-md"></div>
+      <div class="bg-white shadow-lg p-5 rounded-2xl">
+        <h3 class="text-xl font-bold text-indigo-700">🛒 Shopping Spree Showdown</h3>
+        <p class="text-gray-600 text-sm mb-2">Pick the right item combos within 1 min. Accuracy + speed wins!</p>
+        <div class="flex items-center justify-between mt-2">
+          <span class="text-sm text-gray-500">₦150 Entry</span>
+          <button class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-indigo-700 transition">Play Game</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ml-4 relative">
+      <div class="absolute -left-6 top-2 w-4 h-4 rounded-full bg-cyan-400 border-4 border-white shadow-md"></div>
+      <div class="bg-white shadow-lg p-5 rounded-2xl">
+        <h3 class="text-xl font-bold text-cyan-700">🎨 Color Tap IQ</h3>
+        <p class="text-gray-600 text-sm mb-2">Colors flash fast. Match the pattern to win. Brain + reflex combo!</p>
+        <div class="flex items-center justify-between mt-2">
+          <span class="text-sm text-gray-500">Free</span>
+          <button class="bg-cyan-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-cyan-700 transition">Play Free</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ml-4 relative">
+      <div class="absolute -left-6 top-2 w-4 h-4 rounded-full bg-red-400 border-4 border-white shadow-md"></div>
+      <div class="bg-white shadow-lg p-5 rounded-2xl">
+        <h3 class="text-xl font-bold text-red-700">🚀 Reaction Blaster</h3>
+        <p class="text-gray-600 text-sm mb-2">Tap the light as soon as it changes. Pure reflex test. Top 5 win!</p>
+        <div class="flex items-center justify-between mt-2">
+          <span class="text-sm text-gray-500">₦100 Entry</span>
+          <button class="bg-red-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-700 transition">Try Now</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ml-4 relative">
+      <div class="absolute -left-6 top-2 w-4 h-4 rounded-full bg-gray-400 border-4 border-white shadow-md"></div>
+      <div class="bg-white shadow-lg p-5 rounded-2xl">
+        <h3 class="text-xl font-bold text-gray-700">🧮 Math Brawler</h3>
+        <p class="text-gray-600 text-sm mb-2">Fast mental math challenge. Get fastest score to rank top!</p>
+        <div class="flex items-center justify-between mt-2">
+          <span class="text-sm text-gray-500">₦200 Entry</span>
+          <button class="bg-gray-700 text-white px-4 py-2 rounded-xl text-sm hover:bg-black transition">Start Math</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+
+
+
+                               <!-- ✅ Globals Games Section --> <!-- 🎁 Mystery Box Arena UI -->
+
+
+<!-- 🎁 Mystery Box Arena -->
+<div id="mystery-box" class="tab-section hidden px-4 max-w-2xl mx-auto mt-10">
+<button onclick="activateTab('games')" class="text-blue-500 text-lg">← Mystery box</button>
+  <div class="bg-white/90 backdrop-blur-lg rounded-2xl shadow-xl p-6 relative overflow-hidden">
+    
+    <!-- Top Glow Line -->
+    <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-green-400 to-blue-500 rounded-full animate-pulse"></div>
+
+    <!-- Heading & Info -->
+    <h2 class="text-2xl font-bold text-center text-blue-900 mb-2">🎁 Mystery Box Challenge</h2>
+    <p class="text-sm text-center text-gray-600 mb-6">Pay ₦200 to unlock a box. Pick the correct one and win up to <span class="text-green-600 font-bold">₦500</span> instantly!</p>
+
+    <!-- Boxes -->
+    <div class="grid grid-cols-3 gap-4 justify-center items-center">
+      <div onclick="openBox(1)" class="mystery-box-card cursor-pointer hover:scale-110 transition-transform">
+        <img src="https://cdn-icons-png.flaticon.com/512/1041/1041916.png" alt="Box 1" class="w-20 h-20 mx-auto animate-pulse" />
+        <p class="text-center mt-2 font-medium text-gray-700">Box 1</p>
+      </div>
+      <div onclick="openBox(2)" class="mystery-box-card cursor-pointer hover:scale-110 transition-transform">
+        <img src="https://cdn-icons-png.flaticon.com/512/1041/1041916.png" alt="Box 2" class="w-20 h-20 mx-auto animate-pulse" />
+        <p class="text-center mt-2 font-medium text-gray-700">Box 2</p>
+      </div>
+      <div onclick="openBox(3)" class="mystery-box-card cursor-pointer hover:scale-110 transition-transform">
+        <img src="https://cdn-icons-png.flaticon.com/512/1041/1041916.png" alt="Box 3" class="w-20 h-20 mx-auto animate-pulse" />
+        <p class="text-center mt-2 font-medium text-gray-700">Box 3</p>
+      </div>
+    </div>
+
+    <!-- Play Button -->
+    <div class="mt-6 flex justify-center">
+      <button onclick="startMysteryBoxPlay()" class="bg-gradient-to-r from-green-500 to-blue-600 text-white font-bold px-6 py-3 rounded-xl shadow-lg hover:from-green-600 hover:to-blue-700 transition-all">
+        🚀 Play Now for ₦200
+      </button>
+    </div>
+  </div>
+
+  <!-- Result Popup -->
+  <div id="boxResultPopup" class="fixed inset-0 bg-black/60 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-2xl p-6 w-80 text-center animate-scaleIn shadow-2xl">
+      <h3 class="text-xl font-bold text-green-600 mb-2">🎉 Congratulations!</h3>
+      <p class="text-gray-700 mb-4">You picked the lucky box and won:</p>
+      <p class="text-3xl font-extrabold text-blue-800 mb-4" id="rewardAmount">₦0</p>
+      <button onclick="closeBoxPopup()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">Close</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes scaleIn {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .animate-scaleIn {
+    animation: scaleIn 0.4s ease forwards;
+  }
+</style>
+
+
+
+
+
+
+                               <!-- ✅ Globals Games Section --> <!-- 🎮 GlobalsTap Game Screen -->
+							   
+							   
+<!-- 🌩️ Globals Tap Arena -->
+<div id="globals-tap" class="tab-section hidden bg-gradient-to-br from-blue-900 via-black to-gray-900 text-white min-h-screen py-8 px-4 relative overflow-hidden">
+
+<button onclick="activateTab('games')" class="text-blue-500 text-lg">← Globals Tap</button>
+
+  <!-- Header -->
+  <h2 class="text-center text-2xl font-bold mb-6">🌟 Globals Tap</h2>
+
+  <!-- Coin Balance Box -->
+<div class="bg-gradient-to-r from-yellow-400 to-yellow-200 text-black rounded-full py-4 px-6 shadow-lg mb-6 w-60 mx-auto text-center">
+  <p class="text-sm font-semibold">Global Coins</p>
+  <h1 id="coin-count" class="text-2xl font-bold my-1">0</h1>
+  <p class="text-xs text-gray-800">₦<span id="naira-value">0.00</span></p>
+</div>
+
+  <!-- Exchange Button -->
+<div class="flex justify-center mt-4">
+  <button onclick="openExchangeModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-full shadow-md transition">
+    💱 Exchange Coins
+  </button>
+</div>
+
+<!-- Exchange Modal -->
+<div id="exchangeModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden">
+  <div class="bg-white rounded-2xl w-80 max-w-full p-6 shadow-lg relative">
+
+    <h2 class="text-lg font-semibold text-gray-800 mb-4 text-center">Exchange Global Coins</h2>
+
+    <div class="space-y-3">
+      <button onclick="exchangeCoins(1000)" class="exchange-option">1000 Coins → ₦50</button>
+      <button onclick="exchangeCoins(10000)" class="exchange-option">10,000 Coins → ₦500</button>
+      <button onclick="exchangeCoins(50000)" class="exchange-option">50,000 Coins → ₦2,500</button>
+      <button onclick="exchangeCoins(100000)" class="exchange-option">100,000 Coins → ₦5,000</button>
+      <button onclick="exchangeCoins(200000)" class="exchange-option">200,000 Coins → ₦10,000</button>
+    </div>
+
+    <button onclick="closeExchangeModal()" class="absolute top-2 right-3 text-gray-400 hover:text-red-500 text-xl">&times;</button>
+  </div>
+</div>
+
+  <!-- Tap Area -->
+<div class="flex justify-center mb-8">
+  <div onclick="handleTap()" class="tap-coin-wrapper">
+    <img src="https://i.ibb.co/GF4crzS/tapcoin.png" id="tap-coin" class="tap-coin" />
+  </div>
+</div>
+
+  <!-- Bottom Navigation Tabs -->
+  <div class="flex justify-around text-sm font-medium bg-gray-800 rounded-full py-2 px-4 mx-auto max-w-lg mb-4">
+    <button onclick="showTapSection('tasks')" class="tap-tab-btn">🧾 Tasks</button>
+    <button onclick="showTapSection('skill')" class="tap-tab-btn">🎯 Skill</button>
+    <button onclick="showTapSection('boost')" class="tap-tab-btn">⚡ Boost</button>
+    <button onclick="showTapSection('ranking')" class="tap-tab-btn">🏆 Ranking</button>
+  </div>
+
+  <!-- Tap Section Screens -->
+  <div id="tap-section-tasks" class="tap-section-content">Complete tasks to earn more boost or coins.</div>
+  <div id="tap-section-skill" class="tap-section-content hidden">Upgrade your cashout skill here.</div>
+  <div id="tap-section-boost" class="tap-section-content hidden">
+    <p>Choose a Boost Package:</p>
+    <div class="space-y-2 mt-2">
+      <div class="bg-gray-700 p-3 rounded-lg flex justify-between items-center">
+        <span>2x Boost (₦50)</span>
+        <button onclick="buyBoost(2)">Buy</button>
+      </div>
+      <div class="bg-gray-700 p-3 rounded-lg flex justify-between items-center">
+        <span>3x Boost (₦120)</span>
+        <button onclick="buyBoost(3)">Buy</button>
+      </div>
+    </div>
+  </div>
+  <div id="tap-section-ranking" class="tap-section-content hidden">
+    <p>Your Rank:</p>
+    <p class="text-xl font-bold mt-2" id="user-rank">Bronze</p>
+  </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 👥 TEAM REFERRALS SECTION -->
+<div id="team" class="tab-section hidden">
+
+<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Team</button>
+
+
+<div class="max-w-4xl mx-auto px-4 pt-6 pb-16">
+  <!-- 🔗 Referral Link -->
+  <div class="mb-6 text-center">
+    <h2 class="text-xl font-bold text-blue-700 mb-2">Your Referral Link</h2>
+    <div class="flex items-center justify-center gap-2">
+      <input id="teamRefLink" type="text" readonly class="px-3 py-2 border rounded w-full max-w-sm" />
+      <button onclick="copyTeamRefLink()" class="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700 transition">Copy</button>
+    </div>
+    <p id="teamCopyMsg" class="text-green-500 text-sm mt-1 hidden">Copied!</p>
+  </div>
+
+  <!-- 🌀 Swiper Referral Levels -->
+  <div class="swiper team-swiper">
+    <div class="swiper-wrapper">
+      <!-- 🥇 1st Level Referrals -->
+      <div class="swiper-slide bg-white rounded-xl shadow-md p-4">
+        <h3 class="text-lg font-bold text-yellow-600 mb-3">🥇 Level 1 Referrals (₦1,700)</h3>
+        <div id="level1Referrals" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Cards will be injected here -->
+        </div>
+      </div>
+
+      <!-- 🥈 2nd Level Referrals -->
+      <div class="swiper-slide bg-white rounded-xl shadow-md p-4">
+        <h3 class="text-lg font-bold text-purple-600 mb-3">🥈 Level 2 Referrals (₦500)</h3>
+        <div id="level2Referrals" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Cards will be injected here -->
+        </div>
+      </div>
+    </div>
+    <div class="swiper-pagination mt-4"></div>
+  </div>
+</div>
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+                                              
+
+
+
+                                                         <!-- ME FULL SECTION-->
+                                                         <!-- ME FULL SECTION-->
+
+                                             
+
+
+
+<div id="me" class="tab-section hidden bg-gray-50 min-h-screen">
+
+<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Me</button>
+
+  <!-- 🔝 Profile Header -->
+  <div class="relative w-24 h-24 mx-auto mt-6">
+    <img id="profilePicPreview" src="profile-placeholder.png" class="w-full h-full rounded-full object-cover border-4 border-white shadow-xl cursor-pointer" />
+    <input type="file" id="profilePicInput" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" />
+  </div>
+
+  <h2 id="profileUsername" class="text-2xl font-bold text-gray-800 text-center mt-2">@username</h2>
+
+  <!-- Me Section List -->
+  <div class="bg-white mt-6 rounded-xl mx-4 shadow-lg divide-y divide-gray-100 overflow-hidden">
+    <!-- Button Item -->
+    <button onclick="activateTab('myProfile')" class="flex justify-between items-center w-full px-5 py-4 hover:bg-gray-50 transition">
+      <div class="flex items-center gap-3">
+        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2"
+          viewBox="0 0 24 24"><path d="M5.121 17.804A13.937 13.937 0 0112 15c2.21 0 4.29.534 6.121 1.475M15 10a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span class="text-gray-800 font-medium">My Profile</span>
+      </div>
+      <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2"
+        viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+    </button>
+
+    <button onclick="activateTab('notifications')" class="flex justify-between items-center w-full px-5 py-4 hover:bg-gray-50 transition">
+      <div class="flex items-center gap-3">
+        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2"
+          viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-5-5.917V5a2 2 0 10-4 0v.083A6 6 0 004 11v3.159c0 .538-.214 1.055-.595 1.436L2 17h5m5 0v1a3 3 0 11-6 0v-1h6z"/></svg>
+        <span class="text-gray-800 font-medium">Notifications</span>
+      </div>
+      <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2"
+        viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+    </button>
+
+    <button onclick="activateTab('team')" class="flex justify-between items-center w-full px-5 py-4 hover:bg-gray-50 transition">
+      <div class="flex items-center gap-3">
+        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2"
+          viewBox="0 0 24 24"><path d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87M16 7a4 4 0 11-8 0 4 4 0 018 0zM21 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        <span class="text-gray-800 font-medium">Invite a Friend</span>
+      </div>
+      <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2"
+        viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+    </button>
+
+    <button onclick="activateTab('overview')" class="flex justify-between items-center w-full px-5 py-4 hover:bg-gray-50 transition">
+      <div class="flex items-center gap-3">
+        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2"
+          viewBox="0 0 24 24"><path d="M11 3v18M3 11h18"/></svg>
+        <span class="text-gray-800 font-medium">Overview</span>
+      </div>
+      <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2"
+        viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+    </button>
+
+    <button onclick="activateTab('aboutus')" class="flex justify-between items-center w-full px-5 py-4 hover:bg-gray-50 transition">
+      <div class="flex items-center gap-3">
+        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2"
+          viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M12 18.5C6.753 18.5 2.5 14.247 2.5 9S6.753-.5 12-.5 21.5 3.753 21.5 9 17.247 18.5 12 18.5z"/></svg>
+        <span class="text-gray-800 font-medium">About Us</span>
+      </div>
+      <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2"
+        viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+    </button>
+
+    <button onclick="activateTab('contactus')" class="flex justify-between items-center w-full px-5 py-4 hover:bg-gray-50 transition">
+      <div class="flex items-center gap-3">
+        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2"
+          viewBox="0 0 24 24"><path d="M3 5h12M9 3v2m4 0v2m2 6h5M3 15h18"/></svg>
+        <span class="text-gray-800 font-medium">Contact Us</span>
+      </div>
+      <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2"
+        viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+    </button>
+
+    <button onclick="activateTab('language')" class="flex justify-between items-center w-full px-5 py-4 hover:bg-gray-50 transition">
+      <div class="flex items-center gap-3">
+        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2"
+          viewBox="0 0 24 24"><path d="M12 20h9M12 4h9m-9 8h9M4 6h16M4 12h16M4 18h16"/></svg>
+        <span class="text-gray-800 font-medium">Language</span>
+      </div>
+      <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2"
+        viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+    </button>
+  </div>
+
+  <!-- Logout Button -->
+  <div class="mt-8 px-6 pb-10">
+    <button id="logoutBtn" class="w-full bg-red-600 text-white py-3 rounded-xl font-semibold text-base hover:bg-red-700 transition">
+      Logout
+    </button>
+  </div>
+</div>
+
+
+                                               <!-- ME FULL SECTION--> <!-- MY PROFILE INNER SCREEN SECTION-->
+
+
+
+
+
+<!-- 🔐 My Profile Inner Screen -->
+<div id="myProfile" class="tab-section hidden px-4 pt-8 pb-16 min-h-screen bg-gradient-to-b from-sky-50 via-white to-indigo-50">
+<button onclick="activateTab('me')" class="text-blue-500 text-sm">← Back</button>
+  <div class="max-w-xl mx-auto bg-white/80 backdrop-blur-xl shadow-2xl rounded-3xl p-6 space-y-6">
+    
+    <!-- Profile Photo -->
+    <div class="text-center">
+      <label for="profilePicUpload" class="cursor-pointer inline-block group">
+        <img id="profilePicPreview" src="profile-placeholder.png"
+          class="w-28 h-28 mx-auto rounded-full border-4 border-sky-500 shadow-lg object-cover transition-transform group-hover:scale-105" />
+        <p class="text-xs text-sky-600 mt-2">Tap to change photo</p>
+      </label>
+      <input type="file" id="profilePicUpload" accept="image/*" class="hidden" />
+    </div>
+
+    <!-- Profile Fields -->
+    <div class="space-y-4 text-gray-800">
+      <div>
+        <label class="flex items-center gap-2 text-sm font-medium"><svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 12H8m0 0l4-4m-4 4l4 4"/></svg> User ID</label>
+        <input id="userId" type="text" disabled class="input bg-gray-100 text-sm" />
+      </div>
+
+      <div>
+        <label class="flex items-center gap-2 text-sm font-medium"><svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5.121 17.804A3 3 0 017 17h10a3 3 0 012.828 2.121"/></svg> Full Name</label>
+        <input id="fullName" type="text" class="input" placeholder="Enter full name" />
+      </div>
+
+      <div>
+        <label class="flex items-center gap-2 text-sm font-medium"><svg class="w-4 h-4 text-fuchsia-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h7"/></svg> Username</label>
+        <input id="editUsername" type="text" class="input" />
+      </div>
+
+      <div>
+        <label class="flex items-center gap-2 text-sm font-medium"><svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 12H8m0 0l4-4m-4 4l4 4"/></svg> Email</label>
+        <input id="editEmail" type="email" class="input" />
+      </div>
+
+      <div>
+        <label class="flex items-center gap-2 text-sm font-medium"><svg class="w-4 h-4 text-pink-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 5h18M3 12h18M3 19h18"/></svg> Phone Number</label>
+        <input id="phoneNumber" type="tel" class="input" placeholder="Enter phone number" />
+      </div>
+
+      <div>
+        <label class="flex items-center gap-2 text-sm font-medium"><svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 10h11m4 0h3m-8 4h8"/></svg> Referral Link</label>
+        <input id="refLinkDisplay" type="text" class="input bg-gray-100" disabled />
+      </div>
+
+      <div>
+        <label class="flex items-center gap-2 text-sm font-medium"><svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3h8v4m-5 4h2v5h-2z"/></svg> Joined</label>
+        <input id="joinDate" type="text" class="input bg-gray-100" disabled />
+      </div>
+    </div>
+
+    <button onclick="saveProfile()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition">💾 Save Changes</button>
+  </div>
+</div>
+
+
+
+
+
+<!-- 📊 OVERVIEW SECTION -->
+<div id="overview" class="tab-section hidden px-4 pt-8 pb-16 min-h-screen bg-gradient-to-br from-sky-50 via-white to-indigo-50">
+<button onclick="activateTab('me')" class="text-blue-500 text-sm">← Back</button>
+  <div class="text-center">
+    <h2 class="text-3xl font-extrabold text-blue-800">📊 Your Analytics</h2>
+    <p class="text-sm text-gray-500 mt-1">Track your weekly activity and earnings in real-time</p>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-3 gap-4 mt-6 text-center">
+    <div class="bg-white shadow-lg rounded-xl p-4">
+      <h3 class="text-xs text-gray-500">Total Earnings</h3>
+      <p class="text-lg font-bold text-green-600">₦20,000</p>
+    </div>
+    <div class="bg-white shadow-lg rounded-xl p-4">
+      <h3 class="text-xs text-gray-500">Tasks Completed</h3>
+      <p class="text-lg font-bold text-blue-600">26</p>
+    </div>
+    <div class="bg-white shadow-lg rounded-xl p-4">
+      <h3 class="text-xs text-gray-500">Referrals</h3>
+      <p class="text-lg font-bold text-purple-600">12</p>
+    </div>
+  </div>
+
+  <!-- Charts Section -->
+  <div class="mt-8 space-y-6">
+    <div class="bg-white p-4 rounded-2xl shadow-xl">
+      <h4 class="text-sm font-semibold text-blue-700 mb-2">📈 Weekly Earnings</h4>
+      <canvas id="earningsChart" height="100"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded-2xl shadow-xl">
+      <h4 class="text-sm font-semibold text-purple-700 mb-2">💰 Earnings Distribution</h4>
+      <canvas id="pieChart" height="100"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded-2xl shadow-xl">
+      <h4 class="text-sm font-semibold text-green-700 mb-2">📊 Task Performance</h4>
+      <canvas id="barChart" height="100"></canvas>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+                                                <!-- ME FULL SECTION-->  <!-- 🌐 About Us Section -->
+
+
+
+<div id="aboutus" class="tab-section hidden min-h-screen bg-gray-50">
+<button onclick="activateTab('me')" class="text-blue-500 text-sm">← About Us</button>
+
+  
+  <!-- Title -->
+  <div class="text-center mt-6">
+    <h3 class="text-2xl font-bold text-blue-800">About Us</h3>
+    <p class="text-sm text-gray-600 mt-1">Learn more about how we protect and guide you.</p>
+  </div>
+
+  <!-- Options -->
+  <div class="mt-8 space-y-4 px-4">
+
+    <!-- Terms and Conditions -->
+    <div onclick="activateTab('termsScreen')" class="flex items-center justify-between bg-white p-4 rounded-xl shadow hover:shadow-md transition cursor-pointer">
+	
+      <div class="flex items-center gap-3">
+        <span class="text-blue-600 text-xl">📜</span>
+        <span class="text-base font-semibold text-gray-800">Terms and Conditions</span>
+      </div>
+      <span class="text-blue-600 text-xl">›</span>
+    </div>
+
+    <!-- Privacy Policy -->
+    <div onclick="activateTab('privacyScreen')" class="flex items-center justify-between bg-white p-4 rounded-xl shadow hover:shadow-md transition cursor-pointer">
+      <div class="flex items-center gap-3">
+        <span class="text-blue-600 text-xl">🔒</span>
+        <span class="text-base font-semibold text-gray-800">Privacy Policy</span>
+      </div>
+      <span class="text-blue-600 text-xl">›</span>
+    </div>
+  </div>
+
+</div>
+
+
+
+
+
+
+
+                                                     <!-- ME FULL SECTION-->  <!-- 🌐 About Us Section -->                                                                          
+                                                              <!-- 📜 Terms & Conditions Screen -->
+
+
+<div id="termsScreen" class="tab-section hidden min-h-screen bg-white flex flex-col">
+<button onclick="activateTab('aboutus')" class="text-blue-500 text-lg">← Terms & Condition</button>
+
+  <!-- Scrollable Content -->
+  <div class="overflow-y-auto px-5 py-6 space-y-4 text-sm text-gray-700 leading-relaxed">
+    <h2 class="text-lg font-bold text-blue-800">1. Introduction</h2>
+    <p>By accessing Globals, you agree to be bound by our terms and conditions. Please read them carefully.</p>
+
+    <h2 class="text-lg font-bold text-blue-800">2. User Responsibilities</h2>
+    <p>You are responsible for maintaining the confidentiality of your account. All actions made from your account are your responsibility.</p>
+
+    <h2 class="text-lg font-bold text-blue-800">3. Use of Services</h2>
+    <p>Globals offers earning opportunities through referrals, tasks, and more. Misuse or abuse of the system will lead to termination.</p>
+
+    <h2 class="text-lg font-bold text-blue-800">4. Payments</h2>
+    <p>Payouts are subject to approval and system rules. Fraudulent activity will result in account suspension without notice.</p>
+
+    <h2 class="text-lg font-bold text-blue-800">5. Account Suspension</h2>
+    <p>We reserve the right to suspend any account that violates our rules, policies, or engages in abuse.</p>
+
+    <h2 class="text-lg font-bold text-blue-800">6. Content Ownership</h2>
+    <p>All logos, content, and systems are owned by Globals and must not be copied, reproduced, or reused without permission.</p>
+
+    <h2 class="text-lg font-bold text-blue-800">7. Modifications</h2>
+    <p>Globals may revise these terms at any time. Your continued use of the platform signifies your acceptance of those changes.</p>
+
+    <h2 class="text-lg font-bold text-blue-800">8. Contact</h2>
+    <p>For any questions regarding these terms, reach out to our support team via the “Contact Us” section.</p>
+  </div>
+</div>
+
+
+
+
+
+
+
+                                                     <!-- ME FULL SECTION-->  <!-- 🌐 About Us Section -->                                                                            
+                                                               <!-- 🔒 Privacy Policy Screen --> 
+                                                                            
+                                                              
+
+
+
+
+<div id="privacyScreen" class="tab-section hidden min-h-screen bg-white flex flex-col">
+<button onclick="activateTab('aboutus')" class="text-blue-500 text-lg">← Privacy Policy</button>
+
+  
+
+  <!-- Scrollable Content -->
+  <div class="overflow-y-auto px-5 py-6 space-y-4 text-sm text-gray-700 leading-relaxed">
+    <h2 class="text-lg font-bold text-blue-800">1. Data Collection</h2>
+    <p>We collect information you provide during registration, such as email, username, and referral data.</p>
+
+    <h2 class="text-lg font-bold text-blue-800">2. Data Usage</h2>
+    <p>Your information is used solely to personalize your experience, provide services, and improve our platform.</p>
+
+    <h2 class="text-lg font-bold text-blue-800">3. Data Protection</h2>
+    <p>We implement strong security measures to keep your data safe. Firebase Authentication and Firestore manage access securely.</p>
+
+    <h2 class="text-lg font-bold text-blue-800">4. Cookies</h2>
+    <p>We may use cookies to improve user experience. You can control cookie settings in your browser.</p>
+
+    <h2 class="text-lg font-bold text-blue-800">5. Third-Party Access</h2>
+    <p>Your data is not shared with third parties unless required by law or necessary to provide services.</p>
+
+    <h2 class="text-lg font-bold text-blue-800">6. User Control</h2>
+    <p>You can update or delete your personal info via the “Me” section. Contact support if you need help.</p>
+
+    <h2 class="text-lg font-bold text-blue-800">7. Changes</h2>
+    <p>We may update this policy. Changes will be posted on this screen, and your continued use signifies acceptance.</p>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+                                                          <!-- 🌐 Language Screen -->
+
+
+
+<div id="language" class="tab-section hidden px-4 py-6 min-h-screen bg-white">
+<button onclick="activateTab('me')" class="text-blue-500 text-sm">← Back</button>
+  <div class="flex items-center gap-3 mb-6">
+    <button onclick="activateTab('me')" class="text-blue-600 text-lg font-semibold">←</button>
+    <h2 class="text-xl font-bold text-blue-800">Languages</h2>
+  </div>
+
+  <div class="space-y-4">
+    <button onclick="selectLanguage('English')" class="language-option">🇬🇧 English</button>
+    <button onclick="selectLanguage('French')" class="language-option">🇫🇷 French</button>
+    <button onclick="selectLanguage('Yoruba')" class="language-option">🇳🇬 Yoruba</button>
+    <button onclick="selectLanguage('Hausa')" class="language-option">🇳🇬 Hausa</button>
+    <button onclick="selectLanguage('Igbo')" class="language-option">🇳🇬 Igbo</button>
+    <button onclick="selectLanguage('Swahili')" class="language-option">🇰🇪 Swahili</button>
+  </div>
+
+  <p class="mt-8 text-center text-gray-500 text-sm" id="selectedLanguageNotice">
+    You are currently using: <span class="font-semibold text-blue-600" id="currentLanguage">English</span>
+  </p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                        
+
+
+
+
+
+
+
+
+
+
+                                                                <!-- GLOBALS AI Help Center Section -->
+
+
+<div id="aiHelpCenter" class="tab-section hidden bg-gray-50 min-h-screen flex flex-col">
+
+<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← customer support</button>
+
+  <!-- Header -->
+  <div class="p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-xl">
+    🤖 AI Help Center
+  </div>
+
+  <!-- Categories -->
+  <div class="grid grid-cols-2 gap-4 p-4">
+    <button onclick="openAiTopic('aiContent')" class="bg-white shadow-md rounded-xl p-4 text-left hover:bg-blue-300 transition">
+      🧠 AI Content
+    </button>
+    <button onclick="openAiTopic('paymentHelp')" class="bg-white shadow-md rounded-xl p-4 text-left hover:bg-blue-300 transition">
+      💵 Payment Steps
+    </button>
+    <button onclick="openAiTopic('withdrawalHelp')" class="bg-white shadow-md rounded-xl p-4 text-left hover:bg-blue-300 transition">
+      🏧 Withdrawal Steps
+    </button>
+    <button onclick="openAiTopic('taskHelp')" class="bg-white shadow-md rounded-xl p-4 text-left hover:bg-blue-300 transition">
+      ✅ Task Guide
+    </button>
+    <button onclick="openAiTopic('ebookHelp')" class="bg-white shadow-md rounded-xl p-4 text-left hover:bg-blue-300 transition">
+      📚 Buy eBook Steps
+    </button>
+    <button onclick="openAiTopic('chat')" class="bg-white shadow-md rounded-xl p-4 text-left hover:bg-blue-300 transition">
+      💬 Start Conversation
+    </button>
+  </div>
+
+  <!-- Conversation Area -->
+  <div id="chatContainer" class="flex-1 p-4 overflow-y-auto hidden">
+    <div id="chatMessages" class="space-y-3 text-sm text-gray-800"></div>
+
+    <div class="flex mt-4">
+      <input id="userMessage" type="text" class="flex-1 p-3 rounded-l-lg border border-gray-300 focus:outline-none" placeholder="Ask me anything..." />
+      <button onclick="sendMessage()" class="bg-blue-600 text-white px-4 rounded-r-lg hover:bg-blue-700">Send</button>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<footer class="text-center text-sm text-gray-400 py-6">
+  &copy; 2025 Globals • All rights reserved
+</footer>
+
+
+
+
+ <!-- 🌟 Bottom Navbar -->
+
+<!-- ✅ Bottom Navbar -->
+<div id="bottomNavbar" class="fixed bottom-0 w-full z-10 bg-white border-t border-gray-200 shadow-xl">
+  <nav class="flex justify-around items-center py-1 px-2 bg-white rounded-t-2xl">
+    
+    <!-- Dashboard -->
+    <button id="nav-dashboard" onclick="activateTab('dashboard')" class="nav-btn flex flex-col items-center text-gray-600 hover:text-blue-600 transition">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10l9-7 9 7v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+      </svg>
+      <span class="text-xs">Dashboard</span>
+    </button>
+
+   
+
+    <!-- Transaction -->
+    <button id="nav-transaction" onclick="activateTab('transaction')" class="nav-btn flex flex-col items-center text-gray-600 hover:text-blue-600 transition">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>
+      </svg>
+      <span class="text-xs">Transaction</span>
+    </button>
+	
+	
+	
+	
+	
+	
+
+    <!-- Games -->
+    <button id="nav-games" onclick="activateTab('games')" class="nav-btn flex flex-col items-center text-gray-600 hover:text-blue-600 transition">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L4.5 12.75 9.75 8.5m4.5 8.5L19.5 12.75 14.25 8.5"/>
+      </svg>
+      <span class="text-xs">Games</span>
+    </button>
+
+  </nav>
+</div>
+
+
+
+
+
+
+
+<!-- 🔌 Firebase & Logic -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="main.js"></script>
+
+</body>
+</html>
