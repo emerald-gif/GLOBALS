@@ -655,7 +655,7 @@ async function loadAffiliateJobs() {
         <img class="job-image" src="${job.campaignLogoURL || 'default.jpg'}" alt="${job.title}">
         <div class="job-body">
           <div class="job-title">${job.title}</div>
-          <div class="job-price">$${job.workerPay}</div>
+          <div class="job-price">₦${job.workerPay}</div>
           <div class="job-progress">${progressText}</div>
           <a href="/view-job.html?id=${jobId}" class="view-btn">View Job</a>
         </div>
@@ -2001,4 +2001,5 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
