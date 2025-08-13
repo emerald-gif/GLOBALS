@@ -43,7 +43,7 @@ tabBtns.forEach((btn) => {
 
 
 
-'use strict';
+
 
 //Enabling Mobile Menu
 
@@ -2031,6 +2031,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
