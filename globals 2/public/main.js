@@ -729,7 +729,7 @@ function renderAffiliateCard({ id, job, approvedCount }) {
       </p>
 
       <div class="mt-1">
-        <div class="flex justify-between text-[10px] text-gray-500 mb-1">
+        <div class="flex justify-between text-xs text-gray-500 mb-1">
           <span>${approvedCount}/${total} workers</span>
           <span>${percent}%</span>
         </div>
@@ -2246,5 +2246,6 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
