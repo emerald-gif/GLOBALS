@@ -766,120 +766,126 @@ affiliateTasksContainer.addEventListener("click", (e) => {
   if (job) showAffiliateJobDetails(id, job);
 });
 
-// ---- Details overlay with robust collapsible instructions ----
+// --- Replace your existing showAffiliateJobDetails with this (keeps your styles/collapsible logic) ---
 function showAffiliateJobDetails(jobId, jobData) {
   ensureDetailStyles();
+  const detailsSection = ensureDetailScreen();
 
-  const overlay = document.createElement("div");
-  overlay.className = "aff-overlay";
+  // hide the grid, show the details "screen"
+  if (affiliateTasksContainer) affiliateTasksContainer.style.display = "none";
+  detailsSection.style.display = "block";
 
-  overlay.innerHTML = `
-    <div class="aff-sheet relative">
-      <button class="aff-close" aria-label="Close">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-        </svg>
+  // Safe escaped values are used (you already have escapeHtml)
+  detailsSection.innerHTML = `
+    <div class="max-w-2xl mx-auto">
+      <button class="aff-close mt-4 mb-4 inline-flex items-center gap-2 text-blue-700 font-semibold">
+        ← Back to jobs
       </button>
 
-      <div class="aff-head">
-        <div class="flex items-center gap-3">
-          <div class="w-11 h-11 rounded-xl overflow-hidden ring-1 ring-white/30 bg-white/20 backdrop-blur">
-            <img src="${jobData.campaignLogoURL || jobData.screenshotURL || 'https://via.placeholder.com/96'}"
-                 class="w-full h-full object-cover" alt="">
-          </div>
-          <div>
-            <h1 class="text-xl font-bold leading-tight">${escapeHtml(jobData.title || "Affiliate Job")}</h1>
-            <p class="text-xs opacity-90">${escapeHtml(jobData.category || "Affiliate Campaign")}</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="p-6 space-y-6">
-        <div class="grid grid-cols-2 gap-4">
-          <div class="p-4 rounded-xl border border-gray-100">
-            <div class="text-[11px] text-gray-500">Worker Pay</div>
-            <div class="text-2xl font-extrabold text-gray-900">₦${jobData.workerPay || 0}</div>
-          </div>
-          <div class="p-4 rounded-xl border border-gray-100">
-            <div class="text-[11px] text-gray-500">Total Workers</div>
-            <div class="text-2xl font-extrabold text-gray-900">${jobData.numWorkers || 0}</div>
+      <div class="aff-sheet relative overflow-hidden">
+        <div class="aff-head">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl overflow-hidden ring-1 ring-white/30 bg-white/20 backdrop-blur">
+              <img src="${jobData.campaignLogoURL || jobData.screenshotURL || 'https://via.placeholder.com/96'}"
+                   class="w-full h-full object-cover" alt="">
+            </div>
+            <div>
+              <h3 class="text-lg font-bold leading-tight">${escapeHtml(jobData.title || "Affiliate Job")}</h3>
+              <p class="text-xs opacity-90">${escapeHtml(jobData.category || "Affiliate Campaign")}</p>
+            </div>
           </div>
         </div>
 
-        <div class="rounded-xl border border-gray-100 p-4">
-          <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-gray-800">Instructions</h2>
-            <button id="toggleInstr" class="inline-flex items-center gap-1 text-sm font-medium text-blue-700">
-              <span>Show more</span>
-              <svg class="w-4 h-4 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-              </svg>
-            </button>
+        <div class="p-6 space-y-6">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="p-4 rounded-xl border border-gray-100">
+              <div class="text-[11px] text-gray-500">Worker Pay</div>
+              <div class="text-2xl font-extrabold text-gray-900">₦${jobData.workerPay || 0}</div>
+            </div>
+            <div class="p-4 rounded-xl border border-gray-100">
+              <div class="text-[11px] text-gray-500">Total Workers</div>
+              <div class="text-2xl font-extrabold text-gray-900">${jobData.numWorkers || 0}</div>
+            </div>
           </div>
-          <div id="instructionsPanel" class="collapsible is-collapsed text-[15px] leading-relaxed text-gray-700 mt-2">
-            ${escapeHtml(jobData.instructions || "No instructions provided")}
-            <div class="fade-edge"></div>
+
+          <div class="rounded-xl border border-gray-100 p-4">
+            <div class="flex items-center justify-between">
+              <h2 class="font-semibold text-gray-800">Instructions</h2>
+              <button id="toggleInstr" class="inline-flex items-center gap-1 text-sm font-medium text-blue-700">
+                <span>Show more</span>
+                <svg class="w-4 h-4 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+              </button>
+            </div>
+            <div id="instructionsPanel" class="collapsible is-collapsed text-[15px] leading-relaxed text-gray-700 mt-2">
+              ${escapeHtml(jobData.instructions || "No instructions provided")}
+              <div class="fade-edge"></div>
+            </div>
           </div>
-        </div>
 
-        <div class="rounded-xl border border-gray-100 p-4">
-          <h2 class="font-semibold text-gray-800 mb-1">Target Link</h2>
-          ${
-            jobData.targetLink
-              ? `<a href="${jobData.targetLink}" target="_blank" class="text-blue-700 underline break-all">${escapeHtml(jobData.targetLink)}</a>`
-              : `<p class="text-gray-500 text-sm">No link provided</p>`
-          }
-        </div>
+          <div class="rounded-xl border border-gray-100 p-4">
+            <h2 class="font-semibold text-gray-800 mb-1">Target Link</h2>
+            ${
+              jobData.targetLink
+                ? `<a href="${jobData.targetLink}" target="_blank" class="text-blue-700 underline break-all">${escapeHtml(jobData.targetLink)}</a>`
+                : `<p class="text-gray-500 text-sm">No link provided</p>`
+            }
+          </div>
 
-        <div class="rounded-xl border border-gray-100 p-4">
-          <h2 class="font-semibold text-gray-800 mb-1">Proof Required</h2>
-          <p class="text-gray-700 text-sm">${escapeHtml(jobData.proofRequired || "Proof details not provided")}</p>
-        </div>
+          <div class="rounded-xl border border-gray-100 p-4">
+            <h2 class="font-semibold text-gray-800 mb-1">Proof Required</h2>
+            <p class="text-gray-700 text-sm">${escapeHtml(jobData.proofRequired || "Proof details not provided")}</p>
+          </div>
 
-        <button class="btn-primary w-full">Submit Task</button>
+          <button class="btn-primary w-full">Submit Task</button>
+        </div>
       </div>
     </div>
   `;
 
-  document.body.appendChild(overlay);
+  // Back button returns to the list (same section)
+  const backBtn = detailsSection.querySelector(".aff-close");
+  if (backBtn) {
+    backBtn.addEventListener("click", () => {
+      // hide and clean details screen
+      detailsSection.style.display = "none";
+      detailsSection.innerHTML = "";
+      if (affiliateTasksContainer) {
+        affiliateTasksContainer.style.display = "";
+        // scroll user to top of the affiliate grid smoothly
+        try { affiliateTasksContainer.scrollIntoView({ behavior: "smooth", block: "start" }); } catch(e) {}
+      }
+    });
+  }
 
-  // Close handlers
-  overlay.querySelector(".aff-close").addEventListener("click", () => overlay.remove());
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) overlay.remove();
-  });
+  // Collapsible toggle (safe-guarded)
+  const panel = detailsSection.querySelector("#instructionsPanel");
+  const toggle = detailsSection.querySelector("#toggleInstr");
+  if (toggle && panel) {
+    const label = toggle.querySelector("span");
+    const icon = toggle.querySelector("svg");
 
-  // Collapsible toggle (smooth, cross-browser)
-  const panel = overlay.querySelector("#instructionsPanel");
-  const toggle = overlay.querySelector("#toggleInstr");
-  const label = toggle.querySelector("span");
-  const icon = toggle.querySelector("svg");
-
-  toggle.addEventListener("click", () => {
-    const collapsed = panel.classList.contains("is-collapsed");
-    if (collapsed) {
-      // Expand: animate from current to auto
-      panel.style.maxHeight = panel.scrollHeight + "px";
-      panel.classList.remove("is-collapsed");
-      label.textContent = "Show less";
-      icon.style.transform = "rotate(180deg)";
-      // clean inline after transition
-      setTimeout(() => { panel.style.maxHeight = ""; }, 320);
-    } else {
-      // Collapse: set explicit height first so transition can run
-      panel.style.maxHeight = panel.scrollHeight + "px";
-      // next frame apply collapsed class (which sets max-height to ~4 lines)
-      requestAnimationFrame(() => {
-        panel.classList.add("is-collapsed");
-        // remove inline after frame so CSS class value takes over
-        requestAnimationFrame(() => { panel.style.maxHeight = ""; });
-      });
-      label.textContent = "Show more";
-      icon.style.transform = "rotate(0deg)";
-    }
-  });
+    toggle.addEventListener("click", () => {
+      const collapsed = panel.classList.contains("is-collapsed");
+      if (collapsed) {
+        panel.style.maxHeight = panel.scrollHeight + "px";
+        panel.classList.remove("is-collapsed");
+        if (label) label.textContent = "Show less";
+        if (icon) icon.style.transform = "rotate(180deg)";
+        setTimeout(() => { panel.style.maxHeight = ""; }, 320);
+      } else {
+        panel.style.maxHeight = panel.scrollHeight + "px";
+        requestAnimationFrame(() => {
+          panel.classList.add("is-collapsed");
+          requestAnimationFrame(() => { panel.style.maxHeight = ""; });
+        });
+        if (label) label.textContent = "Show more";
+        if (icon) icon.style.transform = "rotate(0deg)";
+      }
+    });
+  }
 }
-
 
 
 
@@ -2210,5 +2216,6 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
