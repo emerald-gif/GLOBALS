@@ -705,38 +705,47 @@ function renderAffiliateCard({ id, job, approvedCount }) {
   const percent = total ? Math.min(100, Math.round((approvedCount / total) * 100)) : 0;
 
   const card = document.createElement("div");
-  card.className = "aff-card p-4 flex flex-col w-[calc(50%-0.5rem)]"; // two per row
+  card.className = `
+    aff-card flex flex-col w-[calc(50%-0.5rem)] rounded-2xl overflow-hidden shadow-md bg-white
+  `;
+
   card.innerHTML = `
-    <div class="flex items-center gap-4">
-      <img src="${job.campaignLogoURL || job.screenshotURL || 'https://via.placeholder.com/150'}"
+    <!-- Top Image -->
+    <div class="h-32 w-full overflow-hidden">
+      <img src="${job.campaignLogoURL || job.screenshotURL || 'https://via.placeholder.com/300x200'}"
            alt="${escapeHtml(job.title)}"
-           class="w-24 h-24 rounded-xl object-cover ring-1 ring-gray-200" />
-      <div class="flex-1 min-w-0">
-        <h3 class="text-base font-semibold text-gray-900 line-clamp-2">
-          ${escapeHtml(job.title || "Untitled")}
-        </h3>
-      </div>
+           class="w-full h-full object-cover" />
     </div>
 
-    <!-- Pay above progress bar -->
-    <p class="text-[11px] text-blue-600 font-medium mt-2">
-      Pay: ₦${job.workerPay || 0}
-    </p>
+    <!-- Card Content -->
+    <div class="p-3 flex flex-col flex-1">
+      <h3 class="text-sm font-semibold text-gray-900 line-clamp-2">
+        ${escapeHtml(job.title || "Untitled")}
+      </h3>
 
-    <div class="mt-1">
-      <div class="flex justify-between text-xs text-gray-500 mb-1">
-        <span>${approvedCount}/${total} workers</span>
-        <span>${percent}%</span>
-      </div>
-      <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-        <div class="grad-bar" style="width:${percent}%;"></div>
-      </div>
-    </div>
+      <!-- Pay above progress -->
+      <p class="text-[11px] text-blue-600 font-medium mt-1">
+        Pay: ₦${job.workerPay || 0}
+      </p>
 
-    <div>
-      <button class="view-job-btn btn-primary w-full mt-3" data-id="${id}">View Job</button>
+      <div class="mt-1">
+        <div class="flex justify-between text-[10px] text-gray-500 mb-1">
+          <span>${approvedCount}/${total} workers</span>
+          <span>${percent}%</span>
+        </div>
+        <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div class="grad-bar" style="width:${percent}%;"></div>
+        </div>
+      </div>
+
+      <!-- View Job -->
+      <button class="view-job-btn mt-3 py-1 px-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              data-id="${id}">
+        View Job
+      </button>
     </div>
   `;
+
   return card;
 }
 
@@ -2237,4 +2246,5 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
