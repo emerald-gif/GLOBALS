@@ -675,6 +675,27 @@ function ensureDetailStyles() {
   document.head.appendChild(style);
 }
 
+
+
+// --- Add this helper near the top of your affiliate script ---
+function ensureDetailScreen() {
+  // returns an existing #affiliate-detail-screen or creates it
+  let el = document.getElementById("affiliate-detail-screen");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "affiliate-detail-screen";
+    el.style.display = "none";
+    // Put it immediately after the affiliateTasksContainer if available
+    if (typeof affiliateTasksContainer !== "undefined" && affiliateTasksContainer && affiliateTasksContainer.parentNode) {
+      affiliateTasksContainer.parentNode.insertBefore(el, affiliateTasksContainer.nextSibling);
+    } else {
+      document.body.appendChild(el);
+    }
+  }
+  return el;
+}
+
+
 // ---- Card rendering + live data ----
 const affiliateTasksContainer = document.getElementById("affiliate-tasks");
 const jobCache = new Map(); // id -> jobData
@@ -2216,6 +2237,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
