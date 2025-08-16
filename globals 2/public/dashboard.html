@@ -17,36 +17,41 @@
 
 
 <!-- ✅ Top Navbar -->
+<!-- ✅ Top Navbar -->
 <div id="topNavbar" class="bg-white shadow-md px-4 py-3 flex justify-between items-center sticky top-0 z-10">
+  
   <!-- LEFT SIDE -->
-  <div class="flex items-center gap-2">
-    <!-- 📱 Hamburger Menu Toggle -->
+  <div class="flex items-center gap-3">
+    <!-- 📱 Modern Hamburger Menu -->
     <button id="hamburgerBtn" class="text-2xl focus:outline-none">
-      <svg id="hamburgerIcon" xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M6 12h12M9 18h6" />
       </svg>
     </button>
-	
-	 <span class="text-gray-800 text-sm font-medium">Welcome Back</span>
+
+    <!-- 👋 Hello + Username -->
+    <div class="flex flex-col leading-tight">
+      <span class="flex items-center text-gray-800 font-semibold text-sm">
+        Hello 👋
+      </span>
+      <span id="navbarUsername" class="text-gray-600 text-xs">Loading...</span>
+    </div>
   </div>
 
   <!-- RIGHT SIDE -->
   <div class="flex items-center gap-4">
     
-    
-   
-
-    <!-- AI Chat -->
+    <!-- AI Chat (Headphone Icon) -->
     <button onclick="activateTab('aiHelpCenter')" class="text-gray-700 hover:text-blue-600 transition">
       <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 18v-6a9 9 0 1118 0v6a3 3 0 01-3 3h-1v-4h-2v4H9v-4H7v4H6a3 3 0 01-3-3z" />
       </svg>
     </button>
 
-    <!-- Notifications -->
+    <!-- Notifications (Modern Bell) -->
     <button onclick="activateTab('notifications')" class="relative text-gray-700 hover:text-blue-600 transition">
       <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 00-4 0v.341C8.67 6.165 8 7.388 8 8.75v5.408a2.032 2.032 0 01-.595 1.437L6 17h5"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-9.33-4.918A6 6 0 006 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
       </svg>
       <span class="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full animate-pulse">3</span>
     </button>
@@ -2629,6 +2634,7 @@
 </body>
 
 </html>
+
 
 
 
