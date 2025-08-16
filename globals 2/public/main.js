@@ -947,12 +947,12 @@ db.collection("adminJobs").orderBy("postedAt", "desc").limit(5)
       slide.className = "swiper-slide"; // width comes from .job-card CSS
 
       slide.innerHTML = `
-        <div class="job-card shadow-md relative h-56">
-          <img src="${job.campaignLogoURL || 'https://via.placeholder.com/800x400'}"
+        <div class="job-card shadow-md relative h-46">
+          <img src="${job.campaignLogoURL || 'https://via.placeholder.com/700x400'}"
                class="w-full h-full object-cover" />
 
           <!-- Bottom overlay -->
-          <div class="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-3">
+          <div class="absolute bottom-0 left-0 right-0 bg-black/50 text-black p-3">
             <div class="font-bold text-sm">${job.title || ''}</div>
 
             <div class="mt-2 pr-20 flex items-center">
@@ -2320,6 +2320,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
