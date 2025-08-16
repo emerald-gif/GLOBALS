@@ -53,75 +53,91 @@
   </div>
 </div>
 
+
+	
 <!-- 📱 Slide-out Sidebar -->
-<div id="sidebar" class="fixed top-0 left-0 w-64 h-full bg-white shadow-lg transform -translate-x-full transition-transform duration-300 z-50">
-  <div class="p-4 border-b flex items-center space-x-3">
+<div id="sidebar" class="fixed top-0 left-0 w-64 h-full bg-white shadow-lg transform -translate-x-full transition-transform duration-300 z-50 flex flex-col">
+
+  <!-- Profile Section -->
+  <div class="p-6 border-b flex flex-col items-center text-center">
     <!-- Profile Picture -->
-    <img id="profilePicPreview" src="profile-placeholder.png" class="w-12 h-12 rounded-full border object-cover" />
+    <img id="profilePicPreview" src="profile-placeholder.png" 
+         class="w-20 h-20 rounded-full border object-cover mb-3" />
 
     <!-- User Info -->
     <div>
-      <div id="userFullName" class="font-bold text-base">Loading...</div>
-      <div id="userEmail" class="text-sm text-gray-500">Loading...</div>
+      <div id="userFullName" class="font-bold text-lg text-gray-800">Loading...</div>
+      <div id="userEmail" class="text-sm text-blue-600">@loading</div>
     </div>
   </div>
-</div>
-	
-    <!-- Navigation Links with Icons -->
-	
-	
-	
-	<li><a href="#" onclick="switchTab('me'); activeTab(this)" class="flex items-center gap-3 hover:bg-gray-100 px-4 py-2 rounded-lg">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A4 4 0 017 15h10a4 4 0 011.879.804M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-      </svg> My Profile</a></li>
-	
-    <li><a href="#" onclick="switchTab('postTaskSection'); activeTab(this)" class="flex items-center gap-3 hover:bg-gray-100 px-4 py-2 rounded-lg">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path d="M3 12l2-2m0 0l7-7 7 7M13 5v6h6m4 4v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6" />
-      </svg> Post Task Job</a></li>
-	  
-    <li><a href="#" onclick="switchTab('afffiliateJobFormSection'); activeTab(this)" class="flex items-center gap-3 hover:bg-gray-100 px-4 py-2 rounded-lg">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path d="M12 8c-2.21 0-4 1.79-4 4 0 2.21 1.79 4 4 4s4-1.79 4-4M5 20h14a2 2 0 002-2v-4H3v4a2 2 0 002 2zM3 8h18" />
-      </svg> Post Affiliate Job</a></li>
-	  
-    <li><a href="#" onclick="switchTab('payment'); activeTab(this)" class="flex items-center gap-3 hover:bg-gray-100 px-4 py-2 rounded-lg">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a4 4 0 00-8 0v2m8 0a4 4 0 01-8 0m8 0H5m12 0v10a2 2 0 01-2 2H7a2 2 0 01-2-2V9h12z"/>
-      </svg> Payment</a></li>
-	  
-	
-    
-    <li><a href="#" onclick="switchTab('all-categories-screen'); activeTab(this)" class="flex items-center gap-3 hover:bg-gray-100 px-4 py-2 rounded-lg">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path d="M13 2v10h7l-7 10V12H3l7-10z" />
-      </svg> Pay Bills</a></li>
-	  
-    <li><a href="#" onclick="switchTab('affiliate-tasks'); activeTab(this)" class="flex items-center gap-3 hover:bg-gray-100 px-4 py-2 rounded-lg">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path d="M3 5h18M3 10h18M3 15h18M3 20h18"/>
-      </svg> Affiliate tasks</a></li>
-	  
-	  
-	  <li onclick="switchTab('myJobsSection')" class="flex items-center gap-2 px-4 py-3 hover:bg-gray-100 cursor-pointer">
-  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18" />
-  </svg>
-  <span class="text-sm font-medium text-gray-700">My Jobs</span>
-</li>
-	  
-	  
-	  
-	
-	  
+
+  <!-- Navigation Links -->
+  <ul class="flex-1 p-4 space-y-2">
+    <li>
+      <a href="#" onclick="switchTab('me'); activeTab(this)" class="flex items-center gap-3 hover:bg-gray-100 px-3 py-2 rounded-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A4 4 0 017 15h10a4 4 0 011.879.804M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        <span class="text-sm font-medium text-gray-700">My Profile</span>
+      </a>
+    </li>
+
+    <li>
+      <a href="#" onclick="switchTab('postTaskSection'); activeTab(this)" class="flex items-center gap-3 hover:bg-gray-100 px-3 py-2 rounded-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path d="M3 12l2-2m0 0l7-7 7 7M13 5v6h6m4 4v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6" />
+        </svg>
+        <span class="text-sm font-medium text-gray-700">Post Task Job</span>
+      </a>
+    </li>
+
+    <li>
+      <a href="#" onclick="switchTab('afffiliateJobFormSection'); activeTab(this)" class="flex items-center gap-3 hover:bg-gray-100 px-3 py-2 rounded-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path d="M12 8c-2.21 0-4 1.79-4 4 0 2.21 1.79 4 4 4s4-1.79 4-4M5 20h14a2 2 0 002-2v-4H3v4a2 2 0 002 2zM3 8h18" />
+        </svg>
+        <span class="text-sm font-medium text-gray-700">Post Affiliate Job</span>
+      </a>
+    </li>
+
+    <li>
+      <a href="#" onclick="switchTab('payment'); activeTab(this)" class="flex items-center gap-3 hover:bg-gray-100 px-3 py-2 rounded-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a4 4 0 00-8 0v2m8 0a4 4 0 01-8 0m8 0H5m12 0v10a2 2 0 01-2 2H7a2 2 0 01-2-2V9h12z"/>
+        </svg>
+        <span class="text-sm font-medium text-gray-700">Payment</span>
+      </a>
+    </li>
+
+    <li>
+      <a href="#" onclick="switchTab('all-categories-screen'); activeTab(this)" class="flex items-center gap-3 hover:bg-gray-100 px-3 py-2 rounded-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path d="M13 2v10h7l-7 10V12H3l7-10z" />
+        </svg>
+        <span class="text-sm font-medium text-gray-700">Pay Bills</span>
+      </a>
+    </li>
+
+    <li>
+      <a href="#" onclick="switchTab('affiliate-tasks'); activeTab(this)" class="flex items-center gap-3 hover:bg-gray-100 px-3 py-2 rounded-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path d="M3 5h18M3 10h18M3 15h18M3 20h18"/>
+        </svg>
+        <span class="text-sm font-medium text-gray-700">Affiliate Tasks</span>
+      </a>
+    </li>
+
+    <li onclick="switchTab('myJobsSection')" class="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 cursor-pointer rounded-lg">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18" />
+      </svg>
+      <span class="text-sm font-medium text-gray-700">My Jobs</span>
+    </li>
   </ul>
-  
-  <div class="absolute bottom-0 w-full text-center py-4 border-t text-gray-500 text-sm">© 2025 Globals</div>
+
+  <!-- Footer -->
+  <div class="text-center py-4 border-t text-gray-500 text-sm">© 2025 Globals</div>
 </div>
-
-
-
 
 
 
@@ -2613,6 +2629,7 @@
 </body>
 
 </html>
+
 
 
 
