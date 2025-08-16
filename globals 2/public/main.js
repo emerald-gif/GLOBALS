@@ -925,18 +925,19 @@ function showAffiliateJobDetails(jobId, jobData) {
 
                              // Initialize ADMIN Swiper
 
-                             
 const adminJobsSwiper = new Swiper('.myAdminJobsSwiper', {
-  slidesPerView: 1.2,
-  spaceBetween: 10,
-  navigation: {
-    nextEl: '.swiper-button-next',
-    prevEl: '.swiper-button-prev',
+  slidesPerView: 1,
+  centeredSlides: true,
+  spaceBetween: 20,
+  loop: true,
+  autoplay: {
+    delay: 4000,
+    disableOnInteraction: false,
   },
-  breakpoints: {
-    640: { slidesPerView: 2.2 },
-    1024: { slidesPerView: 3.2 }
-  }
+  pagination: {
+    el: '.swiper-pagination',
+    clickable: true,
+  },
 });
 
 // Live listener for adminJobs
@@ -947,36 +948,33 @@ db.collection("adminJobs").orderBy("postedAt", "desc").limit(5)
     snapshot.forEach(doc => {
       const job = doc.data();
       const slide = document.createElement("div");
-      slide.className = "swiper-slide bg-white rounded-xl overflow-hidden shadow-md";
+      slide.className = "swiper-slide";
 
       slide.innerHTML = `
-        <div class="relative w-full h-40">
-          <img src="${job.campaignLogoURL || 'https://via.placeholder.com/300'}"
+        <div class="w-full h-52 rounded-xl overflow-hidden relative shadow-lg">
+          <img src="${job.campaignLogoURL || 'https://via.placeholder.com/400x200'}"
                class="w-full h-full object-cover" />
-          <div class="absolute bottom-0 left-0 bg-black bg-opacity-50 text-white p-2 text-sm font-bold">
-            ${job.title}
+          <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-3">
+            <div class="font-bold text-sm">${job.title}</div>
+            <div class="flex items-center mt-2">
+              <img src="${job.campaignLogoURL || 'https://via.placeholder.com/40'}"
+                   class="w-8 h-8 rounded-full object-cover mr-2" />
+              <div class="text-xs">
+                <div>₦${job.workerPay} • ${job.numWorkers} workers</div>
+                <div class="text-gray-300">${job.category}</div>
+              </div>
+              <button class="ml-auto bg-green-500 text-white px-2 py-1 rounded text-xs view-job-btn"
+                      data-id="${doc.id}">
+                View Job
+              </button>
+            </div>
           </div>
-        </div>
-        <div class="flex items-center p-3 space-x-3">
-          <img src="${job.campaignLogoURL || 'https://via.placeholder.com/40'}"
-               class="w-10 h-10 rounded-full object-cover" />
-          <div class="text-sm">
-            <div class="font-bold">₦${job.workerPay}</div>
-            <div class="text-gray-500">${job.numWorkers} workers</div>
-            <div class="text-gray-500">${job.category}</div>
-          </div>
-          <button class="ml-auto bg-green-500 text-white px-3 py-1 rounded text-xs view-job-btn"
-                  data-id="${doc.id}">
-            View Job
-          </button>
         </div>
       `;
       container.appendChild(slide);
     });
     adminJobsSwiper.update();
   });
-
-
 
 
 
@@ -2323,4 +2321,5 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
