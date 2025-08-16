@@ -1317,6 +1317,47 @@ function closeSidebar(fromLink = false) {
 }
 
 
+
+// ✅ Auto-fetch profile data on login
+firebase.auth().onAuthStateChanged(async (user) => {
+  if (user) {
+    try {
+      const doc = await firebase.firestore().collection("users").doc(user.uid).get();
+
+      // Profile Pic
+      if (doc.exists && doc.data().profilePic) {
+        updateAllProfilePreviews(doc.data().profilePic);
+      } else {
+        updateAllProfilePreviews(placeholderPic);
+      }
+
+      // Full Name
+      if (doc.exists && doc.data().fullName) {
+        document.getElementById("userFullName").innerText = doc.data().fullName;
+      } else {
+        document.getElementById("userFullName").innerText = user.displayName || "No Name";
+      }
+
+      // Email
+      document.getElementById("userEmail").innerText = user.email || "No Email";
+
+    } catch (err) {
+      console.error("❌ Error fetching user data:", err);
+      updateAllProfilePreviews(placeholderPic);
+      document.getElementById("userFullName").innerText = "Guest";
+      document.getElementById("userEmail").innerText = "";
+    }
+  } else {
+    // Logged out
+    updateAllProfilePreviews(placeholderPic);
+    document.getElementById("userFullName").innerText = "Guest";
+    document.getElementById("userEmail").innerText = "";
+  }
+});
+
+
+
+
                                                                                   // 🌀 Swiper Setup
 																				  
 document.addEventListener("DOMContentLoaded", function () {
@@ -2410,6 +2451,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
