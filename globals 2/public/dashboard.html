@@ -55,8 +55,18 @@
 
 <!-- 📱 Slide-out Sidebar -->
 <div id="sidebar" class="fixed top-0 left-0 w-64 h-full bg-white shadow-lg transform -translate-x-full transition-transform duration-300 z-50">
-  <div class="p-4 border-b text-lg font-bold">GLOBALS</div>
-  <ul class="p-4 space-y-3">
+  <div class="p-4 border-b flex items-center space-x-3">
+    <!-- Profile Picture -->
+    <img id="profilePicPreview" src="profile-placeholder.png" class="w-12 h-12 rounded-full border object-cover" />
+
+    <!-- User Info -->
+    <div>
+      <div id="userFullName" class="font-bold text-base">Loading...</div>
+      <div id="userEmail" class="text-sm text-gray-500">Loading...</div>
+    </div>
+  </div>
+</div>
+	
     <!-- Navigation Links with Icons -->
 	
 	
@@ -2603,6 +2613,7 @@
 </body>
 
 </html>
+
 
 
 
