@@ -924,7 +924,7 @@ function showAffiliateJobDetails(jobId, jobData) {
                    
                     //ADMIN SWIPER 
 
-// Swiper init: use 'auto' so our CSS width is respected
+// Swiper init
 const adminJobsSwiper = new Swiper('.myAdminJobsSwiper', {
   slidesPerView: 'auto',
   centeredSlides: true,
@@ -935,7 +935,7 @@ const adminJobsSwiper = new Swiper('.myAdminJobsSwiper', {
   pagination: { el: '.swiper-pagination', clickable: true },
 });
 
-// Live listener for adminJobs (top 5 newest)
+// Live listener
 db.collection("adminJobs").orderBy("postedAt", "desc").limit(5)
   .onSnapshot(snapshot => {
     const container = document.getElementById("adminJobsSwiperContainer");
@@ -944,15 +944,15 @@ db.collection("adminJobs").orderBy("postedAt", "desc").limit(5)
     snapshot.forEach(doc => {
       const job = doc.data();
       const slide = document.createElement("div");
-      slide.className = "swiper-slide"; // width comes from .job-card CSS
+      slide.className = "swiper-slide";
 
       slide.innerHTML = `
-        <div class="job-card shadow-md relative h-56">
+        <div class="job-card shadow-md h-56">
           <img src="${job.campaignLogoURL || 'https://via.placeholder.com/800x400'}"
                class="w-full h-full object-cover" />
 
           <!-- Bottom overlay -->
-          <div class="absolute bottom-0 left-0 right-0 bg-black/50 text-black p-3">
+          <div class="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-3">
             <div class="font-bold text-sm">${job.title || ''}</div>
 
             <div class="mt-2 pr-20 flex items-center">
@@ -960,12 +960,12 @@ db.collection("adminJobs").orderBy("postedAt", "desc").limit(5)
                    class="w-8 h-8 rounded-full object-cover mr-2" />
               <div class="text-xs leading-tight">
                 <div>₦${job.workerPay || 0} • ${job.numWorkers || 0} workers</div>
-                <div class="text-gray-400">${job.category || ''}</div>
+                <div class="text-gray-300">${job.category || ''}</div>
               </div>
             </div>
           </div>
 
-          <!-- Blue View Job button at bottom-right -->
+          <!-- Blue View Job button -->
           <button
             class="absolute right-3 bottom-3 bg-blue-500 text-white px-3 py-1 rounded text-xs font-semibold view-job-btn"
             data-id="${doc.id}">
@@ -973,14 +973,13 @@ db.collection("adminJobs").orderBy("postedAt", "desc").limit(5)
           </button>
         </div>
       `;
-
       container.appendChild(slide);
     });
 
     adminJobsSwiper.update();
   });
 
-// Card/button click (open your detail screen)
+// Handle clicks
 document.getElementById("adminJobsSwiperContainer").addEventListener("click", (e) => {
   const btn = e.target.closest(".view-job-btn");
   if (!btn) return;
@@ -988,12 +987,9 @@ document.getElementById("adminJobsSwiperContainer").addEventListener("click", (e
   db.collection("adminJobs").doc(id).get().then(d => {
     if (!d.exists) return;
     const job = d.data();
-    // TODO: replace with your proper detail modal/screen
-    // showAffiliateJobDetails(id, job)  // if you want to reuse your detail UI
     alert(`Viewing: ${job.title}\nPay: ₦${job.workerPay}\nCategory: ${job.category}`);
   });
 });
-
 
 
                                                  //SOCIAL TASK FUNCTION
@@ -2320,6 +2316,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
