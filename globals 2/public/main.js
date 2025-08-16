@@ -948,10 +948,10 @@ db.collection("adminJobs").orderBy("postedAt", "desc").limit(5)
     snapshot.forEach(doc => {
       const job = doc.data();
       const slide = document.createElement("div");
-      slide.className = "swiper-slide";
+      slide.className = "swiper-slide flex justify-center"; // Center each card
 
       slide.innerHTML = `
-        <div class="w-full h-56 rounded-2xl overflow-hidden relative shadow-md">
+        <div class="w-[90%] max-w-md h-56 rounded-2xl overflow-hidden relative shadow-md">
           <img src="${job.campaignLogoURL || 'https://via.placeholder.com/400x200'}"
                class="w-full h-full object-cover" />
           
@@ -981,7 +981,6 @@ db.collection("adminJobs").orderBy("postedAt", "desc").limit(5)
     });
     adminJobsSwiper.update();
   });
-
 
 
 document.getElementById("adminJobsSwiperContainer").addEventListener("click", e => {
@@ -2326,6 +2325,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
