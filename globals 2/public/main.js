@@ -928,7 +928,7 @@ function showAffiliateJobDetails(jobId, jobData) {
 const adminJobsSwiper = new Swiper('.myAdminJobsSwiper', {
   slidesPerView: 1,
   centeredSlides: true,
-  spaceBetween: 20,
+  spaceBetween: 30, // gives breathing room between slides
   loop: true,
   autoplay: {
     delay: 4000,
@@ -951,23 +951,29 @@ db.collection("adminJobs").orderBy("postedAt", "desc").limit(5)
       slide.className = "swiper-slide";
 
       slide.innerHTML = `
-        <div class="w-full h-52 rounded-xl overflow-hidden relative shadow-lg">
+        <div class="w-full h-56 rounded-2xl overflow-hidden relative shadow-md">
           <img src="${job.campaignLogoURL || 'https://via.placeholder.com/400x200'}"
                class="w-full h-full object-cover" />
-          <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-3">
-            <div class="font-bold text-sm">${job.title}</div>
-            <div class="flex items-center mt-2">
-              <img src="${job.campaignLogoURL || 'https://via.placeholder.com/40'}"
-                   class="w-8 h-8 rounded-full object-cover mr-2" />
-              <div class="text-xs">
-                <div>₦${job.workerPay} • ${job.numWorkers} workers</div>
-                <div class="text-gray-300">${job.category}</div>
+          
+          <!-- Overlay for text/details -->
+          <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-3 flex items-end">
+            <div class="flex-1">
+              <div class="font-bold text-sm">${job.title}</div>
+              <div class="flex items-center mt-2">
+                <img src="${job.campaignLogoURL || 'https://via.placeholder.com/40'}"
+                     class="w-8 h-8 rounded-full object-cover mr-2" />
+                <div class="text-xs leading-tight">
+                  <div>₦${job.workerPay} • ${job.numWorkers} workers</div>
+                  <div class="text-gray-300">${job.category}</div>
+                </div>
               </div>
-              <button class="ml-auto bg-green-500 text-white px-2 py-1 rounded text-xs view-job-btn"
-                      data-id="${doc.id}">
-                View Job
-              </button>
             </div>
+
+            <!-- View Job Button -->
+            <button class="bg-blue-500 text-white px-3 py-1 rounded text-xs font-semibold ml-3 mb-1 view-job-btn"
+                    data-id="${doc.id}">
+              View Job
+            </button>
           </div>
         </div>
       `;
@@ -975,7 +981,6 @@ db.collection("adminJobs").orderBy("postedAt", "desc").limit(5)
     });
     adminJobsSwiper.update();
   });
-
 
 
 
@@ -2321,5 +2326,6 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
