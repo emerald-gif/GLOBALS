@@ -897,16 +897,35 @@
 
 
 
-
-<!-- Admin Jobs Swiper -->
 <div class="swiper myAdminJobsSwiper">
-  <div class="swiper-wrapper" id="adminJobsSwiperContainer">
-    <!-- Slides injected dynamically -->
-  </div>
-  <!-- Pagination dots -->
-  <div class="swiper-pagination mt-3"></div>
+  <div class="swiper-wrapper" id="adminJobsSwiperContainer"></div>
+  <div class="swiper-pagination mt-2"></div>
 </div>
 
+
+
+<style id="admin-swiper-fix">
+  /* Give the carousel side padding so it never hugs the screen */
+  .myAdminJobsSwiper { padding-left: 16px; padding-right: 16px; }
+
+  /* Center each slide's content */
+  .myAdminJobsSwiper .swiper-slide { display:flex; justify-content:center; }
+
+  /* Make the actual card smaller than the screen + cap its max width */
+  .myAdminJobsSwiper .job-card {
+    width: 88vw;           /* 88% of viewport width */
+    max-width: 420px;      /* never larger than this */
+    border-radius: 20px;
+    overflow: hidden;
+  }
+</style>
+
+
+
+
+	
+
+	
 
 <style>
 
@@ -2562,5 +2581,6 @@
 </body>
 
 </html>
+
 
 
