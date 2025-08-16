@@ -897,28 +897,42 @@
 
 
 
+<style id="admin-swiper-fix">
+  /* Give the carousel breathing space around */
+  .myAdminJobsSwiper {
+    padding-left: 16px;
+    padding-right: 16px;
+    margin-top: 20px;      /* top breathing space */
+    margin-bottom: 20px;   /* bottom breathing space */
+  }
+
+  /* Center each slide's content */
+  .myAdminJobsSwiper .swiper-slide {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Make the actual card smaller than the screen + cap its max width */
+  .myAdminJobsSwiper .job-card {
+    width: 88vw;           
+    max-width: 420px;      
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;    /* ensure button layers above img */
+  }
+
+  /* Ensure image never blocks the button */
+  .myAdminJobsSwiper .job-card img {
+    pointer-events: none;  /* allow clicks to pass through */
+  }
+</style>
+
+
+
 <div class="swiper myAdminJobsSwiper">
   <div class="swiper-wrapper" id="adminJobsSwiperContainer"></div>
   <div class="swiper-pagination mt-2"></div>
 </div>
-
-
-
-<style id="admin-swiper-fix">
-  /* Give the carousel side padding so it never hugs the screen */
-  .myAdminJobsSwiper { padding-left: 16px; padding-right: 16px; }
-
-  /* Center each slide's content */
-  .myAdminJobsSwiper .swiper-slide { display:flex; justify-content:center; }
-
-  /* Make the actual card smaller than the screen + cap its max width */
-  .myAdminJobsSwiper .job-card {
-    width: 88vw;           /* 88% of viewport width */
-    max-width: 420px;      /* never larger than this */
-    border-radius: 20px;
-    overflow: hidden;
-  }
-</style>
 
 
 
@@ -2581,6 +2595,7 @@
 </body>
 
 </html>
+
 
 
 
