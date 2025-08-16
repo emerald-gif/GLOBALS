@@ -2039,10 +2039,20 @@
 <button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Me</button>
 
   <!-- 🔝 Profile Header -->
-  <div class="relative w-24 h-24 mx-auto mt-6">
-    <img id="profilePicPreview" src="profile-placeholder.png" class="w-full h-full rounded-full object-cover border-4 border-white shadow-xl cursor-pointer" />
-    <input type="file" id="profilePicInput" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" />
-  </div>
+<div class="relative w-24 h-24 mx-auto mt-6">
+  <img id="profilePicPreview" src="profile-placeholder.png"
+    class="w-full h-full rounded-full object-cover border-4 border-white shadow-xl cursor-pointer" />
+  <input type="file" id="profilePicInput" accept="image/*"
+    class="absolute inset-0 opacity-0 cursor-pointer" />
+</div>
+
+<!-- Remove button -->
+<div class="flex justify-center mt-2">
+  <button id="removeProfilePicBtn"
+    class="px-3 py-1 text-xs bg-red-500 text-white rounded-lg shadow hover:bg-red-600 transition">
+    Remove Photo
+  </button>
+</div>
 
   <h2 id="profileUsername" class="text-2xl font-bold text-gray-800 text-center mt-2">@username</h2>
 
@@ -2593,6 +2603,7 @@
 </body>
 
 </html>
+
 
 
 
