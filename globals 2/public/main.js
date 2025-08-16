@@ -1974,6 +1974,92 @@ function checkJobDetails(jobId, jobType) {
 
 
 
+                       // ME SECTION FUNCTION 
+
+// === PROFILE PICTURE UPLOAD / FETCH / REMOVE ===
+const profilePicInput = document.getElementById("profilePicInput");
+const profilePicPreview = document.getElementById("profilePicPreview");
+const removeProfilePicBtn = document.getElementById("removeProfilePicBtn");
+const placeholderPic = "profile-placeholder.png"; // fallback
+
+// Upload new profile picture
+if (profilePicInput) {
+  profilePicInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Local preview first
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      profilePicPreview.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+
+    try {
+      // Upload using your general Cloudinary function
+      const imageUrl = await uploadToCloudinary(file);
+
+      profilePicPreview.src = imageUrl;
+
+      // Save to Firestore
+      const user = firebase.auth().currentUser;
+      if (user) {
+        await firebase.firestore().collection("users").doc(user.uid).update({
+          profilePic: imageUrl
+        });
+        console.log("✅ Profile picture saved to Firestore");
+      }
+    } catch (err) {
+      console.error("❌ Upload error:", err);
+      profilePicPreview.src = placeholderPic;
+    }
+  });
+}
+
+// Remove profile picture (reset to placeholder)
+if (removeProfilePicBtn) {
+  removeProfilePicBtn.addEventListener("click", async () => {
+    profilePicPreview.src = placeholderPic;
+
+    const user = firebase.auth().currentUser;
+    if (user) {
+      try {
+        await firebase.firestore().collection("users").doc(user.uid).update({
+          profilePic: placeholderPic
+        });
+        console.log("✅ Profile picture reset to placeholder");
+      } catch (err) {
+        console.error("❌ Error resetting profile pic:", err);
+      }
+    }
+  });
+}
+
+// Auto-fetch profile pic on login
+firebase.auth().onAuthStateChanged(async (user) => {
+  if (user) {
+    try {
+      const doc = await firebase.firestore().collection("users").doc(user.uid).get();
+      if (doc.exists && doc.data().profilePic) {
+        profilePicPreview.src = doc.data().profilePic;
+      } else {
+        profilePicPreview.src = placeholderPic;
+      }
+    } catch (err) {
+      console.error("❌ Error fetching profile pic:", err);
+      profilePicPreview.src = placeholderPic;
+    }
+  } else {
+    profilePicPreview.src = placeholderPic;
+  }
+});
+
+
+
+
+
+
+
 // NOTIFICATION
 
 function loadNotifications() {
@@ -2315,6 +2401,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
