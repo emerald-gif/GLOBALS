@@ -947,7 +947,7 @@ db.collection("adminJobs").orderBy("postedAt", "desc").limit(5)
       slide.className = "swiper-slide";
 
       slide.innerHTML = `
-        <div class="job-card shadow-md h-56">
+        <div class="job-card shadow-md h-46">
           <img src="${job.campaignLogoURL || 'https://via.placeholder.com/800x400'}"
                class="w-full h-full object-cover" />
 
@@ -2316,6 +2316,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
