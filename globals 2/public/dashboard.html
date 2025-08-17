@@ -177,7 +177,7 @@
       <div class="swiper-slide h-28 rounded-3xl bg-indigo-950/70 backdrop-blur-lg p-5 flex flex-col justify-between text-indigo-50 shadow-inner ring-1 ring-indigo-700 relative">
         
         <!-- 🔘 Circular Plus Button -->
-        <button onclick="switchtab('depositSection')" 
+        <button onclick="switchTab('depositSection')" 
           class="absolute top-3 right-3 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center shadow-lg hover:scale-105 transition-transform duration-300">
           <span class="text-white text-xl font-bold">+</span>
         </button>
@@ -212,51 +212,54 @@
 
   <!-- Swiper Container -->
   <div class="flex space-x-4 overflow-x-auto hide-scrollbar pb-2">
+<div class="flex space-x-4 overflow-x-auto hide-scrollbar pb-2">
 
-    <!-- 🔵 Airtime Card -->
-    <div onclick="activateTab('airtime-screen')" class="flex-shrink-0 w-28 h-28 rounded-2xl bg-gradient-to-br from-blue-100 via-white to-blue-50 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-blue-700 backdrop-blur-md" >
-      <div class="bg-blue-200 p-3 rounded-full shadow-sm mb-2">
-        <img src="airtime-icon.png" class="w-8 h-8" alt="Airtime">
-      </div>
-      <p class="text-sm font-semibold text-blue-900">Airtime</p>
+  <!-- 🔵 Airtime Card -->
+  <div onclick="activateTab('airtime-screen')" 
+       class="flex-shrink-0 w-28 h-32 rounded-2xl bg-gradient-to-br from-blue-50 to-white shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-blue-200 backdrop-blur-md">
+    <div class="bg-white p-2 rounded-xl shadow-md mb-2">
+      <img src="AIRTIME1.jpg" class="w-10 h-10 rounded-md object-cover" alt="Airtime">
     </div>
-
-    <!-- 🟣 Data Card -->
-    <div onclick="activateTab('data-screen')" class="flex-shrink-0 w-28 h-28 rounded-2xl bg-gradient-to-br from-purple-100 via-white to-blue-50 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-purple-700 backdrop-blur-md" >
-      <div class="bg-purple-200 p-3 rounded-full shadow-sm mb-2">
-        <img src="data-icon.png" class="w-8 h-8" alt="Data">
-      </div>
-      <p class="text-sm font-semibold text-blue-900">Data</p>
-    </div>
-	
-	
-	<!-- 🟡 ELECTRICITY Card -->
-    <div onclick="activateTab('electricity-screen')" class="flex-shrink-0 w-28 h-28 rounded-2xl bg-gradient-to-br from-pink-100 via-white to-blue-50 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-pink-700 backdrop-blur-md" >
-      <div class="bg-yellow-200 p-3 rounded-full shadow-sm mb-2">
-        <img src="electricity-icon.png" class="w-8 h-8" alt="electricity">
-      </div>
-      <p class="text-sm font-semibold text-blue-900">Electricity</p>
-    </div>
-	
-	
-
-    <!-- 🟡 Betting Card -->
-    <div onclick="activateTab('betting-screen')" class="flex-shrink-0 w-28 h-28 rounded-2xl bg-gradient-to-br from-yellow-100 via-white to-blue-50 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-yellow-700 backdrop-blur-md" >
-      <div class="bg-yellow-200 p-3 rounded-full shadow-sm mb-2">
-        <img src="betting-icon.png" class="w-8 h-8" alt="Betting">
-      </div>
-      <p class="text-sm font-semibold text-blue-900">Betting</p>
-    </div>
-
-    <!-- 🔴 TV Sub -->
-    <div onclick="activateTab('tv-screen')" class="flex-shrink-0 w-28 h-28 rounded-2xl bg-gradient-to-br from-red-100 via-white to-blue-50 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-red-700 backdrop-blur-md" >
-      <div class="bg-red-200 p-3 rounded-full shadow-sm mb-2">
-        <img src="tv-icon.png" class="w-8 h-8" alt="TV">
-      </div>
-      <p class="text-sm font-semibold text-blue-900">TV</p>
-    </div>
-
+    <p class="text-sm font-semibold text-blue-900">Airtime</p>
   </div>
+
+  <!-- 🟣 Data Card -->
+  <div onclick="activateTab('data-screen')" 
+       class="flex-shrink-0 w-28 h-32 rounded-2xl bg-gradient-to-br from-purple-50 to-white shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-purple-200 backdrop-blur-md">
+    <div class="bg-white p-2 rounded-xl shadow-md mb-2">
+      <img src="DATA1.jpg" class="w-10 h-10 rounded-md object-cover" alt="Data">
+    </div>
+    <p class="text-sm font-semibold text-purple-900">Data</p>
+  </div>
+
+  <!-- 🟡 Electricity Card -->
+  <div onclick="activateTab('electricity-screen')" 
+       class="flex-shrink-0 w-28 h-32 rounded-2xl bg-gradient-to-br from-yellow-50 to-white shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-yellow-200 backdrop-blur-md">
+    <div class="bg-white p-2 rounded-xl shadow-md mb-2">
+      <img src="ELECTRICITY1.jpg" class="w-10 h-10 rounded-md object-cover" alt="Electricity">
+    </div>
+    <p class="text-sm font-semibold text-yellow-900">Electricity</p>
+  </div>
+
+  <!-- 🟡 Betting Card -->
+  <div onclick="activateTab('betting-screen')" 
+       class="flex-shrink-0 w-28 h-32 rounded-2xl bg-gradient-to-br from-pink-50 to-white shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-pink-200 backdrop-blur-md">
+    <div class="bg-white p-2 rounded-xl shadow-md mb-2">
+      <img src="BETTING1.jpg" class="w-10 h-10 rounded-md object-cover" alt="Betting">
+    </div>
+    <p class="text-sm font-semibold text-pink-900">Betting</p>
+  </div>
+
+  <!-- 🔴 TV Sub -->
+  <div onclick="activateTab('tv-screen')" 
+       class="flex-shrink-0 w-28 h-32 rounded-2xl bg-gradient-to-br from-red-50 to-white shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-red-200 backdrop-blur-md">
+    <div class="bg-white p-2 rounded-xl shadow-md mb-2">
+      <img src="TV1.jpg" class="w-10 h-10 rounded-md object-cover" alt="TV">
+    </div>
+    <p class="text-sm font-semibold text-red-900">TV</p>
+  </div>
+
+</div>
 </div>
 
 
@@ -2634,6 +2637,7 @@
 </body>
 
 </html>
+
 
 
 
