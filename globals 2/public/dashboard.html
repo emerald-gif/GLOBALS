@@ -211,53 +211,47 @@
   </div>
 
   <!-- Swiper Container -->
-<!-- ⚡ Services Grid (5 per Row, Centered Premium) -->
-<div class="grid grid-cols-5 gap-4 justify-items-center mt-6">
+<!-- ⚡ Services Grid (2025 Fintech UI/UX) -->
+<div class="grid grid-cols-4 gap-4 px-4 mt-6">
 
-  <!-- 🔵 Airtime Card -->
+  <!-- Airtime -->
   <div onclick="activateTab('airtime-screen')" 
-       class="w-24 h-28 rounded-2xl bg-gradient-to-br from-blue-50 to-white shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-blue-200">
-    <div class="bg-white p-2 rounded-xl shadow mb-2">
-      <img src="AIRTIME1.jpg" class="w-8 h-8 object-contain" alt="Airtime">
+       class="flex flex-col items-center cursor-pointer group">
+    <div class="w-16 h-16 flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 shadow-lg group-hover:scale-110 transition-all duration-300">
+      <img src="https://cdn-icons-png.flaticon.com/512/633/633611.png" class="w-8 h-8" alt="Airtime">
     </div>
-    <p class="text-xs font-semibold text-blue-900">Airtime</p>
+    <p class="mt-2 text-sm font-semibold text-blue-900">Airtime</p>
   </div>
 
-  <!-- 🟣 Data Card -->
+  <!-- Data -->
   <div onclick="activateTab('data-screen')" 
-       class="w-24 h-28 rounded-2xl bg-gradient-to-br from-purple-50 to-white shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-purple-200">
-    <div class="bg-white p-2 rounded-xl shadow mb-2">
-      <img src="DATA1.jpg" class="w-8 h-8 object-contain" alt="Data">
+       class="flex flex-col items-center cursor-pointer group">
+    <div class="w-16 h-16 flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 shadow-lg group-hover:scale-110 transition-all duration-300">
+      <img src="https://cdn-icons-png.flaticon.com/512/1828/1828925.png" class="w-8 h-8" alt="Data">
     </div>
-    <p class="text-xs font-semibold text-purple-900">Data</p>
+    <p class="mt-2 text-sm font-semibold text-blue-900">Data</p>
   </div>
 
-  <!-- 🟡 Electricity Card -->
+  <!-- Electricity -->
   <div onclick="activateTab('electricity-screen')" 
-       class="w-24 h-28 rounded-2xl bg-gradient-to-br from-yellow-50 to-white shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-yellow-200">
-    <div class="bg-white p-2 rounded-xl shadow mb-2">
-      <img src="ELECTRICITY1.jpg" class="w-8 h-8 object-contain" alt="Electricity">
+       class="flex flex-col items-center cursor-pointer group">
+    <div class="w-16 h-16 flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 shadow-lg group-hover:scale-110 transition-all duration-300">
+      <img src="https://cdn-icons-png.flaticon.com/512/1041/1041916.png" class="w-8 h-8" alt="Electricity">
     </div>
-    <p class="text-xs font-semibold text-yellow-900">Electricity</p>
+    <p class="mt-2 text-sm font-semibold text-blue-900">Electricity</p>
   </div>
 
-  <!-- 🟢 Betting Card -->
+  <!-- Betting -->
   <div onclick="activateTab('betting-screen')" 
-       class="w-24 h-28 rounded-2xl bg-gradient-to-br from-green-50 to-white shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-green-200">
-    <div class="bg-white p-2 rounded-xl shadow mb-2">
-      <img src="BETTING1.jpg" class="w-8 h-8 object-contain" alt="Betting">
+       class="flex flex-col items-center cursor-pointer group">
+    <div class="w-16 h-16 flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 shadow-lg group-hover:scale-110 transition-all duration-300">
+      <img src="https://cdn-icons-png.flaticon.com/512/5969/5969051.png" class="w-8 h-8" alt="Betting">
     </div>
-    <p class="text-xs font-semibold text-green-900">Betting</p>
+    <p class="mt-2 text-sm font-semibold text-blue-900">Betting</p>
   </div>
 
-  <!-- 🔴 TV Sub -->
-  <div onclick="activateTab('tv-screen')" 
-       class="w-24 h-28 rounded-2xl bg-gradient-to-br from-red-50 to-white shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center border border-red-200">
-    <div class="bg-white p-2 rounded-xl shadow mb-2">
-      <img src="TV1.jpg" class="w-8 h-8 object-contain" alt="TV">
-    </div>
-    <p class="text-xs font-semibold text-red-900">TV</p>
-  </div>
+  <!-- TV -->
+  
 
 </div>
 </div>
@@ -404,10 +398,13 @@
     </div>
 	
 
-    <div onclick="openService('tv-screen')" class="flex-shrink-0 w-24 h-24 bg-purple-100 rounded-xl flex flex-col items-center justify-center text-purple-700 shadow-sm hover:bg-purple-200 cursor-pointer">
-      <img src="icons/tv.png" class="w-8 h-8 mb-1" />
-      <span class="text-sm font-medium">TV</span>
+    <div onclick="activateTab('tv-screen')" 
+       class="flex flex-col items-center cursor-pointer group">
+    <div class="w-16 h-16 flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 shadow-lg group-hover:scale-110 transition-all duration-300">
+      <img src="https://cdn-icons-png.flaticon.com/512/3107/3107670.png" class="w-8 h-8" alt="TV">
     </div>
+    <p class="mt-2 text-sm font-semibold text-blue-900">TV</p>
+  </div>
 
    
 	
@@ -2637,6 +2634,7 @@
 </body>
 
 </html>
+
 
 
 
