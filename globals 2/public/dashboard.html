@@ -203,37 +203,35 @@
 
 
 
-<!-- 🌟 Premium Upsell Box -->
-<div 
-  id="premiumBox" 
-  class="w-full rounded-2xl relative overflow-hidden cursor-pointer mb-6
-         bg-indigo-950/60 backdrop-blur-xl border border-indigo-800/40 
-         shadow-lg hover:shadow-indigo-900/50
-         hover:scale-[1.02] transition-all duration-300"
->
-  <!-- Diagonal Shine -->
-  <div class="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent pointer-events-none"></div>
+<!-- 🌟 Premium Upgrade Card -->
+<div class="w-full mt-3 rounded-2xl bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 
+            flex items-center justify-between px-5 py-3 shadow-md ring-1 ring-yellow-400/60">
 
-  <!-- Content -->
-  <div class="relative flex items-center justify-between p-4">
-    
-    <!-- Left -->
-    <div class="flex items-center gap-3">
-      <div class="bg-yellow-400/20 p-3 rounded-xl shadow-inner border border-yellow-400/40">
-        <!-- Crown Icon -->
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10l4.5-4.5L12 10l4.5-4.5L21 10v9H3v-9z" />
-        </svg>
-      </div>
-      <div>
-        <h3 class="text-yellow-300 text-lg font-semibold">Go Premium 👑</h3>
-        <p class="text-indigo-100/80 text-sm">Unlock exclusive pinned tasks</p>
-      </div>
+  <!-- Left Icon + Text -->
+  <div class="flex items-center space-x-3">
+    <!-- Premium Icon -->
+    <div class="w-10 h-10 flex items-center justify-center bg-white/30 rounded-xl shadow-inner">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-yellow-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4l2.5 7h7l-5.5 4 2.5 7-6-4.5-6 4.5 2.5-7-5.5-4h7z"/>
+      </svg>
     </div>
 
-    <!-- Right Arrow -->
-    <div class="text-yellow-300 text-xl font-bold group-hover:translate-x-1 transition-transform">➜</div>
+    <!-- Text -->
+    <div>
+      <h3 class="text-sm font-bold text-yellow-900">Go Premium 👑</h3>
+      <p class="text-xs text-yellow-800/80 font-medium">Unlock exclusive pinned tasks</p>
+    </div>
   </div>
+
+  <!-- Right Arrow -->
+  <button onclick="activateTab('premium-section')" 
+          class="w-9 h-9 flex items-center justify-center bg-white rounded-full shadow hover:scale-110 
+                 transition-transform duration-300">
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+    </svg>
+  </button>
+
 </div>
 
 
@@ -2680,6 +2678,7 @@
 </body>
 
 </html>
+
 
 
 
