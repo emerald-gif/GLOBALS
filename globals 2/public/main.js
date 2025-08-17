@@ -71,94 +71,24 @@ auth.onAuthStateChanged(async (user) => {
     document.getElementById("joinDate").value = new Date(user.metadata.creationTime).toLocaleDateString();
   }
 
-  // ✅ Upload profile picture 
-// === PROFILE PICTURE UPLOAD / FETCH / REMOVE ===
-const profilePicInputs = [
-  document.getElementById("profilePicInput"),
-  document.getElementById("profilePicUpload")
-].filter(Boolean);
+  
 
-const removeProfilePicBtn = document.getElementById("removeProfilePicBtn");
-const placeholderPic = "profile-placeholder.png"; // fallback
 
-// Function to update all previews at once
-function updateAllProfilePreviews(url) {
-  document.querySelectorAll("#profilePicPreview").forEach(img => {
-    img.src = url;
-  });
-}
+	// ✅ Upload profile picture
+  const profilePicUpload = document.getElementById("profilePicUpload");
+  if (profilePicUpload) {
+    profilePicUpload.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
 
-//  Reusable upload handler
-async function handleProfilePicUpload(file) {
-  if (!file) return;
+      const storageRef = firebase.storage().ref(`profilePics/${uid}`);
+      await storageRef.put(file);
+      const url = await storageRef.getDownloadURL();
 
-  // Local preview first
-  const reader = new FileReader();
-  reader.onload = (event) => updateAllProfilePreviews(event.target.result);
-  reader.readAsDataURL(file);
-
-  try {
-    // Upload using your general Cloudinary function
-    const imageUrl = await uploadToCloudinary(file);
-
-    updateAllProfilePreviews(imageUrl);
-
-    // Save to Firestore
-    const user = firebase.auth().currentUser;
-    if (user) {
-      await firebase.firestore().collection("users").doc(user.uid).update({
-        profilePic: imageUrl
-      });
-      console.log("✅ Profile picture saved to Firestore");
-    }
-  } catch (err) {
-    console.error("❌ Upload error:", err);
-    updateAllProfilePreviews(placeholderPic);
-  }
-}
-
-// Attach change listener to BOTH inputs
-profilePicInputs.forEach(input => {
-  input.addEventListener("change", (e) => {
-    handleProfilePicUpload(e.target.files[0]);
-  });
-});
-
-// Remove profile picture
-if (removeProfilePicBtn) {
-  removeProfilePicBtn.addEventListener("click", async () => {
-    updateAllProfilePreviews(placeholderPic);
-
-    const user = firebase.auth().currentUser;
-    if (user) {
-      try {
-        await firebase.firestore().collection("users").doc(user.uid).update({
-          profilePic: placeholderPic
-        });
-        console.log("✅ Profile picture reset to placeholder");
-      } catch (err) {
-        console.error("❌ Error resetting profile pic:", err);
-      }
-    }
-  });
-}
-
-// Auto-fetch profile pic on login
-firebase.auth().onAuthStateChanged(async (user) => {
-  if (user) {
-    try {
-      const doc = await firebase.firestore().collection("users").doc(user.uid).get();
-      if (doc.exists && doc.data().profilePic) {
-        updateAllProfilePreviews(doc.data().profilePic);
-      } else {
-        updateAllProfilePreviews(placeholderPic);
-      }
-    } catch (err) {
-      console.error("❌ Error fetching profile pic:", err);
-      updateAllProfilePreviews(placeholderPic);
-    }
-  } else {
-    updateAllProfilePreviews(placeholderPic);
+      await db.collection("users").doc(uid).update({ profilePicture: url });
+      if (profilePicPreview) profilePicPreview.src = url;
+      alert("Profile picture updated successfully!");
+    };
   }
 });
 
@@ -2109,6 +2039,100 @@ function checkJobDetails(jobId, jobType) {
 
 
 
+  // ✅ Upload profile picture 
+// === PROFILE PICTURE UPLOAD / FETCH / REMOVE ===
+const profilePicInputs = [
+  document.getElementById("profilePicInput"),
+  document.getElementById("profilePicUpload")
+].filter(Boolean);
+
+const removeProfilePicBtn = document.getElementById("removeProfilePicBtn");
+const placeholderPic = "profile-placeholder.png"; // fallback
+
+// Function to update all previews at once
+function updateAllProfilePreviews(url) {
+  document.querySelectorAll("#profilePicPreview").forEach(img => {
+    img.src = url;
+  });
+}
+
+//  Reusable upload handler
+async function handleProfilePicUpload(file) {
+  if (!file) return;
+
+  // Local preview first
+  const reader = new FileReader();
+  reader.onload = (event) => updateAllProfilePreviews(event.target.result);
+  reader.readAsDataURL(file);
+
+  try {
+    // Upload using your general Cloudinary function
+    const imageUrl = await uploadToCloudinary(file);
+
+    updateAllProfilePreviews(imageUrl);
+
+    // Save to Firestore
+    const user = firebase.auth().currentUser;
+    if (user) {
+      await firebase.firestore().collection("users").doc(user.uid).update({
+        profilePic: imageUrl
+      });
+      console.log("✅ Profile picture saved to Firestore");
+    }
+  } catch (err) {
+    console.error("❌ Upload error:", err);
+    updateAllProfilePreviews(placeholderPic);
+  }
+}
+
+// Attach change listener to BOTH inputs
+profilePicInputs.forEach(input => {
+  input.addEventListener("change", (e) => {
+    handleProfilePicUpload(e.target.files[0]);
+  });
+});
+
+// Remove profile picture
+if (removeProfilePicBtn) {
+  removeProfilePicBtn.addEventListener("click", async () => {
+    updateAllProfilePreviews(placeholderPic);
+
+    const user = firebase.auth().currentUser;
+    if (user) {
+      try {
+        await firebase.firestore().collection("users").doc(user.uid).update({
+          profilePic: placeholderPic
+        });
+        console.log("✅ Profile picture reset to placeholder");
+      } catch (err) {
+        console.error("❌ Error resetting profile pic:", err);
+      }
+    }
+  });
+}
+
+// Auto-fetch profile pic on login
+firebase.auth().onAuthStateChanged(async (user) => {
+  if (user) {
+    try {
+      const doc = await firebase.firestore().collection("users").doc(user.uid).get();
+      if (doc.exists && doc.data().profilePic) {
+        updateAllProfilePreviews(doc.data().profilePic);
+      } else {
+        updateAllProfilePreviews(placeholderPic);
+      }
+    } catch (err) {
+      console.error("❌ Error fetching profile pic:", err);
+      updateAllProfilePreviews(placeholderPic);
+    }
+  } else {
+    updateAllProfilePreviews(placeholderPic);
+  }
+});
+
+	
+
+
 
 // NOTIFICATION
 
@@ -2451,6 +2475,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
