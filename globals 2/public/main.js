@@ -373,244 +373,123 @@ function closeBoxPopup() {
 
                       
                                    // IDs of sections that require PREMIUM FUNCTION 
-  
-  
 
 
-/* =========================
-   PREMIUM GATEKEEPER (2025)
-   ========================= */
 
-/// Firestore ref (v8 style)
-const db = firebase.firestore();
 
-/// 1) List ALL section IDs that must be Premium to open
-///    ⚠️ Use the EXACT IDs you pass to showSection(...)
-const PREMIUM_SECTIONS = [
-  "whatsapp-task",
-  "tiktok-task",
-  "affiliate-tasks",
-  "myJobsSection",
-  "adminJobsSwiperContainer",
-  "nftSection"
-];
 
-/// 2) Cache of user premium & balance (live)
-let premiumCache = null;
-let balanceCache = 0;
 
-/// 3) UI helpers (custom alert + safe navigation)
-function showAlert(message, onOk) {
-  const box = document.getElementById("globalAlert");
-  const msg = document.getElementById("alertMessage");
-  const ok  = document.getElementById("alertOkBtn");
-  if (!box || !msg || !ok) {
-    console.warn("globalAlert elements missing; falling back to browser alert");
-    alert(message);
-    if (onOk) onOk();
-    return;
-  }
-  msg.innerText = message;
-  box.classList.remove("hidden");
 
-  // reset previous listeners (prevents 'OK not working')
-  const okClone = ok.cloneNode(true);
-  ok.parentNode.replaceChild(okClone, okClone);
 
-  okClone.addEventListener("click", () => {
-    box.classList.add("hidden");
-    if (onOk) onOk();
-  });
-}
 
-function goTo(...ids) {
-  // Try multiple possible IDs safely
-  for (const id of ids) {
-    if (!id) continue;
-    try { if (typeof window.showSection === "function") { window.showSection(id); return; } } catch(e){}
-    const el = document.getElementById(id);
-    if (el) { location.hash = "#" + id; return; }
-  }
-}
 
-/// 4) Auth wiring + live user doc
-firebase.auth().onAuthStateChanged((user) => {
-  if (!user) return;
-  const userRef = db.collection("users").doc(user.uid);
+  // IDs of sections that require premium
+  const premiumRequiredSections = ["whatsappSection", "instagramSection", "nftSection"];
 
-  // Live snapshot (keeps button + cache in sync)
-  userRef.onSnapshot((doc) => {
-    if (!doc.exists) return;
-    const data = doc.data() || {};
-    premiumCache = !!(data.is_Premium || data.is_premium);
-    balanceCache = Number(data.balance || 0);
+  // Get current logged-in user from Firebase Auth
+  firebase.auth().onAuthStateChanged((user) => {
+    if (!user) return; // no logged-in user
+    const currentUserId = user.uid;
+    const userRef = firebase.firestore().collection("users").doc(currentUserId);
 
-    // Button state
-    const btn = document.querySelector(".go-premium-btn");
-    if (btn) {
-      if (premiumCache) {
-        btn.innerText = "👑 Premium Active";
-        btn.disabled = true;
-        btn.style.opacity = "0.7";
+    const goPremiumBtn = document.querySelector(".go-premium-btn");
+
+    // 🔹 Check user status on load
+    userRef.onSnapshot((doc) => {
+      if (!doc.exists) return;
+      const userData = doc.data();
+
+      if (userData.is_Premium) {
+        if (goPremiumBtn) {
+          goPremiumBtn.innerText = "👑 Premium Active";
+          goPremiumBtn.disabled = true;
+          goPremiumBtn.style.opacity = "0.7";
+        }
       } else {
-        btn.innerText = "👑 Go Premium";
-        btn.disabled = false;
-        btn.style.opacity = "1";
+        if (goPremiumBtn) {
+          goPremiumBtn.innerText = "👑 Go Premium";
+          goPremiumBtn.disabled = false;
+          goPremiumBtn.style.opacity = "1";
+        }
       }
-    }
-  });
+    });
 
-  // Go Premium flow (atomic deduction + upgrade)
-  const goBtn = document.querySelector(".go-premium-btn");
-  if (goBtn) {
-    goBtn.addEventListener("click", async () => {
-      try {
-        await db.runTransaction(async (tx) => {
-          const snap = await tx.get(userRef);
-          if (!snap.exists) throw new Error("User not found");
-          const data = snap.data() || {};
-          const bal  = Number(data.balance || 0);
-          const isP  = !!(data.is_Premium || data.is_premium);
+    // 🔹 Handle Go Premium button click
+    if (goPremiumBtn) {
+      goPremiumBtn.addEventListener("click", async () => {
+        try {
+          const userSnap = await userRef.get();
 
-          if (isP) return; // already premium
-
-          if (bal < 1000) {
-            // Not enough: custom alert → Deposit
-            showAlert("⚠️ Insufficient balance. You need at least ₦1,000 to upgrade.", () => {
-              goTo("depositSection", "deposit-section");
-            });
-            throw new Error("INSUFFICIENT_FUNDS");
+          if (!userSnap.exists) {
+            alert("User not found!");
+            return;
           }
 
-          // Deduct ₦1,000 and upgrade (atomic)
-          tx.update(userRef, {
-            balance    : bal - 1000,
-            is_Premium : true
+          const userData = userSnap.data();
+          const balance = userData.balance || 0;
+          const isPremium = userData.is_Premium || false;
+
+          // Already premium
+          if (isPremium) {
+            alert("✅ You are already Premium!");
+            return;
+          }
+
+          // Not enough balance
+          if (balance < 1000) {
+            if (confirm("⚠️ Insufficient balance.\nYou need ₦1,000 to upgrade.\n\n👉 Click OK to Deposit")) {
+              showSection("depositSection"); // your existing function
+            }
+            return;
+          }
+
+          // Deduct 1000 and upgrade user
+          await userRef.update({
+            is_Premium: true,
+            balance: balance - 1000
           });
-        });
 
-        // Success: custom alert → Dashboard
-        showAlert("🎉 Congratulations! Your account has been upgraded to Premium.", () => {
-          goTo("dashboardSection", "dashboard");
-        });
-      } catch (err) {
-        if (String(err.message).includes("INSUFFICIENT_FUNDS")) return;
-        console.error("Upgrade error:", err);
-        showAlert("Something went wrong while upgrading. Please try again.");
-      }
-    });
-  }
+          alert("🎉 Congratulations! Your account has been upgraded to Premium 🚀");
+          showSection("dashboardSection"); // back to dashboard
 
-  // Gate 1 — WRAP showSection so ANY call is checked first
-  hookShowSectionGate(userRef);
-
-  // Gate 2 — Intercept link/button clicks BEFORE they call showSection (anchors/data-section)
-  document.addEventListener("click", async (e) => {
-    const t = e.target.closest("[data-section], a[href^='#']");
-    if (!t) return;
-
-    let targetId = null;
-    if (t.dataset && t.dataset.section) targetId = t.dataset.section;
-    else if (t.getAttribute("href")) {
-      const href = t.getAttribute("href");
-      if (href.startsWith("#")) targetId = href.slice(1);
-    }
-    if (!targetId) return;
-
-    // Only guard premium sections
-    if (!PREMIUM_SECTIONS.includes(targetId)) return;
-
-    // If already premium → allow normal click
-    if (premiumCache === true) return;
-
-    // Not premium → stop default and show alert
-    e.preventDefault();
-    e.stopImmediatePropagation();
-
-    // Fresh verify from Firestore (in case cache not ready)
-    try {
-      const snap = await userRef.get();
-      const data = snap.data() || {};
-      const isP  = !!(data.is_Premium || data.is_premium);
-      if (isP) return; // allow click naturally (user just turned premium)
-    } catch (_) {}
-
-    showAlert("🔒 This feature is for Premium users only. Upgrade to access.", () => {
-      goTo("premium-section");
-    });
-  }, true); // capture phase to beat other handlers
-});
-
-
-/// 5) Wrap showSection EXACTLY ONCE, even if it’s defined later
-function hookShowSectionGate(userRef) {
-  let hooked = false;
-
-  const tryHook = () => {
-    if (hooked) return;
-    if (typeof window.showSection !== "function") return;
-
-    const original = window.showSection.bind(window);
-    const gate = async function(sectionId) {
-      // If free section → pass through
-      if (!PREMIUM_SECTIONS.includes(sectionId)) {
-        return original(sectionId);
-      }
-
-      // If premium in cache → allow
-      if (premiumCache === true) return original(sectionId);
-
-      // Else verify from Firestore (block until checked)
-      try {
-        const snap = await userRef.get();
-        const data = snap.data() || {};
-        const isP  = !!(data.is_Premium || data.is_premium);
-
-        if (!isP) {
-          showAlert("🔒 This feature is for Premium users only. Upgrade to access.", () => {
-            original("premium-section");
-          });
-          return;
+        } catch (error) {
+          console.error("Error upgrading to Premium:", error);
+          alert("Something went wrong. Please try again.");
         }
-        return original(sectionId);
-      } catch (err) {
-        console.error("Gate check failed:", err);
-        // Fail-safe: do NOT open restricted section on error
-        showAlert("Unable to verify premium status. Please try again.");
-      }
-    };
-    gate.__isWrapped = true;
-    window.showSection = gate;
-    hooked = true;
-  };
-
-  // Attempt now and a few times after (in case showSection is defined later)
-  tryHook();
-  window.addEventListener("load", tryHook);
-  const hookTimer = setInterval(() => {
-    tryHook();
-    if (typeof window.showSection === "function" && window.showSection.__isWrapped) {
-      clearInterval(hookTimer);
+      });
     }
-  }, 300);
-}
 
+    // 🔹 Global check for premium-only sections (ID-based)
+    premiumRequiredSections.forEach(sectionId => {
+      const sectionEl = document.getElementById(sectionId);
+      if (!sectionEl) return;
 
+      sectionEl.addEventListener("click", async (e) => {
+        e.preventDefault(); // stop the section from opening first
 
+        try {
+          const userSnap = await userRef.get();
+          if (!userSnap.exists) return;
 
-<div id="globalAlert" class="global-alert hidden">
-  <div class="alert-box">
-    <p id="alertMessage">...</p>
-    <button id="alertOkBtn">OK</button>
-  </div>
-</div>
+          const userData = userSnap.data();
 
-<style>
-.global-alert{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;justify-content:center;align-items:center;z-index:9999}
-.global-alert.hidden{display:none}
-.alert-box{background:#1f2333;color:#fff;padding:1.1rem 1.2rem;border-radius:14px;text-align:center;width:86%;max-width:340px;box-shadow:0 10px 28px rgba(0,0,0,.6)}
-.alert-box button{margin-top:12px;padding:.7rem 1.2rem;border:none;border-radius:10px;background:linear-gradient(135deg,#ffb300,#ff2e63);color:#fff;font-weight:700;cursor:pointer}
-</style>
+          // 🚫 Not premium → show alert first
+          if (!userData.is_Premium) {
+            alert("🔒 This feature is for Premium users only.\n\n👉 Upgrade to access!");
+            showSection("premium-section");
+            return;
+          }
+
+          // ✅ Premium → allow access
+          showSection(sectionId);
+
+        } catch (err) {
+          console.error("Premium check error:", err);
+        }
+      });
+    });
+  });
+
 
 
 
@@ -2709,6 +2588,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
