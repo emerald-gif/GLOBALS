@@ -1326,43 +1326,99 @@
                                                       <!-- 🌍 Social Tasks Main Screen -->
 
 
-
 <!-- 🌍 Social Tasks Main Screen -->
-<div id="social-tasks-main" class="tab-section hidden">
-<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Social Tasks</button>
-  <h2 class="text-2xl font-bold text-center my-6">📢 Social Task Arena</h2>
-  <p class="text-center text-gray-600 mb-6">Choose a platform below to begin your promotional task</p>
+<div id="social-tasks-main" class="tab-section hidden px-4 pb-10">
 
-  <div class="grid grid-cols-2 sm:grid-cols-2 gap-6 px-4">
+  <!-- 🔙 Back Button -->
+  <button onclick="activateTab('dashboard')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" 
+      viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+        d="M15 19l-7-7 7-7" />
+    </svg>
+    Back to Dashboard
+  </button>
+
+  <!-- 🔄 Swiper Section -->
+  <div class="swiper mySwiper mb-6 rounded-2xl overflow-hidden shadow-lg">
+    <div class="swiper-wrapper">
+      <div class="swiper-slide">
+        <img src="AIRTIME1.jpg" class="w-full h-40 object-cover" />
+      </div>
+      <div class="swiper-slide">
+        <img src="DATA1.jpg" class="w-full h-40 object-cover" />
+      </div>
+      <div class="swiper-slide">
+        <img src="BETTING1.jpg" class="w-full h-40 object-cover" />
+      </div>
+    </div>
+  </div>
+
+  <h2 class="text-2xl font-bold text-center mb-2">📢 Social Task Arena</h2>
+  <p class="text-center text-gray-500 mb-6">Choose a platform below to begin your promotional task</p>
+
+  <!-- 🔹 Task Options Grid -->
+  <div class="grid grid-cols-2 sm:grid-cols-2 gap-5">
+    
     <!-- TikTok/Instagram -->
-    <div class="bg-pink-100 p-6 rounded-2xl shadow-md">
-      <h3 class="text-xl font-bold text-pink-700 mb-2">🎬 TikTok / Instagram</h3>
-      <p class="text-sm text-pink-600 mb-4">Promote us with a 30s video, tag us & upload proof.</p>
-      <button onclick="showTask('tiktok-task')" class="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-lg w-full">Do Task</button>
+    <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-md hover:shadow-lg transition">
+      <div class="flex items-center gap-2 mb-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-pink-600" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M..."/> <!-- Replace with modern TikTok/Instagram SVG -->
+        </svg>
+        <h3 class="text-lg font-semibold text-gray-800">TikTok / Instagram</h3>
+      </div>
+      <p class="text-sm text-gray-600 mb-4">Promote us with a 30s video, tag us & upload proof.</p>
+      <button onclick="showTask('tiktok-task')" 
+        class="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-xl w-full transition">
+        Do Task
+      </button>
     </div>
 
     <!-- WhatsApp -->
-    <div class="bg-green-100 p-6 rounded-2xl shadow-md">
-      <h3 class="text-xl font-bold text-green-700 mb-2">📲 WhatsApp Promo</h3>
-      <p class="text-sm text-green-600 mb-4">Send to 3 groups + status for 24 hrs with screenshots.</p>
-      <button onclick="showTask('whatsapp-task')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg w-full">Do Task</button>
+    <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-md hover:shadow-lg transition">
+      <div class="flex items-center gap-2 mb-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M..."/> <!-- WhatsApp SVG -->
+        </svg>
+        <h3 class="text-lg font-semibold text-gray-800">WhatsApp Promo</h3>
+      </div>
+      <p class="text-sm text-gray-600 mb-4">Send to 3 groups + status for 24 hrs with screenshots.</p>
+      <button onclick="showTask('whatsapp-task')" 
+        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl w-full transition">
+        Do Task
+      </button>
     </div>
 
     <!-- Telegram -->
-    <div class="bg-blue-100 p-6 rounded-2xl shadow-md">
-      <h3 class="text-xl font-bold text-blue-700 mb-2">📢 Telegram Groups</h3>
-      <p class="text-sm text-blue-600 mb-4">Forward our promo text to 3 Telegram groups.</p>
-      <button onclick="showTask('telegram-task')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg w-full">Do Task</button>
-    </div> 
+    <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-md hover:shadow-lg transition">
+      <div class="flex items-center gap-2 mb-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M..."/> <!-- Telegram SVG -->
+        </svg>
+        <h3 class="text-lg font-semibold text-gray-800">Telegram Groups</h3>
+      </div>
+      <p class="text-sm text-gray-600 mb-4">Forward our promo text to 3 Telegram groups.</p>
+      <button onclick="showTask('telegram-task')" 
+        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl w-full transition">
+        Do Task
+      </button>
+    </div>
 
     <!-- Coming Soon -->
-    <div class="bg-gray-100 p-6 rounded-2xl shadow-md opacity-70">
-      <h3 class="text-xl font-bold text-gray-500 mb-2">🕒 Coming Soon</h3>
+    <div class="bg-gray-100 p-5 rounded-2xl shadow-inner">
+      <h3 class="text-lg font-semibold text-gray-500">🕒 Coming Soon</h3>
       <p class="text-sm text-gray-400 mb-4">More exciting tasks will be added here soon.</p>
-      <button class="bg-gray-400 text-white px-4 py-2 rounded-lg w-full" disabled>Coming Soon</button>
+      <button disabled class="bg-gray-400 text-white px-4 py-2 rounded-xl w-full">Coming Soon</button>
     </div>
   </div>
 </div>
+
+
+    
+
+	
 
 <!-- 🟣 TikTok Task Section -->
 <div id="tiktok-task" class="tab-section hidden p-4">
@@ -2853,6 +2909,7 @@
 </body>
 
 </html>
+
 
 
 
