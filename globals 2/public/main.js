@@ -452,7 +452,6 @@ function closeBoxPopup() {
 
 
 
-
 // IDs of sections that require premium
 const premiumRequiredSections = [
   "whatsapp-task",
@@ -498,7 +497,7 @@ firebase.auth().onAuthStateChanged((user) => {
         const userSnap = await userRef.get();
 
         if (!userSnap.exists) {
-          alert("User not found!");
+          await alert("User not found!");
           return;
         }
 
@@ -508,18 +507,17 @@ firebase.auth().onAuthStateChanged((user) => {
 
         // Already premium
         if (isPremium) {
-          alert("✅ You are already Premium!");
+          await alert("✅ You are already Premium!");
           return;
         }
 
         // Not enough balance
         if (balance < 1000) {
-          if (
-            confirm(
-              "⚠️ Insufficient balance.\nYou need ₦1,000 to upgrade.\n\n👉 Click OK to Deposit"
-            )
-          ) {
-            showSection("depositSection"); // your existing function
+          const goDeposit = await confirm(
+            "⚠️ Insufficient balance.\nYou need ₦1,000 to upgrade.\n\n👉 Click OK to Deposit"
+          );
+          if (goDeposit) {
+            showSection("depositSection");
           }
           return;
         }
@@ -530,11 +528,11 @@ firebase.auth().onAuthStateChanged((user) => {
           balance: balance - 1000,
         });
 
-        alert("🎉 Congratulations! Your account has been upgraded to Premium 🚀");
+        await alert("🎉 Congratulations! Your account has been upgraded to Premium 🚀");
         showSection("dashboardSection"); // back to dashboard
       } catch (error) {
         console.error("Error upgrading to Premium:", error);
-        alert("Something went wrong. Please try again.");
+        await alert("Something went wrong. Please try again.");
       }
     });
   }
@@ -557,8 +555,8 @@ firebase.auth().onAuthStateChanged((user) => {
       if (await isPremiumAllowed(sectionId)) {
         _activateTab(sectionId);
       } else {
-        alert("🔒 This feature is for Premium users only.\n\n👉 Upgrade to access!");
-        _activateTab("premium-section");
+        await alert("🔒 This feature is for Premium users only.\n\n👉 Upgrade to access!");
+        _activateTab("premium-section"); // ✅ only after OK
       }
     };
   }
@@ -569,7 +567,7 @@ firebase.auth().onAuthStateChanged((user) => {
       if (await isPremiumAllowed(sectionId)) {
         _switchTab(sectionId);
       } else {
-        alert("🔒 This feature is for Premium users only.\n\n👉 Upgrade to access!");
+        await alert("🔒 This feature is for Premium users only.\n\n👉 Upgrade to access!");
         _activateTab("premium-section");
       }
     };
@@ -581,14 +579,12 @@ firebase.auth().onAuthStateChanged((user) => {
       if (await isPremiumAllowed(sectionId)) {
         _showTask(sectionId);
       } else {
-        alert("🔒 This feature is for Premium users only.\n\n👉 Upgrade to access!");
+        await alert("🔒 This feature is for Premium users only.\n\n👉 Upgrade to access!");
         _activateTab("premium-section");
       }
     };
   }
 });
-
-
 	
 	
 	
@@ -2678,6 +2674,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
