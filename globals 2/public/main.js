@@ -428,7 +428,7 @@ function closeBoxPopup() {
           // Not enough balance
           if (balance < 1000) {
             if (confirm("⚠️ Insufficient balance.\nYou need ₦1,000 to upgrade.\n\n👉 Click OK to Deposit")) {
-              showSection("depositSection; // your existing function to open sections
+              showSection("depositSection"); // your existing function to open sections
             }
             return;
           }
@@ -2582,6 +2582,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
