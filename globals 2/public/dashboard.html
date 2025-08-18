@@ -704,8 +704,7 @@
 
 
 
-
-<!-- PREMIUM SECTION -->
+<!-- PREMIUM SECTION (Mobile Card View) -->
 <section id="premium-section" class="premium-box">
   <div class="premium-header">
     <h2>🌟 Global Premium Package</h2>
@@ -716,7 +715,7 @@
     <ul class="premium-features">
       <li>👑 Withdraw funds with 5% less fee</li>
       <li>👑 Affiliate: Banner task included</li>
-      <li>👑 WhatsApp & Instagram tasks locked (Telegram free)</li>
+      <li>👑 WhatsApp & Instagram locked (Telegram free)</li>
       <li>👑 ₦500 unlock for WhatsApp/Telegram</li>
       <li>👑 ₦1,000 unlock for Instagram/TikTok (1k+ followers)</li>
       <li>👑 Cashback on Airtime, Data, Betting, TV, Electricity</li>
@@ -724,7 +723,7 @@
       <li>👑 Minimum withdrawal ₦500 (Premium unlimited)</li>
       <li>👑 Referral bonus: ₦300 (normal), ₦500 (premium)</li>
       <li>👑 Unlock all NFT badge rewards</li>
-      <li>👑 Post & Affiliate tasks get boosted visibility</li>
+      <li>👑 Post & Affiliate tasks boosted visibility</li>
     </ul>
   </div>
 
@@ -742,36 +741,43 @@
 
 <!-- CSS -->
 <style>
-/* Premium Main Box */
-.premium-box {
-  max-width: 420px;
-  margin: 2rem auto;
-  padding: 1.5rem;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 4px 18px rgba(0,0,0,0.25);
-  color: #fff;
+body {
+  background: #0f1218; /* fintech dark bg */
+  display: flex;
+  justify-content: center;
+  padding: 1.2rem;
   font-family: 'Inter', sans-serif;
+}
+
+.premium-box {
+  width: 100%;
+  max-width: 380px;   /* Centered box, not full edge */
+  margin: auto;
+  padding: 1rem;
+  border-radius: 18px;
+  background: rgba(20, 20, 30, 0.9);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+  color: #e4eaf3;
   text-align: center;
-  border: 1px solid rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.06);
 }
 
 /* Title */
 .premium-header h2 {
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   margin-bottom: 1rem;
   font-weight: 700;
+  color: #fefefe;
 }
 
-/* Features Box */
+/* Features */
 .features-box {
-  background: rgba(255,255,255,0.07);
-  padding: 1.2rem;
-  border-radius: 18px;
-  margin-bottom: 1.2rem;
-  border: 1px solid rgba(255,215,0,0.3);
-  box-shadow: 0 0 12px rgba(255,215,0,0.2);
+  background: rgba(35, 38, 55, 0.95);
+  padding: 1rem;
+  border-radius: 14px;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(255,215,0,0.25);
 }
 
 .premium-features {
@@ -780,58 +786,53 @@
   margin: 0;
   text-align: left;
 }
-
 .premium-features li {
-  margin-bottom: 0.8rem;
-  font-size: 0.95rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.92rem;
+  color: #d5dae4;
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-/* Price Box */
+/* Price */
 .price-box {
-  background: rgba(255,255,255,0.07);
+  background: rgba(0, 200, 255, 0.08);
   border-radius: 14px;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-  border: 1px solid rgba(0,200,255,0.3);
-  box-shadow: 0 0 12px rgba(0,200,255,0.25);
+  padding: 0.8rem;
+  margin: 0 auto 1.2rem auto;
+  border: 1px solid rgba(0,200,255,0.25);
+  max-width: 250px; /* Small box centered */
 }
-
 .price {
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   font-weight: 700;
   margin: 0;
+  color: #00d4ff;
 }
 .price span {
   display: block;
-  font-size: 0.9rem;
-  opacity: 0.8;
+  font-size: 0.85rem;
+  color: #b9c5d6;
 }
 
 /* Button */
 .go-premium-btn {
   width: 100%;
-  padding: 1rem;
+  padding: 0.85rem;
   border: none;
-  border-radius: 16px;
+  border-radius: 14px;
   background: linear-gradient(135deg, #ffb300, #ff2e63);
   color: #fff;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease-in-out;
-  box-shadow: 0 6px 15px rgba(255, 46, 99, 0.4);
+  transition: 0.25s ease-in-out;
 }
 .go-premium-btn:hover {
   transform: scale(1.05);
-  background: linear-gradient(135deg, #ff2e63, #ffb300);
-  box-shadow: 0 10px 25px rgba(255, 46, 99, 0.6);
 }
 </style>
-
-
 
 
 
@@ -2802,6 +2803,7 @@
 </body>
 
 </html>
+
 
 
 
