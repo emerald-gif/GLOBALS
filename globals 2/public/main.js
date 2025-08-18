@@ -376,195 +376,7 @@ function closeBoxPopup() {
   
   
 
-/* =========================
-   PREMIUM GATEKEEPER (2025)
-   ========================= */
 
-/// Firestore ref (v8 style)
-const db = firebase.firestore();
-
-/// 1) List ALL section IDs that must be Premium to open
-///    ⚠️ Use the EXACT IDs you pass to showSection(...)
-const PREMIUM_SECTIONS = [
-  "whatsapp-task",
-  "tiktok-task",
-  "affiliate-tasks",
-  "myJobsSection",
-  "adminJobsSwiperContainer",
-  "nftSection"
-];
-
-/// 2) Cache of user premium & balance (live)
-let premiumCache = null;
-let balanceCache = 0;
-
-/// 3) UI helpers (custom alert + safe navigation)
-function showAlert(message, onOk) {
-  const box = document.getElementById("globalAlert");
-  const msg = document.getElementById("alertMessage");
-  const ok  = document.getElementById("alertOkBtn");
-  if (!box || !msg || !ok) {
-    console.warn("globalAlert elements missing; falling back to browser alert");
-    alert(message);
-    if (onOk) onOk();
-    return;
-  }
-  msg.innerText = message;
-  box.classList.remove("hidden");
-
-  // reset previous listeners (prevents 'OK not working')
-  const okClone = ok.cloneNode(true);
-  ok.parentNode.replaceChild(okClone, okClone);
-
-  okClone.addEventListener("click", () => {
-    box.classList.add("hidden");
-    if (onOk) onOk();
-  });
-}
-
-function goTo(...ids) {
-  // Try multiple possible IDs safely
-  for (const id of ids) {
-    if (!id) continue;
-    try { if (typeof window.showSection === "function") { window.showSection(id); return; } } catch(e){}
-    const el = document.getElementById(id);
-    if (el) { location.hash = "#" + id; return; }
-  }
-}
-
-/// 4) Auth wiring + live user doc
-firebase.auth().onAuthStateChanged((user) => {
-  if (!user) return;
-  const userRef = db.collection("users").doc(user.uid);
-
-  // Live snapshot (keeps button + cache in sync)
-  userRef.onSnapshot((doc) => {
-    if (!doc.exists) return;
-    const data = doc.data() || {};
-    premiumCache = !!(data.is_Premium || data.is_premium);
-    balanceCache = Number(data.balance || 0);
-
-    // Button state
-    const btn = document.querySelector(".go-premium-btn");
-    if (btn) {
-      if (premiumCache) {
-        btn.innerText = "👑 Premium Active";
-        btn.disabled = true;
-        btn.style.opacity = "0.7";
-      } else {
-        btn.innerText = "👑 Go Premium";
-        btn.disabled = false;
-        btn.style.opacity = "1";
-      }
-    }
-  });
-
-  // Go Premium flow (atomic deduction + upgrade)
-  const goBtn = document.querySelector(".go-premium-btn");
-  if (goBtn) {
-    goBtn.addEventListener("click", async () => {
-      try {
-        await db.runTransaction(async (tx) => {
-          const snap = await tx.get(userRef);
-          if (!snap.exists) throw new Error("User not found");
-          const data = snap.data() || {};
-          const bal  = Number(data.balance || 0);
-          const isP  = !!(data.is_Premium || data.is_premium);
-
-          if (isP) return; // already premium
-
-          if (bal < 1000) {
-            // Not enough: custom alert → Deposit
-            showAlert("⚠️ Insufficient balance. You need at least ₦1,000 to upgrade.", () => {
-              goTo("depositSection", "deposit-section");
-            });
-            throw new Error("INSUFFICIENT_FUNDS");
-          }
-
-          // Deduct ₦1,000 and upgrade (atomic)
-          tx.update(userRef, {
-            balance    : bal - 1000,
-            is_Premium : true
-          });
-        });
-
-        // Success: custom alert → Dashboard
-        showAlert("🎉 Congratulations! Your account has been upgraded to Premium.", () => {
-          goTo("dashboardSection", "dashboard");
-        });
-      } catch (err) {
-        if (String(err.message).includes("INSUFFICIENT_FUNDS")) return;
-        console.error("Upgrade error:", err);
-        showAlert("Something went wrong while upgrading. Please try again.");
-      }
-    });
-  }
-
-  // Gate 1 — WRAP showSection so ANY call is checked first
-  hookShowSectionGate(userRef);
-
-  // Gate 2 — Intercept link/button clicks BEFORE they call showSection (anchors/data-section)
-  document.addEventListener("click", async (e) => {
-    const t = e.target.closest("[data-section], a[href^='#']");
-    if (!t) return;
-
-    let targetId = null;
-    if (t.dataset && t.dataset.section) targetId = t.dataset.section;
-    else if (t.getAttribute("href")) {
-      const href = t.getAttribute("href");
-      if (href.startsWith("#")) targetId = href.slice(1);
-    }
-    if (!targetId) return;
-
-    // Only guard premium sections
-    if (!PREMIUM_SECTIONS.includes(targetId)) return;
-
-    // If already premium → allow normal click
-    if (premiumCache === true) return;
-
-    // Not premium → stop default and show alert
-    e.preventDefault();
-    e.stopImmediatePropagation();
-
-    // Fresh verify from Firestore (in case cache not ready)
-    try {
-      const snap = await userRef.get();
-      const data = snap.data() || {};
-      const isP  = !!(data.is_Premium || data.is_premium);
-      if (isP) return; // allow click naturally (user just turned premium)
-    } catch (_) {}
-
-    showAlert("🔒 This feature is for Premium users only. Upgrade to access.", () => {
-      goTo("premium-section");
-    });
-  }, true); // capture phase to beat other handlers
-});
-
-
-/// 5) Wrap showSection EXACTLY ONCE, even if it’s defined later
-function hookShowSectionGate(userRef) {
-  let hooked = false;
-
-  const tryHook = () => {
-    if (hooked) return;
-    if (typeof window.showSection !== "function") return;
-
-    const original = window.showSection.bind(window);
-    const gate = async function(sectionId) {
-      // If free section → pass through
-      if (!PREMIUM_SECTIONS.includes(sectionId)) {
-        return original(sectionId);
-      }
-
-      // If premium in cache → allow
-      if (premiumCache === true) return original(sectionId);
-
-      // Else verify from Firestore (block until checked)
-      try {
-        const snap = await userRef.get();
-        const data = snap.data() || {};
-        const isP  = !!(data.is_Premium || data.is_premium);
-<script>
 /* =========================
    PREMIUM GATEKEEPER (2025)
    ========================= */
@@ -784,7 +596,7 @@ function hookShowSectionGate(userRef) {
 }
 
 
-========== OPTIONAL: Minimal Global Alert markup if you don't have it ==========
+
 
 <div id="globalAlert" class="global-alert hidden">
   <div class="alert-box">
@@ -800,7 +612,6 @@ function hookShowSectionGate(userRef) {
 .alert-box button{margin-top:12px;padding:.7rem 1.2rem;border:none;border-radius:10px;background:linear-gradient(135deg,#ffb300,#ff2e63);color:#fff;font-weight:700;cursor:pointer}
 </style>
 
-=============================================================================== 
 
 
 
@@ -2898,6 +2709,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
