@@ -594,8 +594,7 @@ function hookShowSectionGate(userRef) {
   }, 300);
 }
 
-
-  // === GLOBAL ALERT ===
+// === GLOBAL ALERT ===
   function showAlert(message, callback) {
     const alertBox = document.getElementById("globalAlert");
     const alertMessage = document.getElementById("alertMessage");
@@ -2710,6 +2709,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
