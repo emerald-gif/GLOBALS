@@ -453,66 +453,6 @@ function closeBoxPopup() {
 
 
 
-
-
-// IDs of sections that require premium
-const premiumRequiredSections = [
-  "whatsapp-task",
-  "tiktok-task",
-  "affiliate-tasks",
-  "task-nft",
-  "myJobsSection",
-  "taskSection"
-];
-
-// Get current logged-in user from Firebase Auth
-firebase.auth().onAuthStateChanged((user) => {
-  if (!user) return; // no logged-in user
-  const currentUserId = user.uid;
-  const userRef = firebase.firestore().collection("users").doc(currentUserId);
-
-  const goPremiumBtn = document.querySelector(".go-premium-btn");
-
-  // 🔹 Check user status on load
-  userRef.onSnapshot((doc) => {
-    if (!doc.exists) return;
-    const userData = doc.data();
-
-    if (userData.is_Premium) {
-      if (goPremiumBtn) {
-        goPremiumBtn.innerText = "👑 Premium Active";
-        goPremiumBtn.disabled = true;
-        goPremiumBtn.style.opacity = "0.7";
-      }
-    } else {
-      if (goPremiumBtn) {
-        goPremiumBtn.innerText = "👑 Go Premium";
-        goPremiumBtn.disabled = false;
-        goPremiumBtn.style.opacity = "1";
-      }
-    }
-  });
-
-// 🔹 Handle Go Premium button click
-if (goPremiumBtn) {
-  goPremiumBtn.addEventListener("click", async () => {
-    try {
-      const userSnap = await userRef.get();
-
-      if (!userSnap.exists) {
-        await alert("User not found!");
-        return;
-      }
-
-      const userData = userSnap.data();
-      const balance = userData.balance || 0;
-      const isPremium = userData.is_Premium || false;
-
-      // Already premium
-      if (isPremium) {
-        await alert("✅ You are already Premium!");
-        return;
-      }
 // IDs of sections that require premium
 const premiumRequiredSections = [
   "whatsapp-task",
@@ -558,7 +498,7 @@ firebase.auth().onAuthStateChanged((user) => {
         const userSnap = await userRef.get();
 
         if (!userSnap.exists) {
-          await alert("User not found!");
+          alert("User not found!");
           return;
         }
 
@@ -568,17 +508,18 @@ firebase.auth().onAuthStateChanged((user) => {
 
         // Already premium
         if (isPremium) {
-          await alert("✅ You are already Premium!");
+          alert("✅ You are already Premium!");
           return;
         }
 
         // Not enough balance
         if (balance < 1000) {
-          const goDeposit = await confirm(
-            "⚠️ Insufficient balance.\nYou need ₦1,000 to upgrade.\n\n👉 Deposit now?"
-          );
-          if (goDeposit) {
-            showSection("depositSection"); // still works normally
+          if (
+            confirm(
+              "⚠️ Insufficient balance.\nYou need ₦1,000 to upgrade.\n\n👉 Click OK to Deposit"
+            )
+          ) {
+            showSection("depositSection"); // your existing function
           }
           return;
         }
@@ -589,11 +530,11 @@ firebase.auth().onAuthStateChanged((user) => {
           balance: balance - 1000,
         });
 
-        await alert("🎉 Congratulations! Your account has been upgraded to Premium 🚀");
+        alert("🎉 Congratulations! Your account has been upgraded to Premium 🚀");
         showSection("dashboardSection"); // back to dashboard
       } catch (error) {
         console.error("Error upgrading to Premium:", error);
-        await alert("Something went wrong. Please try again.");
+        alert("Something went wrong. Please try again.");
       }
     });
   }
@@ -603,29 +544,51 @@ firebase.auth().onAuthStateChanged((user) => {
   const _switchTab = window.switchTab;
   const _showTask = window.showTask;
 
-  function wrapWithPremiumCheck(originalFn) {
-    return async function(sectionId) {
-      const snap = await userRef.get();
-      if (!snap.exists) return;
-      const userData = snap.data();
+  async function isPremiumAllowed(sectionId) {
+    const snap = await userRef.get();
+    if (!snap.exists) return false;
+    const userData = snap.data();
+    return userData.is_Premium || !premiumRequiredSections.includes(sectionId);
+  }
 
-      if (userData.is_Premium || !premiumRequiredSections.includes(sectionId)) {
-        // ✅ allow normal navigation
-        originalFn(sectionId);
+  // Wrap activateTab
+  if (_activateTab) {
+    window.activateTab = async function (sectionId) {
+      if (await isPremiumAllowed(sectionId)) {
+        _activateTab(sectionId);
       } else {
-        // 🚫 block until user presses OK
-        await alert("🔒 This feature is for Premium users only.\n\n👉 Upgrade to access!");
-        _activateTab("premium-section"); // only after OK
+        alert("🔒 This feature is for Premium users only.\n\n👉 Upgrade to access!");
+        _activateTab("premium-section");
       }
     };
   }
 
-  if (_activateTab) window.activateTab = wrapWithPremiumCheck(_activateTab);
-  if (_switchTab) window.switchTab = wrapWithPremiumCheck(_switchTab);
-  if (_showTask) window.showTask = wrapWithPremiumCheck(_showTask);
+  // Wrap switchTab
+  if (_switchTab) {
+    window.switchTab = async function (sectionId) {
+      if (await isPremiumAllowed(sectionId)) {
+        _switchTab(sectionId);
+      } else {
+        alert("🔒 This feature is for Premium users only.\n\n👉 Upgrade to access!");
+        _activateTab("premium-section");
+      }
+    };
+  }
+
+  // Wrap showTask
+  if (_showTask) {
+    window.showTask = async function (sectionId) {
+      if (await isPremiumAllowed(sectionId)) {
+        _showTask(sectionId);
+      } else {
+        alert("🔒 This feature is for Premium users only.\n\n👉 Upgrade to access!");
+        _activateTab("premium-section");
+      }
+    };
+  }
 });
-	
-	
+
+
 	
 	
 	
@@ -2715,6 +2678,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
