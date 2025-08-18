@@ -1244,6 +1244,14 @@ function submitTelegram() {
 
 
 
+var swiper = new Swiper(".mySwiper", {
+    loop: true,
+    autoplay: { delay: 2500 },
+    slidesPerView: 1,
+    spaceBetween: 0,
+  });
+
+
 
                                                  // GLOBALS TAP FUNCTION
 												 
@@ -2666,6 +2674,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
