@@ -416,7 +416,7 @@ function closeBoxPopup() {
 
         if (balance < 1000) {
           showAlert("⚠️ Insufficient balance. Please deposit ₦1,000", () => {
-            showSection("deposit-section");
+            showSection("depositSection");
           });
           return;
         }
@@ -428,7 +428,7 @@ function closeBoxPopup() {
         });
 
         showAlert("🎉 Congratulations! You are now Premium 🚀", () => {
-          showSection("dashboard-section");
+          showSection("dashboard");
         });
 
       } catch (err) {
@@ -2586,6 +2586,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
