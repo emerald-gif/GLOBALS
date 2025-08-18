@@ -450,27 +450,31 @@ function closeBoxPopup() {
   // Save the original showSection
   const originalShowSection = window.showSection;
 
-  window.showSection = async function(sectionId) {
+  window.showSection = function(sectionId) {
     const user = firebase.auth().currentUser;
 
+    // check if this section is restricted
     if (premiumRequiredSections.includes(sectionId)) {
       if (!user) return;
 
-      const snap = await db.collection("users").doc(user.uid).get();
-      if (!snap.exists) return;
+      db.collection("users").doc(user.uid).get().then((snap) => {
+        if (!snap.exists) return;
 
-      const { is_Premium = false } = snap.data();
+        const { is_Premium = false } = snap.data();
 
-      if (!is_Premium) {
-        showAlert("🔒 This feature is for Premium users only.", () => {
-          originalShowSection("premium-section");
-        });
-        return;
-      }
+        if (!is_Premium) {
+          showAlert("🔒 This feature is for Premium users only.", () => {
+            originalShowSection("premium-section");
+          });
+        } else {
+          originalShowSection(sectionId); // allow if premium
+        }
+      });
+
+    } else {
+      // normal sections (not restricted)
+      originalShowSection(sectionId);
     }
-
-    // ✅ Call the original function for normal navigation
-    originalShowSection(sectionId);
   };
 
 
@@ -492,7 +496,6 @@ function closeBoxPopup() {
       if (callback) callback();
     });
   }
-
 
 
 
@@ -2590,6 +2593,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
