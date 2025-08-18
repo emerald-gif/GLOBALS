@@ -437,30 +437,34 @@ function closeBoxPopup() {
       }
     });
 
-    // premium protection on navigation
-    premiumRequiredSections.forEach(sectionId => {
-      const trigger = document.querySelector(`[data-section='${sectionId}']`);
-      if (!trigger) return;
+	  
 
-      trigger.addEventListener("click", async (e) => {
-        e.preventDefault();
+    // Protect premium sections
+premiumRequiredSections.forEach(sectionId => {
+  const trigger = document.querySelector(`[data-section='${sectionId}']`);
+  if (!trigger) return;
 
-        const snap = await userRef.get();
-        if (!snap.exists) return;
-        const { is_Premium = false } = snap.data();
+  // remove any old onclick/showSection
+  trigger.onclick = null;
 
-        if (!is_Premium) {
-          showAlert("🔒 This feature is for Premium users only. Upgrade to access!", () => {
-            showSection("premium-section");
-          });
-          return;
-        }
+  trigger.addEventListener("click", async (e) => {
+    e.preventDefault();
 
-        // allowed → show section
-        showSection(sectionId);
+    const snap = await userRef.get();
+    if (!snap.exists) return;
+    const { is_Premium = false } = snap.data();
+
+    if (!is_Premium) {
+      showAlert("🔒 This feature is for Premium users only. Upgrade to access!", () => {
+        showSection("premium-section"); // redirect to Go Premium screen
       });
-    });
+      return;
+    }
+
+    // only now allow access
+    showSection(sectionId);
   });
+});
 
 
 
@@ -478,13 +482,15 @@ function showAlert(message, callback) {
   alertMessage.innerText = message;
   alertBox.classList.remove("hidden");
 
-  okBtn.onclick = () => {
+  // clear old listeners to avoid "not working"
+  const newOkBtn = okBtn.cloneNode(true);
+  okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+
+  newOkBtn.addEventListener("click", () => {
     alertBox.classList.add("hidden");
     if (callback) callback();
-  };
+  });
 }
- 
-
 
 
 
@@ -2586,6 +2592,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
