@@ -371,7 +371,113 @@ function closeBoxPopup() {
 
 
 
-                                                           // affiliate task section function
+                      
+                                   // IDs of sections that require PREMIUM FUNCTION 
+  const premiumRequiredSections = ["whatsappSection", "instagramSection", "affiliate-tasks", "nftSection"];
+
+  // Get current logged-in user from Firebase Auth
+  firebase.auth().onAuthStateChanged((user) => {
+    if (!user) return; // no logged-in user
+    const currentUserId = user.uid;
+    const userRef = firebase.firestore().collection("users").doc(currentUserId);
+
+    const goPremiumBtn = document.querySelector(".go-premium-btn");
+
+    // 🔹 Check user status on load
+    userRef.onSnapshot((doc) => {
+      if (!doc.exists) return;
+      const userData = doc.data();
+
+      if (userData.is_Premium) {
+        if (goPremiumBtn) {
+          goPremiumBtn.innerText = "👑 Premium Active";
+          goPremiumBtn.disabled = true;
+          goPremiumBtn.style.opacity = "0.7";
+        }
+      } else {
+        if (goPremiumBtn) {
+          goPremiumBtn.innerText = "👑 Go Premium";
+          goPremiumBtn.disabled = false;
+          goPremiumBtn.style.opacity = "1";
+        }
+      }
+    });
+
+    // 🔹 Handle Go Premium button click
+    if (goPremiumBtn) {
+      goPremiumBtn.addEventListener("click", async () => {
+        try {
+          const userSnap = await userRef.get();
+
+          if (!userSnap.exists) {
+            alert("User not found!");
+            return;
+          }
+
+          const userData = userSnap.data();
+          const balance = userData.balance || 0;
+          const isPremium = userData.is_Premium || false;
+
+          // Already premium
+          if (isPremium) {
+            alert("✅ You are already Premium!");
+            return;
+          }
+
+          // Not enough balance
+          if (balance < 1000) {
+            if (confirm("⚠️ Insufficient balance.\nYou need ₦1,000 to upgrade.\n\n👉 Click OK to Deposit")) {
+              showSection("depositSection"); // your existing function to open sections
+            }
+            return;
+          }
+
+          // Deduct 1000 and upgrade user
+          await userRef.update({
+            is_Premium: true,
+            balance: balance - 1000
+          });
+
+          alert("🎉 Congratulations! Your account has been upgraded to Premium 🚀");
+          showSection("dashboardSection"); // back to dashboard
+
+        } catch (error) {
+          console.error("Error upgrading to Premium:", error);
+          alert("Something went wrong. Please try again.");
+        }
+      });
+    }
+
+    // 🔹 Global check for premium-only sections
+    premiumRequiredSections.forEach(sectionId => {
+      const sectionEl = document.getElementById(sectionId);
+      if (!sectionEl) return;
+
+      sectionEl.addEventListener("click", async (e) => {
+        e.preventDefault();
+
+        try {
+          const userSnap = await userRef.get();
+          if (!userSnap.exists) return;
+
+          const userData = userSnap.data();
+
+          if (!userData.is_Premium) {
+            alert("🔒 This feature is for Premium users only.\n\n👉 Upgrade to access!");
+            showSection("premium-section");
+            return;
+          }
+
+          // If premium → allow access
+          showSection(sectionId);
+
+        } catch (err) {
+          console.error("Premium check error:", err);
+        }
+      });
+    });
+  });
+                                   
  
 
 
@@ -2475,6 +2581,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
