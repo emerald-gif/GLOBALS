@@ -402,72 +402,71 @@ function closeBoxPopup() {
     });
 
     // upgrade flow
-    goPremiumBtn.addEventListener("click", async () => {
-      try {
-        const snap = await userRef.get();
-        if (!snap.exists) return;
+    document.querySelector(".go-premium-btn").addEventListener("click", async () => {
+  const user = firebase.auth().currentUser;
+  if (!user) return;
 
-        const { balance = 0, is_Premium = false } = snap.data();
+  const userRef = db.collection("users").doc(user.uid);
+  const snap = await userRef.get();
+  if (!snap.exists) return;
 
-        if (is_Premium) {
-          showAlert("✅ You are already Premium!");
-          return;
-        }
+  const data = snap.data();
+  const balance = data.balance || 0;
 
-        if (balance < 1000) {
-          showAlert("⚠️ Insufficient balance. Please deposit ₦1,000", () => {
-            showSection("depositSection");
-          });
-          return;
-        }
-
-        // deduct + upgrade
-        await userRef.update({
-          is_Premium: true,
-          balance: balance - 1000
-        });
-
-        showAlert("🎉 Congratulations! You are now Premium 🚀", () => {
-          showSection("dashboard");
-        });
-
-      } catch (err) {
-        console.error("Premium upgrade error:", err);
-        showAlert("Something went wrong. Try again.");
-      }
+  if (balance < 1000) {
+    // insufficient funds
+    showAlert("⚠️ Insufficient balance. Please deposit at least ₦1,000.", () => {
+      showSection("depositSection"); 
     });
+    return;
+  }
 
-	  
+  // deduct and upgrade
+  await userRef.update({
+    balance: balance - 1000,
+    is_Premium: true
+  });
 
-    // Protect premium sections
+  // success
+  showAlert("🎉 Your account has been upgraded to Premium!", () => {
+    showSection("dashboard");
+    const btn = document.querySelector(".go-premium-btn");
+    if (btn) {
+      btn.innerText = "✅ Premium Active";
+      btn.disabled = true;
+    }
+  });
+});
+
+// === PREMIUM SECTION PROTECTION ===
+const premiumRequiredSections = ["whatsapp-section", "instagram-section", "nft-badge-section"];
+
 premiumRequiredSections.forEach(sectionId => {
   const trigger = document.querySelector(`[data-section='${sectionId}']`);
   if (!trigger) return;
 
-  // remove any old onclick/showSection
-  trigger.onclick = null;
-
   trigger.addEventListener("click", async (e) => {
     e.preventDefault();
 
-    const snap = await userRef.get();
+    const user = firebase.auth().currentUser;
+    if (!user) return;
+
+    const snap = await db.collection("users").doc(user.uid).get();
     if (!snap.exists) return;
+
     const { is_Premium = false } = snap.data();
 
     if (!is_Premium) {
-      showAlert("🔒 This feature is for Premium users only. Upgrade to access!", () => {
-        showSection("premium-section"); // redirect to Go Premium screen
+      showAlert("🔒 This feature is for Premium users only.", () => {
+        showSection("premium-section");
       });
       return;
     }
 
-    // only now allow access
+    // ✅ allow only Premium users
     showSection(sectionId);
   });
 });
-
-
-
 
 
 
@@ -482,7 +481,7 @@ function showAlert(message, callback) {
   alertMessage.innerText = message;
   alertBox.classList.remove("hidden");
 
-  // clear old listeners to avoid "not working"
+  // Reset old listeners
   const newOkBtn = okBtn.cloneNode(true);
   okBtn.parentNode.replaceChild(newOkBtn, okBtn);
 
@@ -491,7 +490,6 @@ function showAlert(message, callback) {
     if (callback) callback();
   });
 }
-
 
 
 
@@ -2592,6 +2590,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
