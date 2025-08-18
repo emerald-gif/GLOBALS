@@ -1104,47 +1104,38 @@
 
 
 
-	
-<!-- Affiliate Tasks Section -->
-<section id="affiliate-tasks" style="display: flex; justify-content: center; margin: 20px 0;">
-  <div class="swiper myAdminJobsSwiper">
-    <div class="swiper-wrapper" id="adminJobsSwiperContainer"></div>
-    <div class="swiper-pagination mt-2"></div>
-  </div>
-</section>
-
-
-<style id="admin-swiper-fix">
-  /* Keep swiper centered within its section */
-  #affiliate-tasks .myAdminJobsSwiper {
-    padding: 0 16px;
-    max-width: 440px;   /* cap width so it doesn’t go edge-to-edge */
-    width: 100%;
-  }
-
-  /* Center each slide’s content */
-  #affiliate-tasks .myAdminJobsSwiper .swiper-slide {
-    display: flex;
-    justify-content: center;
-  }
-
-  /* Style the job card */
-  #affiliate-tasks .myAdminJobsSwiper .job-card {
-    width: 88vw;
-    max-width: 420px;
-    border-radius: 20px;
-    overflow: hidden;
-    position: relative;
-  }
-
-  /* Ensure image doesn’t block button clicks */
-  #affiliate-tasks .myAdminJobsSwiper .job-card img {
-    pointer-events: none;
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-</style>
+<style id="admin-swiper-fix">  
+  /* Give the carousel breathing space around */  
+  .myAdminJobsSwiper {  
+    padding-left: 16px;  
+    padding-right: 16px;  
+    margin-top: 20px;      /* top breathing space */  
+    margin-bottom: 20px;   /* bottom breathing space */  
+  }  
+  
+  /* Center each slide's content */  
+  .myAdminJobsSwiper .swiper-slide {  
+    display: flex;  
+    justify-content: center;  
+  }  
+  
+  /* Make the actual card smaller than the screen + cap its max width */  
+  .myAdminJobsSwiper .job-card {  
+    width: 88vw;             
+    max-width: 420px;        
+    border-radius: 20px;  
+    overflow: hidden;  
+    position: relative;    /* ensure button layers above img */  
+  }  
+  
+  /* Ensure image never blocks the button */  
+  .myAdminJobsSwiper .job-card img {  
+    pointer-events: none;  /* allow clicks to pass through */  
+  }  
+</style>  <div class=" swiper myAdminJobsSwiper">  
+  <div class="tab-section hidden swiper-wrapper" id="adminJobsSwiperContainer"></div>  
+  <div class="swiper-pagination mt-2"></div>  
+</div>
 
 
 
@@ -2816,6 +2807,7 @@
 </body>
 
 </html>
+
 
 
 
