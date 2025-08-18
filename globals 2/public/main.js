@@ -493,117 +493,112 @@ firebase.auth().onAuthStateChanged((user) => {
     }
   });
 
-  // 🔹 Handle Go Premium button click
-  if (goPremiumBtn) {
-    goPremiumBtn.addEventListener("click", async () => {
-      try {
-        const userSnap = await userRef.get();
+// 🔹 Handle Go Premium button click
+if (goPremiumBtn) {
+  goPremiumBtn.addEventListener("click", async () => {
+    try {
+      const userSnap = await userRef.get();
 
-        if (!userSnap.exists) {
-          alert("User not found!");
-          return;
+      if (!userSnap.exists) {
+        await alert("User not found!");
+        return;
+      }
+
+      const userData = userSnap.data();
+      const balance = userData.balance || 0;
+      const isPremium = userData.is_Premium || false;
+
+      // Already premium
+      if (isPremium) {
+        await alert("✅ You are already Premium!");
+        return;
+      }
+
+      // Not enough balance
+      if (balance < 1000) {
+        const goDeposit = await confirm(
+          "⚠️ Insufficient balance.\nYou need ₦1,000 to upgrade.\n\n👉 Deposit now?"
+        );
+        if (goDeposit) {
+          showSection("depositSection");
         }
-
-        const userData = userSnap.data();
-        const balance = userData.balance || 0;
-        const isPremium = userData.is_Premium || false;
-
-        // Already premium
-        if (isPremium) {
-          alert("✅ You are already Premium!");
-          return;
-        }
-
-        // Not enough balance
-        if (balance < 1000) {
-          if (
-            confirm(
-              "⚠️ Insufficient balance.\nYou need ₦1,000 to upgrade.\n\n👉 Click OK to Deposit"
-            )
-          ) {
-            showSection("depositSection"); // your existing function
-          }
-          return;
-        }
-
-        // Deduct 1000 and upgrade user
-        await userRef.update({
-          is_Premium: true,
-          balance: balance - 1000,
-        });
-
-        alert("🎉 Congratulations! Your account has been upgraded to Premium 🚀");
-        showSection("dashboardSection"); // back to dashboard
-      } catch (error) {
-        console.error("Error upgrading to Premium:", error);
-        alert("Something went wrong. Please try again.");
+        return;
       }
-    });
-  }
 
-  // 🔹 Premium Wrapper: intercept activateTab, switchTab, showTask
-  const _activateTab = window.activateTab;
-  const _switchTab = window.switchTab;
-  const _showTask = window.showTask;
+      // Deduct 1000 and upgrade user
+      await userRef.update({
+        is_Premium: true,
+        balance: balance - 1000,
+      });
 
-  async function isPremiumAllowed(sectionId) {
-    const snap = await userRef.get();
-    if (!snap.exists) return false;
-    const userData = snap.data();
-    return userData.is_Premium || !premiumRequiredSections.includes(sectionId);
-  }
+      await alert("🎉 Congratulations! Your account has been upgraded to Premium 🚀");
+      showSection("dashboardSection"); // back to dashboard
+    } catch (error) {
+      console.error("Error upgrading to Premium:", error);
+      await alert("Something went wrong. Please try again.");
+    }
+  });
+}
 
-  // Wrap activateTab
-  if (_activateTab) {
-    window.activateTab = async function (sectionId) {
-      if (await isPremiumAllowed(sectionId)) {
-        _activateTab(sectionId);
-      } else {
-        alert("🔒 This feature is for Premium users only.\n\n👉 Upgrade to access!");
-        _activateTab("premium-section");
-      }
-    };
-  }
+// 🔹 Premium Wrapper: intercept activateTab, switchTab, showTask
+const _activateTab = window.activateTab;
+const _switchTab = window.switchTab;
+const _showTask = window.showTask;
 
-  // Wrap switchTab
-  if (_switchTab) {
-    window.switchTab = async function (sectionId) {
-      if (await isPremiumAllowed(sectionId)) {
-        _switchTab(sectionId);
-      } else {
-        alert("🔒 This feature is for Premium users only.\n\n👉 Upgrade to access!");
-        _activateTab("premium-section");
-      }
-    };
-  }
+async function isPremiumAllowed(sectionId) {
+  const snap = await userRef.get();
+  if (!snap.exists) return false;
+  const userData = snap.data();
+  return userData.is_Premium || !premiumRequiredSections.includes(sectionId);
+}
 
-  // Wrap showTask
-  if (_showTask) {
-    window.showTask = async function (sectionId) {
-      if (await isPremiumAllowed(sectionId)) {
-        _showTask(sectionId);
-      } else {
-        alert("🔒 This feature is for Premium users only.\n\n👉 Upgrade to access!");
-        _activateTab("premium-section");
-      }
-    };
-  }
-});
+// Wrap activateTab
+if (_activateTab) {
+  window.activateTab = async function (sectionId) {
+    if (await isPremiumAllowed(sectionId)) {
+      _activateTab(sectionId);
+    } else {
+      await alert("🔒 This feature is for Premium users only.\n\n👉 Upgrade to access!");
+      _activateTab("premium-section"); // ✅ only runs after OK
+    }
+  };
+}
 
+// Wrap switchTab
+if (_switchTab) {
+  window.switchTab = async function (sectionId) {
+    if (await isPremiumAllowed(sectionId)) {
+      _switchTab(sectionId);
+    } else {
+      await alert("🔒 This feature is for Premium users only.\n\n👉 Upgrade to access!");
+      _activateTab("premium-section");
+    }
+  };
+}
 
-                                                                        //INSTALL AND EARN FUCTION
-
-
-
-
-
-
-
-
-
-
-
-
+// Wrap showTask
+if (_showTask) {
+  window.showTask = async function (sectionId) {
+    if (await isPremiumAllowed(sectionId)) {
+      _showTask(sectionId);
+    } else {
+      await alert("🔒 This feature is for Premium users only.\n\n👉 Upgrade to access!");
+      _activateTab("premium-section");
+    }
+  };
+}
+  
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	//INSTALL AND EARN FUCTION
 
 
 
@@ -2685,6 +2680,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
