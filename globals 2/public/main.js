@@ -384,7 +384,7 @@ function closeBoxPopup() {
 
 
   // IDs of sections that require premium
-  const premiumRequiredSections = ["whatsappSection", "instagramSection", "nftSection"];
+  const premiumRequiredSections = ["whatsapp-task", "myJobsSection", "taskSection"];
 
   // Get current logged-in user from Firebase Auth
   firebase.auth().onAuthStateChanged((user) => {
@@ -2588,6 +2588,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
