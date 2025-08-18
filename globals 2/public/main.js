@@ -373,7 +373,8 @@ function closeBoxPopup() {
 
                       
                                    // IDs of sections that require PREMIUM FUNCTION 
-  const premiumRequiredSections = ["whatsappSection", "instagramSection", "affiliate-tasks", "nftSection"];
+  const premiumRequiredSections = ["whatsapp-task", "tiktok-task", "affiliate-tasks",
+								   "myJobsSection", "adminJobsSwiperContainer", "nftSection"];
 
   // Get current logged-in user from Firebase Auth
   firebase.auth().onAuthStateChanged((user) => {
@@ -427,7 +428,7 @@ function closeBoxPopup() {
           // Not enough balance
           if (balance < 1000) {
             if (confirm("⚠️ Insufficient balance.\nYou need ₦1,000 to upgrade.\n\n👉 Click OK to Deposit")) {
-              showSection("depositSection"); // your existing function to open sections
+              showSection("depositSection; // your existing function to open sections
             }
             return;
           }
@@ -439,7 +440,7 @@ function closeBoxPopup() {
           });
 
           alert("🎉 Congratulations! Your account has been upgraded to Premium 🚀");
-          showSection("dashboardSection"); // back to dashboard
+          showSection("dashboard"); // back to dashboard
 
         } catch (error) {
           console.error("Error upgrading to Premium:", error);
@@ -2581,6 +2582,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
