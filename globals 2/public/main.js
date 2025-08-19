@@ -1244,12 +1244,23 @@ function submitTelegram() {
 
 
 
+
 var swiper = new Swiper(".mySwiper", {
-    loop: true,
-    autoplay: { delay: 2500 },
     slidesPerView: 1,
-    spaceBetween: 0,
+    loop: true,
+    effect: "coverflow",
+    autoplay: {
+      delay: 3000,
+      disableOnInteraction: false,
+    },
+    pagination: {
+      el: ".swiper-pagination",
+      type: "progressbar", // makes line instead of dots
+    },
   });
+
+
+
 
 
 
@@ -2674,6 +2685,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
