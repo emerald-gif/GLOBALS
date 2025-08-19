@@ -1161,23 +1161,23 @@ function showAffiliateJobDetails(jobId, jobData) {
         slide.className = "swiper-slide";
 
         slide.innerHTML = `
-  <div class="job-card">
-    <img src="${job.campaignLogoURL || 'https://via.placeholder.com/800x400'}" alt="job image" />
+          <div class="job-card">
+            <img src="${job.campaignLogoURL || 'https://via.placeholder.com/800x400'}" alt="job image" />
 
-    <div class="job-info">
-      <div class="job-info-left">
-        <img src="${job.campaignLogoURL || 'https://via.placeholder.com/40'}" />
-        <div class="job-text">
-          <div class="title">${job.title || ''}</div>
-          <div class="meta">₦${job.workerPay || 0} • ${job.numWorkers || 0} workers</div>
-          <div class="meta">${job.category || ''}</div>
-        </div>
-      </div>
+            <div class="job-info">
+              <div class="job-info-left">
+                <img src="${job.campaignLogoURL || 'https://via.placeholder.com/40'}" />
+                <div class="job-text">
+                  <div class="title">${job.title || ''}</div>
+                  <div class="meta">₦${job.workerPay || 0} • ${job.numWorkers || 0} workers</div>
+                  <div class="meta">${job.category || ''}</div>
+                </div>
+              </div>
 
-      <button class="view-job-btn" data-id="${doc.id}">View Job</button>
-    </div>
-  </div>
-`;
+              <button class="view-job-btn" data-id="${doc.id}">View Job</button>
+            </div>
+          </div>
+        `;
         container.appendChild(slide);
       });
 
@@ -1195,6 +1195,7 @@ function showAffiliateJobDetails(jobId, jobData) {
       alert(`Viewing: ${job.title}\nPay: ₦${job.workerPay}\nCategory: ${job.category}`);
     });
   });
+
 
 
                                                  //SOCIAL TASK FUNCTION
@@ -2663,6 +2664,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
