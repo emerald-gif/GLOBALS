@@ -1326,142 +1326,135 @@
                                                       <!-- 🌍 Social Tasks Main Screen -->
 
 
+<
+
 <!-- 🌍 Social Tasks Main Screen -->
 <div id="social-tasks-main" class="tab-section hidden px-4 pb-12">
 
-  <!-- 🔙 Back Button -->
+  <!-- Back -->
   <button onclick="activateTab('dashboard')" 
     class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" 
-      viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-        d="M15 19l-7-7 7-7" />
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
     </svg>
     Back to Dashboard
   </button>
 
-  <!-- Section Header -->
-  <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-    <span class="w-1.5 h-6 bg-blue-600 rounded-full"></span>
-    Social Tasks
+  <!-- Section header -->
+  <h2 class="mb-3 flex items-center gap-2">
+    <span class="inline-block w-1.5 h-6 rounded-full bg-blue-600"></span>
+    <span class="text-lg font-bold text-gray-800 tracking-tight">Social Tasks</span>
   </h2>
 
-
-
-<!-- 🔄 Swiper Section -->
-<div class="swiper mySwiper mb-6 rounded-2xl overflow-hidden shadow-lg">
-  <div class="swiper-wrapper">
-    <div class="swiper-slide">
-      <img src="MOON1.jpeg" class="w-full h-44 object-cover rounded-2xl" />
+  <!-- Swiper -->
+  <div class="swiper mySwiper mb-5 rounded-2xl overflow-hidden shadow-lg">
+    <div class="swiper-wrapper">
+      <div class="swiper-slide">
+        <img src="PREMIUM1.jpg" class="block w-full h-44 object-cover" />
+      </div>
+      <div class="swiper-slide">
+        <img src="META1.jpg" class="block w-full h-44 object-cover" />
+      </div>
+      <div class="swiper-slide">
+        <img src="META2.jpg" class="block w-full h-44 object-cover" />
+      </div>
     </div>
-    <div class="swiper-slide">
-      <img src="MOON2.jpeg" class="w-full h-44 object-cover rounded-2xl" />
-    </div>
-    <div class="swiper-slide">
-      <img src="MOON3.jpeg" class="w-full h-44 object-cover rounded-2xl" />
-    </div>
+    <!-- tiny line indicators (no dots) -->
+    <div class="swiper-pagination"></div>
   </div>
 
-  <!-- Custom Pagination -->
-  <div class="swiper-pagination flex justify-center gap-2 mt-1"></div>
-</div>
-
-	
-
-
-<!-- Custom CSS FOR SWIPER -->
-<style>
-  /* 📌 Make swiper fit nicely */
-.mySwiper {
-  max-width: 100%;
-  border-radius: 1rem; /* rounded-xl */
-  overflow: hidden;
-}
-
-/* 📌 Pagination: small blue lines instead of dots */
-.swiper-pagination {
-  margin-top: 6px !important; /* tighter under swiper */
-  text-align: center;
-}
-
-.swiper-pagination-bullet {
-  width: 24px;
-  height: 3px;
-  border-radius: 2px;
-  background: #d1d5db; /* gray-300 */
-  opacity: 1;
-  margin: 0 3px !important;
-}
-
-.swiper-pagination-bullet-active {
-  background: #2563eb; /* blue-600 */
-}
-</style>
-
-
-
-
-	
-
-  <!-- 🔹 Task Options Grid -->
+  <!-- Cards -->
   <div class="grid grid-cols-2 sm:grid-cols-2 gap-5">
-    
+
     <!-- TikTok/Instagram -->
-    <div class="bg-white border-l-4 border-pink-500 p-5 rounded-2xl shadow-md hover:shadow-lg transition">
+    <div class="group relative bg-white rounded-2xl p-5 shadow-sm ring-1 ring-gray-200 hover:shadow-md hover:ring-gray-300 transition">
+      <span class="absolute inset-y-0 left-0 w-1.5 rounded-l-2xl bg-pink-500"></span>
       <div class="flex items-center gap-2 mb-3">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-pink-600" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M..."/> <!-- TikTok/IG SVG -->
+        <!-- modern line icon (video) -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-pink-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <rect x="3" y="5" width="14" height="14" rx="3"></rect>
+          <path d="M17 10l4-2v8l-4-2v-4z"></path>
         </svg>
-        <h3 class="text-lg font-semibold text-gray-800">TikTok / Instagram</h3>
+        <h3 class="text-base font-semibold text-gray-800">TikTok / Instagram</h3>
       </div>
       <p class="text-sm text-gray-600 mb-4">Promote us with a 30s video, tag us & upload proof.</p>
-      <button onclick="showTask('tiktok-task')" 
-        class="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-xl w-full transition">
-        Do Task
-      </button>
+      <button onclick="showTask('tiktok-task')" class="w-full rounded-xl bg-pink-600 text-white px-4 py-2 hover:bg-pink-700 transition">Do Task</button>
     </div>
 
     <!-- WhatsApp -->
-    <div class="bg-white border-l-4 border-green-500 p-5 rounded-2xl shadow-md hover:shadow-lg transition">
+    <div class="group relative bg-white rounded-2xl p-5 shadow-sm ring-1 ring-gray-200 hover:shadow-md hover:ring-gray-300 transition">
+      <span class="absolute inset-y-0 left-0 w-1.5 rounded-l-2xl bg-green-500"></span>
       <div class="flex items-center gap-2 mb-3">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M..."/> <!-- WhatsApp SVG -->
+        <!-- modern line icon (chat) -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M21 12a8.5 8.5 0 0 1-12.9 7.2L3 21l1.8-4.9A8.5 8.5 0 1 1 21 12z"></path>
+          <path d="M8.5 13.5c1 .9 2.2 1.6 3.5 2l1.5-1.5"></path>
         </svg>
-        <h3 class="text-lg font-semibold text-gray-800">WhatsApp Promo</h3>
+        <h3 class="text-base font-semibold text-gray-800">WhatsApp Promo</h3>
       </div>
       <p class="text-sm text-gray-600 mb-4">Send to 3 groups + status for 24 hrs with screenshots.</p>
-      <button onclick="showTask('whatsapp-task')" 
-        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl w-full transition">
-        Do Task
-      </button>
+      <button onclick="showTask('whatsapp-task')" class="w-full rounded-xl bg-green-600 text-white px-4 py-2 hover:bg-green-700 transition">Do Task</button>
     </div>
 
     <!-- Telegram -->
-    <div class="bg-white border-l-4 border-blue-500 p-5 rounded-2xl shadow-md hover:shadow-lg transition">
+    <div class="group relative bg-white rounded-2xl p-5 shadow-sm ring-1 ring-gray-200 hover:shadow-md hover:ring-gray-300 transition">
+      <span class="absolute inset-y-0 left-0 w-1.5 rounded-l-2xl bg-blue-500"></span>
       <div class="flex items-center gap-2 mb-3">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M..."/> <!-- Telegram SVG -->
+        <!-- modern line icon (paper plane) -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M22 2L11 13"></path>
+          <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
         </svg>
-        <h3 class="text-lg font-semibold text-gray-800">Telegram Groups</h3>
+        <h3 class="text-base font-semibold text-gray-800">Telegram Groups</h3>
       </div>
       <p class="text-sm text-gray-600 mb-4">Forward our promo text to 3 Telegram groups.</p>
-      <button onclick="showTask('telegram-task')" 
-        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl w-full transition">
-        Do Task
-      </button>
+      <button onclick="showTask('telegram-task')" class="w-full rounded-xl bg-blue-600 text-white px-4 py-2 hover:bg-blue-700 transition">Do Task</button>
     </div>
 
     <!-- Coming Soon -->
-    <div class="bg-gray-50 border border-dashed border-gray-300 p-5 rounded-2xl">
-      <h3 class="text-lg font-semibold text-gray-500">🕒 Coming Soon</h3>
+    <div class="relative rounded-2xl p-5 bg-gray-50 ring-1 ring-gray-200 border-dashed border border-gray-300">
+      <h3 class="text-base font-semibold text-gray-500">🕒 Coming Soon</h3>
       <p class="text-sm text-gray-400 mb-4">More exciting tasks will be added here soon.</p>
-      <button disabled class="bg-gray-400 text-white px-4 py-2 rounded-xl w-full">Coming Soon</button>
+      <button disabled class="w-full rounded-xl bg-gray-400 text-white px-4 py-2">Coming Soon</button>
     </div>
+
   </div>
 </div>
 
-	
+<!-- Swiper init (safe-guard to avoid double init) -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    if (window.__socialSwiper) {
+      try { window.__socialSwiper.destroy(true, true); } catch(e) {}
+    }
+    window.__socialSwiper = new Swiper(".mySwiper", {
+      slidesPerView: 1,
+      spaceBetween: 0,
+      centeredSlides: false,
+      loop: true,
+      autoplay: { delay: 3000, disableOnInteraction: false },
+      pagination: { el: ".mySwiper .swiper-pagination", clickable: true },
+    });
+  });
+</script>
 
+<!-- Custom CSS for swiper + bullets-as-lines -->
+<style>
+  /* container fit & rounded like your first screenshot */
+  .mySwiper { max-width: 100%; border-radius: 1rem; overflow: hidden; }
+  .mySwiper .swiper-slide img { display:block; width:100%; height:11rem; object-fit:cover; }
+
+  /* line indicators (no dots) */
+  .mySwiper .swiper-pagination { position:relative !important; margin-top:6px !important; }
+  .mySwiper .swiper-pagination-bullets { display:flex !important; justify-content:center; align-items:center; gap:6px; }
+  .mySwiper .swiper-pagination-bullet { width:24px !important; height:3px !important; border-radius:9999px !important; background:#E5E7EB !important; opacity:1 !important; }
+  .mySwiper .swiper-pagination-bullet-active { background:#2563EB !important; }
+
+  /* micro polish for cards */
+  #social-tasks-main .group { transform: translateZ(0); }
+  #social-tasks-main .group:hover { transform: translateY(-1px); }
+	
+</style>
 
 
 
@@ -2963,6 +2956,7 @@
 </body>
 
 </html>
+
 
 
 
