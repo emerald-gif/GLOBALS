@@ -1154,32 +1154,31 @@
                         
 	               <!-- Affiliate Tasks Section -->
 	
+
 <!-- Affiliate Tasks Section -->
 <div class="px-4 pt-6">
   <!-- Header -->
-  <div class="flex items-center justify-between mb-4">
+  <div class="flex items-center gap-2 mb-4">
+    <div class="w-1 h-5 bg-blue-600 rounded"></div>
     <h2 class="text-base font-semibold text-neutral-900">Affiliate Tasks</h2>
-    <button onclick="openAllAffiliateTasks()" 
-      class="text-sm font-medium text-blue-700 hover:underline hover:text-blue-900 transition duration-200">
-      View All <span class="text-blue-800 text-xl">›</span>
-    </button>
   </div>
 
   <!-- Swiper -->
-  <div class="swiper myAdminJobsSwiper">
-  <div class="swiper-wrapper" id="adminJobsSwiperContainer"></div>
-  <div class="swiper-pagination mt-2"></div>
+  <div class="swiper myAffiliateTasksSwiper">
+    <div class="swiper-wrapper" id="affiliateTasksSwiperContainer"></div>
+    <div class="swiper-pagination mt-2"></div>
+  </div>
 </div>
 
 <style>
-.myAdminJobsSwiper {
+.myAffiliateTasksSwiper {
   padding: 16px 0;
 }
-.myAdminJobsSwiper .swiper-slide {
+.myAffiliateTasksSwiper .swiper-slide {
   display: flex;
   justify-content: center;
 }
-.myAdminJobsSwiper .job-card {
+.myAffiliateTasksSwiper .job-card {
   width: 88vw;
   max-width: 420px;
   border-radius: 16px;
@@ -1189,41 +1188,41 @@
   display: flex;
   flex-direction: column;
 }
-.myAdminJobsSwiper .job-card img {
+.myAffiliateTasksSwiper .job-card img {
   width: 100%;
   height: 160px;
   object-fit: cover;
 }
-.myAdminJobsSwiper .job-info {
+.myAffiliateTasksSwiper .job-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px;
 }
-.myAdminJobsSwiper .job-info-left {
+.myAffiliateTasksSwiper .job-info-left {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.myAdminJobsSwiper .job-info-left img {
+.myAffiliateTasksSwiper .job-info-left img {
   width: 40px;
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
 }
-.myAdminJobsSwiper .job-text {
+.myAffiliateTasksSwiper .job-text {
   font-size: 14px;
   line-height: 1.2;
 }
-.myAdminJobsSwiper .job-text .title {
+.myAffiliateTasksSwiper .job-text .title {
   font-weight: 600;
   font-size: 15px;
 }
-.myAdminJobsSwiper .job-text .meta {
+.myAffiliateTasksSwiper .job-text .meta {
   color: #555;
   font-size: 13px;
 }
-.myAdminJobsSwiper .view-job-btn {
+.myAffiliateTasksSwiper .view-job-btn {
   background: #2563eb;
   color: #fff;
   padding: 6px 12px;
@@ -1233,7 +1232,6 @@
   white-space: nowrap;
 }
 </style>
-
 
 	
                          <!-- Affiliate Tasks Card Section -->
@@ -3006,6 +3004,7 @@
 </body>
 
 </html>
+
 
 
 
