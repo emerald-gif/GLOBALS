@@ -1136,72 +1136,74 @@ function showAffiliateJobDetails(jobId, jobData) {
                    
                     //ADMIN SWIPER 
 
-// Swiper init
-const adminJobsSwiper = new Swiper('.myAdminJobsSwiper', {
-  slidesPerView: 'auto',
-  centeredSlides: true,
-  centeredSlidesBounds: true,
-  spaceBetween: 18,
-  loop: true,
-  autoplay: { delay: 4000, disableOnInteraction: false },
-  pagination: { el: '.swiper-pagination', clickable: true },
-});
 
-// Live listener
-db.collection("adminJobs").orderBy("postedAt", "desc").limit(5)
-  .onSnapshot(snapshot => {
-    const container = document.getElementById("adminJobsSwiperContainer");
-    container.innerHTML = "";
 
-    snapshot.forEach(doc => {
-      const job = doc.data();
-      const slide = document.createElement("div");
-      slide.className = "swiper-slide";
+  // Init Affiliate Tasks Swiper
+  const affiliateTasksSwiper = new Swiper('.myAffiliateTasksSwiper', {
+    slidesPerView: 'auto',
+    centeredSlides: true,
+    centeredSlidesBounds: true,
+    spaceBetween: 18,
+    loop: true,
+    autoplay: { delay: 4000, disableOnInteraction: false },
+    pagination: { el: '.swiper-pagination', clickable: true },
+  });
 
-      slide.innerHTML = `
-        <div class="job-card shadow-md h-56">
-          <img src="${job.campaignLogoURL || 'https://via.placeholder.com/800x400'}"
-               class="w-full h-full object-cover" />
+  // Firestore listener
+  db.collection("adminJobs").orderBy("postedAt", "desc").limit(5)
+    .onSnapshot(snapshot => {
+      const container = document.getElementById("affiliateTasksSwiperContainer");
+      container.innerHTML = "";
 
-          <!-- Bottom overlay -->
-          <div class="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-3">
-            <div class="font-bold text-sm">${job.title || ''}</div>
+      snapshot.forEach(doc => {
+        const job = doc.data();
+        const slide = document.createElement("div");
+        slide.className = "swiper-slide";
 
-            <div class="mt-2 pr-20 flex items-center">
-              <img src="${job.campaignLogoURL || 'https://via.placeholder.com/40'}"
-                   class="w-8 h-8 rounded-full object-cover mr-2" />
-              <div class="text-xs leading-tight">
-                <div>₦${job.workerPay || 0} • ${job.numWorkers || 0} workers</div>
-                <div class="text-gray-300">${job.category || ''}</div>
+        slide.innerHTML = `
+          <div class="job-card h-56">
+            <img src="${job.campaignLogoURL || 'https://via.placeholder.com/800x400'}" alt="Job Image" />
+
+            <!-- Overlay -->
+            <div class="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-3">
+              <div class="font-bold text-sm">${job.title || ''}</div>
+
+              <div class="mt-2 pr-20 flex items-center">
+                <img src="${job.campaignLogoURL || 'https://via.placeholder.com/40'}"
+                     class="w-8 h-8 rounded-full object-cover mr-2" />
+                <div class="text-xs leading-tight">
+                  <div>₦${job.workerPay || 0} • ${job.numWorkers || 0} workers</div>
+                  <div class="text-gray-300">${job.category || ''}</div>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Blue View Job button -->
-          <button
-            class="absolute right-3 bottom-3 bg-blue-500 text-white px-3 py-1 rounded text-xs font-semibold view-job-btn"
-            data-id="${doc.id}">
-            View Job
-          </button>
-        </div>
-      `;
-      container.appendChild(slide);
+            <!-- View Job button (always clickable) -->
+            <button
+              class="absolute right-3 bottom-3 bg-blue-500 text-white px-3 py-1 rounded text-xs font-semibold view-job-btn"
+              data-id="${doc.id}">
+              View Job
+            </button>
+          </div>
+        `;
+        container.appendChild(slide);
+      });
+
+      affiliateTasksSwiper.update();
     });
 
-    adminJobsSwiper.update();
+  // Handle clicks
+  document.getElementById("affiliateTasksSwiperContainer").addEventListener("click", (e) => {
+    const btn = e.target.closest(".view-job-btn");
+    if (!btn) return;
+    const id = btn.dataset.id;
+    db.collection("adminJobs").doc(id).get().then(d => {
+      if (!d.exists) return;
+      const job = d.data();
+      alert(`Viewing: ${job.title}\nPay: ₦${job.workerPay}\nCategory: ${job.category}`);
+    });
   });
 
-// Handle clicks
-document.getElementById("adminJobsSwiperContainer").addEventListener("click", (e) => {
-  const btn = e.target.closest(".view-job-btn");
-  if (!btn) return;
-  const id = btn.dataset.id;
-  db.collection("adminJobs").doc(id).get().then(d => {
-    if (!d.exists) return;
-    const job = d.data();
-    alert(`Viewing: ${job.title}\nPay: ₦${job.workerPay}\nCategory: ${job.category}`);
-  });
-});
 
                                                  //SOCIAL TASK FUNCTION
 
@@ -2669,6 +2671,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
