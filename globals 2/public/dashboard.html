@@ -1340,34 +1340,37 @@
     Back to Dashboard
   </button>
 
+  <!-- 🔹 Section Header -->
+  <h2 class="text-lg font-semibold text-gray-800 mb-4">Social Tasks</h2>
+
   <!-- 🔄 Swiper Section -->
   <div class="swiper mySwiper mb-6 rounded-2xl overflow-hidden shadow-lg">
     <div class="swiper-wrapper">
       <div class="swiper-slide">
-        <img src="PREMIUM1.jpg" class="w-full h-40 object-cover" />
+        <img src="PREMIUM1.jpg" class="w-full h-44 object-cover" />
       </div>
       <div class="swiper-slide">
-        <img src="META1.jpg" class="w-full h-40 object-cover" />
+        <img src="META1.jpg" class="w-full h-44 object-cover" />
       </div>
       <div class="swiper-slide">
-        <img src="META2.jpg" class="w-full h-40 object-cover" />
+        <img src="META2.jpg" class="w-full h-44 object-cover" />
       </div>
     </div>
+    <!-- 🔹 Blue Line Pagination -->
+    <div class="swiper-pagination h-1 bg-gray-200">
+    </div>
   </div>
-
-  
-  <p class="text-center text-blue-600 mb-6">Social tasks</p>
 
   <!-- 🔹 Task Options Grid -->
   <div class="grid grid-cols-2 sm:grid-cols-2 gap-5">
     
     <!-- TikTok/Instagram -->
-    <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-md hover:shadow-lg transition">
+    <div class="bg-white border border-gray-200 p-5 rounded-2xl shadow-sm hover:shadow-md transition">
       <div class="flex items-center gap-2 mb-3">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-pink-600" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M..."/> <!-- Replace with modern TikTok/Instagram SVG -->
+          <path d="M..."/> 
         </svg>
-        <h3 class="text-lg font-semibold text-gray-800">TikTok / Instagram</h3>
+        <h3 class="text-base font-semibold text-gray-800">TikTok / Instagram</h3>
       </div>
       <p class="text-sm text-gray-600 mb-4">Promote us with a 30s video, tag us & upload proof.</p>
       <button onclick="showTask('tiktok-task')" 
@@ -1377,12 +1380,12 @@
     </div>
 
     <!-- WhatsApp -->
-    <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-md hover:shadow-lg transition">
+    <div class="bg-white border border-gray-200 p-5 rounded-2xl shadow-sm hover:shadow-md transition">
       <div class="flex items-center gap-2 mb-3">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M..."/> <!-- WhatsApp SVG -->
+          <path d="M..."/> 
         </svg>
-        <h3 class="text-lg font-semibold text-gray-800">WhatsApp Promo</h3>
+        <h3 class="text-base font-semibold text-gray-800">WhatsApp Promo</h3>
       </div>
       <p class="text-sm text-gray-600 mb-4">Send to 3 groups + status for 24 hrs with screenshots.</p>
       <button onclick="showTask('whatsapp-task')" 
@@ -1392,12 +1395,12 @@
     </div>
 
     <!-- Telegram -->
-    <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-md hover:shadow-lg transition">
+    <div class="bg-white border border-gray-200 p-5 rounded-2xl shadow-sm hover:shadow-md transition">
       <div class="flex items-center gap-2 mb-3">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M..."/> <!-- Telegram SVG -->
+          <path d="M..."/> 
         </svg>
-        <h3 class="text-lg font-semibold text-gray-800">Telegram Groups</h3>
+        <h3 class="text-base font-semibold text-gray-800">Telegram Groups</h3>
       </div>
       <p class="text-sm text-gray-600 mb-4">Forward our promo text to 3 Telegram groups.</p>
       <button onclick="showTask('telegram-task')" 
@@ -1407,14 +1410,13 @@
     </div>
 
     <!-- Coming Soon -->
-    <div class="bg-gray-100 p-5 rounded-2xl shadow-inner">
-      <h3 class="text-lg font-semibold text-gray-500">🕒 Coming Soon</h3>
+    <div class="bg-gray-50 border border-dashed border-gray-300 p-5 rounded-2xl shadow-inner">
+      <h3 class="text-base font-semibold text-gray-500">🕒 Coming Soon</h3>
       <p class="text-sm text-gray-400 mb-4">More exciting tasks will be added here soon.</p>
       <button disabled class="bg-gray-400 text-white px-4 py-2 rounded-xl w-full">Coming Soon</button>
     </div>
   </div>
 </div>
-
 
     
 
@@ -2909,6 +2911,7 @@
 </body>
 
 </html>
+
 
 
 
