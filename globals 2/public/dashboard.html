@@ -1353,70 +1353,87 @@
 
 
 	
-<!-- 🟣 TikTok / Instagram Task (Fintech 2025 Style) -->
-<div id="tiktok-task" class="tab-section hidden p-6 bg-white rounded-2xl shadow-xl max-w-xl mx-auto">
+<!-- 🟦 TikTok / Instagram Task (Fintech 2025 Premium) -->
+<div id="tiktok-task" class="tab-section hidden p-6 bg-gradient-to-br from-white to-blue-50 rounded-2xl shadow-xl max-w-xl mx-auto border border-gray-100">
 
   <!-- Back Button -->
   <button onclick="activateTab('social-tasks-main')" 
-          class="flex items-center text-blue-600 font-semibold mb-4 hover:underline">
+          class="flex items-center text-blue-600 font-semibold mb-6 hover:underline">
     ← Back to Social Tasks
   </button>
 
   <!-- Header -->
-  <h3 class="text-2xl font-bold mb-2 text-gray-900">🎬 TikTok / Instagram Task</h3>
-  <p class="text-gray-500 text-sm mb-6">Complete this task to earn rewards. Please follow all steps carefully.</p>
+  <h2 class="mb-2 flex items-center gap-2">
+    <span class="inline-block w-1.5 h-6 rounded-full bg-blue-600"></span>
+    <span class="text-lg font-bold text-gray-900 tracking-tight">TikTok / Instagram Tasks</span>
+  </h2>
+  <p class="text-gray-500 text-sm mb-6">Earn rewards by completing and submitting your task. Follow all requirements carefully.</p>
 
   <!-- Notice -->
-  <div class="p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm mb-6">
-    ⚠️ Your account must have at least <strong>1,000 followers</strong> to qualify.
+  <div class="p-4 rounded-xl bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm font-medium mb-8 flex items-center gap-2">
+    ⚠️ Accounts must have at least <strong>1,000 followers</strong> to qualify.
   </div>
 
-  <!-- Task Instructions -->
-  <div class="space-y-3 mb-6 text-gray-700">
-    <p>1️⃣ Record a <strong>30-second video</strong> promoting Globals.</p>
-    <p>2️⃣ Add <strong>@globalsnigeria</strong> in your caption.</p>
-    <p>3️⃣ Use <strong>at least 1</strong> of the official assets below in your video.</p>
-    <p>4️⃣ Post on TikTok/Instagram and upload proof.</p>
+  <!-- Instructions -->
+  <div class="mb-8 space-y-4">
+    <div class="flex items-start gap-3">
+      <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold">1</span>
+      <p class="text-gray-700">Record a <strong>30-second video</strong> promoting Globals.</p>
+    </div>
+    <div class="flex items-start gap-3">
+      <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold">2</span>
+      <p class="text-gray-700">Mention <strong>@globalsnigeria</strong> in your caption.</p>
+    </div>
+    <div class="flex items-start gap-3">
+      <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold">3</span>
+      <p class="text-gray-700">Include <strong>at least 1</strong> of the official assets below in your video.</p>
+    </div>
+    <div class="flex items-start gap-3">
+      <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold">4</span>
+      <p class="text-gray-700">Upload proof with the required details.</p>
+    </div>
   </div>
 
-  <!-- Downloadable Assets -->
-  <h4 class="font-semibold mb-2 text-gray-900">📥 Official Assets</h4>
-  <div class="grid grid-cols-3 gap-4 mb-6">
+  <!-- Assets -->
+  <h4 class="font-semibold mb-3 text-gray-900">📥 Official Assets</h4>
+  <div class="grid grid-cols-3 gap-4 mb-8">
     <div class="flex flex-col items-center space-y-2">
-      <img src="MOON1.jpg" class="rounded-xl shadow-md cursor-pointer" onclick="previewAsset('MOON1.jpg')" />
+      <img src="MOON1.jpg" class="rounded-lg shadow cursor-pointer hover:scale-105 transition" onclick="previewAsset('MOON1.jpg')" />
       <a href="MOON1.jpg" download class="text-blue-600 text-xs hover:underline">Download</a>
     </div>
     <div class="flex flex-col items-center space-y-2">
-      <img src="MOON2.jpg" class="rounded-xl shadow-md cursor-pointer" onclick="previewAsset('MOON2.jpg')" />
+      <img src="MOON2.jpg" class="rounded-lg shadow cursor-pointer hover:scale-105 transition" onclick="previewAsset('MOON2.jpg')" />
       <a href="MOON2.jpg" download class="text-blue-600 text-xs hover:underline">Download</a>
     </div>
     <div class="flex flex-col items-center space-y-2">
-      <img src="MOON3.jpg" class="rounded-xl shadow-md cursor-pointer" onclick="previewAsset('MOON3.jpg')" />
+      <img src="MOON3.jpg" class="rounded-lg shadow cursor-pointer hover:scale-105 transition" onclick="previewAsset('MOON3.jpg')" />
       <a href="MOON3.jpg" download class="text-blue-600 text-xs hover:underline">Download</a>
     </div>
   </div>
 
-  <!-- Input Fields -->
-  <input type="text" id="profileLink" placeholder="Instagram/TikTok Profile Link"
-         class="w-full mb-3 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500" />
+  <!-- Form Inputs -->
+  <div class="space-y-4 mb-6">
+    <input type="text" id="profileLink" placeholder="Instagram/TikTok Profile Link"
+           class="w-full p-3 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm" />
 
-  <input type="text" id="videoLink" placeholder="Video Link"
-         class="w-full mb-3 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500" />
+    <input type="text" id="videoLink" placeholder="Video Link"
+           class="w-full p-3 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm" />
 
-  <input type="text" id="username" placeholder="TikTok/Instagram Username"
-         class="w-full mb-3 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500" />
+    <input type="text" id="username" placeholder="TikTok/Instagram Username"
+           class="w-full p-3 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm" />
+  </div>
 
   <!-- Upload Screenshot -->
-  <div class="mb-4">
+  <div class="mb-6">
     <label class="block text-sm font-medium mb-2 text-gray-700">Upload Screenshot of Your Video</label>
     <input type="file" id="screenshotUpload" accept="image/*"
-           class="w-full p-2 border rounded-lg bg-gray-50" onchange="uploadScreenshot(event)" />
-    <p id="uploadStatus" class="text-xs text-gray-500 mt-1">No file uploaded yet.</p>
+           class="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 shadow-sm" onchange="handleScreenshotUpload(event)" />
+    <p id="uploadStatus" class="text-xs text-gray-500 mt-2">No file uploaded yet.</p>
   </div>
 
   <!-- Submit Button -->
   <button onclick="submitTikTokTask()" 
-          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition">
+          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all shadow-md">
     🚀 Submit for Review
   </button>
 
@@ -1431,13 +1448,11 @@
   <div class="bg-white p-4 rounded-xl shadow-lg max-w-md">
     <img id="assetPreviewImg" src="" class="rounded-lg mb-4 w-full" />
     <button onclick="closePreview()" 
-            class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg">
+            class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 rounded-lg">
       Close Preview
     </button>
   </div>
 </div>
-
-
 
 
 
@@ -2915,6 +2930,7 @@
 </body>
 
 </html>
+
 
 
 
