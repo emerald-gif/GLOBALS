@@ -1030,96 +1030,120 @@ window.submitTikTokTask = submitTikTokTask;
             
 // ---------- WhatsApp Task Helpers ----------  
 
- 
-// === Handle Proof Uploads (Cloudinary) ===  
-async function handleProofUpload(inputEl, messageId) {  
-  const file = inputEl.files[0];  
-  if (!file) return;  
-  
-  try {  
-    const uploaded = await uploadToCloudinary(file); // global function you already have  
-    // store Cloudinary URL on the input for later  
-    inputEl.setAttribute("data-url", uploaded.secure_url);  
-  
-    // hide preview image if you had one  
-    const preview = document.getElementById(inputEl.getAttribute("data-preview"));  
-    if (preview) preview.classList.add("hidden");  
-  
-    // show success message under input  
-    document.getElementById(messageId).innerText = "✅ Upload successful";  
-    document.getElementById(messageId).classList.remove("hidden");  
-  } catch (err) {  
-    console.error("Upload failed:", err);  
-    alert("❌ Upload failed. Try again.");  
-  }  
-}  
-  
-// === Submit WhatsApp Task ===  
-async function submitWhatsAppTask() {  
-  const number = document.getElementById("whatsappNumber").value.trim();  
-  if (!number) {  
-    alert("⚠️ Please enter your WhatsApp number.");  
-    return;  
-  }  
-  
-  // collect uploaded screenshot URLs  
-  const inputs = document.querySelectorAll(".whatsapp-proof");  
-  const uploads = [];  
-  inputs.forEach(i => {  
-    if (i.getAttribute("data-url")) {  
-      uploads.push(i.getAttribute("data-url"));  
-    }  
-  });  
-  
-  if (uploads.length < 2) {  
-    alert("⚠️ Please upload at least 2 proof screenshots.");  
-    return;  
-  }  
-  
-  try {  
-    // Save to Firestore (collection: Whatsapp, doc = user UID)  
-    const user = firebase.auth().currentUser;  
-    if (!user) {  
-      alert("⚠️ You must be logged in.");  
-      return;  
-    }  
-  
-    await firebase.firestore().collection("Whatsapp").doc(user.uid).set({  
-      number,  
-      uploads,  
-      status: "on review",   // 🔹 changed here  
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()  
-    });  
-  
-    alert("✅ Task submitted successfully!");  
-    // Redirect to dashboard  
-    window.location.hash = "dashboard";  
-  
-    // Permanently hide submit section and show "On Review"  
-    document.getElementById("whatsapp-submit-section").classList.add("hidden");  
-    document.getElementById("whatsapp-status").innerText = "⏳ On Review";  
-    document.getElementById("whatsapp-status").classList.remove("hidden");  
-  
-  } catch (err) {  
-    console.error("Submission failed:", err);  
-    alert("❌ Something went wrong. Try again.");  
-  }  
-}  
-  
-// === On Load: check if already submitted ===  
-firebase.auth().onAuthStateChanged(async (user) => {  
-  if (user) {  
-    const doc = await firebase.firestore().collection("Whatsapp").doc(user.uid).get();  
-    if (doc.exists && doc.data().status === "on review") {   // 🔹 check status properly  
-      // Hide submit and show permanent "On Review" message  
-      document.getElementById("whatsapp-submit-section").classList.add("hidden");  
-      document.getElementById("whatsapp-status").innerText = "⏳ On Review";  
-      document.getElementById("whatsapp-status").classList.remove("hidden");  
-    }  
-  }  
-});  
+// ---------- WhatsApp Task Helpers ----------
+let whatsappProofs = [];
+let isUploadingProof = false;
+const SUBMIT_KEY = "whatsappTaskSubmitted"; // 🔑 localStorage key
 
+async function handleProofUpload(input, previewId) {
+  const file = input.files && input.files[0];
+  const previewEl = document.getElementById(previewId);
 
+  if (!file) return;
+
+  isUploadingProof = true;
+  if (previewEl) {
+    previewEl.classList.remove("hidden");
+    previewEl.src = "";
+  }
+
+  try {
+    // 👇 use global uploadToCloudinary from main.js
+    const url = await window.uploadToCloudinary(file);
+    whatsappProofs.push(url);
+
+    if (previewEl) {
+      previewEl.src = url;
+      previewEl.classList.remove("hidden");
+    }
+  } catch (err) {
+    console.error("Cloudinary upload error:", err);
+    alert("❌ Upload failed: " + (err?.message || "Unknown error"));
+  } finally {
+    isUploadingProof = false;
+  }
+}
+
+async function submitWhatsAppTask() {
+  const number = document.getElementById("whatsappNumber")?.value.trim();
+  const submitBtn = document.querySelector("#whatsapp-task button[onclick*='submitWhatsAppTask']");
+
+  if (isUploadingProof) {
+    alert("Please wait — proof is still uploading.");
+    return;
+  }
+  if (!number || whatsappProofs.length < 4) {
+    alert("⚠️ Enter your WhatsApp number and upload at least 4 screenshots.");
+    return;
+  }
+
+  const _auth = window.auth || firebase?.auth?.();
+  const _db   = window.db   || firebase?.firestore?.();
+
+  if (!_auth || !_db) {
+    alert("Firebase not initialized.");
+    return;
+  }
+
+  const user = _auth.currentUser;
+  if (!user) {
+    alert("Please log in to submit.");
+    return;
+  }
+
+  try {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Submitting...";
+    }
+
+    await _db.collection("Whatsapp").add({
+      whatsappNumber: number,
+      proofs: whatsappProofs,
+      status: "on review",
+      submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      submittedBy: user.uid
+    });
+
+    // ✅ Save state to localStorage
+    localStorage.setItem(SUBMIT_KEY, "true");
+
+    // ✅ Alert + redirect to dashboard
+    alert("✅ Your WhatsApp task has been submitted and is awaiting admin approval.");
+    location.hash = "#dashboard"; // jump to section with id="dashboard"
+
+    whatsappProofs = []; // reset after success
+  } catch (err) {
+    console.error("Submit error:", err);
+    alert("❌ Failed to submit: " + (err?.message || "Unknown error"));
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "🚀 Submit for Review";
+      applySubmitState(); // refresh button state
+    }
+  }
+}
+
+// 🔄 Keep button blurred after reload if already submitted
+function applySubmitState() {
+  const submitBtn = document.querySelector("#whatsapp-task button[onclick*='submitWhatsAppTask']");
+  if (!submitBtn) return;
+
+  const submitted = localStorage.getItem(SUBMIT_KEY) === "true";
+  if (submitted) {
+    submitBtn.disabled = true;
+    submitBtn.classList.add("opacity-50", "cursor-not-allowed"); // blur look
+    submitBtn.textContent = "✅ Already Submitted";
+  }
+}
+
+// Run on load
+document.addEventListener("DOMContentLoaded", applySubmitState);
+
+// expose globally
+window.handleProofUpload = handleProofUpload;
+window.submitWhatsAppTask = submitWhatsAppTask;
 
 
 
@@ -2556,6 +2580,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
