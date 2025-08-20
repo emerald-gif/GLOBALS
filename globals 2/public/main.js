@@ -1246,66 +1246,64 @@ function submitTelegram() {
 
 
 
-// ---- State
+// ---------- TikTok/Instagram Task Helpers ----------
 let uploadedScreenshotUrl = "";
 let isUploadingScreenshot = false;
 
-// ---- Asset preview (unchanged)
 function previewAsset(src) {
-  document.getElementById("assetPreviewImg").src = src;
-  document.getElementById("assetPreviewModal").classList.remove("hidden");
+  const img = document.getElementById("assetPreviewImg");
+  const modal = document.getElementById("assetPreviewModal");
+  if (img && modal) {
+    img.src = src;
+    modal.classList.remove("hidden");
+  }
 }
 function closePreview() {
-  document.getElementById("assetPreviewModal").classList.add("hidden");
+  const modal = document.getElementById("assetPreviewModal");
+  if (modal) modal.classList.add("hidden");
 }
 
-// ---- Robust uploader (uses your universal function)
+// Upload screenshot using global uploader (from main.js)
 async function handleScreenshotUpload(e) {
-  const file = e.target.files?.[0];
   const statusEl = document.getElementById("uploadStatus");
-  const submitBtn = document.querySelector("#tiktok-task button[data-submit]");
+  const previewEl = document.getElementById("uploadedPreview");
+  const submitBtn = document.querySelector("#tiktok-task [data-submit]");
+  const file = e.target.files && e.target.files[0];
 
   if (!file) return;
+
   uploadedScreenshotUrl = "";
-  statusEl.textContent = "Uploading...";
   isUploadingScreenshot = true;
   if (submitBtn) submitBtn.disabled = true;
+  if (statusEl) statusEl.textContent = "Uploading...";
 
   try {
-    // Make sure the global uploader exists (main.js must be loaded first)
-    const uploader =
-      (typeof window !== "undefined" && window.uploadToCloudinary) ||
-      (typeof uploadToCloudinary === "function" ? uploadToCloudinary : null);
-
-    if (!uploader) {
-      throw new Error("Uploader not found. Ensure main.js (with uploadToCloudinary) loads before this script and exports it to window.");
-    }
-
-    const url = await uploader(file); // <-- uses your global function
-    if (!url) throw new Error("No URL returned from Cloudinary.");
+    // 👇 Use the one from main.js (must already be loaded)
+    const url = await window.uploadToCloudinary(file);
     uploadedScreenshotUrl = url;
-    statusEl.textContent = "✅ Upload successful";
+    if (statusEl) statusEl.textContent = "✅ Upload successful";
+    if (previewEl) {
+      previewEl.src = url;
+      previewEl.classList.remove("hidden");
+    }
   } catch (err) {
-    console.error("Upload failed:", err);
-    // Show real Cloudinary error if present
-    const msg = err?.message || "Unknown error";
-    statusEl.textContent = "❌ Upload failed: " + msg;
+    console.error("Cloudinary upload error:", err);
+    if (statusEl) statusEl.textContent = "❌ Upload failed: " + (err?.message || "Unknown error");
   } finally {
     isUploadingScreenshot = false;
     if (submitBtn) submitBtn.disabled = false;
   }
 }
 
-// ---- Submit to Firestore
+// Submit to Firestore -> TiktokInstagram
 async function submitTikTokTask() {
-  const profileLink = document.getElementById("profileLink").value.trim();
-  const videoLink   = document.getElementById("videoLink").value.trim();
-  const username    = document.getElementById("username").value.trim();
+  const profileLink = document.getElementById("profileLink")?.value.trim();
+  const videoLink   = document.getElementById("videoLink")?.value.trim();
+  const username    = document.getElementById("username")?.value.trim();
   const confirmEl   = document.getElementById("tiktok-confirmation");
-  const statusEl    = document.getElementById("uploadStatus");
-  const submitBtn   = document.querySelector("#tiktok-task button[data-submit]");
+  const submitBtn   = document.querySelector("#tiktok-task [data-submit]");
 
-  // Basic validation
+  // validations
   if (isUploadingScreenshot) {
     alert("Please wait — screenshot is still uploading.");
     return;
@@ -1314,49 +1312,61 @@ async function submitTikTokTask() {
     alert("⚠️ Please fill in all fields and upload a screenshot.");
     return;
   }
-
-  // Optional: minimal link sanity checks
   const looksLikeUrl = (s) => /^https?:\/\/\S+\.\S+/.test(s);
   if (!looksLikeUrl(profileLink) || !looksLikeUrl(videoLink)) {
     alert("⚠️ Please enter valid links (must start with http/https).");
     return;
   }
 
-  try {
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Submitting...";
+  // use existing Firebase instances
+  const _auth = window.auth || firebase?.auth?.();
+  const _db   = window.db   || firebase?.firestore?.();
 
-    const user = firebase.auth().currentUser;
-    if (!user) {
-      alert("Please log in to submit.");
-      return;
+  if (!_auth || !_db) {
+    alert("Firebase not initialized on this page.");
+    return;
+  }
+
+  const user = _auth.currentUser;
+  if (!user) {
+    alert("Please log in to submit.");
+    return;
+  }
+
+  try {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Submitting...";
     }
 
-    await firebase.firestore().collection("TiktokInstagram").add({
+    await _db.collection("TiktokInstagram").add({
       profileLink,
       videoLink,
       username,
       screenshot: uploadedScreenshotUrl,
       status: "on review",
+      followerRequirement: ">=1000",
       submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
       submittedBy: user.uid
     });
 
-    confirmEl.classList.remove("hidden");
-    // Optional: reset form
-    // document.getElementById("profileLink").value = "";
-    // document.getElementById("videoLink").value = "";
-    // document.getElementById("username").value = "";
-    // uploadedScreenshotUrl = "";
-    // statusEl.textContent = "No file uploaded yet.";
-  } catch (error) {
-    console.error("Submit failed:", error);
-    alert("❌ Failed to submit: " + (error.message || "Unknown error"));
+    if (confirmEl) confirmEl.classList.remove("hidden");
+  } catch (err) {
+    console.error("Submit error:", err);
+    alert("❌ Failed to submit: " + (err?.message || "Unknown error"));
   } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = "🚀 Submit for Review";
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "🚀 Submit for Review";
+    }
   }
 }
+
+// expose globally
+window.previewAsset = previewAsset;
+window.closePreview = closePreview;
+window.handleScreenshotUpload = handleScreenshotUpload;
+window.submitTikTokTask = submitTikTokTask;
 
 
 
@@ -2787,6 +2797,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
