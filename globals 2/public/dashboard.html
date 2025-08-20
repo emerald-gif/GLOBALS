@@ -1470,16 +1470,26 @@
 
 
 	
+<!-- 🟢 WhatsApp Task (Fintech 2025 Premium) -->
+<div id="whatsapp-task" class="tab-section hidden p-6 bg-gradient-to-br from-white to-green-50 rounded-2xl shadow-xl max-w-xl mx-auto border border-gray-100">
 
-<!-- 🟢 WhatsApp Task Section -->
-<div id="whatsapp-task" class="tab-section hidden p-4">
+  <!-- Back Button -->
+  <button onclick="activateTab('social-tasks-main')"
+          class="flex items-center text-green-600 font-semibold mb-6 hover:underline">
+    ← Back to Social Tasks
+  </button>
 
-<button onclick="activateTab('social-tasks-main')" class="text-blue-500 text-lg">← Whatsapp tasks</button>
+  <!-- Header -->
+  <h2 class="mb-2 flex items-center gap-2">
+    <span class="inline-block w-1.5 h-6 rounded-full bg-green-600"></span>
+    <span class="text-lg font-bold text-gray-900 tracking-tight">WhatsApp Task</span>
+  </h2>
+  <p class="text-gray-500 text-sm mb-6">
+    📌 Send the message below to <strong>3 active WhatsApp groups</strong> and post on your status for <strong>24 hours</strong>.
+  </p>
 
-  <h3 class="text-2xl font-bold mb-4 text-green-700">📲 WhatsApp Task</h3>
-  <p class="text-sm text-gray-700 mb-2">📌 Send the text below to 3 active WhatsApp groups and post on your status for 24 hours.</p>
-  
-  <div class="bg-green-50 p-4 rounded-lg mb-2">
+  <!-- Message Box -->
+  <div class="p-4 rounded-xl bg-green-50 border border-green-200 mb-6 relative">
     <p id="whatsapp-text" class="text-sm text-gray-800 leading-relaxed">
       🚀 Join Globals Nigeria today and start earning daily by completing simple tasks online. <br>
       🔗 Sign up now: https://globalsnigeria.com <br>
@@ -1488,23 +1498,82 @@
       💬 Chat support available 24/7. Join us now! <br>
       🔥 This is your moment to grow with us. Don't miss out!
     </p>
-    <button onclick="copyToClipboard('whatsapp-text')" class="bg-green-500 text-white px-4 py-1 rounded mt-2">Copy Message</button>
+    <button onclick="copyToClipboard('whatsapp-text')"
+            class="absolute bottom-3 right-3 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-xs shadow-md">
+      Copy Message
+    </button>
   </div>
 
-  <input type="text" placeholder="Your WhatsApp Number" class="w-full mb-3 p-2 border rounded-md" />
-  <p class="text-sm text-red-600 mb-2">⚠️ Make sure not to delete the post after screenshot. Deleting may lead to ban.</p>
+  <!-- WhatsApp Number -->
+  <input type="text" id="whatsappNumber" placeholder="Your WhatsApp Number"
+         class="w-full p-3 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-green-500 focus:outline-none shadow-sm mb-4" />
 
-  <div class="space-y-2 mb-4">
-    <input type="file" class="w-full" />
-    <input type="file" class="w-full" />
-    <input type="file" class="w-full" />
-    <input type="file" class="w-full" />
+  <!-- Security Notice -->
+  <div class="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium mb-6 flex items-start gap-2">
+    ⚠️ Make sure not to delete the status before 24 hours. Random checks & verification apply. Deleting early may lead to account suspension.
   </div>
 
-  <button onclick="submitWhatsApp()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg w-full">Submit for Review</button>
-  <p id="whatsapp-confirmation" class="hidden text-green-600 text-center mt-4">✅ Review submitted. Await admin approval.</p>
+  <!-- Proof Upload -->
+<label class="block text-sm font-medium mb-2 text-gray-700">Upload Proof Screenshots</label>
+<div class="space-y-4 mb-6">
+  <div>
+    <input type="file" class="whatsapp-proof w-full p-3 border border-gray-200 rounded-xl bg-gray-50 shadow-sm"
+           accept="image/*" onchange="handleProofUpload(this, 'preview1')" />
+    <img id="preview1" class="hidden mt-2 rounded-lg shadow-md w-full" />
+  </div>
+  <div>
+    <input type="file" class="whatsapp-proof w-full p-3 border border-gray-200 rounded-xl bg-gray-50 shadow-sm"
+           accept="image/*" onchange="handleProofUpload(this, 'preview2')" />
+    <img id="preview2" class="hidden mt-2 rounded-lg shadow-md w-full" />
+  </div>
+  <div>
+    <input type="file" class="whatsapp-proof w-full p-3 border border-gray-200 rounded-xl bg-gray-50 shadow-sm"
+           accept="image/*" onchange="handleProofUpload(this, 'preview3')" />
+    <img id="preview3" class="hidden mt-2 rounded-lg shadow-md w-full" />
+  </div>
+  <div>
+    <input type="file" class="whatsapp-proof w-full p-3 border border-gray-200 rounded-xl bg-gray-50 shadow-sm"
+           accept="image/*" onchange="handleProofUpload(this, 'preview4')" />
+    <img id="preview4" class="hidden mt-2 rounded-lg shadow-md w-full" />
+  </div>
 </div>
 
+  <!-- Extra Verification -->
+  <div class="p-3 rounded-xl bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm mb-6">
+    🔐 Additional Security: You may be asked to upload a chat proof where a friend replied to your status (e.g. “I saw your status”).
+  </div>
+
+  <!-- Submit -->
+  <button onclick="submitWhatsAppTask()"
+          class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition-all shadow-md">
+    🚀 Submit for Review
+  </button>
+
+  <!-- Confirmation -->
+  <p id="whatsapp-confirmation" class="hidden text-green-600 text-center mt-4 font-medium">
+    ✅ Review submitted. Await admin approval.
+  </p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+	
 <!-- 🔵 Telegram Task Section -->
 <div id="telegram-task" class="tab-section hidden p-4">
 
@@ -2935,6 +3004,7 @@
 </body>
 
 </html>
+
 
 
 
