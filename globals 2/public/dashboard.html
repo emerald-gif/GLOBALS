@@ -750,52 +750,47 @@
 
 
 
-<!-- PREMIUM SECTION -->  <section id="premium-section" class="premium-section">  
-  <div class="premium-container">  <!-- HEADER -->  
-<div class="premium-header">  
-  <h2>🌟 Global Premium Package</h2>  
-</div>  
+<!-- PREMIUM SECTION (non-interfering) -->
+<section id="premium-section" class="gp-premium-section">
+  <div class="gp-container">
+    <!-- HEADER -->
+    <div class="gp-header">
+      <h2>🌟 Global Premium Package</h2>
+    </div>
 
-<!-- FEATURES -->  
-<div class="features-box">  
-  <ul class="premium-features">  
-    <li>👑 Withdraw funds with 5% less fee</li>  
-    <li>👑 Affiliate: Banner task included</li>  
-    <li>👑 WhatsApp & Instagram locked (Telegram free)</li>  
-    <li>👑 ₦500 unlock for WhatsApp/Telegram</li>  
-    <li>👑 ₦1,000 unlock for Instagram/TikTok (1k+ followers)</li>  
-    <li>👑 Cashback on Airtime, Data, Betting, TV, Electricity</li>  
-    <li>👑 No fee for daily challenge entry</li>  
-    <li>👑 Minimum withdrawal ₦500 (Premium unlimited)</li>  
-    <li>👑 Referral bonus: ₦300 (normal), ₦500 (premium)</li>  
-    <li>👑 Unlock all NFT badge rewards</li>  
-    <li>👑 Post & Affiliate tasks boosted visibility</li>  
-  </ul>  
-</div>  
+    <!-- FEATURES -->
+    <div class="gp-features-box">
+      <ul class="gp-features">
+        <li class="gp-feature">👑 Withdraw funds with 5% less fee</li>
+        <li class="gp-feature">👑 Affiliate: Banner task included</li>
+        <li class="gp-feature">👑 WhatsApp & Instagram locked (Telegram free)</li>
+        <li class="gp-feature">👑 ₦500 unlock for WhatsApp/Telegram</li>
+        <li class="gp-feature">👑 ₦1,000 unlock for Instagram/TikTok (1k+ followers)</li>
+        <li class="gp-feature">👑 Cashback on Airtime, Data, Betting, TV, Electricity</li>
+        <li class="gp-feature">👑 No fee for daily challenge entry</li>
+        <li class="gp-feature">👑 Minimum withdrawal ₦500 (Premium unlimited)</li>
+        <li class="gp-feature">👑 Referral bonus: ₦300 (normal), ₦500 (premium)</li>
+        <li class="gp-feature">👑 Unlock all NFT badge rewards</li>
+        <li class="gp-feature">👑 Post & Affiliate tasks boosted visibility</li>
+      </ul>
+    </div>
 
-<!-- PRICE -->  
-<div class="price-box">  
-  <p class="price">₦1,000 <span>Lifetime Payment</span></p>  
-</div>  
+    <!-- PRICE -->
+    <div class="gp-price-box">
+      <p class="gp-price">₦1,000 <span>Lifetime Payment</span></p>
+    </div>
 
-<!-- ACTION -->  
-<div class="premium-action">  
-  <button class="go-premium-btn">👑 Go Premium</button>  
-</div>
+    <!-- ACTION -->
+    <div class="gp-action">
+      <!-- keep original class for your JS handlers -->
+      <button class="go-premium-btn gp-btn">👑 Go Premium</button>
+    </div>
+  </div>
+</section>
 
-  </div>  
-</section> 
-
-
-
-	 <!-- CSS -->
-	
-	<style>  
-
-
-
-/* Premium Section */
-#premium-section {
+<style>
+/* Hard isolation for premium area */
+#premium-section.gp-premium-section {
   width: 100%;
   min-height: 100vh;
   display: flex;
@@ -804,15 +799,16 @@
   background: rgba(10, 10, 15, 0.95);
   padding: 1.5rem;
   box-sizing: border-box;
+  isolation: isolate; /* prevents z-index/stacking bleed */
 }
 
-/* Premium Container (card) */
-#premium-section .premium-container {
+/* Container */
+#premium-section .gp-container {
   background: rgba(25, 28, 38, 0.96);
   border-radius: 20px;
   padding: 1.5rem;
   width: 100%;
-  max-width: 380px;  /* mobile width, not edge to edge */
+  max-width: 380px;
   margin: auto;
   text-align: center;
   color: #eaeef6;
@@ -821,7 +817,7 @@
 }
 
 /* Header */
-#premium-section .premium-header h2 {
+#premium-section .gp-header h2 {
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 1rem;
@@ -829,22 +825,20 @@
 }
 
 /* Features */
-#premium-section .features-box {
+#premium-section .gp-features-box {
   background: rgba(35, 38, 55, 0.92);
   border-radius: 14px;
   padding: 1rem;
   margin-bottom: 1rem;
   border: 1px solid rgba(255,215,0,0.2);
 }
-
-#premium-section .premium-features {
+#premium-section .gp-features {
   list-style: none;
   padding: 0;
   margin: 0;
   text-align: left;
 }
-
-#premium-section .premium-features li {
+#premium-section .gp-feature {
   font-size: 0.95rem;
   margin-bottom: 0.6rem;
   color: #d2d7e5;
@@ -853,8 +847,8 @@
   gap: 6px;
 }
 
-/* Price box */
-#premium-section .price-box {
+/* Price */
+#premium-section .gp-price-box {
   background: rgba(0, 200, 255, 0.08);
   border-radius: 14px;
   padding: 0.8rem;
@@ -862,22 +856,20 @@
   max-width: 240px;
   border: 1px solid rgba(0,200,255,0.25);
 }
-
-#premium-section .price {
+#premium-section .gp-price {
   font-size: 1.2rem;
   font-weight: 700;
   margin: 0;
   color: #00d4ff;
 }
-
-#premium-section .price span {
+#premium-section .gp-price span {
   font-size: 0.85rem;
   color: #b9c5d6;
   display: block;
 }
 
-/* Button */
-#premium-section .go-premium-btn {
+/* Button (keeps your .go-premium-btn for JS) */
+#premium-section .gp-btn {
   width: 100%;
   padding: 0.9rem;
   border: none;
@@ -889,15 +881,16 @@
   cursor: pointer;
   transition: 0.25s ease-in-out;
 }
-
-#premium-section .go-premium-btn:hover {
+#premium-section .gp-btn:hover {
   transform: scale(1.05);
-	  }
+}
+</style>
 
 
-		</style>
 
 
+
+	
 		
 
 
@@ -2902,6 +2895,7 @@
 </body>
 
 </html>
+
 
 
 
