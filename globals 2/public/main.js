@@ -1242,6 +1242,73 @@ function submitTelegram() {
 
 
 
+// TikTok Instagram function
+
+let uploadedScreenshotUrl = "";
+
+// Preview asset modal
+function previewAsset(src) {
+  document.getElementById("assetPreviewImg").src = src;
+  document.getElementById("assetPreviewModal").classList.remove("hidden");
+}
+function closePreview() {
+  document.getElementById("assetPreviewModal").classList.add("hidden");
+}
+
+// Upload screenshot using global uploader
+async function uploadScreenshot(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  document.getElementById("uploadStatus").innerText = "Uploading...";
+
+  try {
+    // 👇 Call your global uploader (already in main.js)
+    const url = await uploadToCloudinary(file);  
+    uploadedScreenshotUrl = url;
+
+    document.getElementById("uploadStatus").innerText = "✅ Upload successful";
+  } catch (err) {
+    console.error("Upload failed:", err);
+    document.getElementById("uploadStatus").innerText = "❌ Upload failed";
+  }
+}
+
+// Submit TikTok/Instagram task
+async function submitTikTokTask() {
+  const profileLink = document.getElementById("profileLink").value.trim();
+  const videoLink = document.getElementById("videoLink").value.trim();
+  const username = document.getElementById("username").value.trim();
+
+  if (!profileLink || !videoLink || !username || !uploadedScreenshotUrl) {
+    alert("⚠️ Please fill in all fields and upload a screenshot.");
+    return;
+  }
+
+  try {
+    await db.collection("TiktokInstagram").add({
+      profileLink,
+      videoLink,
+      username,
+      screenshot: uploadedScreenshotUrl,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    document.getElementById("tiktok-confirmation").classList.remove("hidden");
+  } catch (error) {
+    console.error("Error submitting task:", error);
+    alert("❌ Failed to submit. Try again.");
+  }
+}
+
+
+
+
+
+
+
+
+
 
                                                  // GLOBALS TAP FUNCTION
 												 
@@ -2664,6 +2731,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
