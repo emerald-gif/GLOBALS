@@ -1023,6 +1023,98 @@ window.submitTikTokTask = submitTikTokTask;
 
 
 
+
+
+
+
+                       //  WHATSAPP FUNCTION
+
+
+function copyToClipboard(elementId) {
+  const text = document.getElementById(elementId).innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    globalsAlert("✅ Message copied successfully!", "blue"); 
+  }).catch(err => {
+    console.error("Copy failed:", err);
+    globalsAlert("❌ Copy failed. Try again.", "red");
+  });
+}
+
+// === Handle Proof Uploads (Cloudinary) ===
+async function handleProofUpload(inputEl, previewId) {
+  const file = inputEl.files[0];
+  if (!file) return;
+
+  try {
+    const uploaded = await uploadToCloudinary(file); // global Cloudinary uploader you already have
+    document.getElementById(previewId).src = uploaded.secure_url;
+    document.getElementById(previewId).classList.remove("hidden");
+    inputEl.setAttribute("data-url", uploaded.secure_url); // store uploaded URL
+    globalsAlert("📤 Proof uploaded successfully!", "blue");
+  } catch (err) {
+    console.error("Upload failed:", err);
+    globalsAlert("❌ Upload failed. Try again.", "red");
+  }
+}
+
+// === Submit WhatsApp Task ===
+async function submitWhatsAppTask() {
+  const number = document.getElementById("whatsappNumber").value.trim();
+  if (!number) {
+    globalsAlert("⚠️ Please enter your WhatsApp number.", "red");
+    return;
+  }
+
+  // collect uploaded screenshot URLs
+  const inputs = document.querySelectorAll(".whatsapp-proof");
+  const uploads = [];
+  inputs.forEach(i => {
+    if (i.getAttribute("data-url")) {
+      uploads.push(i.getAttribute("data-url"));
+    }
+  });
+
+  if (uploads.length < 2) {
+    globalsAlert("⚠️ Please upload at least 2 proof screenshots.", "red");
+    return;
+  }
+
+  try {
+    await addDoc(collection(db, "WhatsApp"), {
+      number: number,
+      proofs: uploads,
+      createdAt: serverTimestamp(),
+      status: "pending" // admin will review
+    });
+
+    globalsAlert("✅ Review submitted! Wait for admin approval.", "blue");
+
+    // reset form after submission
+    document.getElementById("whatsappNumber").value = "";
+    inputs.forEach(i => {
+      i.value = "";
+      i.removeAttribute("data-url");
+    });
+  } catch (err) {
+    console.error("Error saving to Firestore:", err);
+    globalsAlert("❌ Something went wrong. Try again.", "red");
+  }
+}
+
+// make function global for button onclick
+window.copyToClipboard = copyToClipboard;
+window.handleProofUpload = handleProofUpload;
+window.submitWhatsAppTask = submitWhatsAppTask;
+
+
+
+
+
+
+
+
+
+
                                                  // GLOBALS TAP FUNCTION
 												 
 												 
@@ -2444,6 +2536,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
