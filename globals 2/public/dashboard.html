@@ -1427,15 +1427,14 @@
   <div class="mb-6">
     <label class="block text-sm font-medium mb-2 text-gray-700">Upload Screenshot of Your Video</label>
     <input type="file" id="screenshotUpload" accept="image/*"
-           class="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 shadow-sm" onchange="handleScreenshotUpload(event)" />
-    <p id="uploadStatus" class="text-xs text-gray-500 mt-2">No file uploaded yet.</p>
-  </div>
-
-  <!-- Submit Button -->
-  <button onclick="submitTikTokTask()" 
-          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all shadow-md">
-    🚀 Submit for Review
-  </button>
+       class="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 shadow-sm"
+       onchange="handleScreenshotUpload(event)" />
+<p id="uploadStatus" class="text-xs text-gray-500 mt-2">No file uploaded yet.</p>
+	  
+<button data-submit onclick="submitTikTokTask()"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all shadow-md">
+  🚀 Submit for Review
+</button>
 
   <!-- Confirmation -->
   <p id="tiktok-confirmation" class="hidden text-green-600 text-center mt-4 font-medium">
@@ -2930,6 +2929,7 @@
 </body>
 
 </html>
+
 
 
 
