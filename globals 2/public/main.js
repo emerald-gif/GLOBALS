@@ -1028,7 +1028,6 @@ window.submitTikTokTask = submitTikTokTask;
 
 
             
-// ---------- WhatsApp Task Helpers ----------  
 
 // ---------- WhatsApp Task Helpers ----------
 let whatsappProofs = [];
@@ -1097,7 +1096,7 @@ async function submitWhatsAppTask() {
       submitBtn.textContent = "Submitting...";
     }
 
-    await _db.collection("Whatsapp").add({
+    await _db.collection("Whatsapp").doc(user.uid).set({
       whatsappNumber: number,
       proofs: whatsappProofs,
       status: "on review",
@@ -1126,32 +1125,46 @@ async function submitWhatsAppTask() {
 }
 
 // 🔄 Keep button blurred after reload if already submitted
-function applySubmitState() {
+async function applySubmitState() {
   const submitBtn = document.querySelector("#whatsapp-task button[onclick*='submitWhatsAppTask']");
   if (!submitBtn) return;
 
-  const submitted = localStorage.getItem(SUBMIT_KEY) === "true";
-  if (submitted) {
-    submitBtn.disabled = true;
-    submitBtn.classList.add("opacity-50", "cursor-not-allowed"); // blur look
-    submitBtn.textContent = "✅ Already Submitted";
+  const _auth = window.auth || firebase?.auth?.();
+  const _db   = window.db   || firebase?.firestore?.();
+
+  const user = _auth?.currentUser;
+  if (!user || !_db) return;
+
+  try {
+    const doc = await _db.collection("Whatsapp").doc(user.uid).get();
+
+    if (doc.exists) {
+      // ✅ Already submitted
+      submitBtn.disabled = true;
+      submitBtn.classList.add("opacity-50", "cursor-not-allowed");
+      submitBtn.textContent = "✅ Already Submitted";
+      localStorage.setItem(SUBMIT_KEY, "true");
+    } else {
+      // ❌ No submission found → reset
+      submitBtn.disabled = false;
+      submitBtn.classList.remove("opacity-50", "cursor-not-allowed");
+      submitBtn.textContent = "🚀 Submit for Review";
+      localStorage.removeItem(SUBMIT_KEY);
+    }
+  } catch (err) {
+    console.error("State check error:", err);
   }
 }
 
 // Run on load
-document.addEventListener("DOMContentLoaded", applySubmitState);
+document.addEventListener("DOMContentLoaded", () => {
+  // wait for firebase auth to be ready
+  firebase.auth().onAuthStateChanged(() => applySubmitState());
+});
 
 // expose globally
 window.handleProofUpload = handleProofUpload;
 window.submitWhatsAppTask = submitWhatsAppTask;
-
-
-
-
-
-
-
-
 
 
 
@@ -2580,6 +2593,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
