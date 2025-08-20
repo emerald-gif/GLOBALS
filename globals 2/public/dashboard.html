@@ -1354,10 +1354,12 @@
 
 	
 <!-- 🟦 TikTok / Instagram Task (Fintech 2025 Premium) -->
+
+<!-- 🟦 TikTok / Instagram Task (Fintech 2025 Premium) -->
 <div id="tiktok-task" class="tab-section hidden p-6 bg-gradient-to-br from-white to-blue-50 rounded-2xl shadow-xl max-w-xl mx-auto border border-gray-100">
 
   <!-- Back Button -->
-  <button onclick="activateTab('social-tasks-main')" 
+  <button onclick="activateTab('social-tasks-main')"
           class="flex items-center text-blue-600 font-semibold mb-6 hover:underline">
     ← Back to Social Tasks
   </button>
@@ -1367,7 +1369,9 @@
     <span class="inline-block w-1.5 h-6 rounded-full bg-blue-600"></span>
     <span class="text-lg font-bold text-gray-900 tracking-tight">TikTok / Instagram Tasks</span>
   </h2>
-  <p class="text-gray-500 text-sm mb-6">Earn rewards by completing and submitting your task. Follow all requirements carefully.</p>
+  <p class="text-gray-500 text-sm mb-6">
+    Earn rewards by completing and submitting your task. Follow all requirements carefully.
+  </p>
 
   <!-- Notice -->
   <div class="p-4 rounded-xl bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm font-medium mb-8 flex items-center gap-2">
@@ -1413,10 +1417,10 @@
 
   <!-- Form Inputs -->
   <div class="space-y-4 mb-6">
-    <input type="text" id="profileLink" placeholder="Instagram/TikTok Profile Link"
+    <input type="url" id="profileLink" placeholder="Instagram/TikTok Profile Link"
            class="w-full p-3 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm" />
 
-    <input type="text" id="videoLink" placeholder="Video Link"
+    <input type="url" id="videoLink" placeholder="Video Link"
            class="w-full p-3 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm" />
 
     <input type="text" id="username" placeholder="TikTok/Instagram Username"
@@ -1427,14 +1431,17 @@
   <div class="mb-6">
     <label class="block text-sm font-medium mb-2 text-gray-700">Upload Screenshot of Your Video</label>
     <input type="file" id="screenshotUpload" accept="image/*"
-       class="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 shadow-sm"
-       onchange="handleScreenshotUpload(event)" />
+           class="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 shadow-sm"
+           onchange="handleScreenshotUpload(event)" />
+    <p id="uploadStatus" class="text-xs text-gray-500 mt-2">No file uploaded yet.</p>
+    <img id="uploadedPreview" class="hidden mt-3 w-full rounded-xl border border-gray-200" alt="Uploaded proof preview" />
+  </div>
 
-	  
-<button data-submit onclick="submitTikTokTask()"
-        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all shadow-md">
-  🚀 Submit for Review
-</button>
+  <!-- Submit -->
+  <button data-submit onclick="submitTikTokTask()"
+          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all shadow-md">
+    🚀 Submit for Review
+  </button>
 
   <!-- Confirmation -->
   <p id="tiktok-confirmation" class="hidden text-green-600 text-center mt-4 font-medium">
@@ -1446,13 +1453,12 @@
 <div id="assetPreviewModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
   <div class="bg-white p-4 rounded-xl shadow-lg max-w-md">
     <img id="assetPreviewImg" src="" class="rounded-lg mb-4 w-full" />
-    <button onclick="closePreview()" 
+    <button onclick="closePreview()"
             class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 rounded-lg">
       Close Preview
     </button>
   </div>
 </div>
-
 
 
 
@@ -2929,6 +2935,7 @@
 </body>
 
 </html>
+
 
 
 
