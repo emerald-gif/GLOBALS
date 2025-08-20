@@ -1246,26 +1246,16 @@ function submitTelegram() {
 
 let uploadedScreenshotUrl = "";
 
-// Preview asset modal
-function previewAsset(src) {
-  document.getElementById("assetPreviewImg").src = src;
-  document.getElementById("assetPreviewModal").classList.remove("hidden");
-}
-function closePreview() {
-  document.getElementById("assetPreviewModal").classList.add("hidden");
-}
-
-// Upload screenshot using global uploader
-async function uploadScreenshot(event) {
+// Handle screenshot input change
+async function handleScreenshotUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
 
   document.getElementById("uploadStatus").innerText = "Uploading...";
 
   try {
-    // 👇 Call your global uploader (already in main.js)
-    const url = await uploadToCloudinary(file);  
-    uploadedScreenshotUrl = url;
+    // Use your global Cloudinary function
+    uploadedScreenshotUrl = await uploadToCloudinary(file);
 
     document.getElementById("uploadStatus").innerText = "✅ Upload successful";
   } catch (err) {
@@ -1300,8 +1290,6 @@ async function submitTikTokTask() {
     alert("❌ Failed to submit. Try again.");
   }
 }
-
-
 
 
 
@@ -2731,6 +2719,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
