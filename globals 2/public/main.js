@@ -684,14 +684,16 @@ firebase.firestore()
 	
 
   const button = document.createElement("button");
-  button.textContent = "View Task";
-  button.className = `
-    mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2
-    rounded-lg shadow-sm transition
-  `;
-  button.addEventListener("click", () => {
-    showTaskDetails(jobId, jobData);
-  });
+button.textContent = "View Task";
+button.type = "button"; // ✅ prevent accidental form submission
+button.className = `
+  mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2
+  rounded-lg shadow-sm transition cursor-pointer
+`;
+button.addEventListener("click", (e) => {
+  e.stopPropagation(); // ✅ ensure clicks aren’t blocked
+  showTaskDetails(jobId, jobData);
+});
 
   content.appendChild(title);
   content.appendChild(meta);
@@ -2809,6 +2811,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
