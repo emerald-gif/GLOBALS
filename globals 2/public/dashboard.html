@@ -1620,26 +1620,26 @@
 
   <!-- Security Notice -->
   <div class="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium mb-6 flex items-start gap-2">
-    ⚠️ Do not delete your forwarded posts. Random checks & verification apply. Deleting may lead to account suspension.
+    ⚠️ Do not delete your forwarded posts. Because checks & verification apply. Deleting may lead to account suspension.
   </div>
 
   <!-- Proof Upload -->
   <label class="block text-sm font-medium mb-2 text-gray-700">📸 Upload Proof Screenshots</label>
   <div class="space-y-4 mb-6">
     <div>
-      <input type="file" class="telegram-proof w-full p-3 border border-gray-200 rounded-xl bg-gray-50 shadow-sm"
-             accept="image/*" onchange="handleTelegramUpload(this, 'tgPreview1')" />
-      <img id="tgPreview1" class="hidden mt-2 rounded-lg shadow-md w-full" />
-    </div>
-    <div>
-      <input type="file" class="telegram-proof w-full p-3 border border-gray-200 rounded-xl bg-gray-50 shadow-sm"
-             accept="image/*" onchange="handleTelegramUpload(this, 'tgPreview2')" />
-      <img id="tgPreview2" class="hidden mt-2 rounded-lg shadow-md w-full" />
-    </div>
-    <div>
-      <input type="file" class="telegram-proof w-full p-3 border border-gray-200 rounded-xl bg-gray-50 shadow-sm"
-             accept="image/*" onchange="handleTelegramUpload(this, 'tgPreview3')" />
-      <img id="tgPreview3" class="hidden mt-2 rounded-lg shadow-md w-full" />
+		
+      <input type="file" accept="image/*"
+       onchange="handleTelegramUpload(event, 0)" />
+<img id="tgPreview1" class="hidden mt-2 rounded-lg shadow-md w-full" />
+
+<input type="file" accept="image/*"
+       onchange="handleTelegramUpload(event, 1)" />
+<img id="tgPreview2" class="hidden mt-2 rounded-lg shadow-md w-full" />
+
+<input type="file" accept="image/*"
+       onchange="handleTelegramUpload(event, 2)" />
+<img id="tgPreview3" class="hidden mt-2 rounded-lg shadow-md w-full" />
+		
     </div>
   </div>
 
@@ -3046,6 +3046,7 @@
 </body>
 
 </html>
+
 
 
 
