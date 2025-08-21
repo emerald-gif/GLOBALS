@@ -590,6 +590,23 @@ firebase.auth().onAuthStateChanged((user) => {
 
 
 
+function generateProofUploadFields(count) {
+  let fields = "";
+  for (let i = 0; i < count; i++) {
+    fields += `
+      <input type="file" 
+        accept="image/*" 
+        class="w-full p-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+      />
+    `;
+  }
+  return fields;
+}
+
+
+
+
+
 firebase.firestore().collection("tasks")
   .where("status", "==", "approved")
   .onSnapshot(snapshot => {
@@ -831,18 +848,7 @@ if (button) {
 
 
 
-function generateProofUploadFields(count) {
-  let fields = "";
-  for (let i = 0; i < count; i++) {
-    fields += `
-      <input type="file" 
-        accept="image/*" 
-        class="w-full p-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-      />
-    `;
-  }
-  return fields;
-}
+
 
 
 
@@ -2824,6 +2830,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
