@@ -1211,6 +1211,180 @@ window.submitWhatsAppTask = submitWhatsAppTask;
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+ // ---------- Telegram Task Helpers ----------
+
+
+
+
+  let telegramProofs = ["", "", ""];
+  let isUploadingTelegram = false;
+  const TELEGRAM_SUBMIT_KEY = "telegramTaskSubmitted";
+
+  // Copy promo message
+  function copyTelegramMessage() {
+    const msg = document.getElementById("telegramMessage").innerText;
+    navigator.clipboard.writeText(msg).then(() => {
+      alert("📋 Message copied! Paste it in 3 Telegram groups.");
+    });
+  }
+
+  // Upload screenshot
+  async function handleTelegramUpload(e, index) {
+    const statusEl = document.getElementById("telegramUploadStatus");
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    isUploadingTelegram = true;
+    if (statusEl) statusEl.textContent = "Uploading screenshot...";
+
+    try {
+      const url = await window.uploadToCloudinary(file);
+      telegramProofs[index] = url;
+      if (statusEl) statusEl.textContent = "✅ Upload successful";
+    } catch (err) {
+      console.error("Upload error:", err);
+      if (statusEl) statusEl.textContent = "❌ Upload failed: " + (err?.message || "Unknown error");
+    } finally {
+      isUploadingTelegram = false;
+    }
+  }
+
+  // Submit Telegram Task
+  async function submitTelegramTask() {
+    const username = document.getElementById("telegramUsername")?.value.trim();
+    const g1 = document.getElementById("tgGroup1")?.value.trim();
+    const g2 = document.getElementById("tgGroup2")?.value.trim();
+    const g3 = document.getElementById("tgGroup3")?.value.trim();
+    const submitBtn = document.querySelector("#telegram-task [data-submit]");
+    const tgPattern = /^https?:\/\/t\.me\/.+/;
+
+    if (isUploadingTelegram) {
+      alert("Please wait — screenshots are still uploading.");
+      return;
+    }
+    if (!username || !g1 || !g2 || !g3 || telegramProofs.filter(Boolean).length < 3) {
+      alert("⚠️ Please fill all fields, add 3 links, and upload 3 screenshots.");
+      return;
+    }
+    if (!tgPattern.test(g1) || !tgPattern.test(g2) || !tgPattern.test(g3)) {
+      alert("⚠️ Invalid group links. They must start with https://t.me/");
+      return;
+    }
+
+    const _auth = window.auth || firebase?.auth?.();
+    const _db   = window.db   || firebase?.firestore?.();
+    if (!_auth || !_db) {
+      alert("Firebase not initialized.");
+      return;
+    }
+    const user = _auth.currentUser;
+    if (!user) {
+      alert("Please log in to submit.");
+      return;
+    }
+
+    try {
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Submitting...";
+      }
+
+      // Save in Firestore with uid as doc ID
+      await _db.collection("Telegram").doc(user.uid).set({
+        username,
+        groupLinks: [g1, g2, g3],
+        proofs: telegramProofs,
+        status: "on review",
+        submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        submittedBy: user.uid
+      });
+
+      // Save flag
+      localStorage.setItem(TELEGRAM_SUBMIT_KEY, "true");
+
+      alert("✅ Telegram task submitted successfully!");
+      location.hash = "#dashboard";
+
+      document.getElementById("telegram-confirmation").classList.remove("hidden");
+    } catch (err) {
+      console.error("Submit error:", err);
+      alert("❌ Failed to submit: " + (err?.message || "Unknown error"));
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "🚀 Submit for Review";
+        applyTelegramSubmitState();
+      }
+    }
+  }
+
+  // Keep button disabled after reload if submitted
+  async function applyTelegramSubmitState() {
+    const submitBtn = document.querySelector("#telegram-task [data-submit]");
+    if (!submitBtn) return;
+
+    const _auth = window.auth || firebase?.auth?.();
+    const _db   = window.db   || firebase?.firestore?.();
+    const user  = _auth?.currentUser;
+    if (!user || !_db) return;
+
+    try {
+      const doc = await _db.collection("Telegram").doc(user.uid).get();
+
+      if (doc.exists) {
+        submitBtn.disabled = true;
+        submitBtn.classList.add("opacity-50", "cursor-not-allowed");
+        submitBtn.textContent = "✅ Already Submitted";
+        localStorage.setItem(TELEGRAM_SUBMIT_KEY, "true");
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove("opacity-50", "cursor-not-allowed");
+        submitBtn.textContent = "🚀 Submit for Review";
+        localStorage.removeItem(TELEGRAM_SUBMIT_KEY);
+      }
+    } catch (err) {
+      console.error("State check error:", err);
+    }
+  }
+
+  // Run on load
+  document.addEventListener("DOMContentLoaded", () => {
+    firebase.auth().onAuthStateChanged(() => applyTelegramSubmitState());
+  });
+
+  // expose globally
+  window.handleTelegramUpload = handleTelegramUpload;
+  window.submitTelegramTask = submitTelegramTask;
+  window.copyTelegramMessage = copyTelegramMessage;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                                                  // GLOBALS TAP FUNCTION
 												 
 												 
@@ -2632,6 +2806,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
