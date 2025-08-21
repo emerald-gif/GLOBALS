@@ -589,69 +589,62 @@ firebase.auth().onAuthStateChanged((user) => {
 
 
 
+// ====================== INSTALL & EARN (robust, 2025-safe) ======================
 
-function generateProofUploadFields(count) {
-  let fields = "";
-  for (let i = 0; i < count; i++) {
-    fields += `
-      <input type="file" 
-        accept="image/*" 
-        class="w-full p-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-      />
-    `;
-  }
-  return fields;
-}
-
-
-
-
-
+// Live tasks listener
 firebase.firestore().collection("tasks")
   .where("status", "==", "approved")
-  .onSnapshot(snapshot => {
-    const taskContainer = document.getElementById("task-jobs");
-    const searchInput = document.getElementById("taskSearch");
-    const filterSelect = document.getElementById("taskCategoryFilter");
+  .onSnapshot(
+    (snapshot) => {
+      const taskContainer = document.getElementById("task-jobs");
+      if (!taskContainer) {
+        console.warn("#task-jobs not found in DOM — nothing to render");
+        return;
+      }
 
-    let tasks = [];
+      const searchInput  = document.getElementById("taskSearch");
+      const filterSelect = document.getElementById("taskCategoryFilter");
 
-    snapshot.forEach(doc => {
-      const jobData = doc.data();
-      tasks.push({ id: doc.id, ...jobData });
-    });
+      // Collect tasks
+      const tasks = [];
+      snapshot.forEach(doc => tasks.push({ id: doc.id, ...doc.data() }));
 
-    function renderTasks() {
-      const keyword = searchInput.value.toLowerCase();
-      const selectedCategory = filterSelect.value;
+      function renderTasks() {
+        const keyword = (searchInput?.value || "").toLowerCase();
+        const selectedCategory = (filterSelect?.value || "");
 
-      taskContainer.innerHTML = "";
+        taskContainer.innerHTML = "";
 
-      tasks
-        .filter(task => {
-          const matchesCategory = selectedCategory === "" || task.category === selectedCategory;
-          const matchesSearch = task.title.toLowerCase().includes(keyword);
-          return matchesCategory && matchesSearch;
-        })
-        .forEach(task => {
-          createTaskCard(task.id, task);
-        });
-    }
+        tasks
+          .filter(task => {
+            const matchesCategory = !selectedCategory || task.category === selectedCategory;
+            const matchesSearch   = (task.title || "").toLowerCase().includes(keyword);
+            return matchesCategory && matchesSearch;
+          })
+          .forEach(task => createTaskCard(task.id, task));
+      }
 
-    searchInput.addEventListener("input", renderTasks);
-    filterSelect.addEventListener("change", renderTasks);
+      // Avoid attaching duplicate listeners on every snapshot
+      if (searchInput && !searchInput.dataset.bound) {
+        searchInput.addEventListener("input", renderTasks);
+        searchInput.dataset.bound = "1";
+      }
+      if (filterSelect && !filterSelect.dataset.bound) {
+        filterSelect.addEventListener("change", renderTasks);
+        filterSelect.dataset.bound = "1";
+      }
 
-    renderTasks(); // initial render
-  });
+      renderTasks(); // initial render
+    },
+    (err) => console.error("onSnapshot(tasks) error:", err)
+  );
 
 
- 
-
-
+// Create a single task card (kept your structure)
 function createTaskCard(jobId, jobData) {
   const taskContainer = document.getElementById("task-jobs");
+  if (!taskContainer) return;
 
-  // Create the base card
   const card = document.createElement("div");
   card.className = `
     flex gap-4 p-4 rounded-2xl shadow-md border border-gray-200 bg-white
@@ -666,51 +659,50 @@ function createTaskCard(jobId, jobData) {
   const content = document.createElement("div");
   content.className = "flex-1";
 
- const title = document.createElement("h2");
+  const title = document.createElement("h2");
   title.textContent = jobData.title || "Untitled Task";
   title.className = "text-lg font-semibold text-gray-800";
 
   const meta = document.createElement("p");
   meta.className = "text-sm text-gray-500 mt-1";
-  meta.textContent = `${jobData.category} • ${jobData.subCategory}`;
+  meta.textContent = `${jobData.category || "-"} • ${jobData.subCategory || "-"}`;
 
   const earn = document.createElement("p");
   earn.textContent = `Earn: ₦${jobData.workerEarn || 0}`;
   earn.className = "text-sm text-green-600 font-semibold mt-1";
-  
-  
-  
+
   const rate = document.createElement("p");
-rate.className = "text-xs text-gray-500";
-rate.textContent = `Progress: loading...`; // placeholder
+  rate.className = "text-xs text-gray-500";
+  rate.textContent = `Progress: loading...`;
 
-const total = jobData.numWorkers || 0;
+  const total = Number(jobData.numWorkers || 0);
 
-firebase.firestore()
-  .collection("task_submissions")
-  .where("taskId", "==", jobId)
-  .where("status", "==", "approved")
-  .get()
-  .then(querySnapshot => {
-    const done = querySnapshot.size;
-    const progress = `${done} / ${total}`;
-    rate.textContent = `Progress: ${progress}`;
-  });
-
-
-	
+  // progress (safe)
+  firebase.firestore()
+    .collection("task_submissions")
+    .where("taskId", "==", jobId)
+    .where("status", "==", "approved")
+    .get()
+    .then(qs => {
+      const done = qs.size;
+      rate.textContent = `Progress: ${done} / ${total}`;
+    })
+    .catch(err => {
+      console.error("progress query error:", err);
+      rate.textContent = `Progress: - / ${total}`;
+    });
 
   const button = document.createElement("button");
-button.textContent = "View Task";
-button.type = "button"; // ✅ prevent accidental form submission
-button.className = `
-  mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2
-  rounded-lg shadow-sm transition cursor-pointer
-`;
-button.addEventListener("click", (e) => {
-  e.stopPropagation(); // ✅ ensure clicks aren’t blocked
-  showTaskDetails(jobId, jobData);
-});
+  button.textContent = "View Task";
+  button.type = "button";
+  button.className = `
+    mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2
+    rounded-lg shadow-sm transition cursor-pointer
+  `;
+  button.addEventListener("click", (e) => {
+    e.stopPropagation();
+    showTaskDetails(jobId, jobData);
+  });
 
   content.appendChild(title);
   content.appendChild(meta);
@@ -725,27 +717,37 @@ button.addEventListener("click", (e) => {
 }
 
 
+// Modal for task details (small preview image + fullscreen preview on click)
 function showTaskDetails(jobId, jobData) {
+  // If an old modal exists, remove it to avoid duplicates
+  document.querySelectorAll(".task-details-modal").forEach(el => el.remove());
+
   const fullScreen = document.createElement("div");
   fullScreen.className = `
-    fixed inset-0 bg-neutral-50 z-50 overflow-y-auto px-6 py-8
+    task-details-modal fixed inset-0 bg-neutral-50 z-50 overflow-y-auto px-6 py-8
   `;
+
+  // NOTE: generateProofUploadFields() is defined below and is REQUIRED
+  let proofFieldsHTML = "";
+  try {
+    proofFieldsHTML = generateProofUploadFields(jobData.proofFileCount || 1);
+  } catch (e) {
+    console.error("generateProofUploadFields missing/failed:", e);
+    proofFieldsHTML = generateProofUploadFields(1); // fallback
+  }
 
   fullScreen.innerHTML = `
     <div class="max-w-xl mx-auto space-y-6 bg-white shadow-lg rounded-2xl p-6 relative">
-      <!-- Back Button -->
-      <button onclick="this.closest('.fixed').remove()"
+      <button onclick="this.closest('.task-details-modal').remove()"
         class="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-medium">
         <span class="text-lg">←</span> Back
-      </button>   
+      </button>
 
-      <!-- Title -->
       <div>
-        <h1 class="text-xl font-bold text-gray-900 tracking-tight">${jobData.title}</h1>
-        <p class="text-xs text-gray-500 mt-1">${jobData.category} • ${jobData.subCategory}</p>
+        <h1 class="text-xl font-bold text-gray-900 tracking-tight">${jobData.title || "Task"}</h1>
+        <p class="text-xs text-gray-500 mt-1">${jobData.category || "-"} • ${jobData.subCategory || "-"}</p>
       </div>
 
-      <!-- Preview Image (small thumbnail, expandable) -->
       <div class="relative">
         <img src="${jobData.screenshotURL || 'https://via.placeholder.com/200'}"
           alt="Task Preview"
@@ -755,33 +757,28 @@ function showTaskDetails(jobId, jobData) {
         <p class="text-[11px] text-gray-400 mt-1">Click to enlarge</p>
       </div>
 
-      <!-- Task Description -->
       <div>
         <h2 class="text-sm font-semibold text-gray-800 mb-1">Task Description</h2>
         <p class="text-gray-700 text-sm leading-relaxed whitespace-pre-line">${jobData.description || "No description provided"}</p>
       </div>
 
-      <!-- Proof Required -->
       <div>
         <h2 class="text-sm font-semibold text-gray-800 mb-1">Proof Required</h2>
         <p class="text-gray-600 text-sm">${jobData.proof || "Provide the necessary screenshot or details."}</p>
       </div>
 
-      <!-- Proof Upload Section -->
       <div class="pt-2 border-t">
         <h2 class="text-sm font-semibold text-gray-900 mb-3">Submit Proof</h2>
-        
-        <div class="space-y-3">
-          ${generateProofUploadFields(jobData.proofFileCount || 1)}
 
+        <div class="space-y-3">
+          ${proofFieldsHTML}
           <input type="text" placeholder="Enter email/username used (if needed)"
             class="w-full p-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
         </div>
       </div>
 
-      <!-- Submit Button -->
-      <button id="submitTaskBtn-${jobId}"
+      <button id="submitTaskBtn"
         class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl text-sm shadow-md transition">
         ✅ Submit Task
       </button>
@@ -790,37 +787,47 @@ function showTaskDetails(jobId, jobData) {
 
   document.body.appendChild(fullScreen);
 
-  // ✅ Attach event listener here inside the function
-  const button = fullScreen.querySelector(`#submitTaskBtn-${jobId}`);
+  // Attach submit handler (scoped to this modal)
+  const submitBtn = fullScreen.querySelector("#submitTaskBtn");
+  if (!submitBtn) return;
 
-if (button) {
-  button.addEventListener("click", async () => {
+  submitBtn.addEventListener("click", async () => {
+    const user = firebase.auth().currentUser;
+    if (!user) return alert("Please log in to submit task.");
+
+    // Loading state
+    submitBtn.disabled = true;
+    const oldText = submitBtn.textContent;
+    submitBtn.textContent = "Submitting...";
+
     try {
-      const user = firebase.auth().currentUser;
-      if (!user) return alert("Please log in to submit task.");
-
-      const proofText = fullScreen.querySelector('input[type="text"]').value.trim();
+      const proofText = fullScreen.querySelector('input[type="text"]')?.value.trim() || "";
       const files = fullScreen.querySelectorAll('input[type="file"]');
       const uploadedFiles = [];
 
-      for (let fileInput of files) {
-        const file = fileInput.files[0];
-        if (file) {
-          await new Promise((resolve, reject) => {
-            uploadToCloudinary(file, (url) => {
-              if (url) {
-                uploadedFiles.push(url);
-                resolve();
-              } else {
-                reject("Upload failed");
-              }
-            });
-          });
-        }
+      // Guard: ensure uploadToCloudinary exists
+      if (typeof uploadToCloudinary !== "function") {
+        throw new Error("uploadToCloudinary is not defined globally.");
       }
 
-      if (uploadedFiles.length === 0) {
-        return alert("❗ Please upload at least one proof image.");
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i].files?.[0];
+        if (!file) continue;
+
+        await new Promise((resolve, reject) => {
+          uploadToCloudinary(file, (url) => {
+            if (url) {
+              uploadedFiles.push(url);
+              resolve();
+            } else {
+              reject(new Error("Cloudinary returned empty URL"));
+            }
+          });
+        });
+      }
+
+      if ((jobData.proofFileCount || 1) > 0 && uploadedFiles.length === 0) {
+        throw new Error("Please upload at least one proof image.");
       }
 
       await firebase.firestore().collection("task_submissions").add({
@@ -830,22 +837,55 @@ if (button) {
         proofImages: uploadedFiles,
         submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
         status: "on review",
-        workerEarn: jobData.workerEarn || 0
+        workerEarn: jobData.workerEarn || 0,
       });
 
       alert("✅ Task submitted for review!");
       fullScreen.remove();
-
     } catch (err) {
-      console.error(err);
-      alert("❗ Something went wrong while submitting.");
+      console.error("Submit error:", err);
+      alert(`❗ ${err.message || "Failed to submit task. Please try again."}`);
+      submitBtn.disabled = false;
+      submitBtn.textContent = oldText;
     }
   });
 }
 
 
+// Fullscreen image preview (called from onclick in the markup)
+function previewImage(imgUrl) {
+  const overlay = document.createElement("div");
+  overlay.className = "fixed inset-0 bg-black/70 flex items-center justify-center z-[100]";
+  overlay.innerHTML = `
+    <div class="relative">
+      <img src="${imgUrl}" class="max-w-[90vw] max-h-[80vh] rounded-lg shadow-2xl" />
+      <button onclick="this.closest('.fixed').remove()"
+        class="absolute top-2 right-2 bg-white/90 hover:bg-white text-black text-sm font-bold px-3 py-1 rounded-full shadow">✕</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
 
 
+// Generates N file inputs (REQUIRED by showTaskDetails)
+function generateProofUploadFields(count) {
+  const n = Math.max(0, Number(count) || 0);
+  if (n === 0) return ""; // allow tasks that don't require files
+
+  let html = "";
+  for (let i = 1; i <= n; i++) {
+    html += `
+      <div class="mb-3">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Upload Proof ${i}</label>
+        <input type="file"
+          accept="image/*"
+          class="w-full p-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        />
+      </div>
+    `;
+  }
+  return html;
+	  }
 
 
 
@@ -2830,6 +2870,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
