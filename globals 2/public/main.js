@@ -764,7 +764,7 @@ function showTaskDetails(jobId, jobData) {
       </div>
 
       <!-- Submit Button -->
-      <button id="submitTaskBtn" 
+      <button id="submitTaskBtn-${jobId}"
         class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl text-sm shadow-md transition">
         ✅ Submit Task
       </button>
@@ -774,10 +774,11 @@ function showTaskDetails(jobId, jobData) {
   document.body.appendChild(fullScreen);
 
   // ✅ Attach event listener here inside the function
-  const button = fullScreen.querySelector("#submitTaskBtn");
+  const button = fullScreen.querySelector(`#submitTaskBtn-${jobId}`);
 
-  if (button) {
-    button.addEventListener("click", async () => {
+if (button) {
+  button.addEventListener("click", async () => {
+    try {
       const user = firebase.auth().currentUser;
       if (!user) return alert("Please log in to submit task.");
 
@@ -785,29 +786,19 @@ function showTaskDetails(jobId, jobData) {
       const files = fullScreen.querySelectorAll('input[type="file"]');
       const uploadedFiles = [];
 
-      // Loop through all file inputs
-      for (let i = 0; i < files.length; i++) {
-        const fileInput = files[i];
+      for (let fileInput of files) {
         const file = fileInput.files[0];
-
         if (file) {
-          try {
-            // Use your universal Cloudinary function
-            await new Promise((resolve, reject) => {
-              uploadToCloudinary(file, (url) => {
-                if (url) {
-                  uploadedFiles.push(url);
-                  resolve();
-                } else {
-                  reject("Upload failed");
-                }
-              });
+          await new Promise((resolve, reject) => {
+            uploadToCloudinary(file, (url) => {
+              if (url) {
+                uploadedFiles.push(url);
+                resolve();
+              } else {
+                reject("Upload failed");
+              }
             });
-          } catch (err) {
-            console.error("Cloudinary upload error:", err);
-            alert("❗ Failed to upload image. Please try again.");
-            return;
-          }
+          });
         }
       }
 
@@ -815,7 +806,7 @@ function showTaskDetails(jobId, jobData) {
         return alert("❗ Please upload at least one proof image.");
       }
 
-      const submissionData = {
+      await firebase.firestore().collection("task_submissions").add({
         taskId: jobId,
         userId: user.uid,
         proofText,
@@ -823,13 +814,16 @@ function showTaskDetails(jobId, jobData) {
         submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
         status: "on review",
         workerEarn: jobData.workerEarn || 0
-      };
+      });
 
-      await firebase.firestore().collection("task_submissions").add(submissionData);
       alert("✅ Task submitted for review!");
       fullScreen.remove();
-    });
-  }
+
+    } catch (err) {
+      console.error(err);
+      alert("❗ Something went wrong while submitting.");
+    }
+  });
 }
 
 
@@ -837,6 +831,25 @@ function showTaskDetails(jobId, jobData) {
 
 
 
+function generateProofUploadFields(count) {
+  let fields = "";
+  for (let i = 0; i < count; i++) {
+    fields += `
+      <input type="file" 
+        accept="image/*" 
+        class="w-full p-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+      />
+    `;
+  }
+  return fields;
+}
+
+
+
+
+
+
+	
                                     //AFFILIATE 
 
 
@@ -2811,6 +2824,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
