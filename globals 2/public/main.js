@@ -1242,24 +1242,28 @@ window.submitWhatsAppTask = submitWhatsAppTask;
 
   // Upload screenshot
   async function handleTelegramUpload(e, index) {
-    const statusEl = document.getElementById("telegramUploadStatus");
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
 
-    isUploadingTelegram = true;
-    if (statusEl) statusEl.textContent = "Uploading screenshot...";
+  isUploadingTelegram = true;
+  try {
+    const url = await window.uploadToCloudinary(file);
+    telegramProofs[index] = url;
 
-    try {
-      const url = await window.uploadToCloudinary(file);
-      telegramProofs[index] = url;
-      if (statusEl) statusEl.textContent = "✅ Upload successful";
-    } catch (err) {
-      console.error("Upload error:", err);
-      if (statusEl) statusEl.textContent = "❌ Upload failed: " + (err?.message || "Unknown error");
-    } finally {
-      isUploadingTelegram = false;
+    // Show preview
+    const previewEl = document.getElementById(`tgPreview${index + 1}`);
+    if (previewEl) {
+      previewEl.src = url;
+      previewEl.classList.remove("hidden");
     }
+
+  } catch (err) {
+    console.error("Upload error:", err);
+    alert("❌ Upload failed");
+  } finally {
+    isUploadingTelegram = false;
   }
+}
 
   // Submit Telegram Task
   async function submitTelegramTask() {
@@ -2806,6 +2810,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
