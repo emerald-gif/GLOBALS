@@ -889,13 +889,14 @@ function submitTelegram() {
 
 
 
-// TikTok Instagram function
+                                    // TikTok Instagram function
 
 
 
 // ---------- TikTok/Instagram Task Helpers ----------
 let uploadedScreenshotUrl = "";
 let isUploadingScreenshot = false;
+const TIKTOK_SUBMIT_KEY = "tiktokTaskSubmitted"; // localStorage key
 
 function previewAsset(src) {
   const img = document.getElementById("assetPreviewImg");
@@ -925,7 +926,6 @@ async function handleScreenshotUpload(e) {
   if (statusEl) statusEl.textContent = "Uploading...";
 
   try {
-    // 👇 Use the one from main.js (must already be loaded)
     const url = await window.uploadToCloudinary(file);
     uploadedScreenshotUrl = url;
     if (statusEl) statusEl.textContent = "✅ Upload successful";
@@ -947,10 +947,8 @@ async function submitTikTokTask() {
   const profileLink = document.getElementById("profileLink")?.value.trim();
   const videoLink   = document.getElementById("videoLink")?.value.trim();
   const username    = document.getElementById("username")?.value.trim();
-  const confirmEl   = document.getElementById("tiktok-confirmation");
   const submitBtn   = document.querySelector("#tiktok-task [data-submit]");
 
-  // validations
   if (isUploadingScreenshot) {
     alert("Please wait — screenshot is still uploading.");
     return;
@@ -965,7 +963,6 @@ async function submitTikTokTask() {
     return;
   }
 
-  // use existing Firebase instances
   const _auth = window.auth || firebase?.auth?.();
   const _db   = window.db   || firebase?.firestore?.();
 
@@ -986,7 +983,8 @@ async function submitTikTokTask() {
       submitBtn.textContent = "Submitting...";
     }
 
-    await _db.collection("TiktokInstagram").add({
+    // 🔑 store with user.uid as doc ID (1 per user)
+    await _db.collection("TiktokInstagram").doc(user.uid).set({
       profileLink,
       videoLink,
       username,
@@ -997,7 +995,15 @@ async function submitTikTokTask() {
       submittedBy: user.uid
     });
 
-    if (confirmEl) confirmEl.classList.remove("hidden");
+    // ✅ Save local flag
+    localStorage.setItem(TIKTOK_SUBMIT_KEY, "true");
+
+    // ✅ Alert + redirect
+    alert("✅ Your TikTok/Instagram task has been submitted and is awaiting admin approval.");
+    location.hash = "#dashboard";
+
+    // reset
+    uploadedScreenshotUrl = "";
   } catch (err) {
     console.error("Submit error:", err);
     alert("❌ Failed to submit: " + (err?.message || "Unknown error"));
@@ -1005,19 +1011,52 @@ async function submitTikTokTask() {
     if (submitBtn) {
       submitBtn.disabled = false;
       submitBtn.textContent = "🚀 Submit for Review";
+      applyTikTokSubmitState();
     }
   }
 }
+
+// 🔄 Keep button blurred after reload if already submitted
+async function applyTikTokSubmitState() {
+  const submitBtn = document.querySelector("#tiktok-task [data-submit]");
+  if (!submitBtn) return;
+
+  const _auth = window.auth || firebase?.auth?.();
+  const _db   = window.db   || firebase?.firestore?.();
+  const user  = _auth?.currentUser;
+  if (!user || !_db) return;
+
+  try {
+    const doc = await _db.collection("TiktokInstagram").doc(user.uid).get();
+
+    if (doc.exists) {
+      // ✅ Already submitted
+      submitBtn.disabled = true;
+      submitBtn.classList.add("opacity-50", "cursor-not-allowed");
+      submitBtn.textContent = "✅ Already Submitted";
+      localStorage.setItem(TIKTOK_SUBMIT_KEY, "true");
+    } else {
+      // ❌ Reset
+      submitBtn.disabled = false;
+      submitBtn.classList.remove("opacity-50", "cursor-not-allowed");
+      submitBtn.textContent = "🚀 Submit for Review";
+      localStorage.removeItem(TIKTOK_SUBMIT_KEY);
+    }
+  } catch (err) {
+    console.error("State check error:", err);
+  }
+}
+
+// Run on load
+document.addEventListener("DOMContentLoaded", () => {
+  firebase.auth().onAuthStateChanged(() => applyTikTokSubmitState());
+});
 
 // expose globally
 window.previewAsset = previewAsset;
 window.closePreview = closePreview;
 window.handleScreenshotUpload = handleScreenshotUpload;
 window.submitTikTokTask = submitTikTokTask;
-
-
-
-
 
 
 
@@ -2593,6 +2632,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
