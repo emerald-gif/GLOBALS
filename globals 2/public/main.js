@@ -709,48 +709,84 @@ firebase.firestore()
 function showTaskDetails(jobId, jobData) {
   const fullScreen = document.createElement("div");
   fullScreen.className = `
-    fixed inset-0 bg-white z-50 overflow-y-auto p-6
+    fixed inset-0 bg-neutral-50 z-50 overflow-y-auto px-6 py-8
   `;
 
   fullScreen.innerHTML = `
-    <div class="max-w-2xl mx-auto space-y-6">
-      <button onclick="this.parentElement.parentElement.remove()"
-        class="text-blue-600 font-bold text-sm underline">← Back to Tasks</button>
+    <div class="max-w-xl mx-auto space-y-6 bg-white shadow-lg rounded-2xl p-6 relative">
+      <!-- Back Button -->
+      <button onclick="this.closest('.fixed').remove()"
+        class="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-medium">
+        <span class="text-lg">←</span> Back
+      </button>
 
-      <h1 class="text-2xl font-bold text-gray-800">${jobData.title}</h1>
-      <p class="text-sm text-gray-500">${jobData.category} • ${jobData.subCategory}</p>
-
-      <img src="${jobData.screenshotURL || 'https://via.placeholder.com/400'}"
-        alt="Task Preview"
-        class="w-full h-64 object-cover rounded-xl border"
-      />
-
+      <!-- Title -->
       <div>
-        <h2 class="text-lg font-semibold text-gray-800 mb-2">Task Description</h2>
-        <p class="text-gray-700 text-sm whitespace-pre-line">${jobData.description || "No description provided"}</p>
+        <h1 class="text-xl font-bold text-gray-900 tracking-tight">${jobData.title}</h1>
+        <p class="text-xs text-gray-500 mt-1">${jobData.category} • ${jobData.subCategory}</p>
       </div>
 
-      <div>
-        <h2 class="text-lg font-semibold text-gray-800 mb-2">Proof Required</h2>
-        <p class="text-sm text-gray-700">${jobData.proof || "Provide the necessary screenshot or details."}</p>
-      </div>
-
-      <div class="mt-6">
-        <h2 class="text-lg font-bold text-gray-800 mb-4">Proof</h2>
-        ${generateProofUploadFields(jobData.proofFileCount || 1)}
-
-        <input type="text" placeholder="Enter email/username used (if needed)"
-          class="w-full p-2 border border-gray-300 rounded-lg text-sm mt-2"
+      <!-- Preview Image (small thumbnail, expandable) -->
+      <div class="relative">
+        <img src="${jobData.screenshotURL || 'https://via.placeholder.com/200'}"
+          alt="Task Preview"
+          class="w-40 h-28 object-cover rounded-lg border cursor-pointer shadow-sm hover:shadow-md transition"
+          onclick="previewImage('${jobData.screenshotURL || 'https://via.placeholder.com/600'}')"
         />
+        <p class="text-[11px] text-gray-400 mt-1">Click to enlarge</p>
       </div>
 
-      <button id="submitTaskBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm mt-4">
-        Submit Task
+      <!-- Task Description -->
+      <div>
+        <h2 class="text-sm font-semibold text-gray-800 mb-1">Task Description</h2>
+        <p class="text-gray-700 text-sm leading-relaxed whitespace-pre-line">${jobData.description || "No description provided"}</p>
+      </div>
+
+      <!-- Proof Required -->
+      <div>
+        <h2 class="text-sm font-semibold text-gray-800 mb-1">Proof Required</h2>
+        <p class="text-gray-600 text-sm">${jobData.proof || "Provide the necessary screenshot or details."}</p>
+      </div>
+
+      <!-- Proof Upload Section -->
+      <div class="pt-2 border-t">
+        <h2 class="text-sm font-semibold text-gray-900 mb-3">Submit Proof</h2>
+        
+        <div class="space-y-3">
+          ${generateProofUploadFields(jobData.proofFileCount || 1)}
+
+          <input type="text" placeholder="Enter email/username used (if needed)"
+            class="w-full p-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <button id="submitTaskBtn" 
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl text-sm shadow-md transition">
+        ✅ Submit Task
       </button>
     </div>
   `;
 
   document.body.appendChild(fullScreen);
+}
+
+// helper for previewing images in fullscreen modal
+function previewImage(imgUrl) {
+  const overlay = document.createElement("div");
+  overlay.className = "fixed inset-0 bg-black/70 flex items-center justify-center z-[100]";
+  overlay.innerHTML = `
+    <div class="relative">
+      <img src="${imgUrl}" class="max-w-[90vw] max-h-[80vh] rounded-lg shadow-2xl" />
+      <button onclick="this.closest('.fixed').remove()" 
+        class="absolute top-2 right-2 bg-white/90 hover:bg-white text-black text-sm font-bold px-3 py-1 rounded-full shadow">
+        ✕
+      </button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
 
   // ✅ Add event listener after DOM is added
 const button = fullScreen.querySelector("#submitTaskBtn");
@@ -2813,6 +2849,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
