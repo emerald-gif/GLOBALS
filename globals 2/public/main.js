@@ -589,51 +589,193 @@ firebase.auth().onAuthStateChanged((user) => {
 
 
 
-firebase.firestore().collection("tasks")
-  .where("status", "==", "approved")
-  .onSnapshot(snapshot => {
-    const taskContainer = document.getElementById("task-jobs");
-    const searchInput = document.getElementById("taskSearch");
-    const filterSelect = document.getElementById("taskCategoryFilter");
+// ---------- Helpers ----------
+const escapeHtml = s => String(s || '')
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
-    let tasks = [];
+function generateProofUploadFields(count) {
+  let html = '';
+  for (let i = 1; i <= count; i++) {
+    html += `
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Upload Proof ${i}</label>
+        <input id="proof-file-${i}" type="file" accept="image/*" class="w-full p-2 border border-gray-300 rounded-lg text-sm" />
+      </div>
+    `;
+  }
+  return html;
+}
 
-    snapshot.forEach(doc => {
-      const jobData = doc.data();
-      tasks.push({ id: doc.id, ...jobData });
+function waitForAuthReady(timeout = 4000) {
+  return new Promise(resolve => {
+    if (typeof firebase === "undefined" || !firebase.auth) return resolve(null);
+    let done = false;
+    const t = setTimeout(() => {
+      if (done) return;
+      done = true;
+      resolve(firebase.auth().currentUser || null);
+    }, timeout);
+
+    const unsub = firebase.auth().onAuthStateChanged(user => {
+      if (done) return;
+      done = true;
+      clearTimeout(t);
+      try { unsub(); } catch (e) {}
+      resolve(user || null);
     });
-
-    function renderTasks() {
-      const keyword = searchInput.value.toLowerCase();
-      const selectedCategory = filterSelect.value;
-
-      taskContainer.innerHTML = "";
-
-      tasks
-        .filter(task => {
-          const matchesCategory = selectedCategory === "" || task.category === selectedCategory;
-          const matchesSearch = task.title.toLowerCase().includes(keyword);
-          return matchesCategory && matchesSearch;
-        })
-        .forEach(task => {
-          createTaskCard(task.id, task);
-        });
-    }
-
-    searchInput.addEventListener("input", renderTasks);
-    filterSelect.addEventListener("change", renderTasks);
-
-    renderTasks(); // initial render
   });
+}
 
+// ---------- Modal / Submit logic ----------
+function showTaskDetails(jobId, jobData) {
+  if (!jobId || !jobData) {
+    console.error("showTaskDetails missing jobId or jobData", { jobId, jobData });
+    alert("Internal error: missing job data. Refresh and try again.");
+    return;
+  }
 
- 
+  const fullScreen = document.createElement("div");
+  fullScreen.className = "fixed inset-0 bg-white z-50 overflow-y-auto p-6";
 
+  const proofCount = jobData.proofFileCount || 1;
+  const safeTitle = escapeHtml(jobData.title);
+  const safeCategory = escapeHtml(jobData.category || '');
+  const safeSub = escapeHtml(jobData.subCategory || '');
+  const safeDesc = escapeHtml(jobData.description || 'No description provided');
+  const safeProofText = escapeHtml(jobData.proof || 'Provide the necessary screenshot or details.');
 
+  fullScreen.innerHTML = `
+    <div class="max-w-2xl mx-auto space-y-6">
+      <button id="closeTaskBtn" class="text-blue-600 font-bold text-sm underline">← Back to Tasks</button>
+
+      <h1 class="text-2xl font-bold text-gray-800">${safeTitle}</h1>
+      <p class="text-sm text-gray-500">${safeCategory} • ${safeSub}</p>
+
+      <img src="${jobData.screenshotURL || 'https://via.placeholder.com/400'}"
+        alt="Task Preview"
+        class="w-full h-64 object-cover rounded-xl border"
+      />
+
+      <div>
+        <h2 class="text-lg font-semibold text-gray-800 mb-2">Task Description</h2>
+        <p class="text-gray-700 text-sm whitespace-pre-line">${safeDesc}</p>
+      </div>
+
+      <div>
+        <h2 class="text-lg font-semibold text-gray-800 mb-2">Proof Required</h2>
+        <p class="text-sm text-gray-700">${safeProofText}</p>
+      </div>
+
+      <div class="mt-6">
+        <h2 class="text-lg font-bold text-gray-800 mb-4">Proof</h2>
+        <div id="proofFields">${generateProofUploadFields(proofCount)}</div>
+        <input id="proofTextInput" type="text" placeholder="Enter email/username used (if needed)"
+          class="w-full p-2 border border-gray-300 rounded-lg text-sm mt-2"
+        />
+      </div>
+
+      <div class="flex items-center gap-3 mt-4">
+        <button id="submitTaskBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
+          Submit Task
+        </button>
+        <div id="submitStatus" class="text-sm text-gray-600"></div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(fullScreen);
+
+  // close
+  fullScreen.querySelector("#closeTaskBtn").addEventListener("click", () => fullScreen.remove());
+
+  // submit
+  const submitBtn = fullScreen.querySelector("#submitTaskBtn");
+  const status = fullScreen.querySelector("#submitStatus");
+
+  submitBtn.addEventListener("click", async () => {
+    submitBtn.disabled = true;
+    status.textContent = "Checking auth...";
+
+    try {
+      const user = await waitForAuthReady();
+      console.log("submit: currentUser ->", user);
+      if (!user) {
+        alert("Please log in to submit task.");
+        submitBtn.disabled = false;
+        status.textContent = "";
+        return;
+      }
+
+      // collect text + files
+      const proofText = fullScreen.querySelector("#proofTextInput")?.value.trim() || "";
+      const fileInputs = fullScreen.querySelectorAll('input[type="file"]');
+      const uploadedFiles = [];
+
+      // upload files sequentially so we can show progress
+      for (let i = 0; i < fileInputs.length; i++) {
+        const fEl = fileInputs[i];
+        const file = fEl.files[0];
+        if (file) {
+          status.textContent = `Uploading ${i + 1}/${fileInputs.length}...`;
+          console.log("Uploading file:", file.name, file.size);
+          // uses your global uploadToCloudinary(file) that returns a Promise with URL
+          const url = await uploadToCloudinary(file);
+          uploadedFiles.push(url);
+          status.textContent = `Uploaded ${uploadedFiles.length}/${fileInputs.length}`;
+        }
+      }
+
+      if (uploadedFiles.length === 0) {
+        alert("❗ Please upload at least one proof image.");
+        submitBtn.disabled = false;
+        status.textContent = "";
+        return;
+      }
+
+      // ensure job data exists
+      if (!jobId || !jobData) {
+        console.error("Missing jobId/jobData at submit time");
+        alert("❗ Missing job info. Refresh and try again.");
+        submitBtn.disabled = false;
+        status.textContent = "";
+        return;
+      }
+
+      status.textContent = "Saving submission...";
+
+      const submissionData = {
+        taskId: jobId,
+        userId: user.uid,
+        proofText,
+        proofImages: uploadedFiles,
+        submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        status: "on review",
+        workerEarn: jobData.workerEarn || 0
+      };
+
+      const docRef = await firebase.firestore().collection("task_submissions").add(submissionData);
+      console.log("Submission saved:", docRef.id);
+
+      alert("✅ Task submitted for review!");
+      fullScreen.remove();
+    } catch (err) {
+      console.error("Submit error:", err);
+      alert("❗ Failed to submit task: " + (err && err.message ? err.message : String(err)));
+      submitBtn.disabled = false;
+      status.textContent = "";
+    }
+  });
+}
+
+// ---------- Card rendering + live feed ----------
 function createTaskCard(jobId, jobData) {
   const taskContainer = document.getElementById("task-jobs");
+  if (!taskContainer) {
+    console.error("No #task-jobs element found — createTaskCard aborted");
+    return;
+  }
 
-  // Create the base card
   const card = document.createElement("div");
   card.className = `
     flex gap-4 p-4 rounded-2xl shadow-md border border-gray-200 bg-white
@@ -648,39 +790,37 @@ function createTaskCard(jobId, jobData) {
   const content = document.createElement("div");
   content.className = "flex-1";
 
- const title = document.createElement("h2");
+  const title = document.createElement("h2");
   title.textContent = jobData.title || "Untitled Task";
   title.className = "text-lg font-semibold text-gray-800";
 
   const meta = document.createElement("p");
   meta.className = "text-sm text-gray-500 mt-1";
-  meta.textContent = `${jobData.category} • ${jobData.subCategory}`;
+  meta.textContent = `${jobData.category || ""} • ${jobData.subCategory || ""}`;
 
   const earn = document.createElement("p");
   earn.textContent = `Earn: ₦${jobData.workerEarn || 0}`;
   earn.className = "text-sm text-green-600 font-semibold mt-1";
-  
-  
-  
+
   const rate = document.createElement("p");
-rate.className = "text-xs text-gray-500";
-rate.textContent = `Progress: loading...`; // placeholder
+  rate.className = "text-xs text-gray-500";
+  rate.textContent = `Progress: loading...`;
 
-const total = jobData.numWorkers || 0;
+  const total = jobData.numWorkers || 0;
 
-firebase.firestore()
-  .collection("task_submissions")
-  .where("taskId", "==", jobId)
-  .where("status", "==", "approved")
-  .get()
-  .then(querySnapshot => {
-    const done = querySnapshot.size;
-    const progress = `${done} / ${total}`;
-    rate.textContent = `Progress: ${progress}`;
-  });
-
-
-	
+  firebase.firestore()
+    .collection("task_submissions")
+    .where("taskId", "==", jobId)
+    .where("status", "==", "approved")
+    .get()
+    .then(querySnapshot => {
+      const done = querySnapshot.size;
+      rate.textContent = `Progress: ${done} / ${total}`;
+    })
+    .catch(err => {
+      console.error("Failed to read progress for", jobId, err);
+      rate.textContent = `Progress: 0 / ${total}`;
+    });
 
   const button = document.createElement("button");
   button.textContent = "View Task";
@@ -688,9 +828,7 @@ firebase.firestore()
     mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2
     rounded-lg shadow-sm transition
   `;
-  button.addEventListener("click", () => {
-    showTaskDetails(jobId, jobData);
-  });
+  button.addEventListener("click", () => showTaskDetails(jobId, jobData));
 
   content.appendChild(title);
   content.appendChild(meta);
@@ -704,136 +842,47 @@ firebase.firestore()
   taskContainer.appendChild(card);
 }
 
+// ---------- Live tasks listener ----------
+firebase.firestore().collection("tasks")
+  .where("status", "==", "approved")
+  .onSnapshot(snapshot => {
+    const taskContainer = document.getElementById("task-jobs");
+    const searchInput = document.getElementById("taskSearch");
+    const filterSelect = document.getElementById("taskCategoryFilter");
 
-
-
-function showTaskDetails(jobId, jobData) {
-  const fullScreen = document.createElement("div");
-  fullScreen.className = `
-    fixed inset-0 bg-white z-50 overflow-y-auto p-6
-  `;
-
-  fullScreen.innerHTML = `
-    <div class="max-w-2xl mx-auto space-y-6">
-      <button onclick="this.parentElement.parentElement.remove()"
-        class="text-blue-600 font-bold text-sm underline">← Back to Tasks</button>
-
-      <h1 class="text-2xl font-bold text-gray-800">${jobData.title}</h1>
-      <p class="text-sm text-gray-500">${jobData.category} • ${jobData.subCategory}</p>
-
-      <img src="${jobData.screenshotURL || 'https://via.placeholder.com/400'}"
-        alt="Task Preview"
-        class="w-full h-64 object-cover rounded-xl border"
-      />
-
-      <div>
-        <h2 class="text-lg font-semibold text-gray-800 mb-2">Task Description</h2>
-        <p class="text-gray-700 text-sm whitespace-pre-line">${jobData.description || "No description provided"}</p>
-      </div>
-
-      <div>
-        <h2 class="text-lg font-semibold text-gray-800 mb-2">Proof Required</h2>
-        <p class="text-sm text-gray-700">${jobData.proof || "Provide the necessary screenshot or details."}</p>
-      </div>
-
-      <div class="mt-6">
-        <h2 class="text-lg font-bold text-gray-800 mb-4">Proof</h2>
-        ${generateProofUploadFields(jobData.proofFileCount || 1)}
-
-        <input type="text" placeholder="Enter email/username used (if needed)"
-          class="w-full p-2 border border-gray-300 rounded-lg text-sm mt-2"
-        />
-      </div>
-
-      <button id="submitTaskBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm mt-4">
-        Submit Task
-      </button>
-    </div>
-  `;
-
-  document.body.appendChild(fullScreen);
-
-  // ✅ Add event listener for submit button
-// ✅ Handle Submit Task Button Click
-const button = fullScreen.querySelector("#submitTaskBtn");
-
-if (button) {
-    button.addEventListener("click", async () => {
-        const user = firebase.auth().currentUser;
-        if (!user) {
-            alert("Please log in to submit task.");
-            return;
-        }
-
-        // ✅ Get proof text (if exists)
-        const proofTextInput = fullScreen.querySelector('input[type="text"]');
-        const proofText = proofTextInput ? proofTextInput.value.trim() : "";
-
-        // ✅ Get all file inputs
-        const fileInputs = fullScreen.querySelectorAll('input[type="file"]');
-        const uploadedFiles = [];
-
-        try {
-            // ✅ Validate job data
-            if (!jobId || !jobData) {
-                alert("❗ Missing job details. Please refresh and try again.");
-                console.error("jobId or jobData is missing");
-                return;
-            }
-
-            // ✅ Upload all selected images to Cloudinary
-            for (let i = 0; i < fileInputs.length; i++) {
-                const file = fileInputs[i].files[0];
-                if (file) {
-                    const url = await uploadToCloudinary(file); // ✅ Your global function
-                    uploadedFiles.push(url);
-                }
-            }
-
-            if (uploadedFiles.length === 0) {
-                alert("❗ Please upload at least one proof image.");
-                return;
-            }
-
-            // ✅ Prepare Firestore submission data
-            const submissionData = {
-                taskId: jobId,
-                userId: user.uid,
-                proofText,
-                proofImages: uploadedFiles,
-                submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                status: "on review",
-                workerEarn: jobData.workerEarn || 0
-            };
-
-            // ✅ Save to Firestore
-            await firebase.firestore().collection("task_submissions").add(submissionData);
-
-            alert("✅ Task submitted for review!");
-            fullScreen.remove();
-        } catch (err) {
-            console.error("Error during submission:", err);
-            alert("❗ Failed to submit task. Please try again.");
-        }
-    });
-}
-
-// ✅ Dynamic Proof Upload Fields Generator
-function generateProofUploadFields(count) {
-    let html = '';
-    for (let i = 1; i <= count; i++) {
-        html += `
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Upload Proof ${i}</label>
-                <input type="file" accept="image/*" class="w-full p-2 border border-gray-300 rounded-lg text-sm" />
-            </div>
-        `;
+    if (!taskContainer) {
+      console.error("No #task-jobs element found — snapshot handler aborted");
+      return;
     }
-    return html;
-}
 
+    let tasks = [];
+    snapshot.forEach(doc => {
+      const jobData = doc.data();
+      tasks.push({ id: doc.id, ...jobData });
+    });
 
+    function renderTasks() {
+      const keyword = (searchInput && searchInput.value) ? searchInput.value.toLowerCase() : "";
+      const selectedCategory = (filterSelect && filterSelect.value) ? filterSelect.value : "";
 
+      taskContainer.innerHTML = "";
+
+      tasks
+        .filter(task => {
+          const matchesCategory = selectedCategory === "" || (task.category === selectedCategory);
+          const matchesSearch = (task.title || "").toLowerCase().includes(keyword);
+          return matchesCategory && matchesSearch;
+        })
+        .forEach(task => createTaskCard(task.id, task));
+    }
+
+    if (searchInput) searchInput.addEventListener("input", renderTasks);
+    if (filterSelect) filterSelect.addEventListener("change", renderTasks);
+
+    renderTasks();
+  }, err => {
+    console.error("Failed to listen to tasks collection:", err);
+  });
 
 
 
@@ -2813,6 +2862,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
