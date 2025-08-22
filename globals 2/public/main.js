@@ -765,53 +765,45 @@ if (button) {
         const files = fullScreen.querySelectorAll('input[type="file"]');
         const uploadedFiles = [];
 
-        // Loop through all file inputs
-        for (let i = 0; i < files.length; i++) {
-            const fileInput = files[i];
-            const file = fileInput.files[0];
+        try {
+            // ✅ Loop through all file inputs and upload to Cloudinary
+            for (let i = 0; i < files.length; i++) {
+                const fileInput = files[i];
+                const file = fileInput.files[0];
 
-            if (file) {
-                try {
-                    // Use the universal Cloudinary function
-                    await new Promise((resolve, reject) => {
-                        uploadToCloudinary(file, (url) => {
-                            if (url) {
-                                uploadedFiles.push(url);
-                                resolve();
-                            } else {
-                                reject("Upload failed");
-                            }
-                        });
-                    });
-                } catch (err) {
-                    console.error("Cloudinary upload error:", err);
-                    alert("❗ Failed to upload image. Please try again.");
-                    return;
+                if (file) {
+                    const url = await uploadToCloudinary(file); // ✅ Uses the global Cloudinary function
+                    uploadedFiles.push(url);
                 }
             }
+
+            if (uploadedFiles.length === 0) {
+                return alert("❗ Please upload at least one proof image.");
+            }
+
+            // ✅ Prepare data for Firestore
+            const submissionData = {
+                taskId: jobId,
+                userId: user.uid,
+                proofText,
+                proofImages: uploadedFiles,
+                submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                status: "on review",
+                workerEarn: jobData.workerEarn || 0
+            };
+
+            // ✅ Save to Firestore
+            await firebase.firestore().collection("task_submissions").add(submissionData);
+
+            alert("✅ Task submitted for review!");
+            fullScreen.remove();
+
+        } catch (err) {
+            console.error("Error during submission:", err);
+            alert("❗ Failed to submit task. Please try again.");
         }
-
-        if (uploadedFiles.length === 0) {
-            return alert("❗ Please upload at least one proof image.");
-        }
-
-  const submissionData = {
-    taskId: jobId,
-    userId: user.uid,
-    proofText,
-    proofImages: uploadedFiles,
-    submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    status: "on review",
-    workerEarn: jobData.workerEarn || 0
-  };
-
-  await firebase.firestore().collection("task_submissions").add(submissionData);
-  alert("✅ Task submitted for review!");
-  fullScreen.remove();
-});
+    });
 }
-
-
 
 
 
@@ -829,11 +821,6 @@ function generateProofUploadFields(count) {
   }
   return html;
 }
-
-
-}
-
-
 
 
 		
@@ -2821,6 +2808,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
