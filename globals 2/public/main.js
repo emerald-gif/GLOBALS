@@ -754,6 +754,7 @@ function showTaskDetails(jobId, jobData) {
   document.body.appendChild(fullScreen);
 
   // ✅ Add event listener for submit button
+// ✅ Handle Submit Task Button Click
 const button = fullScreen.querySelector("#submitTaskBtn");
 
 if (button) {
@@ -764,16 +765,27 @@ if (button) {
             return;
         }
 
-        const proofText = fullScreen.querySelector('input[type="text"]').value.trim();
+        // ✅ Get proof text (if exists)
+        const proofTextInput = fullScreen.querySelector('input[type="text"]');
+        const proofText = proofTextInput ? proofTextInput.value.trim() : "";
+
+        // ✅ Get all file inputs
         const fileInputs = fullScreen.querySelectorAll('input[type="file"]');
         const uploadedFiles = [];
 
         try {
-            // ✅ Loop through file inputs and upload each to Cloudinary
+            // ✅ Validate job data
+            if (!jobId || !jobData) {
+                alert("❗ Missing job details. Please refresh and try again.");
+                console.error("jobId or jobData is missing");
+                return;
+            }
+
+            // ✅ Upload all selected images to Cloudinary
             for (let i = 0; i < fileInputs.length; i++) {
                 const file = fileInputs[i].files[0];
                 if (file) {
-                    const url = await uploadToCloudinary(file); // ✅ Make sure this returns a Promise with URL
+                    const url = await uploadToCloudinary(file); // ✅ Your global function
                     uploadedFiles.push(url);
                 }
             }
@@ -783,24 +795,18 @@ if (button) {
                 return;
             }
 
-            // ✅ Validate jobId and jobData before saving
-            if (!jobId || !jobData) {
-                console.error("Missing jobId or jobData.");
-                alert("❗ Failed to submit: Job data missing.");
-                return;
-            }
-
-            // ✅ Prepare Firestore document
+            // ✅ Prepare Firestore submission data
             const submissionData = {
                 taskId: jobId,
                 userId: user.uid,
-                proofText: proofText || "",
+                proofText,
                 proofImages: uploadedFiles,
                 submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
                 status: "on review",
                 workerEarn: jobData.workerEarn || 0
             };
 
+            // ✅ Save to Firestore
             await firebase.firestore().collection("task_submissions").add(submissionData);
 
             alert("✅ Task submitted for review!");
@@ -812,7 +818,7 @@ if (button) {
     });
 }
 
-// ✅ Dynamic Proof Upload Fields
+// ✅ Dynamic Proof Upload Fields Generator
 function generateProofUploadFields(count) {
     let html = '';
     for (let i = 1; i <= count; i++) {
@@ -825,8 +831,6 @@ function generateProofUploadFields(count) {
     }
     return html;
 }
-
-	
 
 
 
@@ -2809,6 +2813,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
