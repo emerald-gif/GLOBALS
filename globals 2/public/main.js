@@ -737,7 +737,7 @@ function showTaskDetails(jobId, jobData) {
       </div>
 
       <div class="mt-6">
-        <h2 class="text-lg font-bold text-gray-800 mb-4">Proof</h2>
+        <h2 class="text-lg font-bold text-gray-800 mb-4">Upload Proof</h2>
         ${generateProofUploadFields(jobData.proofFileCount || 1)}
 
         <input type="text" placeholder="Enter email/username used (if needed)"
@@ -745,23 +745,19 @@ function showTaskDetails(jobId, jobData) {
         />
       </div>
 
-      <button id="submitTaskBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm mt-4">
+      <button id="submitTaskBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm mt-4 w-full">
         Submit Task
       </button>
     </div>
   `;
 
-
-
-
-
-document.body.appendChild(fullScreen);
+  document.body.appendChild(fullScreen);
 
   // ✅ Add event listener after DOM is added
-const button = fullScreen.querySelector("#submitTaskBtn");
-
-if (button) {
+  const button = fullScreen.querySelector("#submitTaskBtn");
+  if (button) {
     button.addEventListener("click", async () => {
+      try {
         const user = firebase.auth().currentUser;
         if (!user) return alert("Please log in to submit task.");
 
@@ -769,58 +765,57 @@ if (button) {
         const files = fullScreen.querySelectorAll('input[type="file"]');
         const uploadedFiles = [];
 
-        // Loop through all file inputs
-        for (let i = 0; i < files.length; i++) {
-            const fileInput = files[i];
-            const file = fileInput.files[0];
+        // Show loading state
+        button.disabled = true;
+        button.textContent = "Submitting...";
 
-            if (file) {
-                try {
-                    // Use the universal Cloudinary function
-                    await new Promise((resolve, reject) => {
-                        uploadToCloudinary(file, (url) => {
-                            if (url) {
-                                uploadedFiles.push(url);
-                                resolve();
-                            } else {
-                                reject("Upload failed");
-                            }
-                        });
-                    });
-                } catch (err) {
-                    console.error("Cloudinary upload error:", err);
-                    alert("❗ Failed to upload image. Please try again.");
-                    return;
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i].files[0];
+          if (file) {
+            await new Promise((resolve, reject) => {
+              uploadToCloudinary(file, (url) => {
+                if (url) {
+                  uploadedFiles.push(url);
+                  resolve();
+                } else {
+                  reject("Upload failed");
                 }
-            }
+              });
+            });
+          }
         }
 
         if (uploadedFiles.length === 0) {
-            return alert("❗ Please upload at least one proof image.");
+          alert("❗ Please upload at least one proof image.");
+          button.disabled = false;
+          button.textContent = "Submit Task";
+          return;
         }
 
-  const submissionData = {
-    taskId: jobId,
-    userId: user.uid,
-    proofText,
-    proofImages: uploadedFiles,
-    submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    status: "on review",
-    workerEarn: jobData.workerEarn || 0
-  };
+        await firebase.firestore().collection("task_submissions").add({
+          taskId: jobId,
+          userId: user.uid,
+          proofText,
+          proofImages: uploadedFiles,
+          submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          status: "on review",
+          workerEarn: jobData.workerEarn || 0
+        });
 
-await firebase.firestore().collection("task_submissions").add(submissionData);
-  alert("✅ Task submitted for review!");
-  fullScreen.remove();
-});
+        alert("✅ Task submitted for review!");
+        fullScreen.remove();
+
+      } catch (error) {
+        console.error("Submit error:", error);
+        alert("❗ Something went wrong. Check console for details.");
+        button.disabled = false;
+        button.textContent = "Submit Task";
+      }
+    });
+  }
 }
 
-
-
-
-
-
-
+// ✅ Corrected generateProofUploadFields function
 function generateProofUploadFields(count) {
   let html = '';
   for (let i = 1; i <= count; i++) {
@@ -832,9 +827,6 @@ function generateProofUploadFields(count) {
     `;
   }
   return html;
-}
-
-
 }
 
 
@@ -2826,6 +2818,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
