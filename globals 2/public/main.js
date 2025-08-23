@@ -1815,16 +1815,17 @@ document.addEventListener("DOMContentLoaded", function () {
                                                            // TEAM FUNCTION
 
 
-// 🔁 Show Referral Link inside Team Section
+// Show Referral Link
 auth.onAuthStateChanged(async user => {
   if (!user) return;
   const doc = await db.collection("users").doc(user.uid).get();
   const data = doc.data();
   const username = data?.username || "user";
-  document.getElementById("teamRefLink").value = `https://globals.com/signup.html?ref=${username}`;
+  document.getElementById("teamRefLink").value =
+    `https://globals-myzv.onrender.com/dashboard.html#team?ref=${username}`;
 });
 
-// 📋 Copy referral link (Team Section)
+// Copy referral link
 window.copyTeamRefLink = function () {
   const input = document.getElementById("teamRefLink");
   input.select();
@@ -1835,35 +1836,33 @@ window.copyTeamRefLink = function () {
   }, 2000);
 };
 
-// 👥 Load Team Referrals
+// Load referrals + counts
 auth.onAuthStateChanged(async user => {
   if (!user) return;
   const userDoc = await db.collection("users").doc(user.uid).get();
   const username = userDoc.data()?.username;
 
-  const level1Snap = await db.collection("users").where("referrer", "==", username).get();
-  const level1Container = document.getElementById("level1Referrals");
-  level1Container.innerHTML = "";
-  level1Snap.forEach(doc => {
+  const invitedSnap = await db.collection("users").where("referrer", "==", username).get();
+  const referralList = document.getElementById("referralList");
+  referralList.innerHTML = "";
+
+  let invitedCount = 0;
+  let onboardingCount = 0;
+
+  invitedSnap.forEach(doc => {
     const user = doc.data();
-    level1Container.innerHTML += generateReferralCard(user, 1700);
+    invitedCount++;
+    if (user.accountType === "premium") onboardingCount++;
+    referralList.innerHTML += generateReferralCard(user, 1700);
   });
 
-  // 2nd level
-  const level2Container = document.getElementById("level2Referrals");
-  level2Container.innerHTML = "";
-
-  for (const doc of level1Snap.docs) {
-    const lvl1Username = doc.data().username;
-    const level2Snap = await db.collection("users").where("referrer", "==", lvl1Username).get();
-    level2Snap.forEach(lvl2doc => {
-      const user = lvl2doc.data();
-      level2Container.innerHTML += generateReferralCard(user, 500);
-    });
-  }
+  // update stats
+  document.getElementById("invitedCount").innerText = invitedCount;
+  document.getElementById("onboardingCount").innerText = onboardingCount;
+  document.getElementById("rewardedCount").innerText = invitedCount + onboardingCount; // just showing a number
 });
 
-// 🎴 Create referral card
+// Generate referral card (same as before)
 function generateReferralCard(user, amount) {
   return `
     <div class="bg-gray-50 rounded-xl p-4 shadow-md flex items-center gap-4 hover:bg-blue-50 transition-all duration-300">
@@ -1875,25 +1874,6 @@ function generateReferralCard(user, amount) {
     </div>
   `;
 }
-
-// 🌀 Swiper for Team
-document.addEventListener("DOMContentLoaded", function () {
-  new Swiper('.team-swiper', {
-    loop: false,
-    slidesPerView: 1.1,
-    spaceBetween: 20,
-    pagination: {
-      el: '.swiper-pagination',
-      clickable: true
-    },
-    breakpoints: {
-      768: { slidesPerView: 2.2 }
-    }
-  });
-});
-
-
-
 
 
 
@@ -2862,6 +2842,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
