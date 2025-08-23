@@ -1815,67 +1815,135 @@ document.addEventListener("DOMContentLoaded", function () {
                                                            // TEAM FUNCTION
 
 
-// Show Referral Link
-auth.onAuthStateChanged(async user => {
-  if (!user) return;
-  const doc = await db.collection("users").doc(user.uid).get();
-  const data = doc.data();
-  const username = data?.username || "user";
-  document.getElementById("teamRefLink").value =
-    `https://globals-myzv.onrender.com/dashboard.html#team?ref=${username}`;
-});
 
-// Copy referral link
-window.copyTeamRefLink = function () {
-  const input = document.getElementById("teamRefLink");
-  input.select();
-  document.execCommand("copy");
-  document.getElementById("teamCopyMsg").classList.remove("hidden");
-  setTimeout(() => {
-    document.getElementById("teamCopyMsg").classList.add("hidden");
-  }, 2000);
-};
+  // ========================
+  // CONFIG
+  // ========================
+  const BASE_URL = "https://globals-myzv.onrender.com"; // your root link
 
-// Load referrals + counts
-auth.onAuthStateChanged(async user => {
-  if (!user) return;
-  const userDoc = await db.collection("users").doc(user.uid).get();
-  const username = userDoc.data()?.username;
+  // ========================
+  // HELPERS
+  // ========================
+  function money(n){ return `₦${Number(n).toLocaleString()}`; }
 
-  const invitedSnap = await db.collection("users").where("referrer", "==", username).get();
-  const referralList = document.getElementById("referralList");
-  referralList.innerHTML = "";
+  // Web Share API
+  async function shareReferral() {
+    try {
+      const link = document.getElementById("teamRefLink").value;
+      if (navigator.share) {
+        await navigator.share({
+          title: "Join GLOBALS",
+          text: "Sign up on GLOBALS with my link and get started.",
+          url: link
+        });
+      } else {
+        await navigator.clipboard.writeText(link);
+        alert("Share not supported on this device. Link copied instead.");
+      }
+    } catch (e) {}
+  }
 
-  let invitedCount = 0;
-  let onboardingCount = 0;
+  // Copy link
+  window.copyTeamRefLink = async function () {
+    const input = document.getElementById("teamRefLink");
+    await navigator.clipboard.writeText(input.value);
+    const msg = document.getElementById("teamCopyMsg");
+    msg.classList.remove("hidden");
+    setTimeout(()=>msg.classList.add("hidden"), 1800);
+  }
 
-  invitedSnap.forEach(doc => {
-    const user = doc.data();
-    invitedCount++;
-    if (user.accountType === "premium") onboardingCount++;
-    referralList.innerHTML += generateReferralCard(user, 1700);
+  // Open T&C
+  function openTerms() {
+    const el = document.getElementById("termsScreen");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      // fallback to hash
+      location.hash = "#termsScreen";
+    }
+  }
+
+  // ========================
+  // FIREBASE BINDINGS
+  // (uses your existing Firebase init)
+  // Invited = referrer == username
+  // Rewarded = same + is_Premium === true
+  // Cards: ₦500 if premium else ₦0
+  // ========================
+  auth.onAuthStateChanged(async user => {
+    if (!user) return;
+
+    // get current user's username
+    const userDoc = await db.collection("users").doc(user.uid).get();
+    const data = userDoc.data() || {};
+    const username = data.username || "user";
+
+    // Build referral link (adjust path if needed)
+    const referralLink = `${BASE_URL}/signup.html?ref=${encodeURIComponent(username)}`;
+    document.getElementById("teamRefLink").value = referralLink;
+
+    // Load referrals
+    const invitedSnap = await db.collection("users").where("referrer", "==", username).get();
+
+    let invitedCount = 0;
+    let rewardedCount = 0;
+
+    const container = document.getElementById("referralList");
+    container.innerHTML = "";
+
+    invitedSnap.forEach(docSnap => {
+      const u = docSnap.data();
+      invitedCount += 1;
+
+      const isPremium = !!u.is_Premium; // ← your field
+      if (isPremium) rewardedCount += 1;
+
+      container.innerHTML += generateReferralCard({
+        username: u.username || (u.name || "User"),
+        email: u.email || "",
+        profile: u.profile || "",
+        premium: isPremium
+      });
+    });
+
+    // Update counters
+    document.getElementById("invitedCount").innerText = invitedCount;
+    document.getElementById("rewardedCount").innerText = rewardedCount;
   });
 
-  // update stats
-  document.getElementById("invitedCount").innerText = invitedCount;
-  document.getElementById("onboardingCount").innerText = onboardingCount;
-  document.getElementById("rewardedCount").innerText = invitedCount + onboardingCount; // just showing a number
-});
+  // ========================
+  // CARD UI
+  // ========================
+  function generateReferralCard(user){
+    const initials = (user.username || "U").slice(0,1).toUpperCase();
+    const amount = user.premium ? 500 : 0;
 
-// Generate referral card (same as before)
-function generateReferralCard(user, amount) {
-  return `
-    <div class="bg-gray-50 rounded-xl p-4 shadow-md flex items-center gap-4 hover:bg-blue-50 transition-all duration-300">
-      <img src="${user.profile || 'https://ui-avatars.com/api/?name=' + user.username}" alt="User" class="w-12 h-12 rounded-full object-cover border-2 border-blue-400" />
-      <div>
-        <p class="text-sm font-semibold text-gray-800">@${user.username}</p>
-        <p class="text-xs text-gray-600">Commission Earned: ₦${amount}</p>
+    return `
+      <div class="bg-white rounded-2xl shadow-md p-4 flex items-center justify-between hover:shadow-lg transition">
+        <div class="flex items-center gap-3">
+          ${
+            user.profile
+              ? `<img src="${user.profile}" class="w-10 h-10 rounded-full object-cover" alt="${user.username}">`
+              : `<div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-semibold">${initials}</div>`
+          }
+          <div>
+            <p class="font-semibold text-sm">${user.username}</p>
+            <p class="text-[11px] text-gray-500">${user.premium ? "Premium" : "Signed up"}</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <p class="font-bold ${amount>0 ? "text-green-600" : "text-gray-400"}">${money(amount)}</p>
+          <p class="text-[11px] text-gray-400">Commission</p>
+        </div>
       </div>
-    </div>
-  `;
-}
+    `;
+  }
 
-
+  // Optional: “See all invites” action (hook it to your previous modal/page)
+  document.getElementById("seeAllInvitesBtn")?.addEventListener("click", () => {
+    // e.g., open a modal or navigate:
+    // activateTab('all-invites');
+  });
 
 
 
@@ -2842,6 +2910,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
