@@ -1891,15 +1891,23 @@ document.addEventListener("DOMContentLoaded", function () {
     const container = document.getElementById("referralList");
     container.innerHTML = "";
 
-    invitedSnap.forEach(docSnap => {  
+    invitedSnap.forEach(async docSnap => {  
   const u = docSnap.data();  
   invitedCount += 1;  
 
-  const isPremium = !!u.is_Premium; // ← your field  
+  const isPremium = !!u.is_Premium;  
+  const alreadyCredited = !!u.referralBonusCredited;  
+
   if (isPremium) {  
     rewardedCount += 1;  
-    // 🚀 give referrer ₦500 for this premium upgrade
-    creditReferralBonus(username);  
+
+    // 🚀 only credit if not yet credited
+    if (!alreadyCredited) {  
+      await creditReferralBonus(username);  
+
+      // mark as credited so it won’t re-credit again
+      await docSnap.ref.update({ referralBonusCredited: true });  
+    }  
   }  
 
   container.innerHTML += generateReferralCard({  
@@ -2941,6 +2949,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
