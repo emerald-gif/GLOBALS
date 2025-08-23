@@ -1891,20 +1891,24 @@ document.addEventListener("DOMContentLoaded", function () {
     const container = document.getElementById("referralList");
     container.innerHTML = "";
 
-    invitedSnap.forEach(docSnap => {
-      const u = docSnap.data();
-      invitedCount += 1;
+    invitedSnap.forEach(docSnap => {  
+  const u = docSnap.data();  
+  invitedCount += 1;  
 
-      const isPremium = !!u.is_Premium; // ← your field
-      if (isPremium) rewardedCount += 1;
+  const isPremium = !!u.is_Premium; // ← your field  
+  if (isPremium) {  
+    rewardedCount += 1;  
+    // 🚀 give referrer ₦500 for this premium upgrade
+    creditReferralBonus(username);  
+  }  
 
-      container.innerHTML += generateReferralCard({
-        username: u.username || (u.name || "User"),
-        email: u.email || "",
-        profile: u.profile || "",
-        premium: isPremium
-      });
-    });
+  container.innerHTML += generateReferralCard({  
+    username: u.username || (u.name || "User"),  
+    email: u.email || "",  
+    profile: u.profile || "",  
+    premium: isPremium  
+  });  
+});
 
     // Update counters
     document.getElementById("invitedCount").innerText = invitedCount;
@@ -1944,6 +1948,33 @@ document.addEventListener("DOMContentLoaded", function () {
     // e.g., open a modal or navigate:
     // activateTab('all-invites');
   });
+
+
+
+
+
+// ✅ Increment balance by ₦500 when referral upgrades
+async function creditReferralBonus(referrerUsername) {
+  try {
+    // find referrer
+    const refSnap = await db.collection("users").where("username", "==", referrerUsername).limit(1).get();
+    if (!refSnap.empty) {
+      const refDoc = refSnap.docs[0].ref;
+      await refDoc.update({
+        balance: firebase.firestore.FieldValue.increment(500)
+      });
+    }
+  } catch (err) {
+    console.error("Error updating referral balance:", err);
+  }
+}
+
+
+
+
+
+
+
 
 
 
@@ -2910,6 +2941,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
