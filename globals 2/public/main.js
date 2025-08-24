@@ -1527,12 +1527,48 @@ if (logoutBtn) {
 
 
 
+  const auth = firebase.auth();
+  const db = firebase.firestore();
 
+  // ⚡ Function to animate number count
+  function animateBalance(element, start, end, duration) {
+    let startTime = null;
 
+    function step(currentTime) {
+      if (!startTime) startTime = currentTime;
+      const progress = Math.min((currentTime - startTime) / duration, 1);
+      const value = Math.floor(progress * (end - start) + start);
 
+      element.textContent = "₦" + value.toLocaleString();
 
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      }
+    }
 
+    requestAnimationFrame(step);
+  }
 
+  auth.onAuthStateChanged(function(user) {
+    if (user) {
+      const userRef = db.collection("users").doc(user.uid);
+      let currentBalance = 0;
+
+      userRef.onSnapshot(function(doc) {
+        if (doc.exists) {
+          const data = doc.data();
+          const newBalance = data.balance || 0;
+
+          // Animate from current balance to new balance
+          const balanceElement = document.getElementById("balance");
+          animateBalance(balanceElement, currentBalance, newBalance, 1000);
+
+          // Update current balance
+          currentBalance = newBalance;
+        }
+      });
+    }
+  });
 
 
 
@@ -3022,6 +3058,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
