@@ -158,8 +158,49 @@
       }
     });
   </script>
+
+
+
+<script>
+  (function() {
+    const paramNames = ['ref', 'referral', 'r'];
+    const params = new URLSearchParams(window.location.search);
+
+    let ref = null;
+    for (const name of paramNames) {
+      const v = params.get(name);
+      if (v) { ref = v; break; }
+    }
+
+    const refInput = document.getElementById('referrer');
+
+    if (ref && refInput) {
+      ref = decodeURIComponent(ref);
+      refInput.value = ref;
+      // keep editable
+      localStorage.setItem('pendingReferral', ref);
+    } else if (refInput) {
+      const pending = localStorage.getItem('pendingReferral');
+      if (pending && !refInput.value) {
+        refInput.value = pending;
+        // still editable
+      }
+    }
+
+    // Clear referral from storage after successful signup
+    window.clearPendingReferral = function() {
+      localStorage.removeItem('pendingReferral');
+    };
+  })();
+</script>
+
+
+
+
+  
 </body>
 
  
 </html>
  
+
