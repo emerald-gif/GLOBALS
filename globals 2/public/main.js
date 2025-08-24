@@ -2571,7 +2571,7 @@ async function updateAllProfilePreviews(url) {
     // Add badge if premium
     if (isPremium) {
       const badge = document.createElement("img");
-      badge.src = "VERIFIED1.jpg";
+      badge.src = "VERIFIED.jpg";
       badge.className =
         "premium-badge absolute bottom-0 right-0 w-6 h-6 rounded-full border-2 border-white shadow-md";
       badge.style.transform = "translate(20%, 20%)"; // offset
@@ -3003,6 +3003,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
