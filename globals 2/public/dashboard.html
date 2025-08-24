@@ -2407,38 +2407,11 @@
 
     <!-- 🖼️ Banner (no balance overlay) -->
     <div class="w-full rounded-2xl overflow-hidden mb-5 shadow-md">
-      <img src="MOON1.jpg" alt="Invite Banner" class="w-full h-40 md:h-48 object-cover" />
+      <img src="public/MOON1.jpg" alt="Invite Banner" class="w-full h-40 md:h-48 object-cover" />
     </div>
 
-    <!-- 🔗 Top actions: Share | Copy | T&C (icons) -->
-    <div class="bg-white rounded-2xl shadow-md flex items-stretch divide-x divide-gray-200 mb-6">
-      <!-- Share -->
-      <button onclick="shareReferral()" class="flex-1 flex items-center justify-center gap-2 py-3 hover:bg-gray-50">
-        <!-- share icon -->
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.684 13.342a2.5 2.5 0 010-2.684l6.55-3.928A2.5 2.5 0 1117.5 9.5l-6.55 3.928a2.5 2.5 0 010 2.684l6.55 3.928A2.5 2.5 0 1115 22.5l-6.316-3.787" />
-        </svg>
-        <span class="text-sm font-medium text-blue-600">Share</span>
-      </button>
-      <!-- Copy -->
-      <button onclick="copyTeamRefLink()" class="flex-1 flex items-center justify-center gap-2 py-3 hover:bg-gray-50">
-        <!-- copy icon -->
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <rect x="9" y="9" width="10" height="10" rx="2" stroke-width="1.8"></rect>
-          <rect x="5" y="5" width="10" height="10" rx="2" stroke-width="1.8"></rect>
-        </svg>
-        <span class="text-sm font-medium text-blue-600">Copy</span>
-      </button>
-      <!-- T & C -->
-      <button onclick="openTerms()" class="flex-1 flex items-center justify-center gap-2 py-3 hover:bg-gray-50">
-        <!-- doc icon -->
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M9 12h6M9 16h6M8 2h5l5 5v13a2 2 0 01-2 2H8a2 2 0 01-2-2V4a2 2 0 012-2z"/>
-        </svg>
-        <span class="text-sm font-medium text-blue-600">T & C</span>
-      </button>
-    </div>
 
+    
     <!-- 📢 Notice / Info box -->
     <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl p-5 shadow-md mb-5">
       <h2 class="text-lg font-bold">Invite friends & earn ₦500</h2>
@@ -2469,7 +2442,40 @@
           <div id="rewardedCount" class="text-2xl font-extrabold mt-1">0</div>
         </div>
       </div>
+	</div>
+
+
+	  
+    <!-- 🔗 Top actions: Share | Copy | T&C (icons) -->
+    <div class="bg-white rounded-2xl shadow-md flex items-stretch divide-x divide-gray-200 mb-6">
+      <!-- Share -->
+      <button onclick="shareReferral()" class="flex-1 flex items-center justify-center gap-2 py-3 hover:bg-gray-50">
+        <!-- share icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.684 13.342a2.5 2.5 0 010-2.684l6.55-3.928A2.5 2.5 0 1117.5 9.5l-6.55 3.928a2.5 2.5 0 010 2.684l6.55 3.928A2.5 2.5 0 1115 22.5l-6.316-3.787" />
+        </svg>
+        <span class="text-sm font-medium text-blue-600">Share</span>
+      </button>
+      <!-- Copy -->
+      <button onclick="copyTeamRefLink()" class="flex-1 flex items-center justify-center gap-2 py-3 hover:bg-gray-50">
+        <!-- copy icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <rect x="9" y="9" width="10" height="10" rx="2" stroke-width="1.8"></rect>
+          <rect x="5" y="5" width="10" height="10" rx="2" stroke-width="1.8"></rect>
+        </svg>
+        <span class="text-sm font-medium text-blue-600">Copy</span>
+      </button>
+      <!-- T & C -->
+      <button onclick="openTerms()" class="flex-1 flex items-center justify-center gap-2 py-3 hover:bg-gray-50">
+        <!-- doc icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M9 12h6M9 16h6M8 2h5l5 5v13a2 2 0 01-2 2H8a2 2 0 01-2-2V4a2 2 0 012-2z"/>
+        </svg>
+        <span class="text-sm font-medium text-blue-600">T & C</span>
+      </button>
     </div>
+
+
 
     <!-- 👥 Referral history -->
     <div class="flex items-center justify-between mb-2">
@@ -3071,6 +3077,7 @@
 </body>
 
 </html>
+
 
 
 
