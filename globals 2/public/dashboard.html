@@ -102,74 +102,16 @@
 	
 <!-- 📱 Slide-out Sidebar -->
 
-	
-<script>
-// --- Update Sidebar Profile Picture + Premium Badge ---
-async function updateSidebarProfilePic(picUrl) {
-  const sidebarImg = document.getElementById("profilePicPreview");
-  if (!sidebarImg) return;
+	  <div id="sidebar" class="fixed top-0 left-0 w-64 h-full bg-white shadow-lg transform -translate-x-full transition-transform duration-300 z-50 flex flex-col">    <!-- Profile Section -->    <div class="p-6 border-b flex flex-col items-center text-center">  
+    <!-- Profile Picture -->  
+    <img id="profilePicPreview" src="profile-placeholder.png"   
+         class="w-20 h-20 rounded-full border object-cover mb-3" />  <!-- User Info -->  
+<div>  
+  <div id="userFullName" class="font-bold text-lg text-gray-800">Loading...</div>  
+  <div id="userEmail" class="text-sm text-blue-600">@loading</div>  
+</div>
 
-  sidebarImg.src = picUrl || "profile-placeholder.png";
-
-  // Remove old badge if exists
-  const oldBadge = sidebarImg.parentElement.querySelector(".premium-badge");
-  if (oldBadge) oldBadge.remove();
-
-  // Check premium status
-  const user = firebase.auth().currentUser;
-  let isPremium = false;
-  let username = "@loading";
-  if (user) {
-    try {
-      const doc = await firebase.firestore().collection("users").doc(user.uid).get();
-      if (doc.exists) {
-        isPremium = doc.data().is_Premium === true;
-        username = doc.data().username || username;
-      }
-    } catch (err) {
-      console.error("❌ Error fetching user info:", err);
-    }
-  }
-
-  // Update username display
-  const userNameEl = document.getElementById("userFullName");
-  if (userNameEl) userNameEl.textContent = username;
-
-  const userEmailEl = document.getElementById("userEmail");
-  if (userEmailEl) userEmailEl.textContent = "@" + username;
-
-  // Add premium badge if premium
-  if (isPremium) {
-    const badge = document.createElement("img");
-    badge.src = "VERIFIED.jpg";
-    badge.className = "premium-badge absolute bottom-0 right-0 w-5 h-5 rounded-full border-2 border-white shadow-md";
-    badge.style.transform = "translate(20%, 20%)";
-    badge.style.boxShadow = "0 0 10px rgba(59,130,246,0.5)";
-    sidebarImg.parentElement.classList.add("relative");
-    sidebarImg.parentElement.appendChild(badge);
-  }
-}
-
-// --- Auto-fetch sidebar profile pic on login ---
-firebase.auth().onAuthStateChanged(async (user) => {
-  if (user) {
-    try {
-      const doc = await firebase.firestore().collection("users").doc(user.uid).get();
-      const profilePic = (doc.exists && doc.data().profilePic) ? doc.data().profilePic : "profile-placeholder.png";
-      updateSidebarProfilePic(profilePic);
-    } catch (err) {
-      console.error("❌ Error fetching sidebar profile pic:", err);
-      updateSidebarProfilePic("profile-placeholder.png");
-    }
-  } else {
-    updateSidebarProfilePic("profile-placeholder.png");
-  }
-});
-</script>
-
-
-
-
+  </div>
 	
   <!-- Navigation Links -->
   <ul class="flex-1 p-4 space-y-2">
@@ -3127,6 +3069,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
 </body>
 
 </html>
+
 
 
 
