@@ -1527,49 +1527,113 @@ if (logoutBtn) {
 
 
 
-  const auth = firebase.auth();
-  const db = firebase.firestore();
+  
+(function () {
+  // ---- helpers ----
+  function fmtNaira(n) {
+    const v = Number(n) || 0;
+    return "₦" + v.toLocaleString();
+  }
 
-  // ⚡ Function to animate number count
-  function animateBalance(element, start, end, duration) {
-    let startTime = null;
+  function animateValue(el, from, to, duration) {
+    // guard: if too frequent updates, cancel previous animation
+    if (el._rafId) cancelAnimationFrame(el._rafId);
 
-    function step(currentTime) {
-      if (!startTime) startTime = currentTime;
-      const progress = Math.min((currentTime - startTime) / duration, 1);
-      const value = Math.floor(progress * (end - start) + start);
+    const start = performance.now();
+    const diff = to - from;
+    const D = Math.max(200, duration || 800); // min duration so it feels snappy
 
-      element.textContent = "₦" + value.toLocaleString();
-
-      if (progress < 1) {
-        requestAnimationFrame(step);
+    function step(t) {
+      const p = Math.min((t - start) / D, 1);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - p, 3);
+      const val = Math.round(from + diff * eased);
+      el.textContent = fmtNaira(val);
+      if (p < 1) {
+        el._rafId = requestAnimationFrame(step);
+      } else {
+        el._rafId = null;
       }
     }
 
-    requestAnimationFrame(step);
+    el._rafId = requestAnimationFrame(step);
   }
 
-  auth.onAuthStateChanged(function(user) {
-    if (user) {
-      const userRef = db.collection("users").doc(user.uid);
-      let currentBalance = 0;
-
-      userRef.onSnapshot(function(doc) {
-        if (doc.exists) {
-          const data = doc.data();
-          const newBalance = data.balance || 0;
-
-          // Animate from current balance to new balance
-          const balanceElement = document.getElementById("balance");
-          animateBalance(balanceElement, currentBalance, newBalance, 1000);
-
-          // Update current balance
-          currentBalance = newBalance;
-        }
-      });
+  function startListener() {
+    // Make sure Firebase compat SDK is ready & initialized
+    if (typeof firebase === "undefined" || !firebase.apps || !firebase.apps.length) {
+      console.warn("[balance] Firebase not ready yet. Retrying in 300ms…");
+      setTimeout(startListener, 300);
+      return;
     }
-  });
 
+    var auth, db;
+    try {
+      auth = firebase.auth();
+      db   = firebase.firestore();
+    } catch (e) {
+      console.error("[balance] Firebase SDK error:", e);
+      return;
+    }
+
+    var balanceEl = document.getElementById("balance");
+    if (!balanceEl) {
+      console.warn('[balance] #balance element not found. Waiting for DOM…');
+      setTimeout(startListener, 300);
+      return;
+    }
+
+    var currentValue = Number(balanceEl.dataset.value || 0);
+    balanceEl.textContent = fmtNaira(currentValue);
+
+    // Keep references so we can unsubscribe safely
+    var unsubUser = null;
+    auth.onAuthStateChanged(function (user) {
+      if (unsubUser) { unsubUser(); unsubUser = null; }
+      if (!user) return;
+
+      var ref = db.collection("users").doc(user.uid);
+      unsubUser = ref.onSnapshot(function (snap) {
+        if (!snap.exists) return;
+        var raw = snap.data().balance;          // <- your field
+        var next = Number(raw);
+        if (!isFinite(next)) {
+          console.warn("[balance] Non-numeric balance:", raw);
+          return;
+        }
+
+        // skip if no change
+        if (next === currentValue) return;
+
+        // stash numeric value for next animation
+        balanceEl.dataset.value = String(next);
+        animateValue(balanceEl, currentValue, next, 800);
+        currentValue = next;
+
+        // subtle micro-interaction glow
+        balanceEl.parentElement.classList.add("ring-1","ring-indigo-400/60","shadow");
+        setTimeout(function () {
+          balanceEl.parentElement.classList.remove("ring-1","ring-indigo-400/60","shadow");
+        }, 400);
+      }, function (err) {
+        console.error("[balance] onSnapshot error:", err);
+      });
+    });
+
+    // cleanup on navigate/unload
+    window.addEventListener("beforeunload", function () {
+      if (unsubUser) unsubUser();
+      if (balanceEl && balanceEl._rafId) cancelAnimationFrame(balanceEl._rafId);
+    });
+  }
+
+  // start when DOM is ready (prevents "element not found" crashes)
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", startListener);
+  } else {
+    startListener();
+  }
+})();
 
 
 
@@ -3058,6 +3122,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
