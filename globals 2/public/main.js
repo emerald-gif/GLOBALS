@@ -2520,8 +2520,7 @@ function checkJobDetails(jobId, jobType) {
 
 
 
-
-  // ✅ Upload profile picture 
+// ✅ Upload profile picture
 // === PROFILE PICTURE UPLOAD / FETCH / REMOVE ===
 const profilePicInputs = [
   document.getElementById("profilePicInput"),
@@ -2531,61 +2530,54 @@ const profilePicInputs = [
 const removeProfilePicBtn = document.getElementById("removeProfilePicBtn");
 const placeholderPic = "profile-placeholder.png"; // fallback
 
+// Function to update all previews at once
+async function updateAllProfilePreviews(url) {
+  // Loop through all profile preview elements
+  document.querySelectorAll("#profilePicPreview").forEach(async (img) => {
+    img.src = url;
 
-
-// === Profile Picture + Premium Badge (Sidebar Only) ===
-async function updateSidebarProfilePreview(url) {
-  let isPremium = false;
-  const user = firebase.auth().currentUser;
-
-  if (user) {
-    try {
-      const doc = await firebase.firestore().collection("users").doc(user.uid).get();
-      if (doc.exists && doc.data().is_Premium === true) {
-        isPremium = true;
-      }
-    } catch (err) {
-      console.error("❌ Error checking premium status:", err);
+    // Wrap image in relative container if not already
+    if (!img.parentElement.classList.contains("profile-pic-wrapper")) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "profile-pic-wrapper relative inline-block";
+      wrapper.style.width = img.width ? img.width + "px" : "80px";
+      wrapper.style.height = img.height ? img.height + "px" : "80px";
+      img.parentElement.insertBefore(wrapper, img);
+      wrapper.appendChild(img);
     }
-  }
 
-  // Target only the sidebar profile picture
-  const sidebarImg = document.querySelector("#sidebarProfilePic");
-  if (!sidebarImg) return;
+    // Remove existing premium badge
+    const existingBadge = img.parentElement.querySelector(".premium-badge");
+    if (existingBadge) existingBadge.remove();
 
-  // Update profile picture
-  sidebarImg.src = url;
+    // Check if user is premium
+    const user = firebase.auth().currentUser;
+    let isPremium = false;
+    if (user) {
+      try {
+        const doc = await firebase.firestore().collection("users").doc(user.uid).get();
+        if (doc.exists && doc.data().is_Premium === true) {
+          isPremium = true;
+        }
+      } catch (err) {
+        console.error("❌ Error checking premium status:", err);
+      }
+    }
 
-  // Wrap only once
-  if (!sidebarImg.parentElement.classList.contains("profile-pic-wrapper")) {
-    const wrapper = document.createElement("div");
-    wrapper.className = "profile-pic-wrapper relative inline-block";
-    wrapper.style.width = sidebarImg.width ? sidebarImg.width + "px" : "64px";
-    wrapper.style.height = sidebarImg.height ? sidebarImg.height + "px" : "64px";
-
-    sidebarImg.parentElement.insertBefore(wrapper, sidebarImg);
-    wrapper.appendChild(sidebarImg);
-  }
-
-  // Remove existing badge
-  const existingBadge = sidebarImg.parentElement.querySelector(".premium-badge");
-  if (existingBadge) existingBadge.remove();
-
-  // Add premium badge if user is premium
-  if (isPremium) {
-    const badge = document.createElement("img");
-    badge.src = "VERIFIED.jpg"; // Your badge icon
-    badge.className =
-      "premium-badge absolute bottom-0 right-0 w-5 h-5 rounded-full border-2 border-white shadow-md";
-    badge.style.transform = "translate(25%, 25%)";
-    badge.style.boxShadow = "0 0 10px rgba(59,130,246,0.6)";
-
-    sidebarImg.parentElement.appendChild(badge);
-  }
+    // Add premium badge if user is premium
+    if (isPremium) {
+      const badge = document.createElement("img");
+      badge.src = "VERIFIED.jpg";
+      badge.className =
+        "premium-badge absolute bottom-0 right-0 w-6 h-6 rounded-full border-2 border-white shadow-md";
+      badge.style.transform = "translate(20%, 20%)"; // offset for nice 2025 fintech look
+      badge.style.boxShadow = "0 0 10px rgba(59,130,246,0.5)"; // subtle fintech glow
+      img.parentElement.appendChild(badge);
+    }
+  });
 }
 
-
-//  Reusable upload handler
+// Reusable upload handler
 async function handleProfilePicUpload(file) {
   if (!file) return;
 
@@ -2595,7 +2587,7 @@ async function handleProfilePicUpload(file) {
   reader.readAsDataURL(file);
 
   try {
-    // Upload using your general Cloudinary function
+    // Upload using your Cloudinary function
     const imageUrl = await uploadToCloudinary(file);
 
     updateAllProfilePreviews(imageUrl);
@@ -2615,7 +2607,7 @@ async function handleProfilePicUpload(file) {
 }
 
 // Attach change listener to BOTH inputs
-profilePicInputs.forEach(input => {
+profilePicInputs.forEach((input) => {
   input.addEventListener("change", (e) => {
     handleProfilePicUpload(e.target.files[0]);
   });
@@ -2659,7 +2651,8 @@ firebase.auth().onAuthStateChanged(async (user) => {
   }
 });
 
-	
+
+
 
 
 
@@ -3004,6 +2997,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
