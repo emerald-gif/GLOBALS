@@ -1527,118 +1527,199 @@ if (logoutBtn) {
 
 
 
-  
-(function () {
-  // ---- helpers ----
+
+   
+
+/* ====== Safe Balance Listener (no imports, no side effects) ====== */
+(function (w, d) {
+  // If already running (e.g., script included twice), stop the old one cleanly.
+  if (w.__balanceCtrl && typeof w.__balanceCtrl.stop === "function") {
+    w.__balanceCtrl.stop();
+  }
+
   function fmtNaira(n) {
-    const v = Number(n) || 0;
+    var v = Number(n) || 0;
     return "₦" + v.toLocaleString();
   }
 
-  function animateValue(el, from, to, duration) {
-    // guard: if too frequent updates, cancel previous animation
-    if (el._rafId) cancelAnimationFrame(el._rafId);
-
-    const start = performance.now();
-    const diff = to - from;
-    const D = Math.max(200, duration || 800); // min duration so it feels snappy
-
-    function step(t) {
-      const p = Math.min((t - start) / D, 1);
-      // ease-out cubic
-      const eased = 1 - Math.pow(1 - p, 3);
-      const val = Math.round(from + diff * eased);
-      el.textContent = fmtNaira(val);
-      if (p < 1) {
-        el._rafId = requestAnimationFrame(step);
-      } else {
-        el._rafId = null;
-      }
-    }
-
-    el._rafId = requestAnimationFrame(step);
+  function coerceNumber(val) {
+    if (val == null) return 0;
+    if (typeof val === "number") return isFinite(val) ? val : 0;
+    // strip commas/spaces/naira symbol if string
+    var s = String(val).replace(/[₦,\s]/g, "");
+    var n = Number(s);
+    return isFinite(n) ? n : 0;
   }
 
-  function startListener() {
-    // Make sure Firebase compat SDK is ready & initialized
-    if (typeof firebase === "undefined" || !firebase.apps || !firebase.apps.length) {
-      console.warn("[balance] Firebase not ready yet. Retrying in 300ms…");
-      setTimeout(startListener, 300);
+  function isVisible(el) {
+    if (!el || !d.contains(el)) return false;
+    // visible if it has a box on screen
+    return el.getClientRects().length > 0 && !(d.hidden);
+  }
+
+  function animateNumber(el, from, to, duration) {
+    // If hidden or duration tiny, just set directly (prevents layout churn)
+    if (!isVisible(el) || duration <= 0) {
+      el.textContent = fmtNaira(to);
       return;
     }
+    // Cancel any previous animation on this element
+    if (el.__rafId) cancelAnimationFrame(el.__rafId);
 
-    var auth, db;
-    try {
-      auth = firebase.auth();
-      db   = firebase.firestore();
-    } catch (e) {
-      console.error("[balance] Firebase SDK error:", e);
-      return;
+    var start = performance.now();
+    var diff = to - from;
+    var D = Math.max(200, duration || 800);
+
+    function step(t) {
+      var p = Math.min((t - start) / D, 1);
+      // ease-out cubic
+      var eased = 1 - Math.pow(1 - p, 3);
+      var val = Math.round(from + diff * eased);
+      el.textContent = fmtNaira(val);
+      if (p < 1) {
+        el.__rafId = requestAnimationFrame(step);
+      } else {
+        el.__rafId = null;
+      }
     }
+    el.__rafId = requestAnimationFrame(step);
+  }
 
-    var balanceEl = document.getElementById("balance");
-    if (!balanceEl) {
-      console.warn('[balance] #balance element not found. Waiting for DOM…');
-      setTimeout(startListener, 300);
-      return;
-    }
+  // Controller to manage lifecycle safely
+  var ctrl = {
+    auth: null,
+    db: null,
+    unsubUser: null,
+    balanceEl: null,
+    currentValue: 0,
+    started: false,
+    observer: null,
 
-    var currentValue = Number(balanceEl.dataset.value || 0);
-    balanceEl.textContent = fmtNaira(currentValue);
+    findEl: function () {
+      return d.getElementById("balance"); // <- your element ID
+    },
 
-    // Keep references so we can unsubscribe safely
-    var unsubUser = null;
-    auth.onAuthStateChanged(function (user) {
-      if (unsubUser) { unsubUser(); unsubUser = null; }
-      if (!user) return;
+    attachEl: function () {
+      var el = this.findEl();
+      if (el === this.balanceEl) return;
+      // cancel anim on old el if any
+      if (this.balanceEl && this.balanceEl.__rafId) {
+        cancelAnimationFrame(this.balanceEl.__rafId);
+        this.balanceEl.__rafId = null;
+      }
+      this.balanceEl = el;
+      if (el) {
+        // seed current from DOM (number if already rendered)
+        var seed = coerceNumber(el.dataset.value || el.textContent);
+        this.currentValue = seed;
+        el.textContent = fmtNaira(seed);
+      }
+    },
 
-      var ref = db.collection("users").doc(user.uid);
-      unsubUser = ref.onSnapshot(function (snap) {
-        if (!snap.exists) return;
-        var raw = snap.data().balance;          // <- your field
-        var next = Number(raw);
-        if (!isFinite(next)) {
-          console.warn("[balance] Non-numeric balance:", raw);
+    startObserver: function () {
+      var self = this;
+      if (this.observer) return;
+      this.observer = new MutationObserver(function () {
+        self.attachEl();
+      });
+      this.observer.observe(d.documentElement, { childList: true, subtree: true });
+    },
+
+    stopObserver: function () {
+      if (this.observer) {
+        this.observer.disconnect();
+        this.observer = null;
+      }
+    },
+
+    waitForFirebase: function (cb, tries) {
+      tries = tries || 0;
+      if (w.firebase && firebase.apps && firebase.apps.length) return cb();
+      if (tries > 40) { console.warn("[balance] Firebase not ready."); return; }
+      setTimeout(this.waitForFirebase.bind(this, cb, tries + 1), 250);
+    },
+
+    start: function () {
+      if (this.started) return;
+      this.started = true;
+
+      this.attachEl();
+      this.startObserver();
+
+      var self = this;
+      this.waitForFirebase(function () {
+        try {
+          self.auth = firebase.auth();
+          self.db = firebase.firestore();
+        } catch (e) {
+          console.error("[balance] Firebase SDK error:", e);
           return;
         }
 
-        // skip if no change
-        if (next === currentValue) return;
+        self.auth.onAuthStateChanged(function (user) {
+          // clean previous doc listener
+          if (self.unsubUser) { self.unsubUser(); self.unsubUser = null; }
 
-        // stash numeric value for next animation
-        balanceEl.dataset.value = String(next);
-        animateValue(balanceEl, currentValue, next, 800);
-        currentValue = next;
+          if (!user) return;
 
-        // subtle micro-interaction glow
-        balanceEl.parentElement.classList.add("ring-1","ring-indigo-400/60","shadow");
-        setTimeout(function () {
-          balanceEl.parentElement.classList.remove("ring-1","ring-indigo-400/60","shadow");
-        }, 400);
-      }, function (err) {
-        console.error("[balance] onSnapshot error:", err);
+          var ref = self.db.collection("users").doc(user.uid);
+          self.unsubUser = ref.onSnapshot(function (snap) {
+            if (!snap.exists) return;
+            var next = coerceNumber(snap.data().balance);
+            if (!isFinite(next)) return;
+
+            // If element missing, just cache and wait
+            if (!self.balanceEl) {
+              self.currentValue = next;
+              return;
+            }
+
+            // Avoid re-animating same value
+            if (next === self.currentValue) return;
+
+            // Store numeric value on element (helpful if DOM replaces it later)
+            self.balanceEl.dataset.value = String(next);
+
+            // Animate only when visible, else set silently
+            if (isVisible(self.balanceEl)) {
+              animateNumber(self.balanceEl, self.currentValue, next, 800);
+            } else {
+              self.balanceEl.textContent = fmtNaira(next);
+            }
+
+            self.currentValue = next;
+          }, function (err) {
+            console.error("[balance] onSnapshot error:", err);
+          });
+        });
       });
-    });
+    },
 
-    // cleanup on navigate/unload
-    window.addEventListener("beforeunload", function () {
-      if (unsubUser) unsubUser();
-      if (balanceEl && balanceEl._rafId) cancelAnimationFrame(balanceEl._rafId);
-    });
-  }
+    stop: function () {
+      if (this.unsubUser) { this.unsubUser(); this.unsubUser = null; }
+      if (this.balanceEl && this.balanceEl.__rafId) {
+        cancelAnimationFrame(this.balanceEl.__rafId);
+        this.balanceEl.__rafId = null;
+      }
+      this.stopObserver();
+      this.started = false;
+    }
+  };
 
-  // start when DOM is ready (prevents "element not found" crashes)
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", startListener);
+  // expose for diagnostics / hot-reload safety
+  w.__balanceCtrl = ctrl;
+
+  // Start when DOM ready (prevents element-not-found issues)
+  if (d.readyState === "loading") {
+    d.addEventListener("DOMContentLoaded", function () { ctrl.start(); }, { once: true });
   } else {
-    startListener();
+    ctrl.start();
   }
-})();
 
+  // Clean up on unload
+  w.addEventListener("beforeunload", function () { ctrl.stop(); });
+})(window, document);
 
-
-
-   
 
 
 
@@ -3122,6 +3203,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
