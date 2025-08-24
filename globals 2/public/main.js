@@ -1826,31 +1826,38 @@ document.addEventListener("DOMContentLoaded", function () {
   // ========================
   function money(n){ return `₦${Number(n).toLocaleString()}`; }
 
-  // Web Share API
-  async function shareReferral() {
-    try {
-      const link = document.getElementById("teamRefLink").value;
-      if (navigator.share) {
-        await navigator.share({
-          title: "Join GLOBALS",
-          text: "Sign up on GLOBALS with my link and get started.",
-          url: link
-        });
-      } else {
-        await navigator.clipboard.writeText(link);
-        alert("Share not supported on this device. Link copied instead.");
-      }
-    } catch (e) {}
-  }
 
-  // Copy link
-  window.copyTeamRefLink = async function () {
-    const input = document.getElementById("teamRefLink");
-    await navigator.clipboard.writeText(input.value);
-    const msg = document.getElementById("teamCopyMsg");
-    msg.classList.remove("hidden");
-    setTimeout(()=>msg.classList.add("hidden"), 1800);
-  }
+// Web Share API
+async function shareReferral() {
+  try {
+    const el = document.getElementById("teamRefLinkVisible") || document.getElementById("teamRefLink");
+    const link = el?.value || "";
+    if (!link) return;
+
+    if (navigator.share) {
+      await navigator.share({
+        title: "Join GLOBALS",
+        text: "Sign up on GLOBALS with my link and get started.",
+        url: link
+      });
+    } else {
+      await navigator.clipboard.writeText(link);
+      alert("Share not supported on this device. Link copied instead.");
+    }
+  } catch (e) {}
+}
+
+// Copy link
+window.copyTeamRefLink = async function () {
+  const el = document.getElementById("teamRefLinkVisible") || document.getElementById("teamRefLink");
+  const link = el?.value || "";
+  if (!link) return;
+
+  await navigator.clipboard.writeText(link);
+  const msg = document.getElementById("teamCopyMsg");
+  msg.classList.remove("hidden");
+  setTimeout(()=>msg.classList.add("hidden"), 1800);
+}
 
   // Open T&C
   function openTerms() {
@@ -2949,6 +2956,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
