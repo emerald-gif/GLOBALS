@@ -175,12 +175,15 @@
       </a>
     </li>
 
-    <li onclick="switchTab('myJobsSection')" class="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 cursor-pointer rounded-lg">
+    <li>
+		<a href="#" onclick="switchTab('myJobsSection') ; activeTab(this)"  class="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 cursor-pointer rounded-lg">
       <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18" />
       </svg>
       <span class="text-sm font-medium text-gray-700">My Jobs</span>
-    </li>
+    </a>
+	</li>
+	
   </ul>
 
 
@@ -203,11 +206,10 @@
   <p class="text-[11px] text-gray-600 mt-0.5">Invite friends & earn rewards</p>
 
   <!-- Button (scrolls to team) -->
-  <a href="#team">
-    <button
-      class="mt-2 w-full bg-blue-600 text-white text-[11px] font-medium py-1.5 rounded-md hover:bg-blue-700 transition">
+  
+		<a href="#" onclick="switchTab('team') ; activeTab(this)"  class="mt-2 w-full bg-blue-600 text-white text-[11px] font-medium py-1.5 rounded-md hover:bg-blue-700 transition">
       Invite Now
-    </button>
+    
   </a>
 </div>
 	
@@ -3106,6 +3108,7 @@
 </body>
 
 </html>
+
 
 
 
