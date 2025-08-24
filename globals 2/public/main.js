@@ -2619,11 +2619,11 @@ updateAllProfilePreviews(placeholderPic);
 
 // --- Add Premium Badge to Sidebar Profile Picture ---
 async function addSidebarPremiumBadge() {
-  const sidebarImg = document.getElementById("profilePicPreview");
-  if (!sidebarImg) return;
+  const wrapper = document.querySelector("#profilePicPreview").parentElement;
+  if (!wrapper) return;
 
   // Remove old badge if exists
-  const oldBadge = sidebarImg.parentElement.querySelector(".premium-badge");
+  const oldBadge = wrapper.querySelector(".premium-badge");
   if (oldBadge) oldBadge.remove();
 
   // Check if current user is premium
@@ -2644,11 +2644,11 @@ async function addSidebarPremiumBadge() {
   if (isPremium) {
     const badge = document.createElement("img");
     badge.src = "VERIFIED.jpg";
-    badge.className = "premium-badge absolute bottom-0 right-0 w-5 h-5 rounded-full border-2 border-white shadow-md";
+    badge.className =
+      "premium-badge absolute bottom-0 right-0 w-5 h-5 rounded-full border-2 border-white shadow-md";
     badge.style.transform = "translate(20%, 20%)";
     badge.style.boxShadow = "0 0 10px rgba(59,130,246,0.5)"; // fintech glow
-    sidebarImg.parentElement.classList.add("relative");
-    sidebarImg.parentElement.appendChild(badge);
+    wrapper.appendChild(badge);
   }
 }
 
@@ -3022,6 +3022,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
