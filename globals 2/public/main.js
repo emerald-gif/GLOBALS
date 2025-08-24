@@ -2574,7 +2574,7 @@ async function updateSidebarProfilePreview(url) {
   // Add premium badge if user is premium
   if (isPremium) {
     const badge = document.createElement("img");
-    badge.src = "VERIFIED1.jpg"; // Your badge icon
+    badge.src = "VERIFIED.jpg"; // Your badge icon
     badge.className =
       "premium-badge absolute bottom-0 right-0 w-5 h-5 rounded-full border-2 border-white shadow-md";
     badge.style.transform = "translate(25%, 25%)";
@@ -3004,6 +3004,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
