@@ -2531,12 +2531,58 @@ const profilePicInputs = [
 const removeProfilePicBtn = document.getElementById("removeProfilePicBtn");
 const placeholderPic = "profile-placeholder.png"; // fallback
 
-// Function to update all previews at once
-function updateAllProfilePreviews(url) {
+
+
+// === Profile Picture + Premium Badge ===
+async function updateAllProfilePreviews(url) {
+  // Check if current user is premium
+  let isPremium = false;
+  const user = firebase.auth().currentUser;
+  if (user) {
+    try {
+      const doc = await firebase.firestore().collection("users").doc(user.uid).get();
+      if (doc.exists && doc.data().is_Premium === true) {
+        isPremium = true;
+      }
+    } catch (err) {
+      console.error("❌ Error checking premium status:", err);
+    }
+  }
+
+  // Loop through all profile picture previews
   document.querySelectorAll("#profilePicPreview").forEach(img => {
     img.src = url;
+
+    // Wrap image in a relative container (only once)
+    if (!img.parentElement.classList.contains("profile-pic-wrapper")) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "profile-pic-wrapper relative inline-block";
+      wrapper.style.width = img.width ? img.width + "px" : "80px";
+      wrapper.style.height = img.height ? img.height + "px" : "80px";
+
+      img.parentElement.insertBefore(wrapper, img);
+      wrapper.appendChild(img);
+    }
+
+    // Remove existing badge if any
+    const existingBadge = img.parentElement.querySelector(".premium-badge");
+    if (existingBadge) existingBadge.remove();
+
+    // Add badge if premium
+    if (isPremium) {
+      const badge = document.createElement("img");
+      badge.src = "VERIFIED1.jpg";
+      badge.className =
+        "premium-badge absolute bottom-0 right-0 w-6 h-6 rounded-full border-2 border-white shadow-md";
+      badge.style.transform = "translate(20%, 20%)"; // offset
+      badge.style.boxShadow = "0 0 10px rgba(59,130,246,0.5)"; // fintech glow
+
+      img.parentElement.appendChild(badge);
+    }
   });
 }
+
+
 
 //  Reusable upload handler
 async function handleProfilePicUpload(file) {
@@ -2957,6 +3003,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
