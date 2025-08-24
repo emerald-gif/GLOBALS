@@ -2533,9 +2533,8 @@ const placeholderPic = "profile-placeholder.png"; // fallback
 
 
 
-// === Profile Picture + Premium Badge ===
+// === Profile Picture + Premium Badge (no layout break) ===
 async function updateAllProfilePreviews(url) {
-  // Check if current user is premium
   let isPremium = false;
   const user = firebase.auth().currentUser;
   if (user) {
@@ -2549,22 +2548,10 @@ async function updateAllProfilePreviews(url) {
     }
   }
 
-  // Loop through all profile picture previews
   document.querySelectorAll("#profilePicPreview").forEach(img => {
     img.src = url;
 
-    // Wrap image in a relative container (only once)
-    if (!img.parentElement.classList.contains("profile-pic-wrapper")) {
-      const wrapper = document.createElement("div");
-      wrapper.className = "profile-pic-wrapper relative inline-block";
-      wrapper.style.width = img.width ? img.width + "px" : "80px";
-      wrapper.style.height = img.height ? img.height + "px" : "80px";
-
-      img.parentElement.insertBefore(wrapper, img);
-      wrapper.appendChild(img);
-    }
-
-    // Remove existing badge if any
+    // Remove old badge if exists
     const existingBadge = img.parentElement.querySelector(".premium-badge");
     if (existingBadge) existingBadge.remove();
 
@@ -2574,15 +2561,12 @@ async function updateAllProfilePreviews(url) {
       badge.src = "VERIFIED.jpg";
       badge.className =
         "premium-badge absolute bottom-0 right-0 w-6 h-6 rounded-full border-2 border-white shadow-md";
-      badge.style.transform = "translate(20%, 20%)"; // offset
-      badge.style.boxShadow = "0 0 10px rgba(59,130,246,0.5)"; // fintech glow
-
+      badge.style.transform = "translate(20%, 20%)";
+      badge.style.boxShadow = "0 0 10px rgba(59,130,246,0.5)";
       img.parentElement.appendChild(badge);
     }
   });
 }
-
-
 
 //  Reusable upload handler
 async function handleProfilePicUpload(file) {
@@ -3003,6 +2987,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
