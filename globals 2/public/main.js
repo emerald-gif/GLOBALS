@@ -1885,9 +1885,10 @@ window.copyTeamRefLink = async function () {
     const data = userDoc.data() || {};
     const username = data.username || "user";
 
-    // Build referral link (adjust path if needed)
-    const referralLink = `${BASE_URL}/signup.html?ref=${encodeURIComponent(username)}`;
-    document.getElementById("teamRefLink").value = referralLink;
+// Build referral link (adjust path if needed)
+const referralLink = `${BASE_URL}/signup.html?ref=${encodeURIComponent(username)}`;
+document.getElementById("teamRefLink").value = referralLink;
+document.getElementById("teamRefLinkVisible").value = referralLink; // 👈 show in box
 
     // Load referrals
     const invitedSnap = await db.collection("users").where("referrer", "==", username).get();
@@ -2956,6 +2957,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
