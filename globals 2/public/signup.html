@@ -86,77 +86,90 @@
   <script>
     const form = document.getElementById('signupForm');
     const messageDiv = document.getElementById('message');
+    
+  form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fullName = document.getElementById('fullName').value.trim();
+  const username = document.getElementById('username').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const coupon = document.getElementById('coupon').value.trim().toUpperCase();
+  const referrerUsername = document.getElementById('referrer').value.trim();
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const fullName = document.getElementById('fullName').value.trim();
-      const username = document.getElementById('username').value.trim();
-      const phone = document.getElementById('phone').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-      const coupon = document.getElementById('coupon').value.trim().toUpperCase();
-      const referrerUsername = document.getElementById('referrer').value.trim();
+  messageDiv.textContent = "";
+  messageDiv.className = "";
 
-      messageDiv.textContent = "";
-      messageDiv.className = "";
+  if (!coupon) {
+    messageDiv.textContent = "❌ Please enter a coupon code.";
+    messageDiv.className = "text-red-600";
+    return;
+  }
 
-      if (!coupon) {
-        messageDiv.textContent = "❌ Please enter a coupon code.";
-        messageDiv.className = "text-red-600";
-        return;
-      }
+  try {
+    const couponDoc = await db.collection("coupons").doc(coupon).get();
+    if (!couponDoc.exists || !couponDoc.data().valid) {
+      messageDiv.textContent = "❌ Invalid or already used coupon code.";
+      messageDiv.className = "text-red-600";
+      return;
+    }
 
-      try {
-        const couponDoc = await db.collection("coupons").doc(coupon).get();
-        if (!couponDoc.exists || !couponDoc.data().valid) {
-          messageDiv.textContent = "❌ Invalid or already used coupon code.";
-          messageDiv.className = "text-red-600";
-          return;
-        }
+    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+    const userId = userCredential.user.uid;
 
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        const userId = userCredential.user.uid;
+    // --- updated user fields ---
+    const userData = {
+      fullName,
+      username,
+      phone,
+      email,
+      joinedAt: new Date(),
+      balance: 0, // single balance field
+      referrer: referrerUsername || null
+    };
 
-        const userData = {
-          fullName,
-          username,
-          phone,
-          email,
-          joinedAt: new Date(),
-          normalBalance: 1000,
-          nftBalance: 0,
-          salesBalance: 0,
-          referrer: referrerUsername || null
-        };
+    await db.collection("users").doc(userId).set(userData);
+    await db.collection("coupons").doc(coupon).update({ valid: false, usedBy: userId, usedAt: new Date() });
 
-        await db.collection("users").doc(userId).set(userData);
-        await db.collection("coupons").doc(coupon).update({ valid: false, usedBy: userId, usedAt: new Date() });
+    // --- referral reward logic ---
+    if (referrerUsername) {
+      const refQuery = await db.collection("users").where("username", "==", referrerUsername).get();
+      if (!refQuery.empty) {
+        const refDoc = refQuery.docs[0];
+        const refId = refDoc.id;
 
-        if (referrerUsername) {
-          const refQuery = await db.collection("users").where("username", "==", referrerUsername).get();
-          if (!refQuery.empty) {
-            const refDoc = refQuery.docs[0];
-            const refId = refDoc.id;
-            await db.collection("users").doc(refId).update({ salesBalance: firebase.firestore.FieldValue.increment(1700) });
-            const secondLevelRef = refDoc.data().referrer;
-            if (secondLevelRef) {
-              const secondQuery = await db.collection("users").where("username", "==", secondLevelRef).get();
-              if (!secondQuery.empty) {
-                const secondId = secondQuery.docs[0].id;
-                await db.collection("users").doc(secondId).update({ salesBalance: firebase.firestore.FieldValue.increment(300) });
-              }
-            }
+        // first-level referrer reward
+        await db.collection("users").doc(refId).update({ 
+          balance: firebase.firestore.FieldValue.increment(1700) 
+        });
+
+        // check if first-level has a referrer (second-level)
+        const secondLevelRef = refDoc.data().referrer;
+        if (secondLevelRef) {
+          const secondQuery = await db.collection("users").where("username", "==", secondLevelRef).get();
+          if (!secondQuery.empty) {
+            const secondId = secondQuery.docs[0].id;
+            await db.collection("users").doc(secondId).update({ 
+              balance: firebase.firestore.FieldValue.increment(300) 
+            });
           }
         }
-
-        alert("🎉 Signup successful! You’ve been rewarded ₦1,000.");
-        window.location.href = "dashboard.html";
-      } catch (error) {
-        console.error(error);
-        messageDiv.textContent = "❌ " + error.message;
-        messageDiv.className = "text-red-600";
       }
-    });
+    }
+
+    // ✅ remove signup bonus
+    // ✅ clear referral memory
+    localStorage.removeItem('pendingReferral');
+
+    alert("🎉 Signup successful! Welcome to Globals.");
+    window.location.href = "dashboard.html";
+
+  } catch (error) {
+    console.error(error);
+    messageDiv.textContent = "❌ " + error.message;
+    messageDiv.className = "text-red-600";
+  }
+});
   </script>
 
 
@@ -203,4 +216,5 @@
  
 </html>
  
+
 
