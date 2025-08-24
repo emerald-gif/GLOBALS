@@ -188,30 +188,31 @@
 
 
 	<!-- Refer a Friend Box -->
-<div id="referBox"
-  class="mx-4 my-3 p-3 rounded-lg bg-blue-50 border border-blue-200 shadow-sm text-center">
+<!-- Refer a Friend (Sidebar Card) -->
+<a href="#team" onclick="switchTab('team') ; activeTab(this)"
+   class="block mx-3 my-2">
+  <div 
+     class="flex items-center p-3 rounded-2xl bg-white shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer">
 
-  <!-- Icon -->
-  <div class="flex justify-center mb-1">
-    <svg xmlns="http://www.w3.org/2000/svg" 
-         class="w-6 h-6 text-blue-600" 
-         fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" 
-            d="M12 8c-1.657 0-3-1.343-3-3 0-.828.672-1.5 1.5-1.5S12 4.172 12 5v.5c0-.828.672-1.5 1.5-1.5S15 4.172 15 5c0 1.657-1.343 3-3 3zm0 0v13m-6-9h12" />
-    </svg>
+    <!-- Icon -->
+    <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-inner">
+      <svg xmlns="http://www.w3.org/2000/svg" 
+           class="w-5 h-5" 
+           fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" 
+              d="M12 11c0-1.657-1.343-3-3-3S6 9.343 6 11s1.343 3 3 3 3-1.343 3-3zm6 0c0-1.657-1.343-3-3-3s-3 1.343-3 3 1.343 3 3 3 3-1.343 3-3zm-9 5c-2.21 0-4 1.343-4 3v1h8v-1c0-1.657-1.79-3-4-3zm9 0c-1.481 0-2.75.804-3.469 2h6.938c-.719-1.196-1.988-2-3.469-2z"/>
+      </svg>
+    </div>
+
+    <!-- Text -->
+    <div class="ml-3 flex flex-col">
+      <span class="text-sm font-semibold text-blue-600">Refer a friend</span>
+      <span class="text-xs text-gray-500">invite and earn</span>
+    </div>
   </div>
-
-  <!-- Title -->
-  <h3 class="text-xs font-semibold text-gray-800">Refer a Friend</h3>
-  <p class="text-[11px] text-gray-600 mt-0.5">Invite friends & earn rewards</p>
-
-  <!-- Button (scrolls to team) -->
+</a>
   
-		<a href="#" onclick="switchTab('team') ; activeTab(this)"  class="mt-2 w-full bg-blue-600 text-white text-[11px] font-medium py-1.5 rounded-md hover:bg-blue-700 transition">
-      Invite Now
-    
-  </a>
-</div>
+		
 	
 
   <!-- Footer -->
@@ -3108,6 +3109,7 @@
 </body>
 
 </html>
+
 
 
 
