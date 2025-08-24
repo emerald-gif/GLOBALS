@@ -2533,10 +2533,11 @@ const placeholderPic = "profile-placeholder.png"; // fallback
 
 
 
-// === Profile Picture + Premium Badge (no layout break) ===
-async function updateAllProfilePreviews(url) {
+// === Profile Picture + Premium Badge (Sidebar Only) ===
+async function updateSidebarProfilePreview(url) {
   let isPremium = false;
   const user = firebase.auth().currentUser;
+
   if (user) {
     try {
       const doc = await firebase.firestore().collection("users").doc(user.uid).get();
@@ -2548,25 +2549,41 @@ async function updateAllProfilePreviews(url) {
     }
   }
 
-  document.querySelectorAll("#profilePicPreview").forEach(img => {
-    img.src = url;
+  // Target only the sidebar profile picture
+  const sidebarImg = document.querySelector("#sidebarProfilePic");
+  if (!sidebarImg) return;
 
-    // Remove old badge if exists
-    const existingBadge = img.parentElement.querySelector(".premium-badge");
-    if (existingBadge) existingBadge.remove();
+  // Update profile picture
+  sidebarImg.src = url;
 
-    // Add badge if premium
-    if (isPremium) {
-      const badge = document.createElement("img");
-      badge.src = "VERIFIED.jpg";
-      badge.className =
-        "premium-badge absolute bottom-0 right-0 w-6 h-6 rounded-full border-2 border-white shadow-md";
-      badge.style.transform = "translate(20%, 20%)";
-      badge.style.boxShadow = "0 0 10px rgba(59,130,246,0.5)";
-      img.parentElement.appendChild(badge);
-    }
-  });
+  // Wrap only once
+  if (!sidebarImg.parentElement.classList.contains("profile-pic-wrapper")) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "profile-pic-wrapper relative inline-block";
+    wrapper.style.width = sidebarImg.width ? sidebarImg.width + "px" : "64px";
+    wrapper.style.height = sidebarImg.height ? sidebarImg.height + "px" : "64px";
+
+    sidebarImg.parentElement.insertBefore(wrapper, sidebarImg);
+    wrapper.appendChild(sidebarImg);
+  }
+
+  // Remove existing badge
+  const existingBadge = sidebarImg.parentElement.querySelector(".premium-badge");
+  if (existingBadge) existingBadge.remove();
+
+  // Add premium badge if user is premium
+  if (isPremium) {
+    const badge = document.createElement("img");
+    badge.src = "VERIFIED1.jpg"; // Your badge icon
+    badge.className =
+      "premium-badge absolute bottom-0 right-0 w-5 h-5 rounded-full border-2 border-white shadow-md";
+    badge.style.transform = "translate(25%, 25%)";
+    badge.style.boxShadow = "0 0 10px rgba(59,130,246,0.6)";
+
+    sidebarImg.parentElement.appendChild(badge);
+  }
 }
+
 
 //  Reusable upload handler
 async function handleProfilePicUpload(file) {
@@ -2987,6 +3004,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
