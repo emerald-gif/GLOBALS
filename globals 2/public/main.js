@@ -2617,6 +2617,70 @@ updateAllProfilePreviews(placeholderPic);
 
 
 
+// --- Add Premium Badge to Sidebar Profile Picture ---
+async function addSidebarPremiumBadge() {
+  const sidebarImg = document.getElementById("profilePicPreview");
+  if (!sidebarImg) return;
+
+  // Remove old badge if exists
+  const oldBadge = sidebarImg.parentElement.querySelector(".premium-badge");
+  if (oldBadge) oldBadge.remove();
+
+  // Check if current user is premium
+  const user = firebase.auth().currentUser;
+  let isPremium = false;
+  if (user) {
+    try {
+      const doc = await firebase.firestore().collection("users").doc(user.uid).get();
+      if (doc.exists && doc.data().is_Premium === true) {
+        isPremium = true;
+      }
+    } catch (err) {
+      console.error("❌ Error checking premium status:", err);
+    }
+  }
+
+  // Add badge if premium
+  if (isPremium) {
+    const badge = document.createElement("img");
+    badge.src = "VERIFIED.jpg";
+    badge.className = "premium-badge absolute bottom-0 right-0 w-5 h-5 rounded-full border-2 border-white shadow-md";
+    badge.style.transform = "translate(20%, 20%)";
+    badge.style.boxShadow = "0 0 10px rgba(59,130,246,0.5)"; // fintech glow
+    sidebarImg.parentElement.classList.add("relative");
+    sidebarImg.parentElement.appendChild(badge);
+  }
+}
+
+// --- Call this after profile pic updates ---
+firebase.auth().onAuthStateChanged(async (user) => {
+  if (user) {
+    try {
+      const doc = await firebase.firestore().collection("users").doc(user.uid).get();
+      const profilePic = (doc.exists && doc.data().profilePic) ? doc.data().profilePic : "profile-placeholder.png";
+      // Make sure sidebar image is updated first
+      sidebarImg.src = profilePic;
+      // Then add badge if premium
+      addSidebarPremiumBadge();
+    } catch (err) {
+      console.error("❌ Error fetching sidebar info:", err);
+      addSidebarPremiumBadge();
+    }
+  } else {
+    addSidebarPremiumBadge();
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
 // NOTIFICATION
 
 function loadNotifications() {
@@ -2958,6 +3022,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
