@@ -241,37 +241,37 @@
 
                                                                <!-- ✅ All Screens -->
 															   
-<div id="dashboard" class="tab-section ">
-	
-<!-- ✨ Upgraded Earnings Carousel (2025 Fintech Design) -->
-<div class="w-full max-w-xs mx-auto mt-8 space-y-6 relative">
-  
-  <!-- 🚀 Earnings Swiper -->
-  <div class="swiper earnings-swiper relative z-10 rounded-3xl shadow-2xl overflow-hidden bg-gradient-to-br from-indigo-900 via-indigo-800 to-indigo-700 p-1">
-    <div class="swiper-wrapper">
-      
-      <!-- 💰 Slide: Normal Earnings -->
-      <div class="swiper-slide h-28 rounded-3xl bg-indigo-950/70 backdrop-blur-lg p-5 flex flex-col justify-between text-indigo-50 shadow-inner ring-1 ring-indigo-700 relative">
-        
-        <!-- 🔘 Circular Plus Button -->
-        <button onclick="switchTab('depositSection')" 
-          class="absolute top-3 right-3 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center shadow-lg hover:scale-105 transition-transform duration-300">
-          <span class="text-white text-xl font-bold">+</span>
-        </button>
+<div id="dashboard" class="tab-section">
+  <!-- ✨ Upgraded Earnings Carousel (2025 Fintech Design) -->
+  <div class="w-full max-w-xs mx-auto mt-8 space-y-6 relative">
 
-        <!-- Balance Info -->
-        <div>
-          <h3 class="text-sm font-medium opacity-80 tracking-wide">Normal Earnings</h3>
-          <p id="normalEarnings" class="text-2xl font-extrabold mt-1 tracking-tight">₦0</p>
+    <!-- 🚀 Earnings Swiper -->
+    <div class="swiper earnings-swiper relative z-10 rounded-3xl shadow-2xl overflow-hidden bg-gradient-to-br from-indigo-900 via-indigo-800 to-indigo-700 p-1">
+      <div class="swiper-wrapper">
+
+        <!-- 💰 Slide: Balance -->
+        <div class="swiper-slide h-28 rounded-3xl bg-indigo-950/70 backdrop-blur-lg p-5 flex flex-col justify-between text-indigo-50 shadow-inner ring-1 ring-indigo-700 relative">
+
+          <!-- 🔘 Circular Plus Button -->
+          <button onclick="switchTab('depositSection')"
+            class="absolute top-3 right-3 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center shadow-lg hover:scale-105 transition-transform duration-300">
+            <span class="text-white text-xl font-bold">+</span>
+          </button>
+
+          <!-- Balance Info -->
+          <div>
+            <h3 class="text-sm font-medium opacity-80 tracking-wide">Balance</h3>
+            <p id="balance" class="text-2xl font-extrabold mt-1 tracking-tight">₦0</p>
+          </div>
+
+          <!-- Earn More Button -->
+          <button onclick="switchTab('affiliate-tasks')"
+            class="self-start mt-2 bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-xs font-bold py-1.5 px-4 rounded-full transition-all duration-300 shadow-md">
+            Earn More
+          </button>
         </div>
 
-        <!-- Earn More Button -->
-        <button onclick="switchTab('affiliate-tasks')" 
-          class="self-start mt-2 bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-xs font-bold py-1.5 px-4 rounded-full transition-all duration-300 shadow-md">
-          Earn More
-        </button>
       </div>
-
     </div>
   </div>
 </div>
@@ -3109,6 +3109,7 @@
 </body>
 
 </html>
+
 
 
 
