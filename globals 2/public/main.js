@@ -3037,71 +3037,67 @@ async function submitWithdrawal() {
 
 
 
+  // DEPOSIT FUNCTION ( ALSO CHECK SERVER)
 
-
-//DEPOSIT FUNCTION(also check SERVER)
-
-function validateEmail(email) {
-  const re = /\S+@\S+\.\S+/;
-  return re.test(email);
-}
-
-function handleDeposit() {
-  const email = document.getElementById("depositEmail").value.trim();
-  const amount = parseInt(document.getElementById("depositAmount").value.trim());
-
-  const amountError = document.getElementById("amountError");
-
-  // Reset error
-  amountError.classList.add("hidden");
-
-  if (!amount || amount < 100) {
-    amountError.classList.remove("hidden");
-    return;
-  }
-
-  // Ensure user is signed in
+async function payWithPaystack(email, amount) {
+  // ensure signed in
   const user = firebase.auth().currentUser;
   if (!user) {
     alert("You must be signed in to make a deposit.");
     return;
   }
 
-  // Proceed to Paystack
-  payWithPaystack(email, amount);
-}
-
-
-function payWithPaystack(email, amount) {
-  var handler = PaystackPop.setup({
-    key: "pk_live_8490c2179be3d6cb47b027152bdc2e04b774d22d", // <-- Replace with your REAL Paystack Public Key
+  const handler = PaystackPop.setup({
+    key: "pk_live_8490c2179be3d6cb47b027152bdc2e04b774d22d", // your public key
     email: email,
-    amount: amount * 100, // Convert to Kobo
+    amount: amount * 100, // kobo
     currency: "NGN",
     label: "Globals Deposit",
-    callback: function (response) {
-      alert("Payment successful! Ref: " + response.reference);
-      // TODO: Save to Firebase here (we'll handle this next)
+    // optional metadata so server can double-check owner
+    metadata: {
+      uid: user.uid
     },
-    onClose: function () {
-      alert("Transaction was cancelled");
+    callback: async function(response) {
+      // response.reference contains the transaction reference
+      try {
+        // get ID token
+        const idToken = await user.getIdToken();
+
+        const verifyRes = await fetch("/api/verify-payment", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + idToken
+          },
+          body: JSON.stringify({
+            reference: response.reference,
+            amount: amount // naira integer or decimal as you passed in
+          })
+        });
+
+        const data = await verifyRes.json();
+        if (verifyRes.ok && data.status === "success") {
+          // verification + balance update succeeded server-side
+          alert("Deposit successful!");
+          // your realtime listener will update the UI balance automatically
+        } else {
+          const msg = data && data.message ? data.message : "Verification failed";
+          alert("Deposit verification failed: " + msg);
+          console.warn("verify response", data);
+        }
+      } catch (err) {
+        console.error("Error verifying payment:", err);
+        alert("An error occurred while verifying the deposit.");
+      }
+    },
+    onClose: function() {
+      // optional: handle closed modal
+      console.log("Paystack checkout closed");
     }
   });
+
   handler.openIframe();
 }
-
-
-
-
-firebase.auth().onAuthStateChanged(function (user) {
-  if (user) {
-    document.getElementById("depositEmail").value = user.email;
-  } else {
-    document.getElementById("depositEmail").value = "";
-  }
-});
-
-
 
 
 
@@ -3211,6 +3207,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
