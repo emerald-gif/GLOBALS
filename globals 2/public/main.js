@@ -3039,7 +3039,7 @@ async function submitWithdrawal() {
 
   // DEPOSIT FUNCTION ( ALSO CHECK SERVER)
 
-async function payWithPaystack(email, amount) {
+async function payWithPaystack(amount) {
   // ensure signed in
   const user = firebase.auth().currentUser;
   if (!user) {
@@ -3047,22 +3047,20 @@ async function payWithPaystack(email, amount) {
     return;
   }
 
+  const email = user.email; // ✅ use Firebase user email
+
   const handler = PaystackPop.setup({
-    key: "pk_live_8490c2179be3d6cb47b027152bdc2e04b774d22d", // your public key
+    key: "pk_live_8490c2179be3d6cb47b027152bdc2e04b774d22d", 
     email: email,
     amount: amount * 100, // kobo
     currency: "NGN",
     label: "Globals Deposit",
-    // optional metadata so server can double-check owner
     metadata: {
       uid: user.uid
     },
-    callback: async function(response) {
-      // response.reference contains the transaction reference
+    callback: async function (response) {
       try {
-        // get ID token
         const idToken = await user.getIdToken();
-
         const verifyRes = await fetch("/api/verify-payment", {
           method: "POST",
           headers: {
@@ -3071,27 +3069,22 @@ async function payWithPaystack(email, amount) {
           },
           body: JSON.stringify({
             reference: response.reference,
-            amount: amount // naira integer or decimal as you passed in
+            amount: amount
           })
         });
 
         const data = await verifyRes.json();
         if (verifyRes.ok && data.status === "success") {
-          // verification + balance update succeeded server-side
           alert("Deposit successful!");
-          // your realtime listener will update the UI balance automatically
         } else {
-          const msg = data && data.message ? data.message : "Verification failed";
-          alert("Deposit verification failed: " + msg);
-          console.warn("verify response", data);
+          alert("Deposit verification failed: " + (data?.message || "Verification failed"));
         }
       } catch (err) {
         console.error("Error verifying payment:", err);
         alert("An error occurred while verifying the deposit.");
       }
     },
-    onClose: function() {
-      // optional: handle closed modal
+    onClose: function () {
       console.log("Paystack checkout closed");
     }
   });
@@ -3099,21 +3092,8 @@ async function payWithPaystack(email, amount) {
   handler.openIframe();
 }
 
-
-
-
-
 function handleDeposit() {
-  const email = document.getElementById("depositEmail").value.trim();
   const amount = parseFloat(document.getElementById("depositAmount").value.trim());
-
-  // validate email
-  if (!email) {
-    document.getElementById("emailError").classList.remove("hidden");
-    return;
-  } else {
-    document.getElementById("emailError").classList.add("hidden");
-  }
 
   // validate amount
   if (!amount || amount < 100) {
@@ -3123,11 +3103,9 @@ function handleDeposit() {
     document.getElementById("amountError").classList.add("hidden");
   }
 
-  // call your Paystack function
-  payWithPaystack(email, amount);
+  // no email input needed anymore ✅
+  payWithPaystack(amount);
 }
-
-
 
 
 
@@ -3244,6 +3222,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
