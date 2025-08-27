@@ -3040,75 +3040,205 @@ async function submitWithdrawal() {
 
 
 // ✅ DEPOSIT FUNCTION (ALSO CHECK SERVER)
-firebase.auth().onAuthStateChanged((user) => {
-  if (user) {
-    document.getElementById("depositEmail").value = user.email;
-  }
-});
+// ---------- Paste/replace existing deposit functions with this ----------
 
+// YOUR LIVE public key (public keys are safe to include client side)
+const PAYSTACK_PUBLIC_KEY = "pk_live_8490c2179be3d6cb47b027152bdc2e04b774d22d";
+
+// Loads Paystack inline script if not already present
+function loadPaystackScript(timeoutMs = 7000) {
+  if (window.PaystackPop) return Promise.resolve(window.PaystackPop);
+
+  return new Promise((resolve, reject) => {
+    // if already added but not loaded yet, still handle onload
+    const existing = Array.from(document.getElementsByTagName('script'))
+      .find(s => s.src && s.src.includes('js.paystack.co/v1/inline.js'));
+    if (existing) {
+      existing.addEventListener('load', () => resolve(window.PaystackPop));
+      existing.addEventListener('error', () => reject(new Error('Paystack script failed to load')));
+      // fallback timeout
+      setTimeout(() => (window.PaystackPop ? resolve(window.PaystackPop) : reject(new Error('Paystack load timeout'))), timeoutMs);
+      return;
+    }
+
+    const s = document.createElement('script');
+    s.src = "https://js.paystack.co/v1/inline.js";
+    s.async = true;
+    s.onload = () => resolve(window.PaystackPop);
+    s.onerror = () => reject(new Error('Paystack script failed to load'));
+    document.head.appendChild(s);
+
+    setTimeout(() => {
+      if (window.PaystackPop) return; // already loaded
+      // if still not loaded after timeout, reject
+      reject(new Error('Paystack load timeout'));
+    }, timeoutMs);
+  });
+}
+
+// Ensure firebase current user (handles auth race)
+function ensureFirebaseUser(timeoutMs = 5000) {
+  return new Promise(resolve => {
+    const cur = firebase.auth().currentUser;
+    if (cur) return resolve(cur);
+
+    const unsub = firebase.auth().onAuthStateChanged(user => {
+      try { unsub(); } catch(e) {}
+      resolve(user);
+    });
+
+    setTimeout(() => {
+      try { unsub(); } catch(e) {}
+      resolve(firebase.auth().currentUser || null);
+    }, timeoutMs);
+  });
+}
+
+// UI helpers
+function _getDepositBtn() {
+  return document.getElementById('depositBtn') ||
+         document.querySelector('#depositSection button[onclick="handleDeposit()"]');
+}
+function setDepositLoading(isLoading, text = 'Processing...') {
+  const btn = _getDepositBtn();
+  if (!btn) return;
+  if (isLoading) {
+    btn.dataset.prevHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<span>${text}</span>`;
+  } else {
+    btn.disabled = false;
+    btn.innerHTML = btn.dataset.prevHtml || 'Proceed to Paystack Checkout';
+    delete btn.dataset.prevHtml;
+  }
+}
+
+function debugLog(...args) { try { console.log('[DEPOSIT]', ...args); } catch(e){} }
+
+// auto-fill the depositEmail when auth ready (non-destructive)
+if (window.firebase && firebase.auth) {
+  firebase.auth().onAuthStateChanged(user => {
+    const el = document.getElementById('depositEmail');
+    if (el) el.value = user ? (user.email || '') : '';
+  });
+}
+
+// Main payWithPaystack (live-first)
 async function payWithPaystack(amount) {
-  const user = firebase.auth().currentUser;
-  if (!user) {
-    alert("You must be signed in to make a deposit.");
+  debugLog('payWithPaystack', amount);
+  setDepositLoading(true, 'Opening checkout...');
+
+  const amtNum = Number(amount);
+  if (!isFinite(amtNum) || amtNum <= 0) {
+    setDepositLoading(false);
+    alert('Invalid amount.');
     return;
   }
 
-  const handler = PaystackPop.setup({
-    key: "pk_live_8490c2179be3d6cb47b027152bdc2e04b774d22d",
-    email: user.email, // ✅ email direct from Firebase
-    amount: amount * 100,
-    currency: "NGN",
-    label: "Globals Deposit",
-    metadata: { uid: user.uid },
-    callback: async function (response) {
-      try {
-        const idToken = await user.getIdToken();
-        const verifyRes = await fetch("/api/verify-payment", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + idToken
-          },
-          body: JSON.stringify({
-            reference: response.reference,
-            amount: amount
-          })
-        });
+  // SECURITY: require HTTPS when using live key
+  if (PAYSTACK_PUBLIC_KEY.startsWith('pk_live') && location.protocol !== 'https:') {
+    setDepositLoading(false);
+    alert('Live Paystack key requires a secure (HTTPS) connection. Deploy to HTTPS and try again.');
+    console.error('Attempted to use live key over non-HTTPS page. Aborting.');
+    return;
+  }
 
-        const data = await verifyRes.json();
-        if (verifyRes.ok && data.status === "success") {
-          alert("Deposit successful!");
-        } else {
-          alert("Deposit verification failed: " + (data?.message || "Verification failed"));
+  // Ensure firebase user
+  const user = await ensureFirebaseUser();
+  debugLog('firebase user', user);
+  if (!user) {
+    setDepositLoading(false);
+    alert('You must be signed in to make a deposit.');
+    return;
+  }
+
+  // Load Paystack library (if not loaded)
+  try {
+    await loadPaystackScript();
+  } catch (err) {
+    setDepositLoading(false);
+    console.error('Failed to load Paystack library:', err);
+    alert('Payment library failed to load. Refresh the page and try again.');
+    return;
+  }
+
+  // Setup Paystack
+  try {
+    const handler = PaystackPop.setup({
+      key: PAYSTACK_PUBLIC_KEY,
+      email: user.email,
+      amount: Math.round(amtNum * 100), // kobo
+      currency: "NGN",
+      label: "Globals Deposit",
+      metadata: { uid: user.uid },
+      callback: async function(response) {
+        debugLog('Paystack callback', response);
+        setDepositLoading(true, 'Verifying payment...');
+
+        try {
+          const idToken = await user.getIdToken(true);
+          const verifyRes = await fetch('/api/verify-payment', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + idToken
+            },
+            body: JSON.stringify({ reference: response.reference, amount: amtNum })
+          });
+
+          let data = null;
+          try { data = await verifyRes.json(); } catch(e) { /* ignore */ }
+
+          debugLog('verify result', verifyRes.status, data);
+          if (verifyRes.ok && data && data.status === 'success') {
+            setDepositLoading(false);
+            alert('Deposit successful!');
+            // TODO: refresh user balance UI here if you have a listener
+          } else {
+            setDepositLoading(false);
+            const msg = data && data.message ? data.message : `Verification failed (HTTP ${verifyRes.status})`;
+            alert('Deposit verification failed: ' + msg);
+            console.warn('verify-payment failure', data);
+          }
+        } catch (err) {
+          setDepositLoading(false);
+          console.error('Error verifying payment', err);
+          alert('An error occurred while verifying the deposit.');
         }
-      } catch (err) {
-        console.error("Error verifying payment:", err);
-        alert("An error occurred while verifying the deposit.");
+      },
+      onClose: function() {
+        setDepositLoading(false);
+        debugLog('Paystack checkout closed');
       }
-    },
-    onClose: function () {
-      console.log("Paystack checkout closed");
-    }
-  });
+    });
 
-  handler.openIframe();
+    handler.openIframe();
+  } catch (err) {
+    setDepositLoading(false);
+    console.error('Could not start Paystack flow:', err);
+    alert('Could not start payment flow. Check console for details.');
+  }
 }
 
+// handleDeposit (keeps your existing id names and simple validation)
 function handleDeposit() {
-  const amount = parseFloat(document.getElementById("depositAmount").value.trim());
+  const raw = document.getElementById('depositAmount').value;
+  debugLog('handleDeposit raw', raw);
+  const amount = parseFloat((raw || '').toString().trim());
+  const amountErrorEl = document.getElementById('amountError');
 
   if (!amount || amount < 100) {
-    document.getElementById("amountError").classList.remove("hidden");
+    if (amountErrorEl) amountErrorEl.classList.remove('hidden');
     return;
   } else {
-    document.getElementById("amountError").classList.add("hidden");
+    if (amountErrorEl) amountErrorEl.classList.add('hidden');
   }
 
-  payWithPaystack(amount);
+  payWithPaystack(amount).catch(err => {
+    console.error('Unhandled pay error', err);
+    setDepositLoading(false);
+  });
 }
-
-
-
 
 
 
@@ -3220,6 +3350,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
