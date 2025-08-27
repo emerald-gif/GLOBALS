@@ -1,35 +1,45 @@
-// server.js FOR WITHDRAW
-
 require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
 const path = require("path");
+const admin = require("firebase-admin");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 // Serve static files (like dashboard.html, main.js, etc.)
-app.use(express.static(path.join(__dirname, "public"))); // <-- put all frontend files in a folder called "public"
+app.use(express.static(path.join(__dirname, "public")));
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET;
 
-// ========== PAYSTACK ENDPOINTS ==========
+// ✅ Initialize Firebase Admin
+if (!admin.apps.length) {
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+    admin.initializeApp({
+      credential: admin.credential.cert(JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON))
+    });
+  } else {
+    admin.initializeApp();
+  }
+}
+const dbAdmin = admin.firestore();
 
-// GET list of banks
+/* =======================
+   🔹 PAYSTACK WITHDRAWAL
+   ======================= */
 app.get("/api/get-banks", async (req, res) => {
   try {
     const response = await axios.get("https://api.paystack.co/bank", {
       headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` }
     });
     res.json(response.data.data);
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to fetch banks" });
   }
 });
 
-// POST verify bank account
 app.post("/api/verify-account", async (req, res) => {
   const { accNum, bankCode } = req.body;
   try {
@@ -43,12 +53,11 @@ app.post("/api/verify-account", async (req, res) => {
     } else {
       res.json({ status: "fail" });
     }
-  } catch (err) {
+  } catch {
     res.status(500).json({ status: "fail", error: "Account verification failed" });
   }
 });
 
-// POST initiate transfer
 app.post("/api/initiate-transfer", async (req, res) => {
   const { accNum, bankCode, account_name, amount } = req.body;
 
@@ -90,62 +99,103 @@ app.post("/api/initiate-transfer", async (req, res) => {
       res.json({ status: "fail", message: transfer.data.message });
     }
 
-  } catch (err) {
+  } catch {
     res.status(500).json({ status: "fail", error: "Transfer failed" });
   }
 });
 
+/* =======================
+   🔹 PAYSTACK DEPOSIT
+   ======================= */
+app.post("/api/verify-payment", async (req, res) => {
+  try {
+    // 1) Authenticate user with Firebase ID token
+    const authHeader = req.headers.authorization || "";
+    const idToken = authHeader.startsWith("Bearer ") 
+      ? authHeader.split("Bearer ")[1] 
+      : (req.body.idToken || null);
+    if (!idToken) return res.status(401).json({ status: "fail", message: "Missing ID token" });
 
+    let decoded;
+    try {
+      decoded = await admin.auth().verifyIdToken(idToken);
+    } catch {
+      return res.status(401).json({ status: "fail", message: "Invalid ID token" });
+    }
+    const uid = decoded.uid;
 
+    // 2) Validate request
+    const { reference, amount } = req.body;
+    const amountNum = Number(amount);
+    if (!reference || !isFinite(amountNum) || amountNum <= 0) {
+      return res.status(400).json({ status: "fail", message: "Invalid reference or amount" });
+    }
 
+    // 3) Verify with Paystack
+    const verifyResp = await axios.get(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+      headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` }
+    });
 
-// ========== CATCH ALL ROUTES ==========
-// For preventing "Cannot GET /dashboard.html"
+    const paymentData = verifyResp.data?.data;
+    if (!paymentData || paymentData.status !== "success") {
+      return res.status(400).json({ status: "fail", message: "Payment not successful" });
+    }
+
+    const paidNaira = paymentData.amount / 100;
+    if (Math.abs(paidNaira - amountNum) > 0.01) {
+      return res.status(400).json({ status: "fail", message: "Amount mismatch" });
+    }
+    if ((paymentData.currency || "").toUpperCase() !== "NGN") {
+      return res.status(400).json({ status: "fail", message: "Invalid currency" });
+    }
+
+    // 4) Firestore transaction (prevent double-credit)
+    const paymentDocRef = dbAdmin.collection("payments").doc(reference);
+    await dbAdmin.runTransaction(async (tx) => {
+      const pSnap = await tx.get(paymentDocRef);
+      if (pSnap.exists) return;
+
+      const userRef = dbAdmin.collection("users").doc(uid);
+      const userSnap = await tx.get(userRef);
+
+      let currentBalance = 0;
+      if (userSnap.exists) {
+        const cur = userSnap.data().balance;
+        currentBalance = (typeof cur === "number" && isFinite(cur)) ? cur : Number(cur) || 0;
+      } else {
+        tx.set(userRef, { balance: 0 }, { merge: true });
+      }
+
+      const newBalance = currentBalance + amountNum;
+
+      tx.set(paymentDocRef, {
+        reference,
+        uid,
+        amount: amountNum,
+        status: "verified",
+        paystack: paymentData,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      tx.update(userRef, { balance: newBalance });
+    });
+
+    return res.json({ status: "success" });
+  } catch (err) {
+    console.error("verify-payment error:", err.response?.data || err.message || err);
+    return res.status(500).json({ status: "fail", message: "Server error verifying payment" });
+  }
+});
+
+/* =======================
+   🔹 CATCH ALL ROUTES
+   ======================= */
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "dashboard.html"));
 });
 
-// ========== START SERVER ==========
+/* =======================
+   🔹 START SERVER
+   ======================= */
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
-
-
-
-
-
-
-
-
-
-// server.js FOR DEPOSIT
-
-
-// POST verify payment
-app.post("/api/verify-payment", async (req, res) => {
-  const { reference, amount, email } = req.body;
-
-  try {
-    const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, {
-      headers: {
-        Authorization: `Bearer ${PAYSTACK_SECRET}`
-      }
-    });
-
-    const paymentData = response.data.data;
-
-    if (
-      paymentData.status === "success" &&
-      paymentData.amount / 100 == amount &&
-      paymentData.currency === "NGN"
-    ) {
-      // ✅ Save to DB / Firestore logic here if needed
-
-      res.json({ status: "success" });
-    } else {
-      res.json({ status: "fail", message: "Verification failed" });
-    }
-  } catch (err) {
-    res.status(500).json({ status: "fail", error: "Error verifying transaction" });
-  }
-});
-
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`)); 
