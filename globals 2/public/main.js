@@ -3037,27 +3037,29 @@ async function submitWithdrawal() {
 
 
 
-  // DEPOSIT FUNCTION ( ALSO CHECK SERVER)
+
+
+// ✅ DEPOSIT FUNCTION (ALSO CHECK SERVER)
+firebase.auth().onAuthStateChanged((user) => {
+  if (user) {
+    document.getElementById("depositEmail").value = user.email;
+  }
+});
 
 async function payWithPaystack(amount) {
-  // ensure signed in
   const user = firebase.auth().currentUser;
   if (!user) {
     alert("You must be signed in to make a deposit.");
     return;
   }
 
-  const email = user.email; // ✅ use Firebase user email
-
   const handler = PaystackPop.setup({
-    key: "pk_live_8490c2179be3d6cb47b027152bdc2e04b774d22d", 
-    email: email,
-    amount: amount * 100, // kobo
+    key: "pk_live_8490c2179be3d6cb47b027152bdc2e04b774d22d",
+    email: user.email, // ✅ email direct from Firebase
+    amount: amount * 100,
     currency: "NGN",
     label: "Globals Deposit",
-    metadata: {
-      uid: user.uid
-    },
+    metadata: { uid: user.uid },
     callback: async function (response) {
       try {
         const idToken = await user.getIdToken();
@@ -3095,7 +3097,6 @@ async function payWithPaystack(amount) {
 function handleDeposit() {
   const amount = parseFloat(document.getElementById("depositAmount").value.trim());
 
-  // validate amount
   if (!amount || amount < 100) {
     document.getElementById("amountError").classList.remove("hidden");
     return;
@@ -3103,11 +3104,8 @@ function handleDeposit() {
     document.getElementById("amountError").classList.add("hidden");
   }
 
-  // no email input needed anymore ✅
   payWithPaystack(amount);
 }
-
-
 
 
 
@@ -3222,6 +3220,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
