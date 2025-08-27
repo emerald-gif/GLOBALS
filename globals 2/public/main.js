@@ -1996,6 +1996,9 @@ document.addEventListener("DOMContentLoaded", function () {
                                                            // TEAM FUNCTION
 
 
+
+
+
 // ========================
 // CONFIG
 // ========================
@@ -2034,8 +2037,10 @@ window.copyTeamRefLink = async function () {
 
   await navigator.clipboard.writeText(link);
   const msg = document.getElementById("teamCopyMsg");
-  msg.classList.remove("hidden");
-  setTimeout(()=>msg.classList.add("hidden"), 1800);
+  if (msg) {
+    msg.classList.remove("hidden");
+    setTimeout(()=>msg.classList.add("hidden"), 1800);
+  }
 }
 
 // Open T&C
@@ -2044,7 +2049,6 @@ function openTerms() {
   if (el) {
     el.scrollIntoView({ behavior: "smooth", block: "start" });
   } else {
-    // fallback to hash
     location.hash = "#termsScreen";
   }
 }
@@ -2055,15 +2059,17 @@ function openTerms() {
 auth.onAuthStateChanged(async user => {
   if (!user) return;
 
-  // get current user's username
+  // get current user's username (referrer)
   const userDoc = await db.collection("users").doc(user.uid).get();
   const data = userDoc.data() || {};
-  const username = data.username || "user";
+  const username = (data.username || "user").toString();
 
   // Build referral link
   const referralLink = `${BASE_URL}/signup.html?ref=${encodeURIComponent(username)}`;
-  document.getElementById("teamRefLink").value = referralLink;
-  document.getElementById("teamRefLinkVisible").value = referralLink;
+  const inputA = document.getElementById("teamRefLink");
+  const inputB = document.getElementById("teamRefLinkVisible");
+  if (inputA) inputA.value = referralLink;
+  if (inputB) inputB.value = referralLink;
 
   // Load referrals
   const invitedSnap = await db.collection("users").where("referrer", "==", username).get();
@@ -2072,40 +2078,45 @@ auth.onAuthStateChanged(async user => {
   let rewardedCount = 0;
 
   const container = document.getElementById("referralList");
-  container.innerHTML = "";
+  if (container) container.innerHTML = "";
 
-  invitedSnap.forEach(async docSnap => {
+  // Process each referral
+  const creditTasks = [];
+  invitedSnap.forEach((docSnap) => {
     const u = docSnap.data();
     invitedCount += 1;
 
     const isPremium = !!u.is_Premium;
     const alreadyCredited = !!u.referralBonusCredited;
 
-    if (isPremium) {
-      rewardedCount += 1;
+    if (isPremium) rewardedCount += 1;
 
-      // 🚀 only credit if not yet credited
-      if (!alreadyCredited) {
-        await creditReferralBonus(username);
-
-        // ✅ mark as credited using doc id instead of docSnap.ref
-        await db.collection("users").doc(docSnap.id).update({
-          referralBonusCredited: true
-        });
-      }
+    // UI card (purely visual; not tied to balance)
+    if (container) {
+      container.innerHTML += generateReferralCard({
+        username: u.username || (u.name || "User"),
+        email: u.email || "",
+        profile: u.profile || "",
+        premium: isPremium
+      });
     }
 
-    container.innerHTML += generateReferralCard({
-      username: u.username || (u.name || "User"),
-      email: u.email || "",
-      profile: u.profile || "",
-      premium: isPremium
-    });
+    // 👇 Credit in a single transaction (atomic + idempotent)
+    if (isPremium && !alreadyCredited) {
+      creditTasks.push(processReferralCreditTx(docSnap.id, user.uid));
+    }
   });
 
+  // Wait for all credits to finish
+  if (creditTasks.length) {
+    try { await Promise.all(creditTasks); } catch(e) { console.error("Credit errors:", e); }
+  }
+
   // Update counters
-  document.getElementById("invitedCount").innerText = invitedCount;
-  document.getElementById("rewardedCount").innerText = rewardedCount;
+  const invitedCountEl = document.getElementById("invitedCount");
+  const rewardedCountEl = document.getElementById("rewardedCount");
+  if (invitedCountEl) invitedCountEl.innerText = invitedCount;
+  if (rewardedCountEl) rewardedCountEl.innerText = rewardedCount;
 });
 
 // ========================
@@ -2136,22 +2147,40 @@ function generateReferralCard(user){
   `;
 }
 
-// ✅ Increment balance by ₦500 when referral upgrades
-async function creditReferralBonus(referrerUsername) {
-  try {
-    // find referrer
-    const refSnap = await db.collection("users").where("username", "==", referrerUsername).limit(1).get();
-    if (!refSnap.empty) {
-      const refDoc = refSnap.docs[0].ref;
-      await refDoc.update({
-        balance: firebase.firestore.FieldValue.increment(500)
-      });
-    }
-  } catch (err) {
-    console.error("Error updating referral balance:", err);
-  }
-}
+/**
+ * ✅ Atomic + idempotent credit:
+ * - Reads referred doc and referrer doc in a transaction
+ * - If referred.is_Premium === true AND not yet credited:
+ *      - increments referrer.balance by ₦500 (coerces to number)
+ *      - sets referred.referralBonusCredited = true
+ * This prevents double credits and fixes type issues ("0" -> 0).
+ */
+async function processReferralCreditTx(referredUserDocId, referrerUid) {
+  return db.runTransaction(async (tx) => {
+    const referredRef  = db.collection("users").doc(referredUserDocId);
+    const referrerRef  = db.collection("users").doc(referrerUid);
 
+    const [referredSnap, referrerSnap] = await Promise.all([
+      tx.get(referredRef),
+      tx.get(referrerRef)
+    ]);
+
+    if (!referredSnap.exists) return; // no-op
+    const r = referredSnap.data() || {};
+    if (!r.is_Premium) return; // only credit premium upgrades
+    if (r.referralBonusCredited) return; // already credited -> no-op
+
+    const cur = referrerSnap.exists ? referrerSnap.data().balance : 0;
+    const currentBalance = typeof cur === "number" && isFinite(cur) ? cur : Number(cur) || 0;
+    const newBalance = currentBalance + 500;
+
+    tx.update(referrerRef, { balance: newBalance });         // write numeric balance
+    tx.update(referredRef, { referralBonusCredited: true }); // mark as credited
+  }).catch(err => {
+    console.error("processReferralCreditTx error:", err);
+    throw err;
+  });
+}
 
 
 
@@ -3182,6 +3211,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
