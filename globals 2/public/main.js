@@ -3102,6 +3102,43 @@ async function payWithPaystack(email, amount) {
 
 
 
+
+function handleDeposit() {
+  const email = document.getElementById("depositEmail").value.trim();
+  const amount = parseFloat(document.getElementById("depositAmount").value.trim());
+
+  // validate email
+  if (!email) {
+    document.getElementById("emailError").classList.remove("hidden");
+    return;
+  } else {
+    document.getElementById("emailError").classList.add("hidden");
+  }
+
+  // validate amount
+  if (!amount || amount < 100) {
+    document.getElementById("amountError").classList.remove("hidden");
+    return;
+  } else {
+    document.getElementById("amountError").classList.add("hidden");
+  }
+
+  // call your Paystack function
+  payWithPaystack(email, amount);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
                                                                  // SERVICE FUNCTION  
 
 function openService(serviceName) {
@@ -3207,6 +3244,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
