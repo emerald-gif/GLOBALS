@@ -104,6 +104,8 @@ app.post("/api/initiate-transfer", async (req, res) => {
   }
 });
 
+
+
 /* =======================
    🔹 PAYSTACK DEPOSIT
    ======================= */
@@ -111,8 +113,8 @@ app.post("/api/verify-payment", async (req, res) => {
   try {
     // 1) Authenticate user with Firebase ID token
     const authHeader = req.headers.authorization || "";
-    const idToken = authHeader.startsWith("Bearer ") 
-      ? authHeader.split("Bearer ")[1] 
+    const idToken = authHeader.startsWith("Bearer ")
+      ? authHeader.split("Bearer ")[1]
       : (req.body.idToken || null);
     if (!idToken) return res.status(401).json({ status: "fail", message: "Missing ID token" });
 
@@ -132,14 +134,25 @@ app.post("/api/verify-payment", async (req, res) => {
     }
 
     // 3) Verify with Paystack
-    const verifyResp = await axios.get(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
-      headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` }
-    });
+    const verifyResp = await axios.get(
+      `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+        headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` }
+      }
+    );
 
     const paymentData = verifyResp.data?.data;
     if (!paymentData || paymentData.status !== "success") {
       return res.status(400).json({ status: "fail", message: "Payment not successful" });
     }
+
+    // === NEW CHECK: make sure the Paystack transaction email matches the authenticated user's email ===
+    const payEmail = (paymentData.customer?.email || '').toLowerCase();
+    const tokenEmail = (decoded.email || '').toLowerCase();
+    if (tokenEmail && payEmail && payEmail !== tokenEmail) {
+      console.warn('Email mismatch — token:', tokenEmail, 'paystack:', payEmail);
+      return res.status(400).json({ status: "fail", message: "Payment email does not match authenticated user" });
+    }
+    // ====================================================================================================
 
     const paidNaira = paymentData.amount / 100;
     if (Math.abs(paidNaira - amountNum) > 0.01) {
@@ -187,6 +200,10 @@ app.post("/api/verify-payment", async (req, res) => {
   }
 });
 
+
+
+
+
 /* =======================
    🔹 CATCH ALL ROUTES
    ======================= */
@@ -199,3 +216,4 @@ app.get("*", (req, res) => {
    ======================= */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`)); 
+
