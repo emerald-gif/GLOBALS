@@ -1996,17 +1996,15 @@ document.addEventListener("DOMContentLoaded", function () {
                                                            // TEAM FUNCTION
 
 
+// ========================
+// CONFIG
+// ========================
+const BASE_URL = "https://globals-myzv.onrender.com"; // your root link
 
-  // ========================
-  // CONFIG
-  // ========================
-  const BASE_URL = "https://globals-myzv.onrender.com"; // your root link
-
-  // ========================
-  // HELPERS
-  // ========================
-  function money(n){ return `₦${Number(n).toLocaleString()}`; }
-
+// ========================
+// HELPERS
+// ========================
+function money(n){ return `₦${Number(n).toLocaleString()}`; }
 
 // Web Share API
 async function shareReferral() {
@@ -2040,115 +2038,103 @@ window.copyTeamRefLink = async function () {
   setTimeout(()=>msg.classList.add("hidden"), 1800);
 }
 
-  // Open T&C
-  function openTerms() {
-    const el = document.getElementById("termsScreen");
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    } else {
-      // fallback to hash
-      location.hash = "#termsScreen";
-    }
+// Open T&C
+function openTerms() {
+  const el = document.getElementById("termsScreen");
+  if (el) {
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  } else {
+    // fallback to hash
+    location.hash = "#termsScreen";
   }
+}
 
-  // ========================
-  // FIREBASE BINDINGS
-  // (uses your existing Firebase init)
-  // Invited = referrer == username
-  // Rewarded = same + is_Premium === true
-  // Cards: ₦500 if premium else ₦0
-  // ========================
-  auth.onAuthStateChanged(async user => {
-    if (!user) return;
+// ========================
+// FIREBASE BINDINGS
+// ========================
+auth.onAuthStateChanged(async user => {
+  if (!user) return;
 
-    // get current user's username
-    const userDoc = await db.collection("users").doc(user.uid).get();
-    const data = userDoc.data() || {};
-    const username = data.username || "user";
+  // get current user's username
+  const userDoc = await db.collection("users").doc(user.uid).get();
+  const data = userDoc.data() || {};
+  const username = data.username || "user";
 
-// Build referral link (adjust path if needed)
-const referralLink = `${BASE_URL}/signup.html?ref=${encodeURIComponent(username)}`;
-document.getElementById("teamRefLink").value = referralLink;
-document.getElementById("teamRefLinkVisible").value = referralLink; // 👈 show in box
+  // Build referral link
+  const referralLink = `${BASE_URL}/signup.html?ref=${encodeURIComponent(username)}`;
+  document.getElementById("teamRefLink").value = referralLink;
+  document.getElementById("teamRefLinkVisible").value = referralLink;
 
-    // Load referrals
-    const invitedSnap = await db.collection("users").where("referrer", "==", username).get();
+  // Load referrals
+  const invitedSnap = await db.collection("users").where("referrer", "==", username).get();
 
-    let invitedCount = 0;
-    let rewardedCount = 0;
+  let invitedCount = 0;
+  let rewardedCount = 0;
 
-    const container = document.getElementById("referralList");
-    container.innerHTML = "";
+  const container = document.getElementById("referralList");
+  container.innerHTML = "";
 
-    invitedSnap.forEach(async docSnap => {  
-  const u = docSnap.data();  
-  invitedCount += 1;  
+  invitedSnap.forEach(async docSnap => {
+    const u = docSnap.data();
+    invitedCount += 1;
 
-  const isPremium = !!u.is_Premium;  
-  const alreadyCredited = !!u.referralBonusCredited;  
+    const isPremium = !!u.is_Premium;
+    const alreadyCredited = !!u.referralBonusCredited;
 
-  if (isPremium) {  
-    rewardedCount += 1;  
+    if (isPremium) {
+      rewardedCount += 1;
 
-    // 🚀 only credit if not yet credited
-    if (!alreadyCredited) {  
-      await creditReferralBonus(username);  
+      // 🚀 only credit if not yet credited
+      if (!alreadyCredited) {
+        await creditReferralBonus(username);
 
-      // mark as credited so it won’t re-credit again
-      await docSnap.ref.update({ referralBonusCredited: true });  
-    }  
-  }  
+        // ✅ mark as credited using doc id instead of docSnap.ref
+        await db.collection("users").doc(docSnap.id).update({
+          referralBonusCredited: true
+        });
+      }
+    }
 
-  container.innerHTML += generateReferralCard({  
-    username: u.username || (u.name || "User"),  
-    email: u.email || "",  
-    profile: u.profile || "",  
-    premium: isPremium  
-  });  
+    container.innerHTML += generateReferralCard({
+      username: u.username || (u.name || "User"),
+      email: u.email || "",
+      profile: u.profile || "",
+      premium: isPremium
+    });
+  });
+
+  // Update counters
+  document.getElementById("invitedCount").innerText = invitedCount;
+  document.getElementById("rewardedCount").innerText = rewardedCount;
 });
 
-    // Update counters
-    document.getElementById("invitedCount").innerText = invitedCount;
-    document.getElementById("rewardedCount").innerText = rewardedCount;
-  });
+// ========================
+// CARD UI
+// ========================
+function generateReferralCard(user){
+  const initials = (user.username || "U").slice(0,1).toUpperCase();
+  const amount = user.premium ? 500 : 0;
 
-  // ========================
-  // CARD UI
-  // ========================
-  function generateReferralCard(user){
-    const initials = (user.username || "U").slice(0,1).toUpperCase();
-    const amount = user.premium ? 500 : 0;
-
-    return `
-      <div class="bg-white rounded-2xl shadow-md p-4 flex items-center justify-between hover:shadow-lg transition">
-        <div class="flex items-center gap-3">
-          ${
-            user.profile
-              ? `<img src="${user.profile}" class="w-10 h-10 rounded-full object-cover" alt="${user.username}">`
-              : `<div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-semibold">${initials}</div>`
-          }
-          <div>
-            <p class="font-semibold text-sm">${user.username}</p>
-            <p class="text-[11px] text-gray-500">${user.premium ? "Premium" : "Signed up"}</p>
-          </div>
-        </div>
-        <div class="text-right">
-          <p class="font-bold ${amount>0 ? "text-green-600" : "text-gray-400"}">${money(amount)}</p>
-          <p class="text-[11px] text-gray-400">Commission</p>
+  return `
+    <div class="bg-white rounded-2xl shadow-md p-4 flex items-center justify-between hover:shadow-lg transition">
+      <div class="flex items-center gap-3">
+        ${
+          user.profile
+            ? `<img src="${user.profile}" class="w-10 h-10 rounded-full object-cover" alt="${user.username}">`
+            : `<div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-semibold">${initials}</div>`
+        }
+        <div>
+          <p class="font-semibold text-sm">${user.username}</p>
+          <p class="text-[11px] text-gray-500">${user.premium ? "Premium" : "Signed up"}</p>
         </div>
       </div>
-    `;
-  }
-
-  // Optional: “See all invites” action (hook it to your previous modal/page)
-  document.getElementById("seeAllInvitesBtn")?.addEventListener("click", () => {
-    // e.g., open a modal or navigate:
-    // activateTab('all-invites');
-  });
-
-
-
-
+      <div class="text-right">
+        <p class="font-bold ${amount>0 ? "text-green-600" : "text-gray-400"}">${money(amount)}</p>
+        <p class="text-[11px] text-gray-400">Commission</p>
+      </div>
+    </div>
+  `;
+}
 
 // ✅ Increment balance by ₦500 when referral upgrades
 async function creditReferralBonus(referrerUsername) {
@@ -2165,13 +2151,6 @@ async function creditReferralBonus(referrerUsername) {
     console.error("Error updating referral balance:", err);
   }
 }
-
-
-
-
-
-
-
 
 
 
@@ -3203,6 +3182,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
