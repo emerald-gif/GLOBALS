@@ -3044,7 +3044,7 @@ async function submitWithdrawal() {
 // ---------- Robust deposit code (replace your old deposit block) ----------
 
 // PUBLIC (live) key — keep this public key on client
-const PAYSTACK_PUBLIC_KEY = "pk_test_7b24b93d20de1f631e222dbe8848cbbccbf4c2ba";
+const PAYSTACK_PUBLIC_KEY = "pk_live_8490c2179be3d6cb47b027152bdc2e04b774d22d";
 
 function debugLog(...args) { try { console.log('[DEPOSIT]', ...args); } catch(e){} }
 
@@ -3370,6 +3370,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
