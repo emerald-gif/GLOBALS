@@ -1722,54 +1722,79 @@
 
 
                                                     <!-- PAYMENT HISTORY-->
-
 <!-- 🔵 PAYMENT SECTION -->
 <div id="payment" class="tab-section hidden max-w-md mx-auto px-4 py-6 space-y-6">
-
-<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Payment</button>
+  <button onclick="activateTab('dashboard')" class="text-blue-600 font-semibold flex items-center gap-1">
+    ← Payment
+  </button>
 
   <!-- 💰 Wallet Balance Card -->
-  <div class="bg-gradient-to-br from-white to-gray-100 rounded-2xl shadow-lg p-4 space-y-3 border border-gray-200">
-    <h2 class="text-xs font-medium text-gray-500">WALLET BALANCE</h2>
-    <p class="text-xl font-bold text-gray-800 tracking-wide">₦10,500</p>
+  <div class="rounded-2xl p-5 shadow-xl border border-gray-200 bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 text-white">
+    <div class="flex items-center justify-between">
+      <div class="text-white/80 text-xs font-medium tracking-wide">WALLET BALANCE</div>
 
-    <div class="flex justify-between gap-3 mt-3">
-      <button onclick="activateTab('withdrawFundsSection')" class="w-full bg-red-500 hover:bg-red-600 text-white text-xs font-medium py-2 rounded-xl shadow-md">
+      <!-- eye toggle -->
+      <button id="toggleBalance" class="w-9 h-9 flex items-center justify-center rounded-xl bg-white/15 hover:bg-white/25 transition">
+        <svg id="eyeOpen" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12s-3.75 6.75-9.75 6.75S2.25 12 2.25 12z" />
+          <circle cx="12" cy="12" r="3" stroke-width="1.8" />
+        </svg>
+        <svg id="eyeClosed" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                d="M3 3l18 18M10.58 10.59A3 3 0 0112 9c1.66 0 3 1.34 3 3 0 .42-.09.82-.24 1.18M6.53 6.53C4.7 7.77 3.25 9.65 2.25 12c0 0 3.75 6.75 9.75 6.75 2.07 0 3.95-.53 5.55-1.42" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="mt-2">
+      <p id="payment-balance" class="text-3xl font-extrabold tracking-tight">₦0</p>
+      <p class="text-white/70 text-xs mt-1">Available</p>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mt-5">
+      <button onclick="activateTab('withdrawFundsSection')"
+              class="w-full py-2 rounded-xl bg-white text-red-600 font-semibold text-sm shadow hover:shadow-md">
         Withdraw
       </button>
-      <button onclick="activateTab('depositSection')" class="w-full bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium py-2 rounded-xl shadow-md">
+      <button onclick="activateTab('depositSection')"
+              class="w-full py-2 rounded-xl bg-white text-indigo-600 font-semibold text-sm shadow hover:shadow-md">
         Deposit
       </button>
     </div>
   </div>
 
   <!-- 🧾 Post a Task -->
-  <div id="postTaskSection" class="bg-white border border-gray-200 rounded-xl shadow-sm px-4 py-3 text-center">
-    <h3 class="text-sm font-medium text-gray-700 mb-1">Have a Job for Users?</h3>
-    <button onclick="postTaskSection" class="text-xs text-white bg-indigo-500 hover:bg-indigo-600 px-3 py-1 rounded-lg font-medium shadow">
-      Post a Task
-    </button>
-  </div>
-
-  <!-- 🚀 Swiper Cards -->
-  <div class="swiper mySwiper space-y-2">
-    <div class="swiper-wrapper">
-      <div class="swiper-slide bg-gradient-to-br from-blue-200 to-blue-300 p-4 rounded-xl shadow text-sm font-medium text-gray-800">
-        Refer & Earn
-      </div>
-      <div class="swiper-slide bg-gradient-to-br from-green-200 to-green-300 p-4 rounded-xl shadow text-sm font-medium text-gray-800">
-        Learn More
-      </div>
-      <div class="swiper-slide bg-gradient-to-br from-purple-200 to-purple-300 p-4 rounded-xl shadow text-sm font-medium text-gray-800">
+  <div id="postTaskSection" class="bg-white border border-gray-200 rounded-2xl shadow-sm px-4 py-3">
+    <div class="flex items-center justify-between">
+      <h3 class="text-sm font-semibold text-gray-800">Have a Job for Users?</h3>
+      <button onclick="postTaskSection"
+              class="text-xs text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg font-medium shadow">
         Post a Task
-      </div>
+      </button>
     </div>
   </div>
 
+  <!-- 🚀 Swiper Cards -->
+  <div class="swiper paymentSwiper">
+    <div class="swiper-wrapper">
+      <div class="swiper-slide">
+        <div class="p-4 rounded-xl shadow bg-gradient-to-br from-blue-500 to-indigo-500 text-white text-sm font-medium">Refer & Earn</div>
+      </div>
+      <div class="swiper-slide">
+        <div class="p-4 rounded-xl shadow bg-gradient-to-br from-emerald-500 to-teal-500 text-white text-sm font-medium">Learn More</div>
+      </div>
+      <div class="swiper-slide">
+        <div class="p-4 rounded-xl shadow bg-gradient-to-br from-purple-500 to-fuchsia-500 text-white text-sm font-medium">Post a Task</div>
+      </div>
+    </div>
+    <div class="swiper-pagination"></div>
+  </div>
+
   <!-- 📄 Transaction History -->
-  <div class="bg-white rounded-2xl shadow-xl p-4 space-y-4 border border-gray-200">
-    <div class="flex items-center justify-between mb-2">
-      <h2 class="text-base font-semibold text-gray-800">Transaction History</h2>
+  <div class="bg-white rounded-2xl shadow-xl p-4 border border-gray-200">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-base font-semibold text-gray-900">Transaction History</h2>
       <select id="transactionFilter" class="bg-gray-100 text-xs rounded-md px-2 py-1 border border-gray-300">
         <option value="all">All</option>
         <option value="successful">✅ Successful</option>
@@ -1778,34 +1803,14 @@
     </div>
 
     <div id="transactionList" class="space-y-3">
-      <!-- Example 1 -->
-      <div class="flex items-center justify-between bg-gray-50 px-4 py-3 rounded-xl shadow-sm">
-        <div>
-          <h3 class="font-medium text-sm text-gray-700">Deposit via Paystack</h3>
-          <p class="text-xs text-gray-400">July 25, 2025</p>
-        </div>
-        <div class="text-right">
-          <p class="font-bold text-green-500 text-sm">+₦5,000</p>
-          <span class="text-xs text-green-600 font-medium">✅ Successful</span>
-        </div>
-      </div>
-
-      <!-- Example 2 -->
-      <div class="flex items-center justify-between bg-gray-50 px-4 py-3 rounded-xl shadow-sm">
-        <div>
-          <h3 class="font-medium text-sm text-gray-700">Withdrawal to Bank</h3>
-          <p class="text-xs text-gray-400">July 24, 2025</p>
-        </div>
-        <div class="text-right">
-          <p class="font-bold text-red-500 text-sm">−₦3,000</p>
-          <span class="text-xs text-yellow-500 font-medium">⏳ Pending</span>
-        </div>
-      </div>
+      <!-- filled by JS -->
     </div>
+
+    <button id="loadMoreTx" class="mt-3 w-full text-xs text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg py-2 hidden">
+      Load more
+    </button>
   </div>
 </div>
-
-
 
 
 
@@ -3098,6 +3103,7 @@
 </body>
 
 </html>
+
 
 
 
