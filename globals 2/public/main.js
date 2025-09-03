@@ -15,7 +15,7 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-const db = firebase.firestore();
+const db = firebase.firestore(); 
 
 
 
@@ -1205,17 +1205,27 @@ firebase.firestore().collection("tasks")
               const slide = document.createElement('div');
               slide.className = 'swiper-slide';
               slide.innerHTML = `
-                <div class="job-card" style="max-width:420px;">
-                  <img class="job-image" src="${escapeHtml(job.campaignLogoURL || 'https://via.placeholder.com/800x400')}" alt="${escapeHtml(job.title || '')}">
-                  <div class="job-body">
-                    <div style="font-weight:700">${escapeHtml(job.title || '')}</div>
-                    <div style="font-size:13px;color:#6b7280">₦${escapeHtml(String(job.workerPay || 0))} • ${escapeHtml(String(job.numWorkers || 0))} workers</div>
-                    <div style="margin-top:8px;display:flex;justify-content:flex-end">
-                      <button class="view-btn" data-id="${escapeHtml(doc.id)}">View Job</button>
-                    </div>
-                  </div>
-                </div>
-              `;
+  <div class="job-card">
+    <!-- big cover image -->
+    <img class="job-image" src="${escapeHtml(job.screenshotURL || job.campaignLogoURL || 'https://via.placeholder.com/800x400')}" alt="${escapeHtml(job.title || '')}">
+    
+    <!-- info row -->
+    <div class="job-info">
+      <!-- left: brand + text -->
+      <div class="job-leading">
+        <img class="job-brand" src="${escapeHtml(job.campaignLogoURL || job.screenshotURL || 'https://via.placeholder.com/72')}" alt="">
+        <div class="job-text">
+          <div class="title">${escapeHtml(job.title || '')}</div>
+          <div class="meta">₦${escapeHtml(String(job.workerPay || 0))} • ${escapeHtml(String(job.numWorkers || 0))} workers</div>
+          <div class="category">${escapeHtml(job.category || 'General')}</div>
+        </div>
+      </div>
+      
+      <!-- right: button -->
+      <button class="view-job-btn" data-id="${escapeHtml(doc.id)}">View Job</button>
+    </div>
+  </div>
+`;
               container.appendChild(slide);
             });
             try { swiper.update(); } catch(e) {}
@@ -3847,6 +3857,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
