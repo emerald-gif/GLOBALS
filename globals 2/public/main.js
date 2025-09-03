@@ -994,7 +994,6 @@ function renderAffiliateCard({ id, job, approvedCount }) {
 
 
 
-
 // start Firestore listener for affiliateJobs (grid)
 function startAffiliateJobsListener() {
 if (!affiliateTasksContainer) {
@@ -1055,142 +1054,199 @@ const job = jobCache.get(id);
 if (job) showAffiliateJobDetails(id, job);
 });
 }
-	
+
+
+
+
 
 	
-	
+
 // show job details in modal overlay (only when view clicked)
 function showAffiliateJobDetails(jobId, jobData) {
-ensureDetailStyles();
-const detailsSection = ensureDetailScreen();
+  ensureDetailStyles();
+  const detailsSection = ensureDetailScreen();
 
-// hide grid visually while modal is visible (so it doesn't look like replaced)  
-  if (affiliateTasksContainer) affiliateTasksContainer.style.display = 'none';  
-  detailsSection.style.display = 'flex';  
+  if (affiliateTasksContainer) affiliateTasksContainer.style.display = 'none';
+  detailsSection.style.display = 'flex';
 
-  // prepare safe text (escape + preserve newlines)  
-  function safeHtmlText(s) {  
-    return escapeHtml(s || '').replace(/\n/g, '<br>');  
-  }  
+  function safeHtmlText(s) {
+    return escapeHtml(s || '').replace(/\n/g, '<br>');
+  }
 
-  const targetLinkHtml = jobData.targetLink  
-    ? `<a href="${escapeHtml(jobData.targetLink)}" target="_blank" rel="noopener noreferrer" class="text-blue-600 break-words">${escapeHtml(jobData.targetLink)}</a>`  
-    : `<span class="text-gray-500">No link provided</span>`;  
+  const targetLinkHtml = jobData.targetLink
+    ? `<a href="${escapeHtml(jobData.targetLink)}" target="_blank" rel="noopener noreferrer" class="text-blue-600 break-words">${escapeHtml(jobData.targetLink)}</a>`
+    : `<span class="text-gray-500">No link provided</span>`;
 
-  const proofHtml = safeHtmlText(jobData.proofRequired || 'Proof details not provided');  
-  const instructionsHtml = safeHtmlText(jobData.instructions || 'No instructions provided');  
+  const proofHtml = safeHtmlText(jobData.proofRequired || 'Proof details not provided');
+  const instructionsHtml = safeHtmlText(jobData.instructions || 'No instructions provided');
 
-  detailsSection.innerHTML = `  
-    <div class="aff-sheet">  
-      <button class="aff-close" title="Back">←</button>  
-      <div class="aff-head">  
-        <div style="display:flex;align-items:center;gap:12px">  
-          <div style="width:48px;height:48px;border-radius:12px;overflow:hidden;background:#fff44c">  
-            <img src="${escapeHtml(jobData.campaignLogoURL || jobData.screenshotURL || 'https://via.placeholder.com/96')}" class="w-full h-full" style="width:100%;height:100%;object-fit:cover" alt="">  
-          </div>  
-          <div>  
-            <div style="font-weight:700;font-size:1rem">${escapeHtml(jobData.title || 'Affiliate Job')}</div>  
-            <div style="font-size:12px;opacity:.95">${escapeHtml(jobData.category || 'Affiliate Campaign')}</div>  
-          </div>  
-        </div>  
-      </div>  
+  const proofFileCount = jobData.proofFileCount || 1;
 
-      <div style="padding:18px;display:block;gap:16px">  
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">  
-          <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9">  
-            <div style="font-size:11px;color:#64748b">Worker Pay</div>  
-            <div style="font-weight:800;font-size:20px">₦${escapeHtml(String(jobData.workerPay || 0))}</div>  
-          </div>  
-          <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9">  
-            <div style="font-size:11px;color:#64748b">Total Workers</div>  
-            <div style="font-weight:800;font-size:20px">${escapeHtml(String(jobData.numWorkers || 0))}</div>  
-          </div>  
-        </div>  
+  detailsSection.innerHTML = `
+    <div class="aff-sheet">
+      <button class="aff-close" title="Back">←</button>
+      <div class="aff-head">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:48px;height:48px;border-radius:12px;overflow:hidden;background:#fff44c">
+            <img src="${escapeHtml(jobData.campaignLogoURL || jobData.screenshotURL || 'https://via.placeholder.com/96')}" class="w-full h-full" style="width:100%;height:100%;object-fit:cover" alt="">
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:1rem">${escapeHtml(jobData.title || 'Affiliate Job')}</div>
+            <div style="font-size:12px;opacity:.95">${escapeHtml(jobData.category || 'Affiliate Campaign')}</div>
+          </div>
+        </div>
+      </div>
 
-        <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">  
-          <div style="display:flex;justify-content:space-between;align-items:center">  
-            <div style="font-weight:600">Instructions</div>  
-            <button id="toggleInstr" style="background:none;border:0;color:#1e40af;font-weight:600;cursor:pointer">  
-              <span>Show more</span>  
-              <svg style="width:14px;height:14px;transform:rotate(0deg);transition:transform .2s" viewBox="0 0 24 24" fill="none" stroke="currentColor">  
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>  
-              </svg>  
-            </button>  
-          </div>  
-          <div id="instructionsPanel" class="collapsible is-collapsed" style="margin-top:10px;color:#334155">  
-            ${instructionsHtml}  
-            <div class="fade-edge"></div>  
-          </div>  
-        </div>  
+      <div style="padding:18px;display:block;gap:16px">
+        <!-- Worker Pay & Total Workers -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9">
+            <div style="font-size:11px;color:#64748b">Worker Pay</div>
+            <div style="font-weight:800;font-size:20px">₦${escapeHtml(String(jobData.workerPay || 0))}</div>
+          </div>
+          <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9">
+            <div style="font-size:11px;color:#64748b">Total Workers</div>
+            <div style="font-weight:800;font-size:20px">${escapeHtml(String(jobData.numWorkers || 0))}</div>
+          </div>
+        </div>
 
-        <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">  
-          <div style="font-weight:600;margin-bottom:6px">Target Link</div>  
-          ${targetLinkHtml}  
-        </div>  
+        <!-- Instructions -->
+        <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-weight:600">Instructions</div>
+            <button id="toggleInstr" style="background:none;border:0;color:#1e40af;font-weight:600;cursor:pointer">
+              <span>Show more</span>
+              <svg style="width:14px;height:14px;transform:rotate(0deg);transition:transform .2s" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+          </div>
+          <div id="instructionsPanel" class="collapsible is-collapsed" style="margin-top:10px;color:#334155">
+            ${instructionsHtml}
+            <div class="fade-edge"></div>
+          </div>
+        </div>
 
-        <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">  
-          <div style="font-weight:600;margin-bottom:6px">Proof Required</div>  
-          <div style="color:#374151">${proofHtml}</div>  
-        </div>  
+        <!-- Target Link -->
+        <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">
+          <div style="font-weight:600;margin-bottom:6px">Target Link</div>
+          ${targetLinkHtml}
+        </div>
 
-        <button id="submitTaskBtn" class="btn-primary" style="width:100%;display:inline-block">Submit Task</button>  
-      </div>  
-    </div>  
-  `;  
+        <!-- Proof Required -->
+        <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">
+          <div style="font-weight:600;margin-bottom:6px">Proof Required</div>
+          <div style="color:#374151">${proofHtml}</div>
+        </div>
 
-  // back/close logic  
-  const backBtn = detailsSection.querySelector('.aff-close');  
-  if (backBtn) {  
-    backBtn.addEventListener('click', () => {  
-      detailsSection.style.display = 'none';  
-      detailsSection.innerHTML = '';  
-      if (affiliateTasksContainer) {  
-        affiliateTasksContainer.style.display = '';  
-        try { affiliateTasksContainer.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}  
-      }  
-    });  
-  }  
+        <!-- Submit Proof Section -->
+        <div style="padding:12px;border-radius:12px;border:1px solid #dbeafe;background:#f8fafc;margin-bottom:16px">
+          <div style="font-weight:700;margin-bottom:10px;color:#1e3a8a">Submit Proof</div>
+          <form id="proofForm" style="display:flex;flex-direction:column;gap:10px">
+            ${Array.from({ length: proofFileCount }).map((_, i) => `
+              <div>
+                <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">Upload File ${i+1}</label>
+                <input type="file" name="proofFile${i+1}" accept="image/*" style="border:1px solid #cbd5e1;border-radius:8px;padding:6px;width:100%">
+              </div>
+            `).join("")}
+            <div>
+              <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">Extra Proof (e.g email/phone)</label>
+              <textarea name="extraProof" rows="3" placeholder="Enter additional proof..." style="border:1px solid #cbd5e1;border-radius:8px;padding:8px;width:100%"></textarea>
+            </div>
+            <button id="submitTaskBtn" class="btn-primary" style="width:100%;padding:10px;border-radius:10px;font-weight:600">Submit Task</button>
+          </form>
+        </div>
 
-  // collapsible toggle  
-  const panel = detailsSection.querySelector('#instructionsPanel');  
-  const toggle = detailsSection.querySelector('#toggleInstr');  
-  if (toggle && panel) {  
-    const label = toggle.querySelector('span');  
-    const icon = toggle.querySelector('svg');  
-    toggle.addEventListener('click', () => {  
-      const collapsed = panel.classList.contains('is-collapsed');  
-      if (collapsed) {  
-        panel.style.maxHeight = panel.scrollHeight + 'px';  
-        panel.classList.remove('is-collapsed');  
-        if (label) label.textContent = 'Show less';  
-        if (icon) icon.style.transform = 'rotate(180deg)';  
-        setTimeout(() => { panel.style.maxHeight = ''; }, 320);  
-      } else {  
-        panel.style.maxHeight = panel.scrollHeight + 'px';  
-        requestAnimationFrame(() => {  
-          panel.classList.add('is-collapsed');  
-          requestAnimationFrame(() => { panel.style.maxHeight = ''; });  
-        });  
-        if (label) label.textContent = 'Show more';  
-        if (icon) icon.style.transform = 'rotate(0deg)';  
-      }  
-    });  
-  }  
+        <!-- Submitted Info -->
+        <div id="submittedInfo" style="display:none;padding:12px;border-radius:12px;border:1px solid #bbf7d0;background:#ecfdf5;color:#065f46"></div>
+      </div>
+    </div>
+  `;
 
-  // Submit Task placeholder - wire to your submission flow  
-  const submitBtn = detailsSection.querySelector('#submitTaskBtn');  
-  if (submitBtn) {  
-    submitBtn.addEventListener('click', () => {  
-      // TODO: Connect your submission UI/upload + create affiliate_submissions doc  
-      // Example:  
-      // openSubmissionModal(jobId, jobData)  
-      alert('Submit task clicked. Implement submission flow (upload proof -> create affiliate_submissions doc).');  
-    });  
-  }  
+  // back/close
+  const backBtn = detailsSection.querySelector('.aff-close');
+  if (backBtn) {
+    backBtn.addEventListener('click', () => {
+      detailsSection.style.display = 'none';
+      detailsSection.innerHTML = '';
+      if (affiliateTasksContainer) {
+        affiliateTasksContainer.style.display = '';
+        try { affiliateTasksContainer.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
+      }
+    });
+  }
+
+  // collapsible toggle
+  const panel = detailsSection.querySelector('#instructionsPanel');
+  const toggle = detailsSection.querySelector('#toggleInstr');
+  if (toggle && panel) {
+    const label = toggle.querySelector('span');
+    const icon = toggle.querySelector('svg');
+    toggle.addEventListener('click', () => {
+      const collapsed = panel.classList.contains('is-collapsed');
+      if (collapsed) {
+        panel.style.maxHeight = panel.scrollHeight + 'px';
+        panel.classList.remove('is-collapsed');
+        if (label) label.textContent = 'Show less';
+        if (icon) icon.style.transform = 'rotate(180deg)';
+        setTimeout(() => { panel.style.maxHeight = ''; }, 320);
+      } else {
+        panel.style.maxHeight = panel.scrollHeight + 'px';
+        requestAnimationFrame(() => {
+          panel.classList.add('is-collapsed');
+          requestAnimationFrame(() => { panel.style.maxHeight = ''; });
+        });
+        if (label) label.textContent = 'Show more';
+        if (icon) icon.style.transform = 'rotate(0deg)';
+      }
+    });
+  }
+
+  // handle proof submission
+  const form = detailsSection.querySelector('#proofForm');
+  const submitInfo = detailsSection.querySelector('#submittedInfo');
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const user = firebase.auth().currentUser;
+      if (!user) return alert("You must be logged in.");
+
+      const proofData = {
+        jobId,
+        userId: user.uid,
+        submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        extraProof: form.extraProof.value || "",
+        files: []
+      };
+
+      // handle file uploads (just placeholders here, implement firebase storage if needed)
+      for (let i = 0; i < proofFileCount; i++) {
+        const fileInput = form[`proofFile${i+1}`];
+        if (fileInput && fileInput.files.length > 0) {
+          proofData.files.push(`Uploaded: ${fileInput.files[0].name}`);
+        }
+      }
+
+      // check if user already submitted
+      const existing = await db.collection("affiliate_submissions")
+        .where("jobId", "==", jobId)
+        .where("userId", "==", user.uid)
+        .get();
+
+      if (!existing.empty) {
+        alert("You have already submitted this task.");
+        return;
+      }
+
+      await db.collection("affiliate_submissions").add(proofData);
+
+      form.style.display = "none";
+      submitInfo.style.display = "block";
+      submitInfo.textContent = "✅ You have submitted your proof. Awaiting review.";
+    });
+  }
 }
-
-
-
+      
 
 
 	
@@ -3907,6 +3963,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
