@@ -2832,41 +2832,68 @@ document.getElementById("workerPay").addEventListener("input", updateAffiliateJo
 
 
 // 🚀 Submit Affiliate Job
+// 🚀 Replace your existing submitAffiliateJob() with this exact function
 async function submitAffiliateJob() {
-  const category = document.getElementById("affiliateCategory").value;
-  const title = document.getElementById("campaignTitle").value.trim();
-  const instructions = document.getElementById("workerInstructions").value.trim();
-  const targetLink = document.getElementById("targetLink").value.trim();
-  const proofRequired = document.getElementById("proofRequired").value.trim();
-  const numWorkers = parseInt(document.getElementById("numWorkers").value);
-  const workerPay = parseInt(document.getElementById("workerPay").value);  
-  const proofFileCount = parseInt(document.getElementById("proofFileCount").value || "1");
-  const campaignLogoFile = document.getElementById("campaignLogoFile").files[0];
-  
-
-  if (!category || !title || !instructions || !targetLink || !proofRequired || !numWorkers || !workerPay) {
-    alert("⚠️ Please fill in all required fields.");
-    return;
-  }
-
-  const user = auth.currentUser;
-  if (!user) {
-    alert("⚠️ You must be logged in.");
-    return;
-  }
-
   try {
+    // Get the affiliate form container (note: your HTML uses id "afffiliateJobFormSection")
+    const formSection = document.getElementById("afffiliateJobFormSection") || document;
+
+    // Read inputs (prefer to query inside the affiliate form to avoid duplicate-id problems)
+    const category = (formSection.querySelector("#affiliateCategory") || document.getElementById("affiliateCategory"))?.value || "";
+    const title = (formSection.querySelector("#campaignTitle") || document.getElementById("campaignTitle"))?.value.trim() || "";
+    const instructions = (formSection.querySelector("#workerInstructions") || document.getElementById("workerInstructions"))?.value.trim() || "";
+    const targetLink = (formSection.querySelector("#targetLink") || document.getElementById("targetLink"))?.value.trim() || "";
+    const proofRequired = (formSection.querySelector("#proofRequired") || document.getElementById("proofRequired"))?.value.trim() || "";
+    const numWorkers = parseInt((formSection.querySelector("#numWorkers") || document.getElementById("numWorkers"))?.value, 10) || 0;
+    const workerPay = parseInt((formSection.querySelector("#workerPay") || document.getElementById("workerPay"))?.value, 10) || 0;
+    const campaignLogoFile = (formSection.querySelector("#campaignLogoFile") || document.getElementById("campaignLogoFile"))?.files?.[0] || null;
+
+    // --- ROBUST proofFileCount reading ---
+    // Prefer the select inside affiliate form, fall back to id anywhere
+    const proofSelect =
+      formSection.querySelector("#affiliateProofFileCount") ||
+      document.getElementById("affiliateProofFileCount") ||
+      document.getElementById("proofFileCount"); // last fallback if you still have old id
+
+    const proofFileCountRaw = proofSelect ? proofSelect.value : null;
+    const proofFileCount = parseInt(proofFileCountRaw, 10) || 1;
+
+    // --- DEBUG INFO (open browser console to see) ---
+    console.log("DEBUG submitAffiliateJob: proofSelect element:", proofSelect);
+    console.log("DEBUG submitAffiliateJob: proofFileCountRaw =", proofFileCountRaw, "parsed =", proofFileCount);
+
+    // Check for duplicate IDs that could cause wrong reads
+    const dup_old = document.querySelectorAll("#proofFileCount");
+    const dup_aff = document.querySelectorAll("#affiliateProofFileCount");
+    if (dup_old.length > 0) {
+      console.warn("WARNING: Found", dup_old.length, "elements with id 'proofFileCount'. Rename them to avoid conflicts.");
+    }
+    if (dup_aff.length > 1) {
+      console.warn("WARNING: Found", dup_aff.length, "elements with id 'affiliateProofFileCount' (should be 1).");
+    }
+
+    // Basic validation
+    if (!category || !title || !instructions || !targetLink || !proofRequired || numWorkers <= 0 || workerPay <= 0) {
+      alert("⚠️ Please fill in all required fields.");
+      return;
+    }
+
+    const user = auth.currentUser;
+    if (!user) {
+      alert("⚠️ You must be logged in.");
+      return;
+    }
+
+    // Fetch user profile
     const userDocRef = db.collection("users").doc(user.uid);
     const userSnap = await userDocRef.get();
     if (!userSnap.exists) {
       alert("⚠️ User profile not found.");
       return;
     }
-
     const userProfile = userSnap.data();
 
-    // 🔢 Calculate Total
-    
+    // Calculate total
     const companyFee = 300;
     const total = (numWorkers * workerPay) + companyFee;
 
@@ -2876,54 +2903,49 @@ async function submitAffiliateJob() {
       return;
     }
 
+    // Upload logo if provided
+    let campaignLogoURL = "";
+    if (campaignLogoFile) {
+      try {
+        campaignLogoURL = await uploadToCloudinary(campaignLogoFile);
+      } catch (err) {
+        console.error("Logo upload failed:", err);
+        alert("❌ Campaign logo upload failed. Try again.");
+        return;
+      }
+    }
 
-
-    // 📤 Upload logo if provided
-        let campaignLogoURL = "";
-        if (campaignLogoFile) {
-            try {
-                campaignLogoURL = await uploadToCloudinary(campaignLogoFile);
-            } catch (err) {
-                console.error("Logo upload failed:", err);
-                alert("❌ Campaign logo upload failed. Try again.");
-                return;
-            }
-        }
-
-
-
-
-    // 🧾 Job Data
-const jobData = {
-    jobType: "affiliate",
-    category,
-    title,
-    instructions,
-    targetLink,
-    proofRequired,
-    numWorkers,
-    workerPay,
-    total,
-    proofFileCount,
-    campaignLogoURL,
-    companyFee,
-    
-    status: "on review", // Waiting for admin approval
-    pinned: false,       // Only admin can change to true later
-    pinnedStart: null,   // Admin will set this when they pin it
-
-    postedAt: firebase.firestore.FieldValue.serverTimestamp(),
-
-    postedBy: {
+    // Prepare job data — using proofFileCount variable (number)
+    const jobData = {
+      jobType: "affiliate",
+      category,
+      title,
+      instructions,
+      targetLink,
+      proofRequired,
+      numWorkers,
+      workerPay,
+      total,
+      proofFileCount,        // <-- correct numeric value stored here
+      campaignLogoURL,
+      companyFee,
+      status: "on review",
+      pinned: false,
+      pinnedStart: null,
+      postedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      postedBy: {
         uid: user.uid,
         name: userProfile.name || "",
         email: userProfile.email || "",
         phone: userProfile.phone || "",
         photo: userProfile.photo || ""
-    }
-};
+      }
+    };
 
-    // 🔁 Save Job & Deduct Balance Atomically
+    // Final debug print before saving
+    console.log("DEBUG submitAffiliateJob: jobData about to save ->", jobData);
+
+    // Save job & deduct balance atomically
     await db.runTransaction(async (transaction) => {
       transaction.update(userDocRef, { balance: userBalance - total });
       const jobRef = db.collection("affiliateJobs").doc();
@@ -2938,9 +2960,6 @@ const jobData = {
     alert("❌ Something went wrong. Try again.");
   }
 }
-
-
-
 
 
 
@@ -3872,6 +3891,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
