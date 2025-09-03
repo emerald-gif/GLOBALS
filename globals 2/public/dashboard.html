@@ -1233,24 +1233,23 @@
   border-bottom: 1px solid rgba(15,23,42,0.06);⁰⁰
 }
 
-/* Compact info row: left = logo+text, right = small button */
 .myAffiliateTasksSwiper .job-info {
   display: flex;
   align-items: center;
+  justify-content: space-between;  /* space text vs button */
   padding: 12px 14px;
   gap: 12px;
 }
 
-/* left container (takes remaining space) */
+/* left side (logo + text) */
 .myAffiliateTasksSwiper .job-leading {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-width: 0;
-  flex: 1 1 auto;              /* grow/shrink */
+  min-width: 0;   /* allow text ellipsis */
+  flex: 1;        /* take up remaining width */
 }
 
-/* logo */
 .myAffiliateTasksSwiper .job-brand {
   width: 38px;
   height: 38px;
@@ -1259,12 +1258,11 @@
   background: #e6eefb;
   border: 1px solid #eef6ff;
   box-shadow: 0 1px 4px rgba(2,6,23,0.06);
-  flex: 0 0 38px;              /* fixed size */
+  flex-shrink: 0;
 }
 
-/* text */
 .myAffiliateTasksSwiper .job-text {
-  min-width: 0;                /* allow ellipsis */
+  min-width: 0;   /* so long titles get ellipsis */
 }
 .myAffiliateTasksSwiper .job-text .title {
   font-weight: 700;
@@ -1282,20 +1280,18 @@
   text-overflow: ellipsis;
 }
 
-/* right: small button */
+/* right button */
 .myAffiliateTasksSwiper .view-btn {
-  flex: 0 0 auto;               /* never stretch */
-  margin-left: auto;            /* push to far right */
+  flex-shrink: 0;                /* never shrink */
   background: #2563eb;
   color: #fff;
-  padding: 6px 12px;            /* compact */
+  padding: 6px 14px;             /* size closer to screenshot */
   border-radius: 8px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 600;
   box-shadow: 0 3px 8px rgba(37,99,235,0.25);
   border: none;
   cursor: pointer;
-  user-select: none;
   white-space: nowrap;
   transition: transform .15s ease, box-shadow .15s ease;
 }
@@ -3405,6 +3401,7 @@
 </body>
 
 </html>
+
 
 
 
