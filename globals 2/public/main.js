@@ -1180,63 +1180,85 @@ firebase.firestore().collection("tasks")
       }
     }
 
-    // --- ADMIN SWIPER (kept guarded) ---
-    function initAdminSwiper() {
-      if (typeof Swiper === 'undefined') return; // not loaded
-      try {
-        const swiper = new Swiper('.myAffiliateTasksSwiper', {
-          slidesPerView: 'auto',
-          centeredSlides: true,
-          centeredSlidesBounds: true,
-          spaceBetween: 18,
-          loop: true,
-          autoplay: { delay: 4000, disableOnInteraction: false },
-          pagination: { el: '.swiper-pagination', clickable: true },
+// --- ADMIN SWIPER (kept guarded) ---
+function initAdminSwiper() {
+  if (typeof Swiper === 'undefined') return; // not loaded
+  try {
+    const swiper = new Swiper('.myAffiliateTasksSwiper', {
+      slidesPerView: 'auto',
+      centeredSlides: true,
+      centeredSlidesBounds: true,
+      spaceBetween: 18,
+      loop: true,
+      autoplay: { delay: 4000, disableOnInteraction: false },
+      pagination: { el: '.swiper-pagination', clickable: true },
+    });
+
+    const container = document.getElementById('affiliateTasksSwiperContainer');
+    if (!container) return;
+
+    // Firestore listener to render slides
+    db.collection("adminJobs").orderBy("postedAt", "desc").limit(5)
+      .onSnapshot(snapshot => {
+        container.innerHTML = '';
+        snapshot.forEach(doc => {
+          const job = doc.data();
+          const slide = document.createElement('div');
+          slide.className = 'swiper-slide';
+
+          // NEW: small logo at left, title/meta center, small button at right
+          slide.innerHTML = `
+            <div class="job-card" style="max-width:420px;">
+              <img class="job-image"
+                   src="${escapeHtml(job.screenshotURL || job.campaignLogoURL || 'https://via.placeholder.com/800x400')}"
+                   alt="${escapeHtml(job.title || '')}">
+              <div class="job-info">
+                <div class="job-leading">
+                  <img class="job-brand"
+                       src="${escapeHtml(job.campaignLogoURL || job.screenshotURL || 'https://via.placeholder.com/72')}"
+                       alt="${escapeHtml(job.title || '')}">
+                  <div class="job-text">
+                    <div class="title">${escapeHtml(job.title || '')}</div>
+                    <div class="meta">₦${escapeHtml(String(job.workerPay || 0))} • ${escapeHtml(String(job.numWorkers || 0))} workers</div>
+                  </div>
+                </div>
+
+                <!-- keep .view-btn so your handler works -->
+                <button class="view-btn" data-id="${escapeHtml(doc.id)}">View</button>
+              </div>
+            </div>
+          `;
+
+          container.appendChild(slide);
         });
 
-        const container = document.getElementById('affiliateTasksSwiperContainer');
-        if (!container) return;
+        // update swiper after DOM changes
+        try { swiper.update(); } catch (e) { /* ignore */ }
+      }, err => console.error('adminJobs listener error', err));
 
-        db.collection("adminJobs").orderBy("postedAt", "desc").limit(5)
-          .onSnapshot(snapshot => {
-            container.innerHTML = '';
-            snapshot.forEach(doc => {
-              const job = doc.data();
-              const slide = document.createElement('div');
-              slide.className = 'swiper-slide';
-               slide.innerHTML = `
+    // Robust delegated listener (attached once) — catches clicks on cloned slides too
+    if (!initAdminSwiper._delegatedClickAttached) {
+      document.addEventListener('click', function (e) {
+        const btn = e.target.closest('.view-btn');
+        if (!btn) return;
+        const id = btn.dataset.id;
+        if (!id) return;
 
-  <div class="job-card" style="max-width:420px;">      
-    <img class="job-image" src="${escapeHtml(job.campaignLogoURL || 'https://via.placeholder.com/800x400')}" alt="${escapeHtml(job.title || '')}">      
-    <div class="job-body">      
-      <div style="font-weight:700">${escapeHtml(job.title || '')}</div>      
-      <div style="font-size:13px;color:#6b7280">₦${escapeHtml(String(job.workerPay || 0))} • ${escapeHtml(String(job.numWorkers || 0))} workers</div>      
-      <div style="margin-top:8px;display:flex;justify-content:flex-end">      
-        <button class="view-btn" data-id="${escapeHtml(doc.id)}">View Job</button>      
-      </div>      
-    </div>      
-  </div>      
-`;    
-              container.appendChild(slide);
-            });
-            try { swiper.update(); } catch(e) {}
-          }, err => console.error('adminJobs listener error', err));
+        // fetch job doc and open modal (keeps same behaviour you had)
+        db.collection("adminJobs").doc(id).get().then(d => {
+          if (!d.exists) return;
+          const job = d.data();
+          try { showAffiliateJobDetails(id, job); }
+          catch (err) { console.error('showAffiliateJobDetails failed', err); }
+        }).catch(err => console.error(err));
+      }, { passive: true });
 
-        // click handler inside swiper to reuse modal
-        container.addEventListener('click', (e) => {
-          const btn = e.target.closest('.view-btn');
-          if (!btn) return;
-          const id = btn.dataset.id;
-          db.collection("adminJobs").doc(id).get().then(d => {
-            if (!d.exists) return;
-            const job = d.data();
-            showAffiliateJobDetails(id, job);
-          }).catch(err => console.error(err));
-        });
-      } catch (err) {
-        console.warn('Swiper init failed:', err);
-      }
+      initAdminSwiper._delegatedClickAttached = true;
     }
+  } catch (err) {
+    console.warn('Swiper init failed:', err);
+  }
+}
 
     // ---- start everything ----
     startAffiliateJobsListener();
@@ -3848,6 +3870,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
