@@ -1184,151 +1184,130 @@
 
                         
 	                 <!-- Affiliate Tasks Section -->  
-	
-<!-- Affiliate Tasks Section (UPGRADED UI - paste to replace existing block) -->
-<div class="px-4 pt-6 affiliate-section">
+<!-- Affiliate Tasks Section -->
+<div class="px-4 pt-6">
   <!-- Header -->
   <div class="flex items-center gap-2 mb-4">
-    <div class="w-1 h-5 bg-gradient-to-b from-yellow-400 to-blue-600 rounded"></div>
+    <div class="w-1 h-5 bg-blue-600 rounded"></div>
     <h2 class="text-base font-semibold text-neutral-900">Affiliate Tasks</h2>
   </div>
 
-  <!-- Admin Swiper (keeps your Swiper markup & IDs) -->
+  <!-- Swiper (Full width top carousel) -->
   <div class="swiper myAffiliateTasksSwiper mb-6">
     <div class="swiper-wrapper" id="affiliateTasksSwiperContainer"></div>
     <div class="swiper-pagination mt-2"></div>
   </div>
 
-  <!-- Worker Grid (keeps the same ID your script expects) -->
-  <div id="affiliate-tasks" class="tab-section hidden grid gap-6"
-       style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); align-items:start;">
-    <!-- Jobs will be injected here via JS (job-card markup) -->
+  <!-- Grid (2 per row affiliate jobs) -->
+  <div id="affiliate-tasks"
+       class="tab-section grid grid-cols-2 gap-4">
+    <!-- Jobs will be injected here via JS -->
   </div>
 </div>
 
-<!-- Upgraded Styles (non-invasive: target classes your JS uses) -->
 <style>
-/* Container adjustments for modern spacing */
-.affiliate-section { max-width: 1200px; margin: 0 auto; }
-
-/* ===== Job Card (unified look for SWIPER & GRID) ===== */
-.job-card {
-  background: linear-gradient(145deg, #ffffff, #f8fafc);
-  border-radius: 18px;
+/* Swiper styles */
+.myAffiliateTasksSwiper { padding: 16px 0; }
+.myAffiliateTasksSwiper .swiper-slide {
+  display: flex;
+  justify-content: center;
+}
+.myAffiliateTasksSwiper .job-card {
+  width: 90vw;
+  max-width: 420px;
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(2,6,23,0.06);
-  transition: transform 0.28s cubic-bezier(.2,.9,.24,1), box-shadow .28s;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
-  border: 1px solid rgba(15,23,42,0.03);
 }
-
-/* subtle lift */
-.job-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 20px 44px rgba(2,6,23,0.10);
-}
-
-/* image area */
-.job-image {
+.myAffiliateTasksSwiper .job-card img {
   width: 100%;
   height: 160px;
   object-fit: cover;
-  display: block;
-  border-bottom: 1px solid rgba(15,23,42,0.03);
+}
+.myAffiliateTasksSwiper .job-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+}
+.myAffiliateTasksSwiper .job-info-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.myAffiliateTasksSwiper .job-info-left img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.myAffiliateTasksSwiper .job-text {
+  font-size: 14px;
+  line-height: 1.2;
+}
+.myAffiliateTasksSwiper .job-text .title {
+  font-weight: 600;
+  font-size: 15px;
+}
+.myAffiliateTasksSwiper .job-text .meta {
+  color: #555;
+  font-size: 13px;
+}
+.myAffiliateTasksSwiper .view-job-btn {
+  background: #2563eb;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-/* body */
-.job-body {
-  padding: 1rem 1.125rem;
+/* Grid job cards (2 per row, compact style) */
+#affiliate-tasks .job-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
 }
-
-/* title and meta */
-.job-title {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #0f172a;
-  line-height: 1.1;
-  letter-spacing: -0.2px;
-}
-
-/* price pill */
-.job-price {
-  display: inline-block;
-  margin-top: 4px;
-  font-weight: 700;
-  color: #059669;
-  background: rgba(5,150,105,0.06);
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 0.95rem;
-  width: fit-content;
-}
-
-/* progress / small meta */
-.job-progress {
-  font-size: 0.87rem;
-  color: #475569;
-  margin-top: 6px;
-}
-
-/* progress bar */
-.job-progress-bar {
+#affiliate-tasks .job-image {
   width: 100%;
-  height: 8px;
-  border-radius: 999px;
-  background: linear-gradient(180deg,#eef2ff,#f8fafc);
-  overflow: hidden;
-  margin-top: 10px;
+  height: 120px;
+  object-fit: cover;
 }
-.job-progress-bar > i {
-  display:block;
-  height:100%;
-  border-radius:999px;
-  background: linear-gradient(90deg,#facc15,#3b82f6);
-  width:0%;
-  transition: width .45s cubic-bezier(.2,.9,.24,1);
+#affiliate-tasks .job-body {
+  padding: 0.75rem;
 }
-
-/* view button */
-.view-btn {
-  margin-top: 12px;
-  padding: 0.6rem 1rem;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+#affiliate-tasks .job-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #111827;
+}
+#affiliate-tasks .job-price {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2563eb;
+}
+#affiliate-tasks .job-progress {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+#affiliate-tasks .view-btn {
+  margin-top: auto;
+  padding: 0.5rem;
+  background: #2563eb;
   color: #fff;
-  border-radius: 12px;
+  border-radius: 8px;
   text-align: center;
-  font-weight: 700;
-  box-shadow: 0 8px 20px rgba(37,99,235,0.12);
-  border: none;
-  cursor: pointer;
-}
-.view-btn:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(37,99,235,0.14); }
-.view-btn:active { transform: translateY(0); }
-
-/* ===== Swiper specifics (keeps current behavior) ===== */
-.myAffiliateTasksSwiper { padding: 10px 0; }
-.myAffiliateTasksSwiper .swiper-slide { display:flex; justify-content:center; align-items:flex-start; }
-.myAffiliateTasksSwiper .job-card { width: 86vw; max-width: 440px; }
-
-/* ===== Responsive tweaks ===== */
-@media (max-width: 640px) {
-  .job-image { height: 150px; }
-  .job-title { font-size: 1rem; }
-  .job-price { font-size: 0.92rem; padding: 5px 8px; }
-  .view-btn { padding: .55rem .9rem; font-size: .95rem; }
-}
-
-@media (min-width: 1024px) {
-  /* slightly larger cards on wide screens */
-  .job-card { border-radius: 20px; }
-  .job-image { height: 180px; }
+  font-weight: 600;
+  font-size: 0.85rem;
 }
 </style>
-
 
 
 
@@ -3295,6 +3274,7 @@
 </body>
 
 </html>
+
 
 
 
