@@ -1346,6 +1346,51 @@ async function showAffiliateJobDetails(jobId, jobData) {
 
 
 
+    // --- affiliate jobs listener ---
+    function startAffiliateJobsListener() {
+      const container = document.getElementById("affiliate-tasks");
+      if (!container) return;
+
+      db.collection("affiliateJobs")
+        .where("status", "==", "approved")
+        .orderBy("postedAt", "desc")
+        .onSnapshot(snapshot => {
+          container.innerHTML = "";
+          snapshot.forEach(doc => {
+            const job = doc.data();
+            const card = renderAffiliateCard({
+              id: doc.id,
+              job: job,
+              approvedCount: job.approvedCount || 0
+            });
+            container.appendChild(card);
+          });
+        }, err => console.error("affiliateJobs listener error", err));
+    }
+
+    // --- click handler for affiliate cards ---
+    function attachGridClickHandler() {
+      const container = document.getElementById("affiliate-tasks");
+      if (!container) return;
+
+      container.addEventListener("click", e => {
+        const btn = e.target.closest(".view-btn");
+        if (!btn) return;
+        const id = btn.dataset.id;
+        if (!id) return;
+
+        db.collection("affiliateJobs").doc(id).get().then(doc => {
+          if (!doc.exists) return;
+          const job = doc.data();
+          showAffiliateJobDetails(id, job);
+        }).catch(err => console.error("fetch affiliate job error", err));
+      });
+    }
+
+    
+
+
+
 
 		
 // --- ADMIN SWIPER (kept guarded) ---
@@ -4059,6 +4104,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
