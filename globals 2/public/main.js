@@ -2707,7 +2707,7 @@ async function submitTask() {
   const numWorkers = parseInt(document.getElementById("workerCount").value);
   const workerEarn = parseInt(document.getElementById("workerEarn").value);
   const makePremium = document.getElementById("makePremium")?.checked || false;
-  const proofFileCount = parseInt(document.getElementById("proofFileCount").value || "1");
+  const proofFileCount = parseInt(document.getElementById("affiliateProofFileCount").value || "1");
   
   
 
@@ -3872,6 +3872,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
