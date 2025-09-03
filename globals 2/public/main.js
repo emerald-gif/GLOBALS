@@ -991,384 +991,139 @@ function renderAffiliateCard({ id, job, approvedCount }) {
   return card;  
 }
 
-// REPLACE THE ENTIRE showAffiliateJobDetails FUNCTION WITH THIS
-async function showAffiliateJobDetails(jobId, jobData) {
-  ensureDetailStyles();
-  const detailsSection = ensureDetailScreen();
+// show job details in modal overlay (only when view clicked)
+function showAffiliateJobDetails(jobId, jobData) {
+ensureDetailStyles();
+const detailsSection = ensureDetailScreen();
 
-  // hide grid while modal is visible
-  if (affiliateTasksContainer) affiliateTasksContainer.style.display = 'none';
-  detailsSection.style.display = 'flex';
+// hide grid visually while modal is visible (so it doesn't look like replaced)  
+  if (affiliateTasksContainer) affiliateTasksContainer.style.display = 'none';  
+  detailsSection.style.display = 'flex';  
 
-  function safeHtmlText(s) {
-    return (typeof escapeHtml === 'function' ? escapeHtml(s || '') : String(s || '')).replace(/\n/g, '<br>');
-  }
+  // prepare safe text (escape + preserve newlines)  
+  function safeHtmlText(s) {  
+    return escapeHtml(s || '').replace(/\n/g, '<br>');  
+  }  
 
-  const targetLinkHtml = jobData.targetLink
-    ? `<a href="${escapeHtml(jobData.targetLink)}" target="_blank" rel="noopener noreferrer" class="text-blue-600 break-words">${escapeHtml(jobData.targetLink)}</a>`
-    : `<span class="text-gray-500">No link provided</span>`;
+  const targetLinkHtml = jobData.targetLink  
+    ? `<a href="${escapeHtml(jobData.targetLink)}" target="_blank" rel="noopener noreferrer" class="text-blue-600 break-words">${escapeHtml(jobData.targetLink)}</a>`  
+    : `<span class="text-gray-500">No link provided</span>`;  
 
-  const proofHtml = safeHtmlText(jobData.proofRequired || 'Proof details not provided');
-  const instructionsHtml = safeHtmlText(jobData.instructions || 'No instructions provided');
+  const proofHtml = safeHtmlText(jobData.proofRequired || 'Proof details not provided');  
+  const instructionsHtml = safeHtmlText(jobData.instructions || 'No instructions provided');  
 
-  const jobIdSafe = String(jobId).replace(/[^a-zA-Z0-9_-]/g, '_');
+  detailsSection.innerHTML = `  
+    <div class="aff-sheet">  
+      <button class="aff-close" title="Back">←</button>  
+      <div class="aff-head">  
+        <div style="display:flex;align-items:center;gap:12px">  
+          <div style="width:48px;height:48px;border-radius:12px;overflow:hidden;background:#fff44c">  
+            <img src="${escapeHtml(jobData.campaignLogoURL || jobData.screenshotURL || 'https://via.placeholder.com/96')}" class="w-full h-full" style="width:100%;height:100%;object-fit:cover" alt="">  
+          </div>  
+          <div>  
+            <div style="font-weight:700;font-size:1rem">${escapeHtml(jobData.title || 'Affiliate Job')}</div>  
+            <div style="font-size:12px;opacity:.95">${escapeHtml(jobData.category || 'Affiliate Campaign')}</div>  
+          </div>  
+        </div>  
+      </div>  
 
-  // number of proof files advertiser requested (fallback to 1)
-  const proofCount = Math.max(1, parseInt(jobData.proofFileCount, 10) || 1);
+      <div style="padding:18px;display:block;gap:16px">  
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">  
+          <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9">  
+            <div style="font-size:11px;color:#64748b">Worker Pay</div>  
+            <div style="font-weight:800;font-size:20px">₦${escapeHtml(String(jobData.workerPay || 0))}</div>  
+          </div>  
+          <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9">  
+            <div style="font-size:11px;color:#64748b">Total Workers</div>  
+            <div style="font-weight:800;font-size:20px">${escapeHtml(String(jobData.numWorkers || 0))}</div>  
+          </div>  
+        </div>  
 
-  // build upload rows: file input + text field for username/phone
-  let proofInputsHtml = '<div id="proofUploadsContainer" style="margin-top:8px">';
-  for (let i = 0; i < proofCount; i++) {
-    const fileId = `affProofFile_${jobIdSafe}_${i}`;
-    const textId = `affProofMeta_${jobIdSafe}_${i}`;
-    proofInputsHtml += `
-      <div class="proof-row" style="display:flex;gap:12px;align-items:flex-start;margin-bottom:10px">
-        <div style="flex:0 0 45%">
-          <label for="${fileId}" style="font-size:13px;font-weight:600">Upload file ${i + 1}</label>
-          <input id="${fileId}" type="file" accept="image/*,video/*,application/pdf" style="display:block;margin-top:6px"/>
-          <div style="font-size:11px;color:#6b7280;margin-top:6px">Allowed: images, video, PDF</div>
-        </div>
-        <div style="flex:1">
-          <label for="${textId}" style="font-size:13px;font-weight:600">Proof info (username / phone)</label>
-          <input id="${textId}" type="text" placeholder="e.g. @username or 0801xxxxxxx" style="display:block;margin-top:6px;width:100%;padding:8px;border-radius:8px;border:1px solid #e6e9ef"/>
-        </div>
-      </div>
-    `;
-  }
-  proofInputsHtml += '</div>';
+        <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">  
+          <div style="display:flex;justify-content:space-between;align-items:center">  
+            <div style="font-weight:600">Instructions</div>  
+            <button id="toggleInstr" style="background:none;border:0;color:#1e40af;font-weight:600;cursor:pointer">  
+              <span>Show more</span>  
+              <svg style="width:14px;height:14px;transform:rotate(0deg);transition:transform .2s" viewBox="0 0 24 24" fill="none" stroke="currentColor">  
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>  
+              </svg>  
+            </button>  
+          </div>  
+          <div id="instructionsPanel" class="collapsible is-collapsed" style="margin-top:10px;color:#334155">  
+            ${instructionsHtml}  
+            <div class="fade-edge"></div>  
+          </div>  
+        </div>  
 
-  // render modal (keeps your look + Submit Proof area)
-  detailsSection.innerHTML = `
-    <div class="aff-sheet">
-      <button class="aff-close" title="Back">←</button>
-      <div class="aff-head">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div style="width:48px;height:48px;border-radius:12px;overflow:hidden;background:#fff44c">
-            <img src="${escapeHtml(jobData.campaignLogoURL || jobData.screenshotURL || 'https://via.placeholder.com/96')}" class="w-full h-full" style="width:100%;height:100%;object-fit:cover" alt="">
-          </div>
-          <div>
-            <div style="font-weight:700;font-size:1rem">${escapeHtml(jobData.title || 'Affiliate Job')}</div>
-            <div style="font-size:12px;opacity:.95">${escapeHtml(jobData.category || 'Affiliate Campaign')}</div>
-          </div>
-        </div>
-      </div>
+        <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">  
+          <div style="font-weight:600;margin-bottom:6px">Target Link</div>  
+          ${targetLinkHtml}  
+        </div>  
 
-      <div style="padding:18px;display:block;gap:16px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-          <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9">
-            <div style="font-size:11px;color:#64748b">Worker Pay</div>
-            <div style="font-weight:800;font-size:20px">₦${escapeHtml(String(jobData.workerPay || 0))}</div>
-          </div>
-          <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9">
-            <div style="font-size:11px;color:#64748b">Total Workers</div>
-            <div style="font-weight:800;font-size:20px">${escapeHtml(String(jobData.numWorkers || 0))}</div>
-          </div>
-        </div>
+        <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">  
+          <div style="font-weight:600;margin-bottom:6px">Proof Required</div>  
+          <div style="color:#374151">${proofHtml}</div>  
+        </div>  
 
-        <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div style="font-weight:600">Instructions</div>
-            <button id="toggleInstr" style="background:none;border:0;color:#1e40af;font-weight:600;cursor:pointer">
-              <span>Show more</span>
-              <svg style="width:14px;height:14px;transform:rotate(0deg);transition:transform .2s" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-              </svg>
-            </button>
-          </div>
-          <div id="instructionsPanel" class="collapsible is-collapsed" style="margin-top:10px;color:#334155">
-            ${instructionsHtml}
-            <div class="fade-edge"></div>
-          </div>
-        </div>
+        <button id="submitTaskBtn" class="btn-primary" style="width:100%;display:inline-block">Submit Task</button>  
+      </div>  
+    </div>  
+  `;  
 
-        <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">
-          <div style="font-weight:600;margin-bottom:6px">Target Link</div>
-          ${targetLinkHtml}
-        </div>
+  // back/close logic  
+  const backBtn = detailsSection.querySelector('.aff-close');  
+  if (backBtn) {  
+    backBtn.addEventListener('click', () => {  
+      detailsSection.style.display = 'none';  
+      detailsSection.innerHTML = '';  
+      if (affiliateTasksContainer) {  
+        affiliateTasksContainer.style.display = '';  
+        try { affiliateTasksContainer.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}  
+      }  
+    });  
+  }  
 
-        <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">
-          <div style="font-weight:600;margin-bottom:6px">Proof Required</div>
-          <div style="color:#374151">${proofHtml}</div>
-          <div style="margin-top:10px;font-size:13px;color:#374151">Advertiser requested <strong>${proofCount}</strong> upload(s).</div>
-        </div>
+  // collapsible toggle  
+  const panel = detailsSection.querySelector('#instructionsPanel');  
+  const toggle = detailsSection.querySelector('#toggleInstr');  
+  if (toggle && panel) {  
+    const label = toggle.querySelector('span');  
+    const icon = toggle.querySelector('svg');  
+    toggle.addEventListener('click', () => {  
+      const collapsed = panel.classList.contains('is-collapsed');  
+      if (collapsed) {  
+        panel.style.maxHeight = panel.scrollHeight + 'px';  
+        panel.classList.remove('is-collapsed');  
+        if (label) label.textContent = 'Show less';  
+        if (icon) icon.style.transform = 'rotate(180deg)';  
+        setTimeout(() => { panel.style.maxHeight = ''; }, 320);  
+      } else {  
+        panel.style.maxHeight = panel.scrollHeight + 'px';  
+        requestAnimationFrame(() => {  
+          panel.classList.add('is-collapsed');  
+          requestAnimationFrame(() => { panel.style.maxHeight = ''; });  
+        });  
+        if (label) label.textContent = 'Show more';  
+        if (icon) icon.style.transform = 'rotate(0deg)';  
+      }  
+    });  
+  }  
 
-        <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">
-          <div style="font-weight:700;margin-bottom:8px">Submit proof</div>
-          ${proofInputsHtml}
-        </div>
-
-        <div id="submissionMessage" style="margin-bottom:12px;color:#065f46;font-weight:600;display:none"></div>
-
-        <button id="submitTaskBtn" class="btn-primary" style="width:100%;display:inline-block;padding:12px 16px;border-radius:12px">Submit Task</button>
-      </div>
-    </div>
-  `;
-
-  // back/close logic
-  const backBtn = detailsSection.querySelector('.aff-close');
-  if (backBtn) {
-    backBtn.addEventListener('click', () => {
-      detailsSection.style.display = 'none';
-      detailsSection.innerHTML = '';
-      if (affiliateTasksContainer) {
-        affiliateTasksContainer.style.display = '';
-        try { affiliateTasksContainer.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
-      }
-    });
-  }
-
-  // collapsible toggle
-  const panel = detailsSection.querySelector('#instructionsPanel');
-  const toggle = detailsSection.querySelector('#toggleInstr');
-  if (toggle && panel) {
-    const label = toggle.querySelector('span');
-    const icon = toggle.querySelector('svg');
-    toggle.addEventListener('click', () => {
-      const collapsed = panel.classList.contains('is-collapsed');
-      if (collapsed) {
-        panel.style.maxHeight = panel.scrollHeight + 'px';
-        panel.classList.remove('is-collapsed');
-        if (label) label.textContent = 'Show less';
-        if (icon) icon.style.transform = 'rotate(180deg)';
-        setTimeout(() => { panel.style.maxHeight = ''; }, 320);
-      } else {
-        panel.style.maxHeight = panel.scrollHeight + 'px';
-        requestAnimationFrame(() => {
-          panel.classList.add('is-collapsed');
-          requestAnimationFrame(() => { panel.style.maxHeight = ''; });
-        });
-        if (label) label.textContent = 'Show more';
-        if (icon) icon.style.transform = 'rotate(0deg)';
-      }
-    });
-  }
-
-  // helper: replace upload area with read-only submitted files and disable submit
-  function markAsSubmittedUI(subDoc) {
-    try {
-      const submitBtn = detailsSection.querySelector('#submitTaskBtn');
-      const msg = detailsSection.querySelector('#submissionMessage');
-      if (msg) {
-        const when = subDoc.submittedAt && subDoc.submittedAt.toDate ? subDoc.submittedAt.toDate().toLocaleString() : (new Date()).toLocaleString();
-        msg.style.display = '';
-        msg.textContent = `You already submitted on ${when || 'earlier'}.`;
-      }
-      const container = detailsSection.querySelector('#proofUploadsContainer');
-      if (container) {
-        let html = '<div style="display:flex;flex-direction:column;gap:10px">';
-        (subDoc.files || []).forEach((f, idx) => {
-          const safeName = escapeHtml(f.name || `file-${idx+1}`);
-          const safeMeta = escapeHtml(f.meta || '');
-          const url = escapeHtml(f.url || f.fileURL || '');
-          html += `
-            <div style="padding:8px;border-radius:8px;border:1px solid #e6eef8;display:flex;gap:12px;align-items:center">
-              <div style="flex:0 0 64px">
-                ${url ? `<a href="${url}" target="_blank" rel="noopener noreferrer"><img src="${url}" style="width:64px;height:64px;object-fit:cover;border-radius:8px" onerror="this.style.display='none'"/></a>` : ''}
-              </div>
-              <div style="flex:1">
-                <div style="font-weight:700">${safeName}</div>
-                <div style="font-size:13px;color:#374151">${safeMeta}</div>
-                ${url ? `<div style="margin-top:6px"><a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#0b63d6">Open file</a></div>` : ''}
-              </div>
-            </div>
-          `;
-        });
-        html += '</div>';
-        container.innerHTML = html;
-      }
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Submitted';
-        submitBtn.style.opacity = '0.65';
-        submitBtn.style.cursor = 'not-allowed';
-      }
-    } catch (e) {
-      console.error('markAsSubmittedUI error', e);
-    }
-  }
-
-  // main: check existing submission + wire submit handler
-  async function checkExistingSubmissionAndSetup() {
-    try {
-      const submitBtn = detailsSection.querySelector('#submitTaskBtn');
-      const user = (firebase.auth && firebase.auth().currentUser) ? firebase.auth().currentUser : null;
-      if (!user) {
-        if (submitBtn) submitBtn.addEventListener('click', () => alert('Please log in to submit proof.'));
-        return;
-      }
-
-      // check if current user already submitted for this job
-      const q = await db.collection('affiliate_submissions')
-        .where('jobId', '==', jobId)
-        .where('submittedBy.uid', '==', user.uid)
-        .limit(1)
-        .get();
-
-      if (!q.empty) {
-        const subDoc = q.docs[0].data();
-        markAsSubmittedUI(subDoc);
-        return;
-      }
-
-      // attach submit handler
-      if (submitBtn) {
-        submitBtn.addEventListener('click', async () => {
-          if (submitBtn.disabled) return;
-
-          // re-check to avoid race
-          const q2 = await db.collection('affiliate_submissions')
-            .where('jobId', '==', jobId)
-            .where('submittedBy.uid', '==', user.uid)
-            .limit(1)
-            .get();
-          if (!q2.empty) {
-            markAsSubmittedUI(q2.docs[0].data());
-            alert('You already submitted for this job.');
-            return;
-          }
-
-          // collect files + meta
-          const uploads = [];
-          for (let i = 0; i < proofCount; i++) {
-            const fileEl = detailsSection.querySelector(`#affProofFile_${jobIdSafe}_${i}`);
-            const metaEl = detailsSection.querySelector(`#affProofMeta_${jobIdSafe}_${i}`);
-            const file = fileEl && fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
-            const meta = metaEl ? metaEl.value.trim() : '';
-            if (!file) {
-              alert(`Please upload file ${i + 1} before submitting.`);
-              try { fileEl && fileEl.focus(); } catch (e) {}
-              return;
-            }
-            uploads.push({ file, meta });
-          }
-
-          // UI state
-          submitBtn.disabled = true;
-          const originalText = submitBtn.textContent;
-          submitBtn.textContent = 'Submitting...';
-          submitBtn.style.opacity = '0.7';
-          submitBtn.style.cursor = 'wait';
-
-          try {
-            if (typeof uploadToCloudinary !== 'function') {
-              throw new Error('uploadToCloudinary helper not found.');
-            }
-
-            // upload sequentially
-            const uploadedFiles = [];
-            for (let i = 0; i < uploads.length; i++) {
-              const { file, meta } = uploads[i];
-              let url;
-              try {
-                url = await uploadToCloudinary(file);
-              } catch (err) {
-                console.error('Upload failed for file', i, err);
-                alert('Upload failed for one of the files. Try again.');
-                submitBtn.disabled = false;
-                submitBtn.textContent = originalText;
-                submitBtn.style.opacity = '';
-                submitBtn.style.cursor = '';
-                return;
-              }
-              uploadedFiles.push({ url, name: file.name, meta });
-            }
-
-            // try to fetch user profile name if available
-            let userProfile = {};
-            try {
-              const userDoc = await db.collection('users').doc(user.uid).get();
-              if (userDoc.exists) userProfile = userDoc.data();
-            } catch (e) { /* ignore */ }
-
-            const submissionDoc = {
-              jobId,
-              jobTitle: jobData.title || '',
-              submittedBy: {
-                uid: user.uid,
-                name: (user.displayName || userProfile.name) || '',
-                email: user.email || '',
-                photo: user.photoURL || ''
-              },
-              files: uploadedFiles,
-              status: 'submitted',
-              submittedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-
-            // save
-            await db.collection('affiliate_submissions').doc().set(submissionDoc);
-
-            // update UI (provide local timestamp for immediate feedback)
-            const localSubDoc = Object.assign({}, submissionDoc, { submittedAt: new Date() });
-            markAsSubmittedUI(localSubDoc);
-            alert('✅ Proof submitted successfully!');
-          } catch (err) {
-            console.error('Error saving submission', err);
-            alert('Something went wrong while saving your submission. Try again.');
-            submitBtn.disabled = false;
-            submitBtn.textContent = originalText;
-            submitBtn.style.opacity = '';
-            submitBtn.style.cursor = '';
-          }
-        });
-      }
-
-    } catch (err) {
-      console.error('checkExistingSubmissionAndSetup error', err);
-    }
-  }
-
-  // run setup
-  checkExistingSubmissionAndSetup();
+  // Submit Task placeholder - wire to your submission flow  
+  const submitBtn = detailsSection.querySelector('#submitTaskBtn');  
+  if (submitBtn) {  
+    submitBtn.addEventListener('click', () => {  
+      // TODO: Connect your submission UI/upload + create affiliate_submissions doc  
+      // Example:  
+      // openSubmissionModal(jobId, jobData)  
+      alert('Submit task clicked. Implement submission flow (upload proof -> create affiliate_submissions doc).');  
+    });  
+  }  
 }
 
 
 
 
-
-// --- affiliate jobs listener ---
-function startAffiliateJobsListener() {
-  const container = document.getElementById("affiliate-tasks");
-  if (!container) {
-    console.warn('affiliate-tasks container not found in DOM.');
-    return;
-  }
-
-  db.collection("affiliateJobs")
-    .where("status", "==", "approved")
-    .orderBy("postedAt", "desc")
-    .onSnapshot(snapshot => {
-      container.innerHTML = "";
-      snapshot.forEach(doc => {
-        const job = doc.data();
-        jobCache.set(doc.id, job);
-        const card = renderAffiliateCard({
-          id: doc.id,
-          job: job,
-          approvedCount: job.approvedCount || 0
-        });
-        container.appendChild(card);
-      });
-    }, err => console.error("affiliateJobs listener error", err));
-}
-
-// --- click handler for affiliate cards ---
-function attachGridClickHandler() {
-  const container = document.getElementById("affiliate-tasks");
-  if (!container) return;
-
-  container.addEventListener("click", e => {
-    const btn = e.target.closest(".view-btn");
-    if (!btn) return;
-    const id = btn.dataset.id;
-    if (!id) return;
-
-    db.collection("affiliateJobs").doc(id).get().then(doc => {
-      if (!doc.exists) return;
-      const job = doc.data();
-      showAffiliateJobDetails(id, job);
-    }).catch(err => console.error("fetch affiliate job error", err));
-  });
-}
 
 	
 	
@@ -4084,6 +3839,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
