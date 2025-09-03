@@ -1223,32 +1223,50 @@
   box-shadow: 0 16px 40px rgba(15,23,42,0.12);
 }
 
-/* image (fixed height, always neat) */
+/* image (fixed height) */
 .myAffiliateTasksSwiper .job-image,
 .myAffiliateTasksSwiper .job-thumb {
   width: 100%;
-  height: 160px;
+  height: 180px;                 /* a touch taller like the screenshot */
   object-fit: cover;
   display: block;
   border-bottom: 1px solid rgba(15,23,42,0.06);
 }
 
-/* info row */
+/* info row -> left (brand + text) + right (button) */
 .myAffiliateTasksSwiper .job-info {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
   padding: 14px 18px;
   gap: 12px;
+}
+
+/* NEW: brand avatar beside title */
+.myAffiliateTasksSwiper .job-leading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.myAffiliateTasksSwiper .job-brand {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  object-fit: cover;
+  background: #e2e8f0;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(15,23,42,0.08);
+  flex-shrink: 0;
 }
 
 /* text column */
 .myAffiliateTasksSwiper .job-text {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   flex: 1;
-  min-width: 0; /* allow ellipsis if text is long */
+  min-width: 0;
 }
 .myAffiliateTasksSwiper .job-text .title {
   font-weight: 700;
@@ -1259,12 +1277,16 @@
   text-overflow: ellipsis;
 }
 .myAffiliateTasksSwiper .job-text .meta {
-  font-size: 0.85rem;
+  font-size: 0.86rem;
   color: #64748b;
   line-height: 1.2;
 }
+.myAffiliateTasksSwiper .job-text .category {
+  font-size: 0.8rem;
+  color: #94a3b8; /* small, lighter text like "Business" */
+}
 
-/* button (clickable, large area, modern gradient) */
+/* button */
 .myAffiliateTasksSwiper .view-job-btn,
 .myAffiliateTasksSwiper .view-btn {
   background: linear-gradient(135deg,#2563eb,#1d4ed8);
@@ -1278,43 +1300,37 @@
   cursor: pointer;
   user-select: none;
   transition: transform .18s ease, box-shadow .18s ease;
+  animation: btnPulse 2.5s infinite;
 }
 .myAffiliateTasksSwiper .view-job-btn:active,
-.myAffiliateTasksSwiper .view-btn:active {
-  transform: scale(0.96);
-}
+.myAffiliateTasksSwiper .view-btn:active { transform: scale(0.96); }
 .myAffiliateTasksSwiper .view-job-btn:hover,
 .myAffiliateTasksSwiper .view-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 28px rgba(37,99,235,0.35);
 }
 
-/* pulse micro-animation (modern touch) */
-@keyframes btnPulse {
-  0% { box-shadow: 0 0 0 0 rgba(37,99,235,0.35); }
-  70% { box-shadow: 0 0 0 10px rgba(37,99,235,0); }
-  100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); }
+/* pagination dots like screenshot */
+.myAffiliateTasksSwiper .swiper-pagination-bullet {
+  width: 8px; height: 8px; opacity: 1; background: #cbd5e1;
 }
-.myAffiliateTasksSwiper .view-job-btn,
-.myAffiliateTasksSwiper .view-btn {
-  animation: btnPulse 2.5s infinite;
+.myAffiliateTasksSwiper .swiper-pagination-bullet-active {
+  background: #475569;
 }
 
 /* responsive tweak */
 @media (max-width: 400px) {
   .myAffiliateTasksSwiper .job-info {
-    flex-direction: column;
-    align-items: flex-start;
+    grid-template-columns: 1fr;  /* stack on small screens */
     gap: 10px;
   }
   .myAffiliateTasksSwiper .view-job-btn,
   .myAffiliateTasksSwiper .view-btn {
-    align-self: stretch;
+    width: 100%;
     text-align: center;
   }
 }
 
-	
 /* ---------------- GRID CARDS (2 per row) ---------------- */
 #affiliate-tasks .job-card {
   background: #fff;
@@ -1330,7 +1346,6 @@
   box-shadow: 0 14px 36px rgba(2,6,23,0.08);
 }
 
-/* grid image a bit smaller than swiper */
 #affiliate-tasks .job-image {
   width: 100%;
   height: 120px;
@@ -1354,14 +1369,14 @@
 #affiliate-tasks .job-price {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #0b6f44; /* deep green */
+  color: #0b6f44;
 }
 #affiliate-tasks .job-progress {
   font-size: 0.8rem;
   color: #64748b;
 }
 
-/* progress bar (if your JS injects .job-progress-bar > i with width) */
+/* progress bar */
 #affiliate-tasks .job-progress-bar {
   width: 100%;
   height: 8px;
@@ -1371,15 +1386,32 @@
   margin-top: 6px;
 }
 #affiliate-tasks .job-progress-bar > i {
-  display:block;
-  height:100%;
-  border-radius:999px;
+  display: block;
+  height: 100%;
+  border-radius: 999px;
   background: linear-gradient(90deg,#facc15,#3b82f6);
-  width:0%;
+  width: 0%;
   transition: width .45s ease;
 }
 
-/* bottom button for grid cards */
+/* NEW: optional mini brand row in grid (if you want it) */
+#affiliate-tasks .brand-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#affiliate-tasks .job-brand {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  object-fit: cover;
+  background: #e2e8f0;
+  flex-shrink: 0;
+  border: 1px solid #fff;
+  box-shadow: 0 1px 4px rgba(15,23,42,0.08);
+}
+
+/* grid button */
 #affiliate-tasks .view-btn,
 #affiliate-tasks .view-job-btn {
   margin-top: 8px;
@@ -1401,10 +1433,17 @@
   box-shadow: 0 12px 28px rgba(37,99,235,0.22);
 }
 
-/* small responsive tweak to preserve 2-per-row on tiny screens */
+/* tiny screens */
 @media (max-width: 360px) {
   #affiliate-tasks { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .myAffiliateTasksSwiper .job-card { max-width: 92vw; }
+}
+
+/* pulse micro-animation (already present) */
+@keyframes btnPulse {
+  0% { box-shadow: 0 0 0 0 rgba(37,99,235,0.35); }
+  70% { box-shadow: 0 0 0 10px rgba(37,99,235,0); }
+  100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); }
 }
 </style>
 
@@ -3372,6 +3411,7 @@
 </body>
 
 </html>
+
 
 
 
