@@ -1210,23 +1210,40 @@
 .myAffiliateTasksSwiper .job-card {
   width: 90vw;
   max-width: 420px;
-  border-radius: 18px;
+  border-radius: 20px;
   overflow: hidden;
   background: #fff;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 .myAffiliateTasksSwiper .job-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.12);
 }
+
+/* top thumbnail (fixed height, no stretch) */
+.myAffiliateTasksSwiper .job-thumb {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-bottom: 1px solid #f1f1f1;
+}
+
+/* job info row */
 .myAffiliateTasksSwiper .job-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px;
+}
+
+/* text area */
+.myAffiliateTasksSwiper .job-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 .myAffiliateTasksSwiper .job-text .title {
   font-weight: 600;
@@ -1236,16 +1253,18 @@
 .myAffiliateTasksSwiper .job-text .meta {
   color: #6b7280;
   font-size: 0.85rem;
-  margin-top: 2px;
 }
+
+/* button aligned right */
 .myAffiliateTasksSwiper .view-job-btn {
   background: linear-gradient(135deg,#2563eb,#1d4ed8);
   color: #fff;
-  padding: 8px 16px;
-  border-radius: 10px;
+  padding: 10px 18px;
+  border-radius: 12px;
   font-size: 0.85rem;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(37,99,235,0.35);
   transition: transform 0.2s ease, background 0.2s ease;
 }
 .myAffiliateTasksSwiper .view-job-btn:hover {
@@ -1256,8 +1275,8 @@
 /* === GRID CARDS (2 per row) === */
 #affiliate-tasks .job-card {
   background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  border-radius: 16px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1267,8 +1286,9 @@
   transform: translateY(-3px);
   box-shadow: 0 8px 20px rgba(0,0,0,0.1);
 }
+
 #affiliate-tasks .job-body {
-  padding: 0.9rem;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -1287,12 +1307,14 @@
   font-size: 0.8rem;
   color: #6b7280;
 }
+
+/* bottom button */
 #affiliate-tasks .view-btn {
   margin-top: 0.6rem;
   padding: 0.55rem;
   background: linear-gradient(135deg,#2563eb,#1d4ed8);
   color: #fff;
-  border-radius: 10px;
+  border-radius: 12px;
   text-align: center;
   font-weight: 600;
   font-size: 0.85rem;
@@ -3270,6 +3292,7 @@
 </body>
 
 </html>
+
 
 
 
