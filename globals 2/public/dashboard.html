@@ -1185,120 +1185,151 @@
                         
 	                 <!-- Affiliate Tasks Section -->  
 	
-
-<!-- Affiliate Tasks Section -->
-<div class="px-4 pt-6">
-  <!-- Section Header -->
+<!-- Affiliate Tasks Section (UPGRADED UI - paste to replace existing block) -->
+<div class="px-4 pt-6 affiliate-section">
+  <!-- Header -->
   <div class="flex items-center gap-2 mb-4">
     <div class="w-1 h-5 bg-gradient-to-b from-yellow-400 to-blue-600 rounded"></div>
     <h2 class="text-base font-semibold text-neutral-900">Affiliate Tasks</h2>
   </div>
 
-  <!-- Admin Swiper -->
+  <!-- Admin Swiper (keeps your Swiper markup & IDs) -->
   <div class="swiper myAffiliateTasksSwiper mb-6">
     <div class="swiper-wrapper" id="affiliateTasksSwiperContainer"></div>
     <div class="swiper-pagination mt-2"></div>
   </div>
 
-  <!-- Worker Grid -->
-  <div id="affiliate-tasks"
-       class="tab-section grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-    <!-- Jobs injected by script -->
+  <!-- Worker Grid (keeps the same ID your script expects) -->
+  <div id="affiliate-tasks" class="tab-section hidden grid gap-6"
+       style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); align-items:start;">
+    <!-- Jobs will be injected here via JS (job-card markup) -->
   </div>
 </div>
 
-
-
+<!-- Upgraded Styles (non-invasive: target classes your JS uses) -->
 <style>
-/* ===== Job Card ===== */
+/* Container adjustments for modern spacing */
+.affiliate-section { max-width: 1200px; margin: 0 auto; }
+
+/* ===== Job Card (unified look for SWIPER & GRID) ===== */
 .job-card {
-  background: linear-gradient(145deg, #ffffff, #f9fafb);
-  border-radius: 20px;
+  background: linear-gradient(145deg, #ffffff, #f8fafc);
+  border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-  transition: transform .25s ease, box-shadow .25s ease;
+  box-shadow: 0 10px 30px rgba(2,6,23,0.06);
+  transition: transform 0.28s cubic-bezier(.2,.9,.24,1), box-shadow .28s;
   display: flex;
   flex-direction: column;
+  border: 1px solid rgba(15,23,42,0.03);
 }
+
+/* subtle lift */
 .job-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+  transform: translateY(-8px);
+  box-shadow: 0 20px 44px rgba(2,6,23,0.10);
 }
+
+/* image area */
 .job-image {
   width: 100%;
   height: 160px;
   object-fit: cover;
+  display: block;
+  border-bottom: 1px solid rgba(15,23,42,0.03);
 }
+
+/* body */
 .job-body {
-  padding: 1.25rem;
+  padding: 1rem 1.125rem;
   display: flex;
   flex-direction: column;
-  gap: .6rem;
+  gap: 0.6rem;
 }
+
+/* title and meta */
 .job-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #111827;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+  letter-spacing: -0.2px;
 }
+
+/* price pill */
 .job-price {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #16a34a;
+  display: inline-block;
+  margin-top: 4px;
+  font-weight: 700;
+  color: #059669;
+  background: rgba(5,150,105,0.06);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  width: fit-content;
 }
+
+/* progress / small meta */
 .job-progress {
-  font-size: .85rem;
-  color: #6b7280;
+  font-size: 0.87rem;
+  color: #475569;
+  margin-top: 6px;
 }
+
+/* progress bar */
 .job-progress-bar {
   width: 100%;
   height: 8px;
   border-radius: 999px;
-  background: #eef2ff;
+  background: linear-gradient(180deg,#eef2ff,#f8fafc);
   overflow: hidden;
+  margin-top: 10px;
 }
 .job-progress-bar > i {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #facc15, #3b82f6);
-  width: 0%;
-  transition: width .4s ease;
+  display:block;
+  height:100%;
+  border-radius:999px;
+  background: linear-gradient(90deg,#facc15,#3b82f6);
+  width:0%;
+  transition: width .45s cubic-bezier(.2,.9,.24,1);
 }
+
+/* view button */
 .view-btn {
-  margin-top: auto;
-  padding: .65rem 1rem;
+  margin-top: 12px;
+  padding: 0.6rem 1rem;
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  color: white;
+  color: #fff;
   border-radius: 12px;
   text-align: center;
-  font-weight: 600;
-  transition: background .2s ease, transform .2s ease;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(37,99,235,0.12);
+  border: none;
+  cursor: pointer;
 }
-.view-btn:hover {
-  background: linear-gradient(135deg, #1d4ed8, #1e40af);
-  transform: translateY(-2px);
+.view-btn:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(37,99,235,0.14); }
+.view-btn:active { transform: translateY(0); }
+
+/* ===== Swiper specifics (keeps current behavior) ===== */
+.myAffiliateTasksSwiper { padding: 10px 0; }
+.myAffiliateTasksSwiper .swiper-slide { display:flex; justify-content:center; align-items:flex-start; }
+.myAffiliateTasksSwiper .job-card { width: 86vw; max-width: 440px; }
+
+/* ===== Responsive tweaks ===== */
+@media (max-width: 640px) {
+  .job-image { height: 150px; }
+  .job-title { font-size: 1rem; }
+  .job-price { font-size: 0.92rem; padding: 5px 8px; }
+  .view-btn { padding: .55rem .9rem; font-size: .95rem; }
 }
 
-/* ===== Modal / Overlay ===== */
-.aff-overlay { backdrop-filter: blur(8px); }
-.aff-sheet {
-  border-radius: 24px !important;
-  overflow: hidden;
-  box-shadow: 0 30px 80px rgba(2,6,23,.25);
+@media (min-width: 1024px) {
+  /* slightly larger cards on wide screens */
+  .job-card { border-radius: 20px; }
+  .job-image { height: 180px; }
 }
-.aff-head {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-  padding: 20px;
-  color: #fff;
-  font-weight: 600;
-  font-size: 1rem;
-}
-
-/* Swiper tweaks */
-.myAffiliateTasksSwiper { padding: 12px 0; }
-.myAffiliateTasksSwiper .swiper-slide { display: flex; justify-content: center; }
-.myAffiliateTasksSwiper .job-card { width: 85vw; max-width: 420px; }
 </style>
+
+
 
 
 	
@@ -3264,6 +3295,7 @@
 </body>
 
 </html>
+
 
 
 
