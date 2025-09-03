@@ -1208,26 +1208,28 @@ function initAdminSwiper() {
 
           // NEW: small logo at left, title/meta center, small button at right
           slide.innerHTML = `
-            <div class="job-card" style="max-width:420px;">
-              <img class="job-image"
-                   src="${escapeHtml(job.screenshotURL || job.campaignLogoURL || 'https://via.placeholder.com/800x400')}"
-                   alt="${escapeHtml(job.title || '')}">
-              <div class="job-info">
-                <div class="job-leading">
-                  <img class="job-brand"
-                       src="${escapeHtml(job.campaignLogoURL || job.screenshotURL || 'https://via.placeholder.com/72')}"
-                       alt="${escapeHtml(job.title || '')}">
-                  <div class="job-text">
-                    <div class="title">${escapeHtml(job.title || '')}</div>
-                    <div class="meta">₦${escapeHtml(String(job.workerPay || 0))} • ${escapeHtml(String(job.numWorkers || 0))} workers</div>
-                  </div>
-                </div>
+  <div class="job-card" style="max-width:420px;">
+    <img class="job-image"
+         src="${escapeHtml(job.screenshotURL || job.campaignLogoURL || 'https://via.placeholder.com/800x400')}"
+         alt="${escapeHtml(job.title || '')}">
 
-                <!-- keep .view-btn so your handler works -->
-                <button class="view-btn" data-id="${escapeHtml(doc.id)}">View</button>
-              </div>
-            </div>
-          `;
+    <div class="job-info">
+      <!-- LEFT: logo + text -->
+      <div class="job-leading">
+        <img class="job-brand"
+             src="${escapeHtml(job.campaignLogoURL || job.screenshotURL || 'https://via.placeholder.com/72')}"
+             alt="${escapeHtml(job.title || '')}">
+        <div class="job-text">
+          <div class="title">${escapeHtml(job.title || '')}</div>
+          <div class="meta">₦${escapeHtml(String(job.workerPay || 0))} • ${escapeHtml(String(job.numWorkers || 0))} workers</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: small button -->
+      <button class="view-btn" data-id="${escapeHtml(doc.id)}">View</button>
+    </div>
+  </div>
+`;
 
           container.appendChild(slide);
         });
@@ -3870,6 +3872,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
