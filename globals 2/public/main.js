@@ -894,50 +894,74 @@ firebase.firestore().collection("tasks")
 
 
 
-// AFFILIATE - fixed, single-file script
+// AFFILIATE - single-file script (fixed + live submission counts + Cloudinary + search)
 (function () {
-// run after DOM ready so elements exist
-if (document.readyState === 'loading') {
-document.addEventListener('DOMContentLoaded', main);
-} else {
-main();
-}
+  // run after DOM ready so elements exist
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', main);
+  } else {
+    main();
+  }
 
-function main() {
-// ensure firebase is available
-if (typeof firebase === 'undefined' || !firebase.firestore) {
-console.warn('Firebase not found - affiliate script aborted.');
-return;
-}
-const db = firebase.firestore();
+  function main() {
+    // ensure firebase is available
+    if (typeof firebase === 'undefined' || !firebase.firestore) {
+      console.warn('Firebase not found - affiliate script aborted.');
+      return;
+    }
+    const db = firebase.firestore();
 
-// ---- small util ----  
-function escapeHtml(s = "") {  
-  return String(s)  
-    .replace(/&/g, "&amp;")  
-    .replace(/</g, "&lt;")  
-    .replace(/>/g, "&gt;")  
-    .replace(/"/g, "&quot;")  
-    .replace(/'/g, "&#39;");  
-}  
+    // ---------------- Cloudinary config (use your values) ----------------
+    // You said earlier you have these values; leaving defaults you gave me.
+    const CLOUD_NAME = "dyquovrg3";           // replace if needed
+    const UPLOAD_PRESET = "globals_tasks_proofs"; // replace if needed
 
-// ---- inject modal + collapsible styles once ----  
-function ensureDetailStyles() {  
-  if (document.getElementById("affiliate-detail-styles")) return;  
-  const style = document.createElement("style");  
-  style.id = "affiliate-detail-styles";  
-  style.textContent = `
+    // Universal upload function (returns secure_url)
+    async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", preset);
 
-/* Modal / overlay styles (kept small so your existing job-card CSS can stay) */v
+      try {
+        const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+          method: "POST",
+          body: formData
+        });
+        const cloudData = await cloudRes.json();
+        if (cloudData.secure_url) return cloudData.secure_url;
+        throw new Error(cloudData.error?.message || "Cloudinary upload failed");
+      } catch (err) {
+        console.error("Cloudinary upload error:", err);
+        throw err;
+      }
+    }
+
+    // ---- small util ----
+    function escapeHtml(s = "") {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    // ---- inject modal + collapsible styles once ----
+    function ensureDetailStyles() {
+      if (document.getElementById("affiliate-detail-styles")) return;
+      const style = document.createElement("style");
+      style.id = "affiliate-detail-styles";
+      style.textContent = `
+/* Modal / overlay styles */
 .aff-overlay { position:fixed; inset:0; z-index:9999; display:flex; align-items:flex-start; justify-content:center; overflow:auto; padding:24px; background:rgba(2,6,23,.56); backdrop-filter: blur(6px); }
 .aff-sheet { width:min(720px, 100%); background:#fff; border-radius:20px; overflow:hidden; box-shadow:0 30px 80px rgba(2,6,23,.25); position:relative; }
 .aff-head { background: linear-gradient(135deg, #facc15 0%, #3b82f6 100%); padding:18px 20px; color:#fff; }
 .aff-close { position:absolute; right:14px; top:14px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.16); width:36px; height:36px; border-radius:10px; display:grid; place-items:center; color:#fff; cursor:pointer; }
 .aff-close:hover { background:rgba(255,255,255,.18); }
 
-/* Collapsible instructions /
+/* Collapsible instructions */
 .collapsible { overflow:hidden; transition:max-height .32s ease; line-height:1.6; position:relative; }
-.collapsible.is-collapsed { max-height: 6.5em; } / ≈ 4 lines */
+.collapsible.is-collapsed { max-height: 6.5em; } /* ≈ 4 lines */
 .collapsible .fade-edge { content:""; position:absolute; left:0; right:0; bottom:0; height:2.2em; background: linear-gradient(to bottom, rgba(255,255,255,0), #ffffff 70%); pointer-events:none; transition:opacity .2s; }
 .collapsible:not(.is-collapsed) .fade-edge { opacity:0; }
 
@@ -945,429 +969,488 @@ function ensureDetailStyles() {
 .job-progress-bar { width:100%; height:8px; border-radius:999px; background:#eef2ff; overflow:hidden; margin-top:8px; }
 .job-progress-bar > i { display:block; height:100%; border-radius:999px; background: linear-gradient(90deg,#facc15,#3b82f6); width:0%; transition:width .4s ease; }
 `;
-document.head.appendChild(style);
-}
+      document.head.appendChild(style);
+    }
 
-// helper to create or return detail overlay  
-function ensureDetailScreen() {  
-  let el = document.getElementById("affiliate-detail-screen");  
-  if (!el) {  
-    el = document.createElement("div");  
-    el.id = "affiliate-detail-screen";  
-    el.style.display = "none";  
-    el.className = "aff-overlay";  
-    // if grid container exists, insert after it; otherwise append to body  
-    const anchor = document.getElementById("affiliate-tasks");  
-    if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(el, anchor.nextSibling);  
-    else document.body.appendChild(el);  
-  }  
-  return el;  
-}  
-
-// --- main DOM refs & cache ---  
-const affiliateTasksContainer = document.getElementById("affiliate-tasks");  
-const jobCache = new Map(); // id -> jobData  
-const submissionCountsUnsub = { fn: null }; // holder for single submissions listener unsubscribe
-
-// render a single job card (keeps your job-card style classes)  
-function renderAffiliateCard({ id, job, approvedCount }) {  
-  const total = job.numWorkers || 0;  
-  const percent = total ? Math.min(100, Math.round((approvedCount / total) * 100)) : 0;  
-
-  const card = document.createElement('div');  
-  card.className = 'job-card';  
-
-  // build innerHTML using the classes you provided earlier (job-image, job-body, etc.)  
-  card.innerHTML = `  
-    <img class="job-image" src="${escapeHtml(job.campaignLogoURL || job.screenshotURL || 'https://via.placeholder.com/400x200')}" alt="${escapeHtml(job.title || 'Job image')}">  
-    <div class="job-body">  
-      <h3 class="job-title">${escapeHtml(job.title || 'Untitled')}</h3>  
-      <div class="job-price">₦${escapeHtml(String(job.workerPay || 0))}</div>  
-      <div class="job-progress">${escapeHtml(String(approvedCount || 0))}/${escapeHtml(String(total))} workers • ${percent}%</div>  
-      <div class="job-progress-bar"><i style="width:${percent}%;"></i></div>  
-      <button class="view-btn" data-id="${escapeHtml(id)}">View Task</button>  
-    </div>  
-  `;  
-
-  return card;  
-}
-
-
-
-// function startAffiliateJobsListener FUNCTION 
-// start Firestore listener for affiliateJobs (grid) — single submissions listener approach
-function startAffiliateJobsListener() {
-  if (!affiliateTasksContainer) {
-    console.warn("#affiliate-tasks container not found. Affiliate tasks will not render.");
-    return;
-  }
-  ensureDetailStyles();
-
-  // listen for affiliateJobs (approved)
-  db.collection("affiliateJobs")
-    .where("status", "==", "approved")
-    .onSnapshot(async (snap) => {
-
-      // render jobs immediately (approvedCount will be updated when submissions snapshot arrives)
-      affiliateTasksContainer.innerHTML = '';
-      jobCache.clear();
-
-      const jobs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      jobs.forEach(j => {
-        jobCache.set(j.id, j);
-        const card = renderAffiliateCard({ id: j.id, job: j, approvedCount: 0 });
-        affiliateTasksContainer.appendChild(card);
-      });
-
-      // unsubscribe previous submissions listener if any (avoid duplicates)
-      try {
-        if (submissionCountsUnsub.fn) {
-          submissionCountsUnsub.fn();
-        }
-      } catch (e) { /* ignore */ }
-      submissionCountsUnsub.fn = null;
-
-      // Attach ONE realtime listener to all approved submissions.
-      // When submissions change, we compute counts per job and update DOM for each card.
-      submissionCountsUnsub.fn = db.collection("affiliate_submissions")
-        .where("status", "==", "approved")
-        .onSnapshot(subSnap => {
-          // build counts map from submissions
-          const counts = Object.create(null);
-          subSnap.forEach(doc => {
-            const d = doc.data();
-            const jid = d.jobId;
-            if (!jid) return;
-            counts[jid] = (counts[jid] || 0) + 1;
-          });
-
-          // update each rendered job card
-          jobs.forEach(job => {
-            const approvedCount = counts[job.id] || 0;
-            const total = job.numWorkers || 0;
-            const percent = total ? Math.min(100, Math.round((approvedCount / total) * 100)) : 0;
-
-            // find the card by view button dataset (ensures we target the right card)
-            const btn = affiliateTasksContainer.querySelector(`.view-btn[data-id="${job.id}"]`);
-            const jobCardEl = btn ? btn.closest('.job-card') : null;
-            if (jobCardEl) {
-              const progText = jobCardEl.querySelector(".job-progress");
-              const progBar = jobCardEl.querySelector(".job-progress-bar > i");
-              if (progText) progText.textContent = `${approvedCount}/${total} workers • ${percent}%`;
-              if (progBar) progBar.style.width = percent + "%";
-            }
-
-            // keep cache up to date
-            const cached = jobCache.get(job.id) || {};
-            cached.approvedCount = approvedCount;
-            jobCache.set(job.id, cached);
-          });
-        }, err => {
-          console.error("affiliate_submissions listener error:", err);
-        });
-
-    }, err => {
-      console.error("affiliateJobs listener error:", err);
-    });
-}
-
-
-
-
-
-	
-// show job details in modal overlay (only when view clicked)
-function showAffiliateJobDetails(jobId, jobData) {
-  ensureDetailStyles();
-  const detailsSection = ensureDetailScreen();
-
-  if (affiliateTasksContainer) affiliateTasksContainer.style.display = 'none';
-  detailsSection.style.display = 'flex';
-
-  function safeHtmlText(s) {
-    return escapeHtml(s || '').replace(/\n/g, '<br>');
-  }
-
-  const targetLinkHtml = jobData.targetLink
-    ? `<a href="${escapeHtml(jobData.targetLink)}" target="_blank" rel="noopener noreferrer" class="text-blue-600 break-words">${escapeHtml(jobData.targetLink)}</a>`
-    : `<span class="text-gray-500">No link provided</span>`;
-
-  const proofHtml = safeHtmlText(jobData.proofRequired || 'Proof details not provided');
-  const instructionsHtml = safeHtmlText(jobData.instructions || 'No instructions provided');
-
-  const proofFileCount = jobData.proofFileCount || 1;
-
-  detailsSection.innerHTML = `
-    <div class="aff-sheet">
-      <button class="aff-close" title="Back">←</button>
-      <div class="aff-head">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div style="width:48px;height:48px;border-radius:12px;overflow:hidden;background:#fff44c">
-            <img src="${escapeHtml(jobData.campaignLogoURL || jobData.screenshotURL || 'https://via.placeholder.com/96')}" class="w-full h-full" style="width:100%;height:100%;object-fit:cover" alt="">
-          </div>
-          <div>
-            <div style="font-weight:700;font-size:1rem">${escapeHtml(jobData.title || 'Affiliate Job')}</div>
-            <div style="font-size:12px;opacity:.95">${escapeHtml(jobData.category || 'Affiliate Campaign')}</div>
-          </div>
-        </div>
-      </div>
-
-      <div style="padding:18px;display:block;gap:16px">
-        <!-- Worker Pay & Total Workers -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-          <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9">
-            <div style="font-size:11px;color:#64748b">Worker Pay</div>
-            <div style="font-weight:800;font-size:20px">₦${escapeHtml(String(jobData.workerPay || 0))}</div>
-          </div>
-          <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9">
-            <div style="font-size:11px;color:#64748b">Total Workers</div>
-            <div style="font-weight:800;font-size:20px">${escapeHtml(String(jobData.numWorkers || 0))}</div>
-          </div>
-        </div>
-
-        <!-- Instructions -->
-        <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div style="font-weight:600">Instructions</div>
-            <button id="toggleInstr" style="background:none;border:0;color:#1e40af;font-weight:600;cursor:pointer">
-              <span>Show more</span>
-              <svg style="width:14px;height:14px;transform:rotate(0deg);transition:transform .2s" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-              </svg>
-            </button>
-          </div>
-          <div id="instructionsPanel" class="collapsible is-collapsed" style="margin-top:10px;color:#334155">
-            ${instructionsHtml}
-            <div class="fade-edge"></div>
-          </div>
-        </div>
-
-        <!-- Target Link -->
-        <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">
-          <div style="font-weight:600;margin-bottom:6px">Target Link</div>
-          ${targetLinkHtml}
-        </div>
-
-        <!-- Proof Required -->
-        <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">
-          <div style="font-weight:600;margin-bottom:6px">Proof Required</div>
-          <div style="color:#374151">${proofHtml}</div>
-        </div>
-
-        <!-- Submit Proof Section -->
-        <div style="padding:12px;border-radius:12px;border:1px solid #dbeafe;background:#f8fafc;margin-bottom:16px">
-          <div style="font-weight:700;margin-bottom:10px;color:#1e3a8a">Submit Proof</div>
-          <form id="proofForm" style="display:flex;flex-direction:column;gap:10px">
-            ${Array.from({ length: proofFileCount }).map((_, i) => `
-              <div>
-                <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">Upload File ${i+1}</label>
-                <input type="file" name="proofFile${i+1}" accept="image/*" style="border:1px solid #cbd5e1;border-radius:8px;padding:6px;width:100%">
-              </div>
-            `).join("")}
-            <div>
-              <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">Extra Proof (e.g email/phone)</label>
-              <textarea name="extraProof" rows="3" placeholder="Enter additional proof..." style="border:1px solid #cbd5e1;border-radius:8px;padding:8px;width:100%"></textarea>
-            </div>
-            <button id="submitTaskBtn" class="btn-primary" style="width:100%;padding:10px;border-radius:10px;font-weight:600">Submit Task</button>
-          </form>
-        </div>
-
-        <!-- Submitted Info -->
-        <div id="submittedInfo" style="display:none;padding:12px;border-radius:12px;border:1px solid #bbf7d0;background:#ecfdf5;color:#065f46"></div>
-      </div>
-    </div>
-  `;
-
-  // back/close
-  const backBtn = detailsSection.querySelector('.aff-close');
-  if (backBtn) {
-    backBtn.addEventListener('click', () => {
-      detailsSection.style.display = 'none';
-      detailsSection.innerHTML = '';
-      if (affiliateTasksContainer) {
-        affiliateTasksContainer.style.display = '';
-        try { affiliateTasksContainer.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
+    // helper to create or return detail overlay
+    function ensureDetailScreen() {
+      let el = document.getElementById("affiliate-detail-screen");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "affiliate-detail-screen";
+        el.style.display = "none";
+        el.className = "aff-overlay";
+        const anchor = document.getElementById("affiliate-tasks");
+        if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(el, anchor.nextSibling);
+        else document.body.appendChild(el);
       }
-    });
-  }
+      return el;
+    }
 
-  // collapsible toggle
-  const panel = detailsSection.querySelector('#instructionsPanel');
-  const toggle = detailsSection.querySelector('#toggleInstr');
-  if (toggle && panel) {
-    const label = toggle.querySelector('span');
-    const icon = toggle.querySelector('svg');
-    toggle.addEventListener('click', () => {
-      const collapsed = panel.classList.contains('is-collapsed');
-      if (collapsed) {
-        panel.style.maxHeight = panel.scrollHeight + 'px';
-        panel.classList.remove('is-collapsed');
-        if (label) label.textContent = 'Show less';
-        if (icon) icon.style.transform = 'rotate(180deg)';
-        setTimeout(() => { panel.style.maxHeight = ''; }, 320);
-      } else {
-        panel.style.maxHeight = panel.scrollHeight + 'px';
-        requestAnimationFrame(() => {
-          panel.classList.add('is-collapsed');
-          requestAnimationFrame(() => { panel.style.maxHeight = ''; });
-        });
-        if (label) label.textContent = 'Show more';
-        if (icon) icon.style.transform = 'rotate(0deg)';
-      }
-    });
-  }
+    // --- main DOM refs & cache ---
+    const affiliateTasksContainer = document.getElementById("affiliate-tasks");
+    const jobCache = new Map(); // id -> jobData
 
-  // handle proof submission
-  const form = detailsSection.querySelector('#proofForm');
-  const submitInfo = detailsSection.querySelector('#submittedInfo');
-  if (form) {
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const user = firebase.auth().currentUser;
-      if (!user) return alert("You must be logged in.");
+    // submissionCountsUnsub will hold the single global submissions listener unsubscribe
+    let submissionCountsUnsub = null;
 
-      const proofData = {
-        jobId,
-        userId: user.uid,
-        submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        extraProof: form.extraProof.value || "",
-        files: [],
-        status: "on_review",                 // ✅ new status
-        workerEarn: jobData.workerPay || 0   // ✅ add workerEarn
-      };
+    // render a single job card (keeps your job-card style classes)
+    function renderAffiliateCard({ id, job, approvedCount = 0 }) {
+      const total = job.numWorkers || 0;
+      const percent = total ? Math.min(100, Math.round((approvedCount / total) * 100)) : 0;
 
-      // ✅ upload each file to Cloudinary
-      for (let i = 0; i < proofFileCount; i++) {
-        const fileInput = form[`proofFile${i+1}`];
-        if (fileInput && fileInput.files.length > 0) {
-          try {
-            const url = await uploadToCloudinary(fileInput.files[0]);
-            proofData.files.push(url);
-          } catch (err) {
-            console.error("Cloudinary upload failed", err);
-            alert("File upload failed. Please try again.");
-            return;
+      const card = document.createElement('div');
+      card.className = 'job-card';
+      // allow quick search text (optional) - keep it small and useful
+      const dataSearch = [
+        job.title, job.category, String(job.workerPay), String(job.numWorkers)
+      ].filter(Boolean).join(' | ');
+
+      card.setAttribute('data-search', dataSearch.toLowerCase());
+
+      card.innerHTML = `
+        <img class="job-image" src="${escapeHtml(job.campaignLogoURL || job.screenshotURL || 'https://via.placeholder.com/400x200')}" alt="${escapeHtml(job.title || 'Job image')}">
+        <div class="job-body">
+          <h3 class="job-title">${escapeHtml(job.title || 'Untitled')}</h3>
+          <div class="job-price">₦${escapeHtml(String(job.workerPay || 0))}</div>
+          <div class="job-progress">${escapeHtml(String(approvedCount || 0))}/${escapeHtml(String(total))} workers • ${percent}%</div>
+          <div class="job-progress-bar"><i style="width:${percent}%;"></i></div>
+          <button class="view-btn" data-id="${escapeHtml(id)}">View Task</button>
+        </div>
+      `;
+      return card;
+    }
+
+    // ---------- SEARCH ----------
+    function initTaskSearch() {
+      const searchInput = document.getElementById("taskSearchInput");
+      const taskGrid = document.getElementById("affiliate-tasks");
+      if (!searchInput || !taskGrid) return;
+
+      // show/hide no-results helper
+      function showEmpty(show) {
+        let empty = document.getElementById("taskSearchEmpty");
+        if (show) {
+          if (!empty) {
+            empty = document.createElement("div");
+            empty.id = "taskSearchEmpty";
+            empty.className = "text-sm text-slate-500 py-6 text-center";
+            empty.textContent = "No tasks match your search.";
+            taskGrid.parentElement.appendChild(empty);
           }
+          empty.style.display = "";
+        } else if (empty) {
+          empty.style.display = "none";
         }
       }
 
-      // check if user already submitted
-      const existing = await db.collection("affiliate_submissions")
-        .where("jobId", "==", jobId)
-        .where("userId", "==", user.uid)
-        .get();
+      searchInput.addEventListener("input", () => {
+        const q = searchInput.value.trim().toLowerCase();
+        const cards = taskGrid.querySelectorAll(".job-card");
+        if (!q) {
+          cards.forEach(c => c.style.display = "");
+          showEmpty(false);
+          return;
+        }
+        let any = false;
+        cards.forEach(card => {
+          const preset = card.getAttribute("data-search") || "";
+          const fallback = (card.textContent || "").toLowerCase();
+          const text = preset.length ? preset : fallback;
+          const match = text.includes(q);
+          card.style.display = match ? "" : "none";
+          if (match) any = true;
+        });
+        showEmpty(!any);
+      });
+    }
 
-      if (!existing.empty) {
-        alert("You have already submitted this task.");
+    // ---------- LISTENERS & RENDERING ----------
+    // start Firestore listener for affiliateJobs (grid) — single submissions listener approach (robust)
+    function startAffiliateJobsListener() {
+      if (!affiliateTasksContainer) {
+        console.warn("#affiliate-tasks container not found. Affiliate tasks will not render.");
         return;
       }
+      ensureDetailStyles();
 
-      await db.collection("affiliate_submissions").add(proofData);
+      db.collection("affiliateJobs")
+        .where("status", "==", "approved")
+        .onSnapshot(async (snap) => {
+          // prepare job list
+          const jobs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      form.style.display = "none";
-      submitInfo.style.display = "block";
-      submitInfo.textContent = "✅ You have submitted your proof. Awaiting review.";
-    });
-  }
-}
+          // clear grid & cache then render cards (counts will update immediately when submissions snapshot arrives)
+          affiliateTasksContainer.innerHTML = '';
+          jobCache.clear();
+          jobs.forEach(j => {
+            jobCache.set(j.id, j);
+            affiliateTasksContainer.appendChild(renderAffiliateCard({ id: j.id, job: j, approvedCount: 0 }));
+          });
 
+          // unsubscribe previous global submissions listener if any
+          try { if (submissionCountsUnsub) submissionCountsUnsub(); } catch (e) { /* ignore */ }
+          submissionCountsUnsub = null;
 
+          // attach one realtime listener to approved submissions
+          submissionCountsUnsub = db.collection("affiliate_submissions")
+            .where("status", "==", "approved")
+            .onSnapshot(subSnap => {
+              // build counts map
+              const counts = Object.create(null);
+              subSnap.forEach(doc => {
+                const d = doc.data();
+                if (!d || !d.jobId) return;
+                counts[d.jobId] = (counts[d.jobId] || 0) + 1;
+              });
 
+              // update each rendered job card
+              jobs.forEach(job => {
+                const approvedCount = counts[job.id] || 0;
+                const total = job.numWorkers || 0;
+                const percent = total ? Math.min(100, Math.round((approvedCount / total) * 100)) : 0;
 
+                // find the card via view button dataset
+                const btn = affiliateTasksContainer.querySelector(`.view-btn[data-id="${job.id}"]`);
+                const jobCardEl = btn ? btn.closest('.job-card') : null;
+                if (jobCardEl) {
+                  const progText = jobCardEl.querySelector(".job-progress");
+                  const progBar = jobCardEl.querySelector(".job-progress-bar > i");
+                  if (progText) progText.textContent = `${approvedCount}/${total} workers • ${percent}%`;
+                  if (progBar) progBar.style.width = percent + "%";
+                }
 
-	
-	
+                // update cache
+                const cached = jobCache.get(job.id) || {};
+                cached.approvedCount = approvedCount;
+                jobCache.set(job.id, cached);
+              });
+            }, err => {
+              console.error("affiliate_submissions listener error:", err);
+            });
 
-// --- ADMIN SWIPER (kept guarded) ---
-function initAdminSwiper() {
-if (typeof Swiper === 'undefined') return; // not loaded
-try {
-const swiper = new Swiper('.myAffiliateTasksSwiper', {
-slidesPerView: 'auto',
-centeredSlides: true,
-centeredSlidesBounds: true,
-spaceBetween: 18,
-loop: true,
-autoplay: { delay: 4000, disableOnInteraction: false },
-pagination: { el: '.swiper-pagination', clickable: true },
-});
+        }, err => {
+          console.error("affiliateJobs listener error:", err);
+        });
+    }
 
-const container = document.getElementById('affiliateTasksSwiperContainer');  
-if (!container) return;  
+    // delegate clicks on the grid to open modal
+    function attachGridClickHandler() {
+      if (!affiliateTasksContainer) return;
+      affiliateTasksContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('.view-btn');
+        if (!btn) return;
+        const id = btn.dataset.id;
+        const job = jobCache.get(id);
+        if (job) showAffiliateJobDetails(id, job);
+      });
+    }
 
-// Firestore listener to render slides  
-db.collection("adminJobs").orderBy("postedAt", "desc").limit(5)  
-  .onSnapshot(snapshot => {  
-    container.innerHTML = '';  
-    snapshot.forEach(doc => {  
-      const job = doc.data();  
-      const slide = document.createElement('div');  
-      slide.className = 'swiper-slide';  
+    // show job details in modal overlay (only when view clicked)
+    function showAffiliateJobDetails(jobId, jobData) {
+      ensureDetailStyles();
+      const detailsSection = ensureDetailScreen();
 
-      // NEW: small logo at left, title/meta center, small button at right  
-      slide.innerHTML = `
+      if (affiliateTasksContainer) affiliateTasksContainer.style.display = 'none';
+      detailsSection.style.display = 'flex';
 
-  <div class="job-card" style="max-width:420px;">  
-    <img class="job-image"  
-         src="${escapeHtml(job.screenshotURL || job.campaignLogoURL || 'https://via.placeholder.com/800x400')}"  
-         alt="${escapeHtml(job.title || '')}">  <div class="job-info">  
-  <!-- LEFT: logo + text -->  
-  <div class="job-leading">  
-    <img class="job-brand"  
-         src="${escapeHtml(job.campaignLogoURL || job.screenshotURL || 'https://via.placeholder.com/72')}"  
-         alt="${escapeHtml(job.title || '')}">  
-    <div class="job-text">  
-      <div class="title">${escapeHtml(job.title || '')}</div>  
-      <div class="meta">₦${escapeHtml(String(job.workerPay || 0))} • ${escapeHtml(String(job.numWorkers || 0))} workers</div>  
-    </div>  
-  </div>  
+      function safeHtmlText(s) {
+        return escapeHtml(s || '').replace(/\n/g, '<br>');
+      }
 
-  <!-- RIGHT: small button -->  
-  <button class="view-btn" data-id="${escapeHtml(doc.id)}">View</button>  
-</div>
+      const targetLinkHtml = jobData.targetLink
+        ? `<a href="${escapeHtml(jobData.targetLink)}" target="_blank" rel="noopener noreferrer" class="text-blue-600 break-words">${escapeHtml(jobData.targetLink)}</a>`
+        : `<span class="text-gray-500">No link provided</span>`;
 
-  </div>  
-`;  container.appendChild(slide);  
-    });  
+      const proofHtml = safeHtmlText(jobData.proofRequired || 'Proof details not provided');
+      const instructionsHtml = safeHtmlText(jobData.instructions || 'No instructions provided');
 
-    // update swiper after DOM changes  
-    try { swiper.update(); } catch (e) { /* ignore */ }  
-  }, err => console.error('adminJobs listener error', err));  
+      const proofFileCount = jobData.proofFileCount || 1;
 
-// Robust delegated listener (attached once) — catches clicks on cloned slides too  
-if (!initAdminSwiper._delegatedClickAttached) {  
-  document.addEventListener('click', function (e) {  
-    const btn = e.target.closest('.view-btn');  
-    if (!btn) return;  
-    const id = btn.dataset.id;  
-    if (!id) return;  
+      // Template includes a small modal progress area (modalProgressText + modalProgressBar) which we'll populate below
+      detailsSection.innerHTML = `
+        <div class="aff-sheet">
+          <button class="aff-close" title="Back">←</button>
+          <div class="aff-head">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="width:48px;height:48px;border-radius:12px;overflow:hidden;background:#fff44c">
+                <img src="${escapeHtml(jobData.campaignLogoURL || jobData.screenshotURL || 'https://via.placeholder.com/96')}" class="w-full h-full" style="width:100%;height:100%;object-fit:cover" alt="">
+              </div>
+              <div>
+                <div style="font-weight:700;font-size:1rem">${escapeHtml(jobData.title || 'Affiliate Job')}</div>
+                <div style="font-size:12px;opacity:.95">${escapeHtml(jobData.category || 'Affiliate Campaign')}</div>
+              </div>
+            </div>
+          </div>
 
-    // fetch job doc and open modal (keeps same behaviour you had)  
-    db.collection("adminJobs").doc(id).get().then(d => {  
-      if (!d.exists) return;  
-      const job = d.data();  
-      try { showAffiliateJobDetails(id, job); }  
-      catch (err) { console.error('showAffiliateJobDetails failed', err); }  
-    }).catch(err => console.error(err));  
-  }, { passive: true });  
+          <div style="padding:18px;display:block;gap:16px">
+            <!-- Worker Pay & Total Workers -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+              <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9">
+                <div style="font-size:11px;color:#64748b">Worker Pay</div>
+                <div style="font-weight:800;font-size:20px">₦${escapeHtml(String(jobData.workerPay || 0))}</div>
+              </div>
+              <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9">
+                <div style="font-size:11px;color:#64748b">Total Workers</div>
+                <div style="font-weight:800;font-size:20px">${escapeHtml(String(jobData.numWorkers || 0))}</div>
+              </div>
 
-  initAdminSwiper._delegatedClickAttached = true;  
-}
+              <!-- modal progress (spans full width) -->
+              <div style="grid-column:1 / -1; margin-top:8px">
+                <div id="modalProgressText" style="font-size:13px;color:#64748b;margin-bottom:6px">0/0 workers • 0%</div>
+                <div class="job-progress-bar" id="modalProgressBar"><i style="width:0%"></i></div>
+              </div>
+            </div>
 
-} catch (err) {
-console.warn('Swiper init failed:', err);
-}
-}
+            <!-- Instructions -->
+            <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div style="font-weight:600">Instructions</div>
+                <button id="toggleInstr" style="background:none;border:0;color:#1e40af;font-weight:600;cursor:pointer">
+                  <span>Show more</span>
+                  <svg style="width:14px;height:14px;transform:rotate(0deg);transition:transform .2s" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                  </svg>
+                </button>
+              </div>
+              <div id="instructionsPanel" class="collapsible is-collapsed" style="margin-top:10px;color:#334155">
+                ${instructionsHtml}
+                <div class="fade-edge"></div>
+              </div>
+            </div>
 
-// ---- start everything ----
-startAffiliateJobsListener();
-attachGridClickHandler();
-initAdminSwiper();
-initTaskSearch(); // <— add this line
+            <!-- Target Link -->
+            <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">
+              <div style="font-weight:600;margin-bottom:6px">Target Link</div>
+              ${targetLinkHtml}
+            </div>
 
-} // end main
+            <!-- Proof Required -->
+            <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">
+              <div style="font-weight:600;margin-bottom:6px">Proof Required</div>
+              <div style="color:#374151">${proofHtml}</div>
+            </div>
+
+            <!-- Submit Proof Section -->
+            <div style="padding:12px;border-radius:12px;border:1px solid #dbeafe;background:#f8fafc;margin-bottom:16px">
+              <div style="font-weight:700;margin-bottom:10px;color:#1e3a8a">Submit Proof</div>
+              <form id="proofForm" style="display:flex;flex-direction:column;gap:10px">
+                ${Array.from({ length: proofFileCount }).map((_, i) => `
+                  <div>
+                    <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">Upload File ${i+1}</label>
+                    <input type="file" name="proofFile${i+1}" accept="image/*" style="border:1px solid #cbd5e1;border-radius:8px;padding:6px;width:100%">
+                  </div>
+                `).join("")}
+                <div>
+                  <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">Extra Proof (e.g email/phone)</label>
+                  <textarea name="extraProof" rows="3" placeholder="Enter additional proof..." style="border:1px solid #cbd5e1;border-radius:8px;padding:8px;width:100%"></textarea>
+                </div>
+                <button id="submitTaskBtn" class="btn-primary" style="width:100%;padding:10px;border-radius:10px;font-weight:600">Submit Task</button>
+              </form>
+            </div>
+
+            <!-- Submitted Info -->
+            <div id="submittedInfo" style="display:none;padding:12px;border-radius:12px;border:1px solid #bbf7d0;background:#ecfdf5;color:#065f46"></div>
+          </div>
+        </div>
+      `;
+
+      // populate modal progress from cache (if available)
+      (function updateModalProgress() {
+        const cached = jobCache.get(jobId) || {};
+        const approvedCount = cached.approvedCount || 0;
+        const total = jobData.numWorkers || 0;
+        const percent = total ? Math.min(100, Math.round((approvedCount / total) * 100)) : 0;
+        const txt = detailsSection.querySelector('#modalProgressText');
+        const bar = detailsSection.querySelector('#modalProgressBar > i');
+        if (txt) txt.textContent = `${approvedCount}/${total} workers • ${percent}%`;
+        if (bar) bar.style.width = percent + '%';
+      })();
+
+      // back/close logic
+      const backBtn = detailsSection.querySelector('.aff-close');
+      if (backBtn) {
+        backBtn.addEventListener('click', () => {
+          detailsSection.style.display = 'none';
+          detailsSection.innerHTML = '';
+          if (affiliateTasksContainer) {
+            affiliateTasksContainer.style.display = '';
+            try { affiliateTasksContainer.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
+          }
+        });
+      }
+
+      // collapsible toggle
+      const panel = detailsSection.querySelector('#instructionsPanel');
+      const toggle = detailsSection.querySelector('#toggleInstr');
+      if (toggle && panel) {
+        const label = toggle.querySelector('span');
+        const icon = toggle.querySelector('svg');
+        toggle.addEventListener('click', () => {
+          const collapsed = panel.classList.contains('is-collapsed');
+          if (collapsed) {
+            panel.style.maxHeight = panel.scrollHeight + 'px';
+            panel.classList.remove('is-collapsed');
+            if (label) label.textContent = 'Show less';
+            if (icon) icon.style.transform = 'rotate(180deg)';
+            setTimeout(() => { panel.style.maxHeight = ''; }, 320);
+          } else {
+            panel.style.maxHeight = panel.scrollHeight + 'px';
+            requestAnimationFrame(() => {
+              panel.classList.add('is-collapsed');
+              requestAnimationFrame(() => { panel.style.maxHeight = ''; });
+            });
+            if (label) label.textContent = 'Show more';
+            if (icon) icon.style.transform = 'rotate(0deg)';
+          }
+        });
+      }
+
+      // handle proof submission
+      const form = detailsSection.querySelector('#proofForm');
+      const submitInfo = detailsSection.querySelector('#submittedInfo');
+      if (form) {
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const user = firebase.auth().currentUser;
+          if (!user) return alert("You must be logged in.");
+
+          const proofData = {
+            jobId,
+            userId: user.uid,
+            submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            extraProof: form.extraProof.value || "",
+            files: [],
+            status: "on_review",
+            workerEarn: jobData.workerPay || 0
+          };
+
+          // upload files to Cloudinary
+          for (let i = 0; i < proofFileCount; i++) {
+            const fileInput = form[`proofFile${i+1}`];
+            if (fileInput && fileInput.files.length > 0) {
+              try {
+                const url = await uploadToCloudinary(fileInput.files[0]);
+                proofData.files.push(url);
+              } catch (err) {
+                console.error("Cloudinary upload failed", err);
+                alert("File upload failed. Please try again.");
+                return;
+              }
+            }
+          }
+
+          // check if user already submitted
+          const existing = await db.collection("affiliate_submissions")
+            .where("jobId", "==", jobId)
+            .where("userId", "==", user.uid)
+            .get();
+
+          if (!existing.empty) {
+            alert("You have already submitted this task.");
+            return;
+          }
+
+          await db.collection("affiliate_submissions").add(proofData);
+
+          form.style.display = "none";
+          submitInfo.style.display = "block";
+          submitInfo.textContent = "✅ You have submitted your proof. Awaiting review.";
+
+          // update modal progress (the global submissions listener will update the grid; we reflect locally too)
+          const cached = jobCache.get(jobId) || {};
+          const newApproved = cached.approvedCount || 0; // still requires admin approval to increment approvedCount
+          const total = jobData.numWorkers || 0;
+          const percent = total ? Math.min(100, Math.round((newApproved / total) * 100)) : 0;
+          const txt = detailsSection.querySelector('#modalProgressText');
+          const bar = detailsSection.querySelector('#modalProgressBar > i');
+          if (txt) txt.textContent = `${newApproved}/${total} workers • ${percent}%`;
+          if (bar) bar.style.width = percent + '%';
+        });
+      }
+    }
+
+    // --- ADMIN SWIPER (kept guarded) ---
+    function initAdminSwiper() {
+      if (typeof Swiper === 'undefined') return; // not loaded
+      try {
+        const swiper = new Swiper('.myAffiliateTasksSwiper', {
+          slidesPerView: 'auto',
+          centeredSlides: true,
+          centeredSlidesBounds: true,
+          spaceBetween: 18,
+          loop: true,
+          autoplay: { delay: 4000, disableOnInteraction: false },
+          pagination: { el: '.swiper-pagination', clickable: true },
+        });
+
+        const container = document.getElementById('affiliateTasksSwiperContainer');
+        if (!container) return;
+
+        // Firestore listener to render slides
+        db.collection("adminJobs").orderBy("postedAt", "desc").limit(5)
+          .onSnapshot(snapshot => {
+            container.innerHTML = '';
+            snapshot.forEach(doc => {
+              const job = doc.data();
+              const slide = document.createElement('div');
+              slide.className = 'swiper-slide';
+
+              slide.innerHTML = `
+                <div class="job-card" style="max-width:420px;">
+                  <img class="job-image"
+                       src="${escapeHtml(job.screenshotURL || job.campaignLogoURL || 'https://via.placeholder.com/800x400')}"
+                       alt="${escapeHtml(job.title || '')}">
+                  <div class="job-info">
+                    <div class="job-leading">
+                      <img class="job-brand"
+                           src="${escapeHtml(job.campaignLogoURL || job.screenshotURL || 'https://via.placeholder.com/72')}"
+                           alt="${escapeHtml(job.title || '')}">
+                      <div class="job-text">
+                        <div class="title">${escapeHtml(job.title || '')}</div>
+                        <div class="meta">₦${escapeHtml(String(job.workerPay || 0))} • ${escapeHtml(String(job.numWorkers || 0))} workers</div>
+                      </div>
+                    </div>
+                    <button class="view-btn" data-id="${escapeHtml(doc.id)}">View</button>
+                  </div>
+                </div>
+              `;
+              container.appendChild(slide);
+            });
+            try { swiper.update(); } catch (e) { /* ignore */ }
+          }, err => console.error('adminJobs listener error', err));
+
+        // Robust delegated listener (attached once) — catches clicks on cloned slides too
+        if (!initAdminSwiper._delegatedClickAttached) {
+          document.addEventListener('click', function (e) {
+            const btn = e.target.closest('.view-btn');
+            if (!btn) return;
+            const id = btn.dataset.id;
+            if (!id) return;
+            // fetch job doc and open modal
+            db.collection("adminJobs").doc(id).get().then(d => {
+              if (!d.exists) return;
+              const job = d.data();
+              try { showAffiliateJobDetails(id, job); }
+              catch (err) { console.error('showAffiliateJobDetails failed', err); }
+            }).catch(err => console.error(err));
+          }, { passive: true });
+
+          initAdminSwiper._delegatedClickAttached = true;
+        }
+
+      } catch (err) {
+        console.warn('Swiper init failed:', err);
+      }
+    }
+
+    // ---- start everything ----
+    startAffiliateJobsListener();
+    attachGridClickHandler();
+    initAdminSwiper();
+    initTaskSearch();
+  } // end main
 })(); // end IIFE
-
 
 
 
@@ -4058,6 +4141,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
