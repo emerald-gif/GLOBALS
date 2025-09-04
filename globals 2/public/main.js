@@ -1549,49 +1549,53 @@ async function loadFinishedTasks() {
 
   try {
     const snapshot = await firebase.firestore()
-      .collection("affiliate_submissions")
-      .where("userId", "==", userId)
-      .orderBy("submittedAt", "desc")
-      .get();
+  .collection("affiliate_submissions")
+  .where("userId", "==", userId)
+  .get();
 
-    listEl.innerHTML = "";
-    let pending = 0, approved = 0;
+let docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    if (snapshot.empty) {
-      listEl.innerHTML = `<p class="text-center text-gray-500">No finished tasks yet.</p>`;
-    }
+// sort client-side by submittedAt desc
+docs.sort((a, b) => {
+  const t1 = a.submittedAt?.toDate?.() || new Date(0);
+  const t2 = b.submittedAt?.toDate?.() || new Date(0);
+  return t2 - t1;
+});
 
-    snapshot.forEach(doc => {
-      const data = doc.data();
+listEl.innerHTML = "";
+let pending = 0, approved = 0;
 
-      if (data.status === "on review") pending++;
-      if (data.status === "approved") approved++;
+if (!docs.length) {
+  listEl.innerHTML = `<p class="text-center text-gray-500">No finished tasks yet.</p>`;
+}
 
-      // Card template
-      const card = document.createElement("div");
-      card.className = "p-4 bg-white shadow rounded-xl flex items-center justify-between";
+docs.forEach(data => {
+  if (data.status === "on review") pending++;
+  if (data.status === "approved") approved++;
 
-      card.innerHTML = `
-        <div>
-          <h3 class="font-semibold text-gray-900">Job: ${data.jobTitle || data.jobId}</h3>
-          <p class="text-sm text-gray-600">Earn: ₦${data.workerEarn || 0}</p>
-          <p class="text-xs text-gray-400">${data.submittedAt?.toDate().toLocaleString() || ""}</p>
-          <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded ${
-            data.status === "approved" 
-              ? "bg-green-100 text-green-700" 
-              : "bg-yellow-100 text-yellow-700"
-          }">${data.status}</span>
-        </div>
-        <button 
-          class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg details-btn"
-          data-id="${doc.id}"
-        >
-          Details
-        </button>
-      `;
+  const card = document.createElement("div");
+  card.className = "p-4 bg-white shadow rounded-xl flex items-center justify-between";
 
-      listEl.appendChild(card);
-    });
+  card.innerHTML = `
+    <div>
+      <h3 class="font-semibold text-gray-900">Job: ${data.jobTitle || data.jobId}</h3>
+      <p class="text-sm text-gray-600">Earn: ₦${data.workerEarn || 0}</p>
+      <p class="text-xs text-gray-400">${data.submittedAt?.toDate().toLocaleString() || ""}</p>
+      <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded ${
+        data.status === "approved"
+          ? "bg-green-100 text-green-700"
+          : "bg-yellow-100 text-yellow-700"
+      }">${data.status}</span>
+    </div>
+    <button
+      class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg details-btn"
+      data-id="${data.id}"
+    >
+      Details
+    </button>
+  `;
+  listEl.appendChild(card);
+});
 
     // Update counts
     pendingCountEl.textContent = pending;
@@ -4279,6 +4283,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
