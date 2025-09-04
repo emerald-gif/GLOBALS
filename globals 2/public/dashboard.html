@@ -1500,59 +1500,77 @@
 	
 	
 	
-	<!-- INSTALL AND EARN --> 
-
-
-<!-- Controls for searching and filtering -->
+<!-- ================= INSTALL AND EARN ================= -->
 <div id="taskSection" class="tab-section hidden">
 
+  <!-- Controls for searching and filtering -->
+  <div id="task-controls" class="w-full px-4 py-4 bg-white rounded-2xl shadow-sm mb-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 
-<div id="task-controls" class="w-full px-4 py-4 bg-white rounded-2xl shadow-sm mb-4">
-  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-    <!-- Search Input -->
-    <input
-      type="text"
-      id="taskSearch"
-      placeholder="Search tasks..."
-      class="w-full sm:w-1/2 px-4 py-2 border border-gray-300 rounded-full shadow focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200"
-    />
+      <!-- Search Input -->
+      <input
+        type="text"
+        id="taskSearch"
+        placeholder="Search tasks..."
+        class="w-full sm:w-1/2 px-4 py-2 border border-gray-300 rounded-full shadow focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200"
+      />
 
-    <!-- Category & Finished Button -->
-    <div class="flex items-center gap-3 sm:gap-4">
-      <select
-        id="taskCategoryFilter"
-        class="px-4 py-2 border border-gray-300 rounded-xl text-sm shadow-sm"
-      >
-        <option value="">All Categories</option>
-        <option>WhatsApp/Telegram</option>
-        <option>Instagram/TikTok</option>
-        <option>App</option>
-        <option>YouTube</option>
-        <option>Facebook</option>
-        <option>Twitter</option>
-        <option>Website</option>
-        <option>Vote</option>
-        <option>Music Player</option>
-      </select>
+      <!-- Category & Finished Button -->
+      <div class="flex items-center gap-3 sm:gap-4">
+        <select
+          id="taskCategoryFilter"
+          class="px-4 py-2 border border-gray-300 rounded-xl text-sm shadow-sm"
+        >
+          <option value="">All Categories</option>
+          <option>WhatsApp/Telegram</option>
+          <option>Instagram/TikTok</option>
+          <option>App</option>
+          <option>YouTube</option>
+          <option>Facebook</option>
+          <option>Twitter</option>
+          <option>Website</option>
+          <option>Vote</option>
+          <option>Music Player</option>
+        </select>
 
-    <button
-        id="finishedTasksBtn"
-        class="bg-blue-600 hover:bg-gray-200 text-blue-500 px-4 py-2 rounded-xl text-sm transition"
-        disabled
-      >
-        Finished Tasks
-      </button>
-
-
+        <button
+          id="finishedTasksBtn"
+          class="bg-blue-600 hover:bg-gray-200 text-blue-500 px-4 py-2 rounded-xl text-sm transition"
+        >
+          Finished Tasks
+        </button>
+      </div>
     </div>
   </div>
+
+  <!-- Tasks container -->
+  <div id="task-jobs" class="grid gap-4 px-4 pb-10"></div>
 </div>
 
-<!-- Tasks container -->
-<div id="task-jobs" class=" grid gap-4 px-4 pb-10"></div>
+<!-- ================= FINISHED TASKS SCREEN ================= -->
+<div id="finishedTasksScreen" class="hidden px-4 py-6">
+  <div class="bg-white rounded-2xl shadow p-4 mb-6 flex items-center justify-between">
+    <div class="flex items-center gap-6">
+      <div class="text-center">
+        <p class="text-sm text-gray-500">Pending</p>
+        <p id="pendingCount" class="text-lg font-bold text-yellow-600">0</p>
+      </div>
+      <div class="text-center">
+        <p class="text-sm text-gray-500">Approved</p>
+        <p id="approvedCount" class="text-lg font-bold text-green-600">0</p>
+      </div>
+    </div>
+    <button
+      id="backToMainBtn"
+      class="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm shadow hover:bg-blue-700 transition"
+    >
+      Back
+    </button>
+  </div>
 
- </div>                                       
-
+  <!-- Finished tasks list -->
+  <div id="finishedTasksList" class="grid gap-4"></div>
+</div>
 
 
 
@@ -3460,6 +3478,7 @@
 </body>
 
 </html>
+
 
 
 
