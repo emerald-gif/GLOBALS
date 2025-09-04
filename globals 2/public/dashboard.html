@@ -1501,10 +1501,11 @@
 	
 	
 <!-- ================= INSTALL AND EARN ================= -->
+<!-- ================= INSTALL AND EARN ================= -->
 <div id="taskSection" class="tab-section hidden">
 
   <!-- Controls for searching and filtering -->
-  <div id="task-controls" class="w-full px-4 py-4 bg-white rounded-2xl shadow-sm mb-4">
+  <div class="w-full px-4 py-4 bg-white rounded-2xl shadow-sm mb-4">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 
       <!-- Search Input -->
@@ -1534,7 +1535,7 @@
         </select>
 
         <button
-          id="finishedTasksBtn"
+          id="taskFinishedBtn"
           class="bg-blue-600 hover:bg-gray-200 text-blue-500 px-4 py-2 rounded-xl text-sm transition"
         >
           Finished Tasks
@@ -1548,20 +1549,20 @@
 </div>
 
 <!-- ================= FINISHED TASKS SCREEN ================= -->
-<div id="finishedTasksScreen" class="hidden px-4 py-6">
+<div id="taskFinishedScreen" class="hidden px-4 py-6">
   <div class="bg-white rounded-2xl shadow p-4 mb-6 flex items-center justify-between">
     <div class="flex items-center gap-6">
       <div class="text-center">
         <p class="text-sm text-gray-500">Pending</p>
-        <p id="pendingCount" class="text-lg font-bold text-yellow-600">0</p>
+        <p id="taskPendingCount" class="text-lg font-bold text-yellow-600">0</p>
       </div>
       <div class="text-center">
         <p class="text-sm text-gray-500">Approved</p>
-        <p id="approvedCount" class="text-lg font-bold text-green-600">0</p>
+        <p id="taskApprovedCount" class="text-lg font-bold text-green-600">0</p>
       </div>
     </div>
     <button
-      id="backToMainBtn"
+      id="taskBackBtn"
       class="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm shadow hover:bg-blue-700 transition"
     >
       Back
@@ -1569,9 +1570,8 @@
   </div>
 
   <!-- Finished tasks list -->
-  <div id="finishedTasksList" class="grid gap-4"></div>
+  <div id="taskFinishedList" class="grid gap-4"></div>
 </div>
-
 
 
                                                       <!-- 🌍 Social Tasks Main Screen -->
@@ -3478,6 +3478,7 @@
 </body>
 
 </html>
+
 
 
 
