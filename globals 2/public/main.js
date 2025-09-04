@@ -1060,7 +1060,6 @@ if (job) showAffiliateJobDetails(id, job);
 
 
 	
-
 // show job details in modal overlay (only when view clicked)
 function showAffiliateJobDetails(jobId, jobData) {
   ensureDetailStyles();
@@ -1212,29 +1211,29 @@ function showAffiliateJobDetails(jobId, jobData) {
       if (!user) return alert("You must be logged in.");
 
       const proofData = {
-	    proofData.status = "on review";                 // instead of submitted
-        proofData.workerEarn = jobData.workerPay || 0;  // keep record of pay
         jobId,
         userId: user.uid,
         submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
         extraProof: form.extraProof.value || "",
-        files: []
+        files: [],
+        status: "on_review",                 // ✅ new status
+        workerEarn: jobData.workerPay || 0   // ✅ add workerEarn
       };
 
-      // handle file uploads to Cloudinary
-for (let i = 0; i < proofFileCount; i++) {
-  const fileInput = form[`proofFile${i+1}`];
-  if (fileInput && fileInput.files.length > 0) {
-    try {
-      const url = await uploadToCloudinary(fileInput.files[0]);
-      proofData.files.push(url); // push the hosted URL
-    } catch (err) {
-      console.error("Upload failed:", err);
-      alert("File upload failed. Please try again.");
-      return;
-    }
-  }
-}
+      // ✅ upload each file to Cloudinary
+      for (let i = 0; i < proofFileCount; i++) {
+        const fileInput = form[`proofFile${i+1}`];
+        if (fileInput && fileInput.files.length > 0) {
+          try {
+            const url = await uploadToCloudinary(fileInput.files[0]);
+            proofData.files.push(url);
+          } catch (err) {
+            console.error("Cloudinary upload failed", err);
+            alert("File upload failed. Please try again.");
+            return;
+          }
+        }
+      }
 
       // check if user already submitted
       const existing = await db.collection("affiliate_submissions")
@@ -1255,7 +1254,9 @@ for (let i = 0; i < proofFileCount; i++) {
     });
   }
 }
-      
+
+
+
 
 
 	
@@ -3972,6 +3973,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
