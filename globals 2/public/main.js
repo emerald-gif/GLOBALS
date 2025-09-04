@@ -891,25 +891,26 @@ firebase.firestore().collection("tasks")
 
 
 // ================= Finished Task Submissions Logic =================
+ 
 
 // Open finished tasks screen
-document.getElementById("finishedTasksBtn").addEventListener("click", () => {
+document.getElementById("taskFinishedBtn").addEventListener("click", () => {
   document.getElementById("taskSection").classList.add("hidden");
-  document.getElementById("finishedTasksScreen").classList.remove("hidden");
-  loadFinishedTaskSubmissions();
+  document.getElementById("taskFinishedScreen").classList.remove("hidden");
+  loadTaskFinishedSubmissions();
 });
 
 // Back button
-document.getElementById("backToMainBtn").addEventListener("click", () => {
-  document.getElementById("finishedTasksScreen").classList.add("hidden");
+document.getElementById("taskBackBtn").addEventListener("click", () => {
+  document.getElementById("taskFinishedScreen").classList.add("hidden");
   document.getElementById("taskSection").classList.remove("hidden");
 });
 
 // Load finished task submissions
-async function loadFinishedTaskSubmissions() {
-  const listEl = document.getElementById("finishedTasksList");
-  const pendingCountEl = document.getElementById("pendingCount");
-  const approvedCountEl = document.getElementById("approvedCount");
+async function loadTaskFinishedSubmissions() {
+  const listEl = document.getElementById("taskFinishedList");
+  const pendingCountEl = document.getElementById("taskPendingCount");
+  const approvedCountEl = document.getElementById("taskApprovedCount");
 
   const userId = firebase.auth().currentUser?.uid;
   if (!userId) return;
@@ -940,7 +941,6 @@ async function loadFinishedTaskSubmissions() {
       if (data.status === "on review") pending++;
       if (data.status === "approved") approved++;
 
-      // ✅ use taskId (not jobId)
       let jobTitle = "Untitled Task";
       if (data.taskId) {
         const jobDoc = await firebase.firestore()
@@ -953,7 +953,7 @@ async function loadFinishedTaskSubmissions() {
       }
 
       const card = document.createElement("div");
-      card.className = "p-4 bg-white shadow rounded-xl flex items-center justify-between";
+      card.className = "p-4 bg-white shadow rounded-xl cursor-pointer hover:bg-gray-50 transition";
 
       card.innerHTML = `
         <div>
@@ -966,26 +966,19 @@ async function loadFinishedTaskSubmissions() {
               : "bg-yellow-100 text-yellow-700"
           }">${data.status}</span>
         </div>
-        <button
-          class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg details-btn"
-          data-id="${data.id}"
-        >
-          Details
-        </button>
       `;
+
+      // ✅ make card itself clickable
+      card.addEventListener("click", () => {
+        showTaskSubmissionDetails(data.id);
+      });
+
       listEl.appendChild(card);
     }
 
     // Update counters
     pendingCountEl.textContent = pending;
     approvedCountEl.textContent = approved;
-
-    // Attach details button events
-    listEl.querySelectorAll(".details-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        showTaskSubmissionDetails(btn.dataset.id);
-      });
-    });
 
   } catch (err) {
     console.error("Error loading finished tasks:", err);
@@ -1004,7 +997,6 @@ async function showTaskSubmissionDetails(submissionId) {
     if (!subDoc.exists) return;
     const data = subDoc.data();
 
-    // ✅ use taskId (not jobId)
     let jobData = {};
     if (data.taskId) {
       const jobDoc = await firebase.firestore()
@@ -4497,6 +4489,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
