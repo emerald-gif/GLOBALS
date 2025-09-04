@@ -1574,24 +1574,28 @@ async function loadFinishedTasks() {
       if (data.status === "on review") pending++;  
       if (data.status === "approved") approved++;  
 
-      // ✅ Detect job type (admin or affiliate)
+      // ✅ Detect job type using jobType field
       let jobTitle = "Untitled Task";
       if (data.jobId) {
         try {
-          let jobDoc;
-          if (data.isAdminJob) {
-            jobDoc = await firebase.firestore()
+          // Try affiliateJobs first
+          let jobDoc = await firebase.firestore()
+            .collection("affiliateJobs")
+            .doc(data.jobId)
+            .get();
+
+          if (jobDoc.exists) {
+            jobTitle = jobDoc.data().title || jobTitle;
+          } else {
+            // If not in affiliateJobs, check adminJobs
+            let adminDoc = await firebase.firestore()
               .collection("adminJobs")
               .doc(data.jobId)
               .get();
-          } else {
-            jobDoc = await firebase.firestore()
-              .collection("affiliateJobs")
-              .doc(data.jobId)
-              .get();
-          }
-          if (jobDoc.exists) {
-            jobTitle = jobDoc.data().title || jobTitle;
+
+            if (adminDoc.exists && adminDoc.data().jobType === "admin") {
+              jobTitle = adminDoc.data().title || jobTitle;
+            }
           }
         } catch (err) {
           console.warn("Error fetching job for", data.jobId, err);
@@ -1650,22 +1654,28 @@ async function showSubmissionDetails(submissionId) {
     if (!subDoc.exists) return;  
     const data = subDoc.data();  
 
-    // ✅ Fetch job title from the right collection
+    // ✅ Fetch job title from correct collection
     let jobData = {};
     if (data.jobId) {  
-      let jobDoc;
-      if (data.isAdminJob) {
-        jobDoc = await firebase.firestore()
+      // Check affiliateJobs first
+      let jobDoc = await firebase.firestore()
+        .collection("affiliateJobs")
+        .doc(data.jobId)
+        .get();
+
+      if (jobDoc.exists) {
+        jobData = jobDoc.data();
+      } else {
+        // Then check adminJobs
+        let adminDoc = await firebase.firestore()
           .collection("adminJobs")
           .doc(data.jobId)
           .get();
-      } else {
-        jobDoc = await firebase.firestore()
-          .collection("affiliateJobs")
-          .doc(data.jobId)
-          .get();
+
+        if (adminDoc.exists && adminDoc.data().jobType === "admin") {
+          jobData = adminDoc.data();
+        }
       }
-      if (jobDoc.exists) jobData = jobDoc.data();  
     }  
 
     const jobTitle = jobData.title || "Untitled Task";  
@@ -1703,7 +1713,6 @@ async function showSubmissionDetails(submissionId) {
     console.error("Error showing submission details:", err);
   }
 }
-
 
 
                                                  //SOCIAL TASK FUNCTION
@@ -4324,6 +4333,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
