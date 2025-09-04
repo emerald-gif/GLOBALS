@@ -1212,6 +1212,8 @@ function showAffiliateJobDetails(jobId, jobData) {
       if (!user) return alert("You must be logged in.");
 
       const proofData = {
+	    proofData.status = "on review";                 // instead of submitted
+        proofData.workerEarn = jobData.workerPay || 0;  // keep record of pay
         jobId,
         userId: user.uid,
         submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -1219,13 +1221,20 @@ function showAffiliateJobDetails(jobId, jobData) {
         files: []
       };
 
-      // handle file uploads (just placeholders here, implement firebase storage if needed)
-      for (let i = 0; i < proofFileCount; i++) {
-        const fileInput = form[`proofFile${i+1}`];
-        if (fileInput && fileInput.files.length > 0) {
-          proofData.files.push(`Uploaded: ${fileInput.files[0].name}`);
-        }
-      }
+      // handle file uploads to Cloudinary
+for (let i = 0; i < proofFileCount; i++) {
+  const fileInput = form[`proofFile${i+1}`];
+  if (fileInput && fileInput.files.length > 0) {
+    try {
+      const url = await uploadToCloudinary(fileInput.files[0]);
+      proofData.files.push(url); // push the hosted URL
+    } catch (err) {
+      console.error("Upload failed:", err);
+      alert("File upload failed. Please try again.");
+      return;
+    }
+  }
+}
 
       // check if user already submitted
       const existing = await db.collection("affiliate_submissions")
@@ -3963,6 +3972,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
