@@ -1523,7 +1523,6 @@ function initTaskSearch() {
 
 
 
-
 // ================= Finished Tasks Logic =================
 
 // Open finished tasks screen
@@ -1540,90 +1539,122 @@ document.getElementById("backToMainBtn").addEventListener("click", () => {
 });
 
 // Load finished tasks from Firestore
-function loadFinishedTasks() {
+async function loadFinishedTasks() {
   const listEl = document.getElementById("finishedTasksList");
   const pendingCountEl = document.getElementById("pendingCount");
   const approvedCountEl = document.getElementById("approvedCount");
 
-  firebase.firestore().collection("affiliate_submissions")
-    .where("userId", "==", firebase.auth().currentUser.uid)
-    .orderBy("submittedAt", "desc")
-    .get()
-    .then(snapshot => {
-      listEl.innerHTML = "";
-      let pending = 0, approved = 0;
+  const userId = firebase.auth().currentUser?.uid;
+  if (!userId) return;
 
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.status === "on review") pending++;
-        if (data.status === "approved") approved++;
+  try {
+    const snapshot = await firebase.firestore()
+      .collection("affiliate_submissions")
+      .where("userId", "==", userId)
+      .orderBy("submittedAt", "desc")
+      .get();
 
-        // Card template
-        const card = document.createElement("div");
-        card.className = "p-4 bg-white shadow rounded-xl flex items-center justify-between";
+    listEl.innerHTML = "";
+    let pending = 0, approved = 0;
 
-        card.innerHTML = `
-          <div>
-            <h3 class="font-semibold text-gray-900">${data.jobId}</h3>
-            <p class="text-sm text-gray-600">Earn: ₦${data.workerEarn}</p>
-            <p class="text-xs text-gray-400">${data.submittedAt?.toDate().toLocaleString() || ""}</p>
-            <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded ${
-              data.status === "approved" 
-                ? "bg-green-100 text-green-700" 
-                : "bg-yellow-100 text-yellow-700"
-            }">${data.status}</span>
-          </div>
-          <button 
-            class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg details-btn"
-            data-id="${doc.id}"
-          >
-            Details
-          </button>
-        `;
-        listEl.appendChild(card);
-      });
+    if (snapshot.empty) {
+      listEl.innerHTML = `<p class="text-center text-gray-500">No finished tasks yet.</p>`;
+    }
 
-      // Update counts
-      pendingCountEl.textContent = pending;
-      approvedCountEl.textContent = approved;
-
-      // Attach details button events
-      listEl.querySelectorAll(".details-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-          showSubmissionDetails(btn.dataset.id);
-        });
-      });
-    });
-}
-
-// Show submission details
-function showSubmissionDetails(submissionId) {
-  firebase.firestore().collection("affiliate_submissions").doc(submissionId).get()
-    .then(doc => {
-      if (!doc.exists) return;
+    snapshot.forEach(doc => {
       const data = doc.data();
 
-      const modal = document.createElement("div");
-      modal.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50";
-      modal.innerHTML = `
-        <div class="bg-white rounded-xl shadow-lg p-6 w-96">
-          <h2 class="text-lg font-bold mb-2">Submission Details</h2>
-          <p class="text-sm"><strong>Job ID:</strong> ${data.jobId}</p>
-          <p class="text-sm"><strong>Status:</strong> ${data.status}</p>
-          <p class="text-sm"><strong>Worker Earn:</strong> ₦${data.workerEarn}</p>
-          <p class="text-sm"><strong>Extra Proof:</strong> ${data.extraProof || "—"}</p>
-          <div class="mt-4 flex justify-end">
-            <button class="closeModal px-4 py-2 bg-blue-600 text-white rounded-lg">Close</button>
-          </div>
+      if (data.status === "on review") pending++;
+      if (data.status === "approved") approved++;
+
+      // Card template
+      const card = document.createElement("div");
+      card.className = "p-4 bg-white shadow rounded-xl flex items-center justify-between";
+
+      card.innerHTML = `
+        <div>
+          <h3 class="font-semibold text-gray-900">Job: ${data.jobTitle || data.jobId}</h3>
+          <p class="text-sm text-gray-600">Earn: ₦${data.workerEarn || 0}</p>
+          <p class="text-xs text-gray-400">${data.submittedAt?.toDate().toLocaleString() || ""}</p>
+          <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded ${
+            data.status === "approved" 
+              ? "bg-green-100 text-green-700" 
+              : "bg-yellow-100 text-yellow-700"
+          }">${data.status}</span>
         </div>
+        <button 
+          class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg details-btn"
+          data-id="${doc.id}"
+        >
+          Details
+        </button>
       `;
 
-      document.body.appendChild(modal);
-      modal.querySelector(".closeModal").addEventListener("click", () => modal.remove());
+      listEl.appendChild(card);
     });
+
+    // Update counts
+    pendingCountEl.textContent = pending;
+    approvedCountEl.textContent = approved;
+
+    // Attach details button events
+    listEl.querySelectorAll(".details-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        showSubmissionDetails(btn.dataset.id);
+      });
+    });
+
+  } catch (err) {
+    console.error("Error loading finished tasks:", err);
+    listEl.innerHTML = `<p class="text-center text-red-500">Error loading tasks. Try again later.</p>`;
+  }
 }
 
+// Show submission details (fetch both submission + job info)
+async function showSubmissionDetails(submissionId) {
+  try {
+    const subDoc = await firebase.firestore()
+      .collection("affiliate_submissions")
+      .doc(submissionId)
+      .get();
 
+    if (!subDoc.exists) return;
+    const data = subDoc.data();
+
+    // Optional: fetch job details from jobs collection
+    let jobData = {};
+    if (data.jobId) {
+      const jobDoc = await firebase.firestore()
+        .collection("affiliate_tasks")
+        .doc(data.jobId)
+        .get();
+      if (jobDoc.exists) jobData = jobDoc.data();
+    }
+
+    const modal = document.createElement("div");
+    modal.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50";
+    modal.innerHTML = `
+      <div class="bg-white rounded-xl shadow-lg p-6 w-96">
+        <h2 class="text-lg font-bold mb-3">Submission Details</h2>
+        
+        <p class="text-sm"><strong>Job Title:</strong> ${jobData.title || data.jobTitle || "N/A"}</p>
+        <p class="text-sm"><strong>Status:</strong> ${data.status}</p>
+        <p class="text-sm"><strong>Earned:</strong> ₦${data.workerEarn || 0}</p>
+        <p class="text-sm"><strong>Submitted At:</strong> ${data.submittedAt?.toDate().toLocaleString() || "—"}</p>
+        <p class="text-sm"><strong>Extra Proof:</strong> ${data.extraProof || "—"}</p>
+        
+        <div class="mt-4 flex justify-end">
+          <button class="closeModal px-4 py-2 bg-blue-600 text-white rounded-lg">Close</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.querySelector(".closeModal").addEventListener("click", () => modal.remove());
+  } catch (err) {
+    console.error("Error showing submission details:", err);
+  }
+}
 
 
 
@@ -4248,6 +4279,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
