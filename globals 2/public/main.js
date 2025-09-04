@@ -890,27 +890,28 @@ firebase.firestore().collection("tasks")
 
 
 
+
+
 // ================= Finished Task Submissions Logic =================
- 
 
 // Open finished tasks screen
-document.getElementById("taskFinishedBtn").addEventListener("click", () => {
+document.getElementById("finishedTaskBtnUser").addEventListener("click", () => {
   document.getElementById("taskSection").classList.add("hidden");
-  document.getElementById("taskFinishedScreen").classList.remove("hidden");
-  loadTaskFinishedSubmissions();
+  document.getElementById("finishedTasksScreenUser").classList.remove("hidden");
+  loadFinishedTaskSubmissionsUser();
 });
 
 // Back button
-document.getElementById("taskBackBtn").addEventListener("click", () => {
-  document.getElementById("taskFinishedScreen").classList.add("hidden");
+document.getElementById("backToMainBtnUser").addEventListener("click", () => {
+  document.getElementById("finishedTasksScreenUser").classList.add("hidden");
   document.getElementById("taskSection").classList.remove("hidden");
 });
 
 // Load finished task submissions
-async function loadTaskFinishedSubmissions() {
-  const listEl = document.getElementById("taskFinishedList");
-  const pendingCountEl = document.getElementById("taskPendingCount");
-  const approvedCountEl = document.getElementById("taskApprovedCount");
+async function loadFinishedTaskSubmissionsUser() {
+  const listEl = document.getElementById("finishedTasksListUser");
+  const pendingCountEl = document.getElementById("pendingCountUser");
+  const approvedCountEl = document.getElementById("approvedCountUser");
 
   const userId = firebase.auth().currentUser?.uid;
   if (!userId) return;
@@ -941,6 +942,7 @@ async function loadTaskFinishedSubmissions() {
       if (data.status === "on review") pending++;
       if (data.status === "approved") approved++;
 
+      // ✅ use taskId (not jobId)
       let jobTitle = "Untitled Task";
       if (data.taskId) {
         const jobDoc = await firebase.firestore()
@@ -953,7 +955,7 @@ async function loadTaskFinishedSubmissions() {
       }
 
       const card = document.createElement("div");
-      card.className = "p-4 bg-white shadow rounded-xl cursor-pointer hover:bg-gray-50 transition";
+      card.className = "p-4 bg-white shadow rounded-xl flex items-center justify-between";
 
       card.innerHTML = `
         <div>
@@ -966,19 +968,26 @@ async function loadTaskFinishedSubmissions() {
               : "bg-yellow-100 text-yellow-700"
           }">${data.status}</span>
         </div>
+        <button
+          class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg details-btn-user"
+          data-id="${data.id}"
+        >
+          Details
+        </button>
       `;
-
-      // ✅ make card itself clickable
-      card.addEventListener("click", () => {
-        showTaskSubmissionDetails(data.id);
-      });
-
       listEl.appendChild(card);
     }
 
     // Update counters
     pendingCountEl.textContent = pending;
     approvedCountEl.textContent = approved;
+
+    // Attach details button events
+    listEl.querySelectorAll(".details-btn-user").forEach(btn => {
+      btn.addEventListener("click", () => {
+        showTaskSubmissionDetailsUser(btn.dataset.id);
+      });
+    });
 
   } catch (err) {
     console.error("Error loading finished tasks:", err);
@@ -987,7 +996,7 @@ async function loadTaskFinishedSubmissions() {
 }
 
 // Show task submission details
-async function showTaskSubmissionDetails(submissionId) {
+async function showTaskSubmissionDetailsUser(submissionId) {
   try {
     const subDoc = await firebase.firestore()
       .collection("task_submissions")
@@ -997,6 +1006,7 @@ async function showTaskSubmissionDetails(submissionId) {
     if (!subDoc.exists) return;
     const data = subDoc.data();
 
+    // ✅ use taskId (not jobId)
     let jobData = {};
     if (data.taskId) {
       const jobDoc = await firebase.firestore()
@@ -1029,18 +1039,20 @@ async function showTaskSubmissionDetails(submissionId) {
         ` : ""}
 
         <div class="mt-4 flex justify-end">
-          <button class="closeModal px-4 py-2 bg-blue-600 text-white rounded-lg">Close</button>
+          <button class="closeModalUser px-4 py-2 bg-blue-600 text-white rounded-lg">Close</button>
         </div>
       </div>
     `;
 
     document.body.appendChild(modal);
-    modal.querySelector(".closeModal").addEventListener("click", () => modal.remove());
+    modal.querySelector(".closeModalUser").addEventListener("click", () => modal.remove());
 
   } catch (err) {
     console.error("Error showing task submission details:", err);
   }
 }
+
+
 
 
 	
@@ -4489,6 +4501,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
