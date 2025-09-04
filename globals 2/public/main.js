@@ -1574,14 +1574,22 @@ async function loadFinishedTasks() {
       if (data.status === "on review") pending++;  
       if (data.status === "approved") approved++;  
 
-      // ✅ Always fetch job title from affiliate_tasks
+      // ✅ Detect job type (admin or affiliate)
       let jobTitle = "Untitled Task";
       if (data.jobId) {
         try {
-          const jobDoc = await firebase.firestore()
-            .collection("affiliate_tasks")
-            .doc(data.jobId)
-            .get();
+          let jobDoc;
+          if (data.isAdminJob) {
+            jobDoc = await firebase.firestore()
+              .collection("adminJobs")
+              .doc(data.jobId)
+              .get();
+          } else {
+            jobDoc = await firebase.firestore()
+              .collection("affiliateJobs")
+              .doc(data.jobId)
+              .get();
+          }
           if (jobDoc.exists) {
             jobTitle = jobDoc.data().title || jobTitle;
           }
@@ -1631,7 +1639,7 @@ async function loadFinishedTasks() {
   }
 }
 
-// Show submission details (fetch from affiliate_tasks)
+// Show submission details (fetch from affiliateJobs or adminJobs)
 async function showSubmissionDetails(submissionId) {
   try {
     const subDoc = await firebase.firestore()
@@ -1642,13 +1650,21 @@ async function showSubmissionDetails(submissionId) {
     if (!subDoc.exists) return;  
     const data = subDoc.data();  
 
-    // ✅ Fetch job title from affiliate_tasks
+    // ✅ Fetch job title from the right collection
     let jobData = {};
     if (data.jobId) {  
-      const jobDoc = await firebase.firestore()  
-        .collection("affiliate_tasks")  
-        .doc(data.jobId)  
-        .get();  
+      let jobDoc;
+      if (data.isAdminJob) {
+        jobDoc = await firebase.firestore()
+          .collection("adminJobs")
+          .doc(data.jobId)
+          .get();
+      } else {
+        jobDoc = await firebase.firestore()
+          .collection("affiliateJobs")
+          .doc(data.jobId)
+          .get();
+      }
       if (jobDoc.exists) jobData = jobDoc.data();  
     }  
 
@@ -4308,6 +4324,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
