@@ -1355,6 +1355,36 @@ initAdminSwiper();
 
 
 
+// Search filter for normal task grid
+
+document.addEventListener("DOMContentLoaded", () => {
+  const searchInput = document.getElementById("taskSearchInput");
+  const taskGrid = document.getElementById("affiliate-tasks");
+
+  if (!searchInput || !taskGrid) return;
+
+  searchInput.addEventListener("input", () => {
+    const query = searchInput.value.toLowerCase().trim();
+    const tasks = taskGrid.querySelectorAll(".job-card"); // each card from your loop
+
+    tasks.forEach(task => {
+      const title = task.querySelector(".title")?.textContent.toLowerCase() || "";
+      const meta = task.querySelector(".meta")?.textContent.toLowerCase() || "";
+
+      if (title.includes(query) || meta.includes(query)) {
+        task.style.display = "";
+      } else {
+        task.style.display = "none";
+      }
+    });
+  });
+});
+
+
+
+
+
+
                                                  //SOCIAL TASK FUNCTION
 
 
@@ -3973,6 +4003,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
