@@ -890,10 +890,6 @@ firebase.firestore().collection("tasks")
 
 
 
-
-
-// ================= Finished Task Submissions Logic =================
-
 // ================= Finished Task Submissions Logic =================
 
 // Open finished tasks screen
@@ -944,12 +940,12 @@ async function loadFinishedTaskSubmissions() {
       if (data.status === "on review") pending++;
       if (data.status === "approved") approved++;
 
-      // Fetch job title from tasks collection
+      // ✅ use taskId (not jobId)
       let jobTitle = "Untitled Task";
-      if (data.jobId) {
+      if (data.taskId) {
         const jobDoc = await firebase.firestore()
           .collection("tasks")
-          .doc(data.jobId)
+          .doc(data.taskId)
           .get();
         if (jobDoc.exists) {
           jobTitle = jobDoc.data().title || "Untitled Task";
@@ -980,7 +976,7 @@ async function loadFinishedTaskSubmissions() {
       listEl.appendChild(card);
     }
 
-    // Update counts
+    // Update counters
     pendingCountEl.textContent = pending;
     approvedCountEl.textContent = approved;
 
@@ -1008,18 +1004,17 @@ async function showTaskSubmissionDetails(submissionId) {
     if (!subDoc.exists) return;
     const data = subDoc.data();
 
-    // Fetch job details from tasks
+    // ✅ use taskId (not jobId)
     let jobData = {};
-    if (data.jobId) {
+    if (data.taskId) {
       const jobDoc = await firebase.firestore()
         .collection("tasks")
-        .doc(data.jobId)
+        .doc(data.taskId)
         .get();
       if (jobDoc.exists) jobData = jobDoc.data();
     }
 
-    const jobTitle = jobData.title || data.jobTitle || "Untitled Task";
-
+    const jobTitle = jobData.title || "Untitled Task";
     const proofImage = data.proofImage || data.extraProofImage || null;
 
     const modal = document.createElement("div");
@@ -1054,7 +1049,6 @@ async function showTaskSubmissionDetails(submissionId) {
     console.error("Error showing task submission details:", err);
   }
 }
-
 
 
 	
@@ -4503,6 +4497,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
