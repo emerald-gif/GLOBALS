@@ -1535,7 +1535,7 @@
         </select>
 
         <button
-          id="taskFinishedBtn"
+          id="finishedTaskBtnUser"
           class="bg-blue-600 hover:bg-gray-200 text-blue-500 px-4 py-2 rounded-xl text-sm transition"
         >
           Finished Tasks
@@ -1549,28 +1549,33 @@
 </div>
 
 <!-- ================= FINISHED TASKS SCREEN ================= -->
-<div id="taskFinishedScreen" class="hidden px-4 py-6">
-  <div class="bg-white rounded-2xl shadow p-4 mb-6 flex items-center justify-between">
-    <div class="flex items-center gap-6">
-      <div class="text-center">
-        <p class="text-sm text-gray-500">Pending</p>
-        <p id="taskPendingCount" class="text-lg font-bold text-yellow-600">0</p>
-      </div>
-      <div class="text-center">
-        <p class="text-sm text-gray-500">Approved</p>
-        <p id="taskApprovedCount" class="text-lg font-bold text-green-600">0</p>
-      </div>
-    </div>
+<div id="finishedTasksScreenUser" class="hidden px-4 py-6">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
     <button
-      id="taskBackBtn"
-      class="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm shadow hover:bg-blue-700 transition"
+      id="backToMainBtnUser"
+      class="text-blue-600 font-medium flex items-center gap-1"
     >
-      Back
+      ← Back
     </button>
+    <h2 class="text-lg font-bold">Finished Tasks</h2>
+  </div>
+
+  <!-- Stats -->
+  <div class="flex gap-4 mb-6">
+    <div class="flex-1 text-center bg-yellow-50 border border-yellow-200 rounded-xl py-3">
+      <p id="pendingCountUser" class="text-2xl font-bold text-yellow-600">0</p>
+      <p class="text-sm text-gray-600">Pending Tasks</p>
+    </div>
+    <div class="flex-1 text-center bg-green-50 border border-green-200 rounded-xl py-3">
+      <p id="approvedCountUser" class="text-2xl font-bold text-green-600">0</p>
+      <p class="text-sm text-gray-600">Approved Tasks</p>
+    </div>
   </div>
 
   <!-- Finished tasks list -->
-  <div id="taskFinishedList" class="grid gap-4"></div>
+  <div id="finishedTasksListUser" class="grid gap-4"></div>
 </div>
 
 
@@ -3478,6 +3483,7 @@
 </body>
 
 </html>
+
 
 
 
