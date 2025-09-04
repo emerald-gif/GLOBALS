@@ -1343,10 +1343,11 @@ console.warn('Swiper init failed:', err);
 }
 }
 
-// ---- start everything ----  
-startAffiliateJobsListener();  
-attachGridClickHandler();  
+// ---- start everything ----
+startAffiliateJobsListener();
+attachGridClickHandler();
 initAdminSwiper();
+initTaskSearch(); // <— add this line
 
 } // end main
 })(); // end IIFE
@@ -1355,31 +1356,69 @@ initAdminSwiper();
 
 
 
-// Search filter for normal task grid
+ // AFFILIATE SERCH JOB FUNCTION 
 
-document.addEventListener("DOMContentLoaded", () => {
+
+function initTaskSearch() {
   const searchInput = document.getElementById("taskSearchInput");
   const taskGrid = document.getElementById("affiliate-tasks");
-
   if (!searchInput || !taskGrid) return;
 
-  searchInput.addEventListener("input", () => {
-    const query = searchInput.value.toLowerCase().trim();
-    const tasks = taskGrid.querySelectorAll(".job-card"); // each card from your loop
+  // Helper: build searchable text for a card
+  const getSearchText = (card) => {
+    // Prefer developer-provided data-search if you add it later
+    const preset = card.getAttribute("data-search");
+    if (preset) return preset;
 
-    tasks.forEach(task => {
-      const title = task.querySelector(".title")?.textContent.toLowerCase() || "";
-      const meta = task.querySelector(".meta")?.textContent.toLowerCase() || "";
+    const bits = [
+      card.querySelector(".job-title")?.textContent,
+      card.querySelector(".job-price")?.textContent,
+      card.querySelector(".job-progress")?.textContent,
+      card.querySelector(".title")?.textContent, // fallback if you ever used .title
+      card.querySelector(".meta")?.textContent   // fallback if you ever used .meta
+    ].filter(Boolean).join(" ");
 
-      if (title.includes(query) || meta.includes(query)) {
-        task.style.display = "";
-      } else {
-        task.style.display = "none";
+    const text = (bits || card.textContent || "").toLowerCase();
+    return text;
+  };
+
+  // Optional: small “no results” helper
+  const showEmpty = (show) => {
+    let empty = document.getElementById("taskSearchEmpty");
+    if (show) {
+      if (!empty) {
+        empty = document.createElement("div");
+        empty.id = "taskSearchEmpty";
+        empty.className = "text-sm text-slate-500 py-6 text-center";
+        empty.textContent = "No tasks match your search.";
+        // place right under the grid
+        taskGrid.parentElement.appendChild(empty);
       }
-    });
-  });
-});
+      empty.style.display = "";
+    } else if (empty) {
+      empty.style.display = "none";
+    }
+  };
 
+  // Filter as you type
+  searchInput.addEventListener("input", () => {
+    const q = searchInput.value.trim().toLowerCase();
+    const cards = taskGrid.querySelectorAll(".job-card");
+    if (!q) {
+      cards.forEach(c => c.style.display = "");
+      showEmpty(false);
+      return;
+    }
+
+    let any = false;
+    cards.forEach(card => {
+      const match = getSearchText(card).includes(q);
+      card.style.display = match ? "" : "none";
+      if (match) any = true;
+    });
+    showEmpty(!any);
+  });
+}
 
 
 
@@ -4003,6 +4042,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
