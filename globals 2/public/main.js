@@ -967,8 +967,7 @@ function ensureDetailScreen() {
 // --- main DOM refs & cache ---  
 const affiliateTasksContainer = document.getElementById("affiliate-tasks");  
 const jobCache = new Map(); // id -> jobData  
-const submissionUnsubMap = new Map(); // jobId -> unsubscribe function for affiliate_submissions listener
-	
+const submissionCountsUnsub = { fn: null }; // holder for single submissions listener unsubscribe
 
 // render a single job card (keeps your job-card style classes)  
 function renderAffiliateCard({ id, job, approvedCount }) {  
@@ -996,7 +995,7 @@ function renderAffiliateCard({ id, job, approvedCount }) {
 
 
 // function startAffiliateJobsListener FUNCTION 
-	
+// start Firestore listener for affiliateJobs (grid) — single submissions listener approach
 function startAffiliateJobsListener() {
   if (!affiliateTasksContainer) {
     console.warn("#affiliate-tasks container not found. Affiliate tasks will not render.");
@@ -1004,65 +1003,73 @@ function startAffiliateJobsListener() {
   }
   ensureDetailStyles();
 
-  // Listen for affiliateJobs (approved)
+  // listen for affiliateJobs (approved)
   db.collection("affiliateJobs")
     .where("status", "==", "approved")
-    .onSnapshot((snap) => {
-      const jobs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const newIds = new Set(jobs.map(j => j.id));
+    .onSnapshot(async (snap) => {
 
-      // cleanup listeners for jobs that no longer exist
-      for (const [jobId, unsub] of submissionUnsubMap.entries()) {
-        if (!newIds.has(jobId)) {
-          try { unsub(); } catch (err) {}
-          submissionUnsubMap.delete(jobId);
-        }
-      }
-
-      // clear DOM and cache (we'll re-render)
+      // render jobs immediately (approvedCount will be updated when submissions snapshot arrives)
       affiliateTasksContainer.innerHTML = '';
       jobCache.clear();
 
-      // render each job card and attach per-job submissions listener
-      jobs.forEach(job => {
-        jobCache.set(job.id, job);
-
-        // render card immediately
-        const card = renderAffiliateCard({ id: job.id, job, approvedCount: 0 });
+      const jobs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      jobs.forEach(j => {
+        jobCache.set(j.id, j);
+        const card = renderAffiliateCard({ id: j.id, job: j, approvedCount: 0 });
         affiliateTasksContainer.appendChild(card);
-
-        // attach submissions listener if not already
-        if (!submissionUnsubMap.has(job.id)) {
-          const unsub = db.collection("affiliate_submissions")
-            .where("jobId", "==", job.id)
-            .where("status", "==", "approved")
-            .onSnapshot(subSnap => {
-              const approvedCount = subSnap.size;
-              const total = job.numWorkers || 0;
-              const percent = total ? Math.min(100, Math.round((approvedCount / total) * 100)) : 0;
-
-              // update DOM
-              const btn = affiliateTasksContainer.querySelector(`.view-btn[data-id="${job.id}"]`);
-              const jobCardEl = btn ? btn.closest('.job-card') : null;
-              if (jobCardEl) {
-                const progText = jobCardEl.querySelector(".job-progress");
-                const progBar = jobCardEl.querySelector(".job-progress-bar > i");
-                if (progText) progText.textContent = `${approvedCount}/${total} workers • ${percent}%`;
-                if (progBar) progBar.style.width = percent + "%";
-              }
-
-              // update cache
-              const cached = jobCache.get(job.id) || {};
-              cached.approvedCount = approvedCount;
-              jobCache.set(job.id, cached);
-            });
-
-          submissionUnsubMap.set(job.id, unsub);
-        }
       });
+
+      // unsubscribe previous submissions listener if any (avoid duplicates)
+      try {
+        if (submissionCountsUnsub.fn) {
+          submissionCountsUnsub.fn();
+        }
+      } catch (e) { /* ignore */ }
+      submissionCountsUnsub.fn = null;
+
+      // Attach ONE realtime listener to all approved submissions.
+      // When submissions change, we compute counts per job and update DOM for each card.
+      submissionCountsUnsub.fn = db.collection("affiliate_submissions")
+        .where("status", "==", "approved")
+        .onSnapshot(subSnap => {
+          // build counts map from submissions
+          const counts = Object.create(null);
+          subSnap.forEach(doc => {
+            const d = doc.data();
+            const jid = d.jobId;
+            if (!jid) return;
+            counts[jid] = (counts[jid] || 0) + 1;
+          });
+
+          // update each rendered job card
+          jobs.forEach(job => {
+            const approvedCount = counts[job.id] || 0;
+            const total = job.numWorkers || 0;
+            const percent = total ? Math.min(100, Math.round((approvedCount / total) * 100)) : 0;
+
+            // find the card by view button dataset (ensures we target the right card)
+            const btn = affiliateTasksContainer.querySelector(`.view-btn[data-id="${job.id}"]`);
+            const jobCardEl = btn ? btn.closest('.job-card') : null;
+            if (jobCardEl) {
+              const progText = jobCardEl.querySelector(".job-progress");
+              const progBar = jobCardEl.querySelector(".job-progress-bar > i");
+              if (progText) progText.textContent = `${approvedCount}/${total} workers • ${percent}%`;
+              if (progBar) progBar.style.width = percent + "%";
+            }
+
+            // keep cache up to date
+            const cached = jobCache.get(job.id) || {};
+            cached.approvedCount = approvedCount;
+            jobCache.set(job.id, cached);
+          });
+        }, err => {
+          console.error("affiliate_submissions listener error:", err);
+        });
+
+    }, err => {
+      console.error("affiliateJobs listener error:", err);
     });
 }
-
 
 
 
@@ -4051,6 +4058,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
