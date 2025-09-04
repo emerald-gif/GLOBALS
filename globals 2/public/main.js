@@ -887,6 +887,174 @@ firebase.firestore().collection("tasks")
 
 
 
+
+
+
+
+
+// ================= Finished Task Submissions Logic =================
+
+// Open finished tasks screen (for regular tasks)
+document.getElementById("finishedTasksBtn").addEventListener("click", () => {
+  document.getElementById("taskSection").style.display = "none";
+  document.getElementById("finishedTasksScreen").style.display = "block";
+  loadFinishedTaskSubmissions();
+});
+
+// Back button
+document.getElementById("backToMainBtn").addEventListener("click", () => {
+  document.getElementById("finishedTasksScreen").style.display = "none";
+  document.getElementById("taskSection").style.display = "block";
+});
+
+// Load finished task submissions
+async function loadFinishedTaskSubmissions() {
+  const listEl = document.getElementById("finishedTasksList");
+  const pendingCountEl = document.getElementById("pendingCount");
+  const approvedCountEl = document.getElementById("approvedCount");
+
+  const userId = firebase.auth().currentUser?.uid;
+  if (!userId) return;
+
+  try {
+    const snapshot = await firebase.firestore()
+      .collection("task_submissions")
+      .where("userId", "==", userId)
+      .get();
+
+    let docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    // Sort by submittedAt descending
+    docs.sort((a, b) => {
+      const t1 = a.submittedAt?.toDate?.() || new Date(0);
+      const t2 = b.submittedAt?.toDate?.() || new Date(0);
+      return t2 - t1;
+    });
+
+    listEl.innerHTML = "";
+    let pending = 0, approved = 0;
+
+    if (!docs.length) {
+      listEl.innerHTML = `<p class="text-center text-gray-500">No finished tasks yet.</p>`;
+    }
+
+    for (const data of docs) {
+      if (data.status === "on review") pending++;
+      if (data.status === "approved") approved++;
+
+      // Fetch job title from tasks collection
+      let jobTitle = "Untitled Task";
+      if (data.jobId) {
+        const jobDoc = await firebase.firestore()
+          .collection("tasks")
+          .doc(data.jobId)
+          .get();
+        if (jobDoc.exists) {
+          jobTitle = jobDoc.data().title || "Untitled Task";
+        }
+      }
+
+      const card = document.createElement("div");
+      card.className = "p-4 bg-white shadow rounded-xl flex items-center justify-between";
+
+      card.innerHTML = `
+        <div>
+          <h3 class="font-semibold text-gray-900">${jobTitle}</h3>
+          <p class="text-sm text-gray-600">Earn: ₦${data.workerEarn || 0}</p>
+          <p class="text-xs text-gray-400">${data.submittedAt?.toDate().toLocaleString() || ""}</p>
+          <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded ${
+            data.status === "approved"
+              ? "bg-green-100 text-green-700"
+              : "bg-yellow-100 text-yellow-700"
+          }">${data.status}</span>
+        </div>
+        <button
+          class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg details-btn"
+          data-id="${data.id}"
+        >
+          Details
+        </button>
+      `;
+      listEl.appendChild(card);
+    }
+
+    // Update counts
+    pendingCountEl.textContent = pending;
+    approvedCountEl.textContent = approved;
+
+    // Attach details button events
+    listEl.querySelectorAll(".details-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        showTaskSubmissionDetails(btn.dataset.id);
+      });
+    });
+
+  } catch (err) {
+    console.error("Error loading finished tasks:", err);
+    listEl.innerHTML = `<p class="text-center text-red-500">Error loading tasks. Try again later.</p>`;
+  }
+}
+
+// Show task submission details
+async function showTaskSubmissionDetails(submissionId) {
+  try {
+    const subDoc = await firebase.firestore()
+      .collection("task_submissions")
+      .doc(submissionId)
+      .get();
+
+    if (!subDoc.exists) return;
+    const data = subDoc.data();
+
+    // Fetch job details from tasks
+    let jobData = {};
+    if (data.jobId) {
+      const jobDoc = await firebase.firestore()
+        .collection("tasks")
+        .doc(data.jobId)
+        .get();
+      if (jobDoc.exists) jobData = jobDoc.data();
+    }
+
+    const jobTitle = jobData.title || data.jobTitle || "Untitled Task";
+
+    const proofImage = data.proofImage || data.extraProofImage || null;
+
+    const modal = document.createElement("div");
+    modal.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50";
+    modal.innerHTML = `
+      <div class="bg-white rounded-xl shadow-lg p-6 w-96 max-h-[90vh] overflow-y-auto">
+        <h2 class="text-lg font-bold mb-3">Submission Details</h2>
+        
+        <p class="text-sm"><strong>Job Title:</strong> ${jobTitle}</p>
+        <p class="text-sm"><strong>Status:</strong> ${data.status}</p>
+        <p class="text-sm"><strong>Earned:</strong> ₦${data.workerEarn || 0}</p>
+        <p class="text-sm"><strong>Submitted At:</strong> ${data.submittedAt?.toDate().toLocaleString() || "—"}</p>
+        <p class="text-sm"><strong>Extra Proof:</strong> ${data.extraProof || "—"}</p>
+
+        ${proofImage ? `
+          <div class="mt-3">
+            <p class="text-sm font-medium text-gray-700 mb-1">Uploaded Proof:</p>
+            <img src="${proofImage}" alt="Proof" class="rounded-lg border w-full">
+          </div>
+        ` : ""}
+
+        <div class="mt-4 flex justify-end">
+          <button class="closeModal px-4 py-2 bg-blue-600 text-white rounded-lg">Close</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.querySelector(".closeModal").addEventListener("click", () => modal.remove());
+
+  } catch (err) {
+    console.error("Error showing task submission details:", err);
+  }
+}
+
+
+
 	
                                     //AFFILIATE 
 
@@ -4333,6 +4501,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
