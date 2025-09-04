@@ -894,17 +894,19 @@ firebase.firestore().collection("tasks")
 
 // ================= Finished Task Submissions Logic =================
 
-// Open finished tasks screen (for regular tasks)
+// ================= Finished Task Submissions Logic =================
+
+// Open finished tasks screen
 document.getElementById("finishedTasksBtn").addEventListener("click", () => {
-  document.getElementById("taskSection").style.display = "none";
-  document.getElementById("finishedTasksScreen").style.display = "block";
+  document.getElementById("taskSection").classList.add("hidden");
+  document.getElementById("finishedTasksScreen").classList.remove("hidden");
   loadFinishedTaskSubmissions();
 });
 
 // Back button
 document.getElementById("backToMainBtn").addEventListener("click", () => {
-  document.getElementById("finishedTasksScreen").style.display = "none";
-  document.getElementById("taskSection").style.display = "block";
+  document.getElementById("finishedTasksScreen").classList.add("hidden");
+  document.getElementById("taskSection").classList.remove("hidden");
 });
 
 // Load finished task submissions
@@ -4501,6 +4503,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
