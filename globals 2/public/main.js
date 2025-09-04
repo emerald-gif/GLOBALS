@@ -967,6 +967,8 @@ function ensureDetailScreen() {
 // --- main DOM refs & cache ---  
 const affiliateTasksContainer = document.getElementById("affiliate-tasks");  
 const jobCache = new Map(); // id -> jobData  
+const submissionUnsubMap = new Map(); // jobId -> unsubscribe function for affiliate_submissions listener
+	
 
 // render a single job card (keeps your job-card style classes)  
 function renderAffiliateCard({ id, job, approvedCount }) {  
@@ -993,8 +995,8 @@ function renderAffiliateCard({ id, job, approvedCount }) {
 
 
 
-
-// start Firestore listener for affiliateJobs (grid)
+// function startAffiliateJobsListener FUNCTION 
+	
 function startAffiliateJobsListener() {
   if (!affiliateTasksContainer) {
     console.warn("#affiliate-tasks container not found. Affiliate tasks will not render.");
@@ -1002,44 +1004,67 @@ function startAffiliateJobsListener() {
   }
   ensureDetailStyles();
 
+  // Listen for affiliateJobs (approved)
   db.collection("affiliateJobs")
     .where("status", "==", "approved")
     .onSnapshot((snap) => {
+      const jobs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const newIds = new Set(jobs.map(j => j.id));
+
+      // cleanup listeners for jobs that no longer exist
+      for (const [jobId, unsub] of submissionUnsubMap.entries()) {
+        if (!newIds.has(jobId)) {
+          try { unsub(); } catch (err) {}
+          submissionUnsubMap.delete(jobId);
+        }
+      }
+
+      // clear DOM and cache (we'll re-render)
       affiliateTasksContainer.innerHTML = '';
       jobCache.clear();
 
-      const jobs = snap.docs.map(d => ({ id: d.id, ...d.data() }));    
-      jobs.forEach(j => jobCache.set(j.id, j));    
-
+      // render each job card and attach per-job submissions listener
       jobs.forEach(job => {
-        // Create card placeholder first
+        jobCache.set(job.id, job);
+
+        // render card immediately
         const card = renderAffiliateCard({ id: job.id, job, approvedCount: 0 });
         affiliateTasksContainer.appendChild(card);
 
-        // 🔥 Attach real-time listener for submissions of this job
-        db.collection("affiliate_submissions")
-          .where("jobId", "==", job.id)
-          .where("status", "==", "approved")
-          .onSnapshot(subSnap => {
-            const approvedCount = subSnap.size;
-            const total = job.numWorkers || 0;
-            const percent = total ? Math.min(100, Math.round((approvedCount / total) * 100)) : 0;
+        // attach submissions listener if not already
+        if (!submissionUnsubMap.has(job.id)) {
+          const unsub = db.collection("affiliate_submissions")
+            .where("jobId", "==", job.id)
+            .where("status", "==", "approved")
+            .onSnapshot(subSnap => {
+              const approvedCount = subSnap.size;
+              const total = job.numWorkers || 0;
+              const percent = total ? Math.min(100, Math.round((approvedCount / total) * 100)) : 0;
 
-            // Update progress inside card
-            const jobCard = affiliateTasksContainer.querySelector(`.view-btn[data-id="${job.id}"]`)?.closest(".job-card");
-            if (jobCard) {
-              const progText = jobCard.querySelector(".job-progress");
-              const progBar = jobCard.querySelector(".job-progress-bar > i");
+              // update DOM
+              const btn = affiliateTasksContainer.querySelector(`.view-btn[data-id="${job.id}"]`);
+              const jobCardEl = btn ? btn.closest('.job-card') : null;
+              if (jobCardEl) {
+                const progText = jobCardEl.querySelector(".job-progress");
+                const progBar = jobCardEl.querySelector(".job-progress-bar > i");
+                if (progText) progText.textContent = `${approvedCount}/${total} workers • ${percent}%`;
+                if (progBar) progBar.style.width = percent + "%";
+              }
 
-              if (progText) progText.textContent = `${approvedCount}/${total} workers • ${percent}%`;
-              if (progBar) progBar.style.width = percent + "%";
-            }
-          });
+              // update cache
+              const cached = jobCache.get(job.id) || {};
+              cached.approvedCount = approvedCount;
+              jobCache.set(job.id, cached);
+            });
+
+          submissionUnsubMap.set(job.id, unsub);
+        }
       });
-    }, err => {
-      console.error("affiliateJobs listener error:", err);
     });
 }
+
+
+
 
 
 
@@ -4026,6 +4051,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
