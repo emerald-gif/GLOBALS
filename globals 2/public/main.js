@@ -996,66 +996,50 @@ function renderAffiliateCard({ id, job, approvedCount }) {
 
 // start Firestore listener for affiliateJobs (grid)
 function startAffiliateJobsListener() {
-if (!affiliateTasksContainer) {
-console.warn("#affiliate-tasks container not found. Affiliate tasks will not render.");
-return;
+  if (!affiliateTasksContainer) {
+    console.warn("#affiliate-tasks container not found. Affiliate tasks will not render.");
+    return;
+  }
+  ensureDetailStyles();
+
+  db.collection("affiliateJobs")
+    .where("status", "==", "approved")
+    .onSnapshot((snap) => {
+      affiliateTasksContainer.innerHTML = '';
+      jobCache.clear();
+
+      const jobs = snap.docs.map(d => ({ id: d.id, ...d.data() }));    
+      jobs.forEach(j => jobCache.set(j.id, j));    
+
+      jobs.forEach(job => {
+        // Create card placeholder first
+        const card = renderAffiliateCard({ id: job.id, job, approvedCount: 0 });
+        affiliateTasksContainer.appendChild(card);
+
+        // 🔥 Attach real-time listener for submissions of this job
+        db.collection("affiliate_submissions")
+          .where("jobId", "==", job.id)
+          .where("status", "==", "approved")
+          .onSnapshot(subSnap => {
+            const approvedCount = subSnap.size;
+            const total = job.numWorkers || 0;
+            const percent = total ? Math.min(100, Math.round((approvedCount / total) * 100)) : 0;
+
+            // Update progress inside card
+            const jobCard = affiliateTasksContainer.querySelector(`.view-btn[data-id="${job.id}"]`)?.closest(".job-card");
+            if (jobCard) {
+              const progText = jobCard.querySelector(".job-progress");
+              const progBar = jobCard.querySelector(".job-progress-bar > i");
+
+              if (progText) progText.textContent = `${approvedCount}/${total} workers • ${percent}%`;
+              if (progBar) progBar.style.width = percent + "%";
+            }
+          });
+      });
+    }, err => {
+      console.error("affiliateJobs listener error:", err);
+    });
 }
-ensureDetailStyles();
-
-db.collection("affiliateJobs")
-.where("status", "==", "approved")
-.onSnapshot(async (snap) => {
-// clear previous
-affiliateTasksContainer.innerHTML = '';
-jobCache.clear();
-
-const jobs = snap.docs.map(d => ({ id: d.id, ...d.data() }));    
-  jobs.forEach(j => jobCache.set(j.id, j));    
-
-  // fetch approved counts in parallel (safe-catch)    
-  const countPromises = jobs.map(j =>    
-    db.collection("affiliate_submissions")    
-      .where("jobId", "==", j.id)    
-      .where("status", "==", "approved")    
-      .get()    
-      .then(q => ({ id: j.id, count: q.size }))    
-      .catch(() => ({ id: j.id, count: 0 }))    
-  );    
-
-  let counts = [];    
-  try {    
-    counts = await Promise.all(countPromises);    
-  } catch (err) {    
-    console.warn("Error fetching affiliate submission counts", err);    
-    counts = counts || [];    
-  }    
-  const countById = Object.fromEntries(counts.map(x => [x.id, x.count || 0]));    
-
-  const frag = document.createDocumentFragment();    
-  jobs.forEach(j => {    
-    const card = renderAffiliateCard({ id: j.id, job: j, approvedCount: countById[j.id] || 0 });    
-    frag.appendChild(card);    
-  });    
-  affiliateTasksContainer.appendChild(frag);    
-}, err => {    
-  console.error("affiliateJobs listener error:", err);    
-});
-
-}
-
-// delegate clicks on the grid to open modal
-function attachGridClickHandler() {
-if (!affiliateTasksContainer) return;
-affiliateTasksContainer.addEventListener('click', (e) => {
-const btn = e.target.closest('.view-btn');
-if (!btn) return;
-const id = btn.dataset.id;
-const job = jobCache.get(id);
-if (job) showAffiliateJobDetails(id, job);
-});
-}
-
-
 
 
 
@@ -4042,6 +4026,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
