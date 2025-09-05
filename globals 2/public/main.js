@@ -249,63 +249,125 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
 
 
 
-const userId = "currentUserId"; // replace with auth.uid
-const userRef = db.collection("users").doc(userId);
+  let currentInput = "new"; // "old" | "new" | "confirm"
+  let pinValues = { old: "", new: "", confirm: "" };
 
-// 🔹 Open modal (check if PIN exists)
-async function openPinModal() {
-  const doc = await userRef.get();
-  const hasPin = doc.exists && doc.data().pin;
+  // ✅ Detect logged in user automatically
+  firebase.auth().onAuthStateChanged(async (user) => {
+    if (user) {
+      const userId = user.uid;
+      window.userRef = db.collection("users").doc(userId); // store globally
+      await setupPinTab();
+    } else {
+      console.log("No user logged in");
+    }
+  });
 
-  document.getElementById("pinModal").classList.remove("hidden");
+  // 🔹 Setup PIN Tab when opened
+  async function setupPinTab() {
+    const doc = await userRef.get();
+    const hasPin = doc.exists && doc.data().pin;
 
-  if (hasPin) {
-    // Change PIN flow
-    document.getElementById("pinModalTitle").innerText = "Change Payment PIN";
-    document.getElementById("oldPinGroup").classList.remove("hidden");
-    document.getElementById("pinActionBtn").innerText = "Update PIN";
-  } else {
-    // Set PIN flow
-    document.getElementById("pinModalTitle").innerText = "Set Payment PIN";
-    document.getElementById("oldPinGroup").classList.add("hidden");
-    document.getElementById("pinActionBtn").innerText = "Set PIN";
+    if (hasPin) {
+      // Change PIN flow
+      document.getElementById("pinTabTitle").innerText = "Change Payment PIN";
+      document.getElementById("oldPinGroup").classList.remove("hidden");
+      document.getElementById("pinActionBtn").innerText = "Update PIN";
+      document.getElementById("pinLabel").innerText = "Change Payment PIN";
+      currentInput = "old";
+    } else {
+      // Set PIN flow
+      document.getElementById("pinTabTitle").innerText = "Set Payment PIN";
+      document.getElementById("oldPinGroup").classList.add("hidden");
+      document.getElementById("pinActionBtn").innerText = "Set PIN";
+      document.getElementById("pinLabel").innerText = "Set Payment PIN";
+      currentInput = "new";
+    }
+
+    // reset pins
+    pinValues = { old: "", new: "", confirm: "" };
+    updatePinDisplay();
   }
-}
 
-function closePinModal() {
-  document.getElementById("pinModal").classList.add("hidden");
-}
+  // 🔹 Save or Update PIN
+  async function savePin() {
+    const doc = await userRef.get();
+    const hasPin = doc.exists && doc.data().pin;
 
-// 🔹 Save or Update PIN
-async function savePin() {
-  const newPin = document.getElementById("newPin").value;
-  const confirmPin = document.getElementById("confirmPin").value;
-  const oldPin = document.getElementById("oldPin").value;
+    const oldPin = pinValues.old;
+    const newPin = pinValues.new;
+    const confirmPin = pinValues.confirm;
 
-  if (newPin !== confirmPin) {
-    alert("PINs do not match");
-    return;
-  }
-
-  const doc = await userRef.get();
-  const hasPin = doc.exists && doc.data().pin;
-
-  if (hasPin) {
-    if (oldPin !== doc.data().pin) {
-      alert("Old PIN is incorrect");
+    if (newPin.length < 4) {
+      alert("PIN must be at least 4 digits");
       return;
     }
-    await userRef.update({ pin: newPin });
-    document.getElementById("pinLabel").innerText = "Change Payment PIN";
-    alert("PIN updated successfully!");
-  } else {
-    await userRef.set({ pin: newPin }, { merge: true });
-    document.getElementById("pinLabel").innerText = "Change Payment PIN";
-    alert("PIN set successfully!");
+
+    if (newPin !== confirmPin) {
+      alert("PINs do not match");
+      return;
+    }
+
+    if (hasPin) {
+      if (oldPin !== doc.data().pin) {
+        alert("Old PIN is incorrect");
+        return;
+      }
+      await userRef.update({ pin: newPin });
+      alert("PIN updated successfully!");
+    } else {
+      await userRef.set({ pin: newPin }, { merge: true });
+      alert("PIN set successfully!");
+    }
+
+    // ✅ Reset pins
+    pinValues = { old: "", new: "", confirm: "" };
+    updatePinDisplay();
+
+    // ✅ Auto redirect back to Me tab
+    activateTab('me');
+    setupPinTab(); // refresh button label
   }
 
-  closePinModal();
-}
+  // 🔹 Keypad functions
+  function pressKey(num) {
+    if (pinValues[currentInput].length < 6) {
+      pinValues[currentInput] += num;
+      updatePinDisplay();
+    }
+  }
+
+  function deleteKey() {
+    if (pinValues[currentInput].length > 0) {
+      pinValues[currentInput] = pinValues[currentInput].slice(0, -1);
+      updatePinDisplay();
+    }
+  }
+
+  function updatePinDisplay() {
+    ["old", "new", "confirm"].forEach(type => {
+      const display = document.getElementById(type + "PinDisplay");
+      if (display) {
+        [...display.children].forEach((dot, i) => {
+          dot.classList.remove("bg-gray-800", "rounded-full");
+          if (pinValues[type][i]) {
+            dot.classList.add("bg-gray-800", "rounded-full");
+          }
+        });
+      }
+    });
+  }
+
+  // 🔹 Switch focus
+  function setInput(type) {
+    currentInput = type;
+  }
+
+  // 🔹 When opening the tab
+  function openPinTab() {
+    setupPinTab();
+    activateTab('pinTab');
+  }
 
 
 
@@ -4572,6 +4634,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
