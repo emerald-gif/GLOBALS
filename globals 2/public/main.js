@@ -412,6 +412,7 @@ function pressKey(num) {
 
   // PAYMENT Detect user on reload FUNCTION 
 	
+  // Detect user on reload
   firebase.auth().onAuthStateChanged(async (user) => {
     if (user) {
       const userId = user.uid;
@@ -435,18 +436,21 @@ function pressKey(num) {
     }, 50);
   }
 
-  // Hide sheet & go to pin tab
-  function goToPinSetup() {
+  // Hide sheet
+  function closePinIntro() {
     const overlay = document.getElementById("pinIntroSheet");
     const drawer = document.getElementById("pinIntroDrawer");
     drawer.classList.add("translate-y-full");
     setTimeout(() => {
       overlay.classList.add("hidden");
-      openPinTab(); // 🚀 send to PIN setup screen
     }, 300);
   }
 
-
+  // Hide + go to pin tab
+  function goToPinSetup() {
+    closePinIntro();
+    setTimeout(() => openPinTab(), 300); // 🚀 send to PIN setup screen
+  }
 
 
 
@@ -4714,6 +4718,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
