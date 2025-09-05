@@ -2,7 +2,13 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
 const admin = require('firebase-admin');
-const serviceAccount = require('./serviceAccountKey.json');
+
+// ✅ Load Firebase service account from Render env variable
+if (!process.env.FIREBASE_CONFIG) {
+  console.error("❌ Missing FIREBASE_CONFIG environment variable");
+  process.exit(1);
+}
+const serviceAccount = JSON.parse(process.env.FIREBASE_CONFIG);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
@@ -31,19 +37,18 @@ app.post('/purchase-airtime', async (req, res) => {
   try {
     const userRef = dbAdmin.collection('users').doc(userId);
     const doc = await userRef.get();
-    if (!doc.exists) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    if (!doc.exists) return res.status(404).json({ error: 'User not found' });
 
     const userData = doc.data();
+    const userBalance = userData.balance || 0;
 
-    // ✅ Check PIN
+    // ✅ PIN check
     if (pin !== userData.pin) {
       return res.status(403).json({ error: 'Invalid PIN' });
     }
 
-    const userBalance = userData.balance || 0;
-    if (amount > userBalance) {
+    // ✅ Balance check
+    if (Number(amount) > Number(userBalance)) {
       return res.status(400).json({ error: 'Insufficient balance' });
     }
 
@@ -57,8 +62,8 @@ app.post('/purchase-airtime', async (req, res) => {
     const apiUrl = "https://www.nellobytesystems.com/APIAirtimeV1.asp";
     const response = await axios.post(apiUrl, null, {
       params: {
-        UserID: "YOUR_CLUBKONNECT_USERID",
-        APIKey: "YOUR_CLUBKONNECT_APIKEY",
+        UserID: process.env.CLUBKONNECT_USERID,
+        APIKey: process.env.CLUBKONNECT_APIKEY,
         MobileNetwork: mappedNetwork,
         Amount: amount,
         MobileNumber: phone,
@@ -67,23 +72,30 @@ app.post('/purchase-airtime', async (req, res) => {
     });
 
     if (response.data && response.data.status === "ORDER_RECEIVED") {
-      // Deduct balance
+      // ✅ Deduct balance
       await userRef.update({
-        balance: userBalance - amount
+        balance: userBalance - Number(amount)
       });
 
-      return res.json({ success: true, message: "Airtime purchase successful" });
+      return res.json({
+        success: true,
+        message: "Airtime purchase successful",
+        newBalance: userBalance - Number(amount)
+      });
     } else {
-      return res.status(400).json({ error: "Airtime purchase failed", details: response.data });
+      return res.status(400).json({
+        error: "Airtime purchase failed",
+        details: response.data
+      });
     }
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ Server error:", err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// ✅ Fetch balance
+// ✅ Fetch user balance
 app.get('/get-balance', async (req, res) => {
   try {
     const userId = req.query.userId;
@@ -96,11 +108,12 @@ app.get('/get-balance', async (req, res) => {
     const balance = doc.data().balance || 0;
     res.json({ balance });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Balance fetch error:", err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-app.listen(5000, () => {
-  console.log('Server running on port 5000');
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
 });
