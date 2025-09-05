@@ -364,14 +364,13 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
   function setInput(type) {
   currentInput = type;
 
-  // highlight active field
   ["old", "new", "confirm"].forEach(t => {
-    const display = document.getElementById(t + "PinDisplay");
-    if (display) {
+    const el = document.getElementById(t + "PinDisplay");
+    if (el) {
       if (t === type) {
-        display.classList.add("border-b-2", "border-blue-500");
+        el.classList.add("border-blue-500", "bg-blue-50", "shadow-sm");
       } else {
-        display.classList.remove("border-b-2", "border-blue-500");
+        el.classList.remove("border-blue-500", "bg-blue-50", "shadow-sm");
       }
     }
   });
@@ -4665,6 +4664,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
