@@ -4629,25 +4629,187 @@ function openService(serviceName) {
 
                     
 
-// Set amount from quick buttons
-function setAmount(amount) {
-  document.getElementById('airtime-amount').value = amount;
+
+let selectedAmount = 0;
+let currentUser = null;
+let userRef = null;
+
+// network map (code -> label & badge text)
+const NETWORKS = {
+  '01': { label: 'MTN', badge: 'MTN' },
+  '02': { label: 'GLO', badge: 'GLO' },
+  '04': { label: 'Airtel', badge: 'AIR' },
+  '03': { label: '9mobile', badge: '9M' }
+};
+
+// helper: show/hide screens (safe, doesn't touch other app functions)
+function showScreen(id) {
+  const screens = ['airtime-screen','confirm-airtime-screen','success-screen'];
+  screens.forEach(s => {
+    const el = document.getElementById(s);
+    if (!el) return;
+    if (s === id) el.classList.remove('hidden'); else el.classList.add('hidden');
+  });
+
+  // clear small inline errors when switching
+  hideElement('airtime-error');
+  hideElement('confirm-error');
 }
 
-localStorage.setItem("networkCode", network);
-document.getElementById('confirm-network').textContent = getNetworkName(network);
+// small helpers
+function showElement(id, text='') { const el=document.getElementById(id); if(!el) return; el.textContent=text; el.classList.remove('hidden'); }
+function hideElement(id) { const el=document.getElementById(id); if(!el) return; el.classList.add('hidden'); el.textContent=''; }
+function formatN(n){ return Number(n).toLocaleString(); }
 
-const network = localStorage.getItem("networkCode"); // ✅ raw code
-
-
-
-
-
-function getNetworkName(code) {
-  const map = { "01": "MTN", "02": "GLO", "04": "Airtel", "03": "9mobile" };
-  return map[code] || code;
+// init firebase auth listener
+if (typeof firebase !== 'undefined') {
+  firebase.auth().onAuthStateChanged(user => {
+    currentUser = user;
+    if (user) userRef = db.collection('users').doc(user.uid);
+    else userRef = null;
+  });
+} else {
+  console.warn('firebase not found on window. Make sure Firebase SDK is initialized and "firebase" & "db" are global.');
 }
 
+// amount quick set
+function setAmount(val) {
+  selectedAmount = val;
+  const input = document.getElementById('airtime-amount');
+  if (input) input.value = val;
+}
+
+// Continue -> Confirm screen
+async function goToConfirmScreen() {
+  hideElement('airtime-error');
+
+  const networkCode = document.getElementById('airtime-network').value;
+  const phone = (document.getElementById('airtime-phone').value || '').trim();
+  const rawAmount = document.getElementById('airtime-amount').value;
+  const amount = parseInt(rawAmount || selectedAmount || 0, 10);
+
+  // basic validation
+  if (!networkCode) { showElement('airtime-error','Please select a network.'); return; }
+  if (!phone || !/^[0][0-9]{10}$/.test(phone)) { showElement('airtime-error','Please enter a valid 11-digit phone number starting with 0.'); return; }
+  if (!amount || amount < 50) { showElement('airtime-error','Amount must be at least ₦50.'); return; }
+
+  if (!currentUser || !userRef) { showElement('airtime-error','You must be signed in to continue.'); return; }
+
+  try {
+    const doc = await userRef.get();
+    if (!doc.exists) { showElement('airtime-error','User record not found.'); return; }
+
+    const data = doc.data();
+    if (!data) { showElement('airtime-error','Unable to read user data.'); return; }
+
+    if (!data.pin) {
+      showElement('airtime-error','Payment PIN not set. Please set your payment PIN first.');
+      return;
+    }
+
+    // all good — fill confirm screen using friendly label
+    const net = NETWORKS[networkCode] ? NETWORKS[networkCode].label : networkCode;
+    document.getElementById('confirm-network').innerText = net;
+    document.getElementById('confirm-network-badge').innerText = NETWORKS[networkCode] ? NETWORKS[networkCode].badge : net.slice(0,3).toUpperCase();
+    document.getElementById('confirm-phone').innerText = phone;
+    document.getElementById('confirm-amount').innerText = '₦' + formatN(amount);
+    document.getElementById('confirm-balance').innerText = '₦' + formatN(data.balance || 0);
+
+    // store amount/network in dataset (used for pay)
+    document.getElementById('confirm-airtime-screen').dataset.networkCode = networkCode;
+    document.getElementById('confirm-airtime-screen').dataset.amount = amount;
+    document.getElementById('confirm-airtime-screen').dataset.phone = phone;
+
+    showScreen('confirm-airtime-screen');
+  } catch (err) {
+    console.error('goToConfirmScreen error', err);
+    showElement('airtime-error','Could not fetch account. Try again later.');
+  }
+}
+
+// Pay Now (verify pin + balance, write to bill_submissions, decrement balance)
+async function payAirtime() {
+  hideElement('confirm-error');
+  const pinInput = (document.getElementById('confirm-pin').value || '').trim();
+  const btn = document.getElementById('pay-btn');
+  if (!pinInput) { showElement('confirm-error','Please enter your 6-digit payment PIN.'); return; }
+
+  if (!currentUser || !userRef) { showElement('confirm-error','You must be signed in.'); return; }
+
+  // read stored context
+  const networkCode = document.getElementById('confirm-airtime-screen').dataset.networkCode;
+  const phone = document.getElementById('confirm-airtime-screen').dataset.phone;
+  const amount = parseInt(document.getElementById('confirm-airtime-screen').dataset.amount, 10);
+
+  if (!networkCode || !phone || !amount) { showElement('confirm-error','Missing transaction details. Please go back and try again.'); return; }
+
+  // disable button & show loading
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = 'Processing...';
+
+  try {
+    // re-read latest user doc in a transaction-safe way:
+    await db.runTransaction(async (tx) => {
+      const uSnap = await tx.get(userRef);
+      if (!uSnap.exists) throw new Error('User record not found');
+      const u = uSnap.data();
+
+      // pin check
+      if (!u.pin) throw new Error('PIN_NOT_SET');
+      if (String(u.pin) !== String(pinInput)) throw new Error('INCORRECT_PIN');
+
+      // balance check
+      const currentBalance = Number(u.balance || 0);
+      if (currentBalance < amount) throw new Error('INSUFFICIENT_BALANCE');
+
+      // decrement balance
+      tx.update(userRef, { balance: currentBalance - amount });
+
+      // save the bill submission record
+      const payload = {
+        userId: currentUser.uid,
+        networkCode,
+        network: NETWORKS[networkCode] ? NETWORKS[networkCode].label : networkCode,
+        phone,
+        amount,
+        status: 'submitted',       // you can change to 'success' if you want
+        processed: false,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      const billsRef = db.collection('bill_submissions');
+      tx.set(billsRef.doc(), payload); // create a new doc via tx
+    });
+
+    // SHOW SUCCESS SCREEN
+    showScreen('success-screen');
+
+  } catch (err) {
+    console.error('payAirtime transaction error', err);
+
+    if (err.message === 'PIN_NOT_SET') {
+      showElement('confirm-error','Payment PIN not set. Please set your PIN first.');
+      alert('Payment PIN not set.');
+    } else if (err.message === 'INCORRECT_PIN') {
+      showElement('confirm-error','Incorrect PIN. Try again.');
+      alert('Incorrect PIN.');
+    } else if (err.message === 'INSUFFICIENT_BALANCE') {
+      showElement('confirm-error','Insufficient balance.');
+      alert('Insufficient balance.');
+    } else {
+      showElement('confirm-error','Transaction failed. Try again later.');
+      alert('Transaction error. Check console.');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+// initial screen
+showScreen('airtime-screen');
+</script>
 
 
 
