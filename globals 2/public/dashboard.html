@@ -2959,6 +2959,22 @@
         viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
     </button>
 
+
+    <!-- Settings -->
+<button onclick="openPinModal()" class="flex justify-between items-center w-full px-5 py-4 hover:bg-gray-50 transition">
+  <div class="flex items-center gap-3">
+    <!-- Settings Gear Icon -->
+    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2"
+      viewBox="0 0 24 24">
+      <path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7zm7.94-2.34l1.06.61a1 1 0 0 1 .38 1.37l-1 1.73a1 1 0 0 1-1.27.42l-1.24-.5a7.963 7.963 0 0 1-1.7.98l-.26 1.32a1 1 0 0 1-1 .82h-2a1 1 0 0 1-1-.82l-.26-1.32a7.963 7.963 0 0 1-1.7-.98l-1.24.5a1 1 0 0 1-1.27-.42l-1-1.73a1 1 0 0 1 .38-1.37l1.06-.61a7.963 7.963 0 0 1 0-1.98l-1.06-.61a1 1 0 0 1-.38-1.37l1-1.73a1 1 0 0 1 1.27-.42l1.24.5c.52-.41 1.1-.75 1.7-.98l.26-1.32a1 1 0 0 1 1-.82h2a1 1 0 0 1 1 .82l.26 1.32c.6.23 1.18.57 1.7.98l1.24-.5a1 1 0 0 1 1.27.42l1 1.73a1 1 0 0 1-.38 1.37l-1.06.61c.07.33.1.66.1.99s-.03.66-.1.99z"/>
+    </svg>
+    <span class="text-gray-800 font-medium">Settings</span>
+  </div>
+  <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2"
+    viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+</button>
+	  
+
     <button onclick="activateTab('team')" class="flex justify-between items-center w-full px-5 py-4 hover:bg-gray-50 transition">
       <div class="flex items-center gap-3">
         <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2"
@@ -3019,7 +3035,66 @@
 </div>
 
 
-                                               <!-- ME FULL SECTION--> <!-- MY PROFILE INNER SCREEN SECTION-->
+              
+	
+	
+	
+	
+	
+	<!-- Payment PIN Section -->
+<button onclick="openPinModal()" id="pinButton"
+  class="flex justify-between items-center w-full px-5 py-4 hover:bg-gray-50 transition">
+  <div class="flex items-center gap-3">
+    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2"
+      viewBox="0 0 24 24"><path d="M12 11c.828 0 1.5-.672 1.5-1.5S12.828 8 12 8s-1.5.672-1.5 1.5S11.172 11 12 11z"/><path d="M5 20h14v-2c0-2.21-1.79-4-4-4H9c-2.21 0-4 1.79-4 4v2z"/></svg>
+    <span id="pinLabel" class="text-gray-800 font-medium">Set Payment PIN</span>
+  </div>
+  <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2"
+    viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+</button>
+
+<!-- PIN Modal -->
+<div id="pinModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-40 z-50">
+  <div class="bg-white w-96 p-6 rounded-2xl shadow-xl">
+    <h2 id="pinModalTitle" class="text-lg font-semibold text-gray-800 mb-4">Set Payment PIN</h2>
+
+    <!-- Old PIN (only visible if changing) -->
+    <div id="oldPinGroup" class="hidden mb-3">
+      <label class="text-sm text-gray-600">Enter Old PIN</label>
+      <input type="password" id="oldPin" maxlength="6"
+        class="w-full mt-1 p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+    </div>
+
+    <label class="text-sm text-gray-600">Enter New PIN</label>
+    <input type="password" id="newPin" maxlength="6"
+      class="w-full mt-1 p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none mb-3" />
+
+    <label class="text-sm text-gray-600">Confirm PIN</label>
+    <input type="password" id="confirmPin" maxlength="6"
+      class="w-full mt-1 p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none mb-5" />
+
+    <div class="flex justify-end gap-3">
+      <button onclick="closePinModal()" class="px-4 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-700">Cancel</button>
+      <button onclick="savePin()" id="pinActionBtn"
+        class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white">Set PIN</button>
+    </div>
+  </div>
+</div>
+	
+	
+	
+	
+
+
+
+
+	
+	
+	
+	<!-- ME FULL SECTION-->
+	
+	
+	<!-- MY PROFILE INNER SCREEN SECTION-->
 
 
 
@@ -3483,6 +3558,7 @@
 </body>
 
 </html>
+
 
 
 
