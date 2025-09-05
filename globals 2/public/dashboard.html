@@ -540,67 +540,68 @@
 
 
                                                            <!-- 📱 Airtime Screen -->
-
 <!-- ================= Airtime Screen ================= -->
-<!-- Airtime Purchase Screen -->
 <div id="airtime-screen" class="tab-section hidden bg-gray-50 min-h-screen p-4">
 
   <!-- Header -->
   <div class="flex items-center justify-between mb-6">
-    <button onclick="activateTab('dashboard')" class="text-blue-600 font-medium">← Back</button>
+    <button onclick="activateTab('dashboard')" class="text-blue-600 font-medium hover:underline">← Back</button>
     <h2 class="text-2xl font-bold text-gray-800">Buy Airtime & Data</h2>
     <div></div>
   </div>
 
-  <!-- Network & Phone -->
-  <div class="grid grid-cols-2 gap-4 mb-6">
-    <select id="airtime-network" class="w-full border rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500">
-      <option value="">Select Network</option>
-      <option value="01">MTN</option>
-      <option value="02">GLO</option>
-      <option value="04">Airtel</option>
-      <option value="03">9mobile</option>
-    </select>
+  <!-- Card Container -->
+  <div class="bg-white rounded-2xl shadow-md p-6 mb-6 space-y-4">
+    <!-- Network & Phone -->
+    <div class="grid grid-cols-2 gap-4">
+      <select id="airtime-network" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500">
+        <option value="">Select Network</option>
+        <option value="01">MTN</option>
+        <option value="02">GLO</option>
+        <option value="04">Airtel</option>
+        <option value="03">9mobile</option>
+      </select>
 
-    <input type="tel" id="airtime-phone" maxlength="11" placeholder="Recipient Phone" 
-           class="w-full border rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500" />
-  </div>
-
-  <!-- Amount Quick Buttons -->
-  <div class="mb-6">
-    <h3 class="text-sm font-semibold text-gray-700 mb-2">Quick Top-Up</h3>
-    <div class="grid grid-cols-3 gap-3">
-      <button onclick="setAmount(50)" class="bg-blue-50 text-blue-800 rounded-lg py-3 font-bold">₦50</button>
-      <button onclick="setAmount(100)" class="bg-blue-50 text-blue-800 rounded-lg py-3 font-bold">₦100</button>
-      <button onclick="setAmount(200)" class="bg-blue-50 text-blue-800 rounded-lg py-3 font-bold">₦200</button>
-      <button onclick="setAmount(500)" class="bg-blue-50 text-blue-800 rounded-lg py-3 font-bold">₦500</button>
-      <button onclick="setAmount(1000)" class="bg-blue-50 text-blue-800 rounded-lg py-3 font-bold">₦1,000</button>
-      <button onclick="setAmount(2000)" class="bg-blue-50 text-blue-800 rounded-lg py-3 font-bold">₦2,000</button>
+      <input type="tel" id="airtime-phone" maxlength="11" placeholder="Recipient Phone" 
+             class="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500" />
     </div>
-  </div>
 
-  <!-- Manual Amount Input -->
-  <div class="mb-6">
-    <input type="number" id="airtime-amount" min="50" max="500000" placeholder="Enter Amount ₦50 - ₦500,000" 
-           class="w-full border rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 mb-3" />
-    <button onclick="goToConfirmScreen()" class="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold">Continue</button>
+    <!-- Amount Quick Buttons -->
+    <div>
+      <h3 class="text-sm font-semibold text-gray-700 mb-2">Quick Top-Up</h3>
+      <div class="grid grid-cols-3 gap-3">
+        <button onclick="setAmount(50)" class="bg-blue-50 text-blue-800 rounded-xl py-3 font-semibold hover:bg-blue-100">₦50</button>
+        <button onclick="setAmount(100)" class="bg-blue-50 text-blue-800 rounded-xl py-3 font-semibold hover:bg-blue-100">₦100</button>
+        <button onclick="setAmount(200)" class="bg-blue-50 text-blue-800 rounded-xl py-3 font-semibold hover:bg-blue-100">₦200</button>
+        <button onclick="setAmount(500)" class="bg-blue-50 text-blue-800 rounded-xl py-3 font-semibold hover:bg-blue-100">₦500</button>
+        <button onclick="setAmount(1000)" class="bg-blue-50 text-blue-800 rounded-xl py-3 font-semibold hover:bg-blue-100">₦1,000</button>
+        <button onclick="setAmount(2000)" class="bg-blue-50 text-blue-800 rounded-xl py-3 font-semibold hover:bg-blue-100">₦2,000</button>
+      </div>
+    </div>
+
+    <!-- Manual Amount Input -->
+    <div class="mt-4">
+      <input type="number" id="airtime-amount" min="50" max="500000" placeholder="Enter Amount ₦50 - ₦500,000" 
+             class="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 mb-3" />
+      <button onclick="goToConfirmScreen()" class="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700">Continue</button>
+    </div>
   </div>
 
   <div id="airtime-response" class="mt-4 text-sm text-center text-green-600 font-medium"></div>
 </div>
 
-<!-- Confirm Airtime Screen -->
+<!-- ================= Confirm Airtime Screen ================= -->
 <div id="confirm-airtime-screen" class="tab-section hidden bg-gray-50 min-h-screen p-4">
 
   <!-- Header -->
   <div class="flex items-center justify-between mb-6">
-    <button onclick="activateTab('airtime-screen')" class="text-blue-600 font-medium">← Back</button>
+    <button onclick="activateTab('airtime-screen')" class="text-blue-600 font-medium hover:underline">← Back</button>
     <h2 class="text-2xl font-bold text-gray-800">Confirm Airtime</h2>
     <div></div>
   </div>
 
-  <!-- Details Card -->
-  <div class="bg-white p-6 rounded-2xl shadow-md mb-6">
+  <!-- Confirmation Card -->
+  <div class="bg-white rounded-2xl shadow-md p-6 mb-6 space-y-3">
     <p><span class="font-semibold">Network:</span> <span id="confirm-network">-</span></p>
     <p><span class="font-semibold">Recipient:</span> <span id="confirm-phone">-</span></p>
     <p><span class="font-semibold">Amount:</span> ₦<span id="confirm-amount">0</span></p>
@@ -610,11 +611,11 @@
   <!-- PIN Input -->
   <div class="mb-6">
     <input type="password" id="confirm-pin" maxlength="6" placeholder="Enter 6-digit PIN" 
-           class="w-full border rounded-lg px-4 py-3 text-center focus:ring-2 focus:ring-blue-500" />
+           class="w-full border border-gray-200 rounded-xl px-4 py-3 text-center focus:ring-2 focus:ring-blue-500" />
   </div>
 
   <!-- Pay Button -->
-  <button onclick="payAirtime()" class="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold">Pay Now</button>
+  <button onclick="payAirtime()" class="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700">Pay Now</button>
 
   <div id="confirm-response" class="mt-4 text-sm text-center text-green-600 font-medium"></div>
 </div>
@@ -3598,6 +3599,7 @@
 </body>
 
 </html>
+
 
 
 
