@@ -241,6 +241,77 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
 
 
 
+
+
+
+
+                                                                 // PAYMENT PIN FUNCTION 
+
+
+
+const userId = "currentUserId"; // replace with auth.uid
+const userRef = db.collection("users").doc(userId);
+
+// 🔹 Open modal (check if PIN exists)
+async function openPinModal() {
+  const doc = await userRef.get();
+  const hasPin = doc.exists && doc.data().pin;
+
+  document.getElementById("pinModal").classList.remove("hidden");
+
+  if (hasPin) {
+    // Change PIN flow
+    document.getElementById("pinModalTitle").innerText = "Change Payment PIN";
+    document.getElementById("oldPinGroup").classList.remove("hidden");
+    document.getElementById("pinActionBtn").innerText = "Update PIN";
+  } else {
+    // Set PIN flow
+    document.getElementById("pinModalTitle").innerText = "Set Payment PIN";
+    document.getElementById("oldPinGroup").classList.add("hidden");
+    document.getElementById("pinActionBtn").innerText = "Set PIN";
+  }
+}
+
+function closePinModal() {
+  document.getElementById("pinModal").classList.add("hidden");
+}
+
+// 🔹 Save or Update PIN
+async function savePin() {
+  const newPin = document.getElementById("newPin").value;
+  const confirmPin = document.getElementById("confirmPin").value;
+  const oldPin = document.getElementById("oldPin").value;
+
+  if (newPin !== confirmPin) {
+    alert("PINs do not match");
+    return;
+  }
+
+  const doc = await userRef.get();
+  const hasPin = doc.exists && doc.data().pin;
+
+  if (hasPin) {
+    if (oldPin !== doc.data().pin) {
+      alert("Old PIN is incorrect");
+      return;
+    }
+    await userRef.update({ pin: newPin });
+    document.getElementById("pinLabel").innerText = "Change Payment PIN";
+    alert("PIN updated successfully!");
+  } else {
+    await userRef.set({ pin: newPin }, { merge: true });
+    document.getElementById("pinLabel").innerText = "Change Payment PIN";
+    alert("PIN set successfully!");
+  }
+
+  closePinModal();
+}
+
+
+
+
+
+
                                                                  //OVERVIEW SECTION (ME SECTION) FUNCTION
 
 
@@ -4501,6 +4572,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
