@@ -3120,16 +3120,24 @@
 
 
 <!-- ================= BOTTOM SHEET FOR PIN ================= -->
+<!-- ================= BOTTOM SHEET ================= -->
 <div id="pinIntroSheet" 
      class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-end z-50">
   <div class="w-full bg-white rounded-t-2xl p-6 transform translate-y-full transition-transform duration-300"
        id="pinIntroDrawer">
     
-    <!-- Grab handle -->
-    <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
+    <!-- Grab handle (clickable for swipe down) -->
+    <div onclick="closePinIntro()" 
+         class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4 cursor-pointer"></div>
+
+    <!-- Close button -->
+    <button onclick="closePinIntro()" 
+            class="absolute top-3 right-4 text-gray-400 hover:text-gray-600">
+      ✕
+    </button>
 
     <!-- Icon -->
-    <div class="flex justify-center mb-4">
+    <div class="flex justify-center mb-4 mt-2">
       <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
         <svg xmlns="http://www.w3.org/2000/svg" 
              class="h-8 w-8 text-blue-600" 
@@ -3629,6 +3637,7 @@
 </body>
 
 </html>
+
 
 
 
