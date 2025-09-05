@@ -416,7 +416,30 @@ app.post('/purchase-airtime', async (req, res) => {
 
 
 
+// Get user balance
+app.get('/get-balance', async (req, res) => {
+try {
+const userId = req.query.userId;
+if (!userId) return res.status(400).json({ error: 'Missing userId' });
 
+const userRef = dbAdmin.collection('users').doc(userId);  
+const doc = await userRef.get();  
+if (!doc.exists) return res.status(404).json({ error: 'User not found' });  
+
+const balance = doc.data().balance || 0;  
+res.json({ balance });
+
+} catch (err) {
+console.error(err);
+res.status(500).json({ error: 'Internal server error' });
+}
+});
+
+
+
+
+
+  
 
 
 
@@ -429,4 +452,5 @@ app.get("*", (req, res) => {
 /* Start server */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
 
