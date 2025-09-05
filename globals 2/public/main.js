@@ -4809,7 +4809,8 @@ async function payAirtime() {
 
 // initial screen
 showScreen('airtime-screen');
-</script>
+
+
 
 
 
