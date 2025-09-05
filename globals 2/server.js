@@ -346,6 +346,81 @@ app.post('/webhook/paystack', async (req, res) => {
   }
 });
 
+
+
+
+
+
+
+/* =======================
+   Airtime Purchase (ClubKonnect)
+   ======================= */
+app.post('/purchase-airtime', async (req, res) => {
+  const { network, phone, amount, pin, userId } = req.body;
+
+  if (!network || !phone || !amount || !pin || !userId) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    const userRef = dbAdmin.collection('users').doc(userId); // dynamic userId
+    const doc = await userRef.get();
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userData = doc.data();
+
+    // ✅ Check if PIN matches
+    if (pin !== userData.pin) {
+      return res.status(403).json({ error: 'Invalid PIN' });
+    }
+
+    const userBalance = userData.balance;
+
+    if (amount > userBalance) {
+      return res.status(400).json({ error: 'Insufficient balance' });
+    }
+
+    const requestId = 'TX' + Math.floor(Math.random() * 1000000);
+    const callbackUrl = 'https://yourdomain.com/callback';
+
+    // Call ClubKonnect API
+    const response = await axios.get('https://www.nellobytesystems.com/APIAirtimeV1.asp', {
+      params: {
+        UserID: process.env.USER_ID,
+        APIKey: process.env.API_KEY,
+        MobileNetwork: network,
+        Amount: amount,
+        MobileNumber: phone,
+        RequestID: requestId,
+        CallBackURL: callbackUrl
+      }
+    });
+
+    if (response.data.Status === 'Success') {
+      await userRef.update({
+        balance: admin.firestore.FieldValue.increment(-amount)
+      });
+      return res.status(200).json({ success: true });
+    } else {
+      return res.status(500).json({ error: 'Airtime purchase failed' });
+    }
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+
+
+
+
+
+
+
 /* Catch-all route (serve dashboard) */
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "dashboard.html"));
@@ -354,3 +429,4 @@ app.get("*", (req, res) => {
 /* Start server */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
