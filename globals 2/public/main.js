@@ -298,8 +298,8 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
     const newPin = pinValues.new;
     const confirmPin = pinValues.confirm;
 
-    if (newPin.length < 4) {
-      alert("PIN must be at least 4 digits");
+    if (newPin.length < 6) {
+      alert("PIN must 6 digits");
       return;
     }
 
@@ -4664,6 +4664,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
