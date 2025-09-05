@@ -4629,50 +4629,59 @@ function openService(serviceName) {
 
                     
 
-
-
-// Set the amount for airtime purchase
+// Set amount from quick buttons
 function setAmount(amount) {
   document.getElementById('airtime-amount').value = amount;
 }
 
-// Navigate to the confirmation screen
-function goToConfirmScreen() {
+// Navigate to Confirm screen
+async function goToConfirmScreen() {
   const network = document.getElementById('airtime-network').value;
   const phone = document.getElementById('airtime-phone').value;
-  const amount = document.getElementById('airtime-amount').value;
+  const amount = parseFloat(document.getElementById('airtime-amount').value);
 
   if (!network || !phone || !amount) {
     alert('Please fill in all fields');
     return;
   }
 
-  // Fetch user balance from Firebase
-  fetch('/get-balance')
-    .then(response => response.json())
-    .then(data => {
-      if (data.balance < amount) {
-        alert('Insufficient balance');
-        return;
-      }
+  // Get Firebase logged-in user
+  const user = firebase.auth().currentUser;
+  if (!user) {
+    alert('User not logged in');
+    return;
+  }
+  const userId = user.uid;
 
-      // Update confirmation screen
-      document.getElementById('confirm-network').textContent = network;
-      document.getElementById('confirm-phone').textContent = phone;
-      document.getElementById('confirm-amount').textContent = amount;
-      document.getElementById('confirm-balance').textContent = data.balance;
+  try {
+    const res = await fetch(`/get-balance?userId=${userId}`);
+    const data = await res.json();
 
-      // Show confirmation screen
-      document.getElementById('airtime-screen').classList.add('hidden');
-      document.getElementById('confirm-airtime-screen').classList.remove('hidden');
-    });
+    if (data.balance < amount) {
+      alert('Insufficient balance');
+      return;
+    }
+
+    // Update confirmation screen
+    document.getElementById('confirm-network').textContent = network;
+    document.getElementById('confirm-phone').textContent = phone;
+    document.getElementById('confirm-amount').textContent = amount;
+    document.getElementById('confirm-balance').textContent = data.balance;
+
+    // Show confirmation screen
+    document.getElementById('airtime-screen').classList.add('hidden');
+    document.getElementById('confirm-airtime-screen').classList.remove('hidden');
+  } catch (err) {
+    console.error(err);
+    alert('Failed to fetch balance');
+  }
 }
 
-// Handle airtime payment
-function payAirtime() {
+// Handle Airtime Payment
+async function payAirtime() {
   const network = document.getElementById('confirm-network').textContent;
   const phone = document.getElementById('confirm-phone').textContent;
-  const amount = document.getElementById('confirm-amount').textContent;
+  const amount = parseFloat(document.getElementById('confirm-amount').textContent);
   const pin = document.getElementById('confirm-pin').value;
 
   if (!pin) {
@@ -4680,31 +4689,33 @@ function payAirtime() {
     return;
   }
 
-  // Send payment request to server
-  fetch('/purchase-airtime', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      network,
-      phone,
-      amount,
-      pin,
-    }),
-  })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        alert('Airtime purchase successful');
-        // Navigate back to dashboard
-        activateTab('dashboard');
-      } else {
-        alert('Airtime purchase failed');
-      }
-    });
-}
+  // Firebase logged-in user
+  const user = firebase.auth().currentUser;
+  if (!user) {
+    alert('User not logged in');
+    return;
+  }
+  const userId = user.uid;
 
+  try {
+    const res = await fetch('/purchase-airtime', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ network, phone, amount, pin, userId })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      alert('Airtime purchase successful!');
+      activateTab('dashboard');
+    } else {
+      alert(data.error || 'Airtime purchase failed');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Server error');
+  }
+}
 
 
 
