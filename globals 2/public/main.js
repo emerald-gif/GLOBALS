@@ -4631,241 +4631,79 @@ function openService(serviceName) {
 
 
 
+// Set the amount for airtime purchase
+function setAmount(amount) {
+  document.getElementById('airtime-amount').value = amount;
+}
 
-  let selectedAmount = 0;
-  let currentUser, userRef;
+// Navigate to the confirmation screen
+function goToConfirmScreen() {
+  const network = document.getElementById('airtime-network').value;
+  const phone = document.getElementById('airtime-phone').value;
+  const amount = document.getElementById('airtime-amount').value;
 
-  // Firebase Auth
-  firebase.auth().onAuthStateChanged(user => {
-    if(user) {
-      currentUser = user;
-      userRef = db.collection('users').doc(user.uid);
-    }
-  });
-
-  function setAmount(val) {
-    selectedAmount = val;
-    document.getElementById('airtime-amount').value = val;
+  if (!network || !phone || !amount) {
+    alert('Please fill in all fields');
+    return;
   }
 
-  // Navigate to Confirm Screen
-  async function goToConfirmScreen() {
-    const network = document.getElementById('airtime-network').value;
-    const phone = document.getElementById('airtime-phone').value;
-    const amountInput = parseInt(document.getElementById('airtime-amount').value) || selectedAmount;
-
-    if(!network || !phone || !amountInput || amountInput < 50) {
-      alert('Please fill in all details and ensure amount is at least ₦50');
-      return;
-    }
-
-    // Fetch user balance and PIN
-    const doc = await userRef.get();
-    const data = doc.data();
-
-    if(!data.pin) {
-      alert('Payment PIN not set. Please set your PIN first.');
-      return;
-    }
-
-    document.getElementById('confirm-network').innerText = network;
-    document.getElementById('confirm-phone').innerText = phone;
-    document.getElementById('confirm-amount').innerText = amountInput.toLocaleString();
-    document.getElementById('confirm-balance').innerText = (data.balance || 0).toLocaleString();
-
-    activateTab('confirm-airtime-screen');
-  }
-
-  // Pay Airtime
-  async function payAirtime() {
-    const pin = document.getElementById('confirm-pin').value;
-
-    const doc = await userRef.get();
-    const data = doc.data();
-
-    const amount = parseInt(document.getElementById('confirm-amount').innerText.replace(/,/g,''));
-
-    if(pin !== data.pin) {
-      alert('Incorrect PIN');
-      return;
-    }
-
-    if(amount > (data.balance || 0)) {
-      alert('Insufficient balance');
-      return;
-    }
-
-    const network = document.getElementById('confirm-network').innerText;
-    const phone = document.getElementById('confirm-phone').innerText;
-
-    // Call backend API
-    fetch('/api/clubconnect/airtime', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: currentUser.uid, network, phone, amount })
-    })
-    .then(res => res.json())
-    .then(resp => {
-      if(resp.success) {
-        alert('Airtime purchase successful!');
-        activateTab('airtime-screen');
-      } else {
-        alert('Transaction failed: ' + resp.message);
+  // Fetch user balance from Firebase
+  fetch('/get-balance')
+    .then(response => response.json())
+    .then(data => {
+      if (data.balance < amount) {
+        alert('Insufficient balance');
+        return;
       }
-    })
-    .catch(err => {
-      console.error(err);
-      alert('Transaction error, try again.');
+
+      // Update confirmation screen
+      document.getElementById('confirm-network').textContent = network;
+      document.getElementById('confirm-phone').textContent = phone;
+      document.getElementById('confirm-amount').textContent = amount;
+      document.getElementById('confirm-balance').textContent = data.balance;
+
+      // Show confirmation screen
+      document.getElementById('airtime-screen').classList.add('hidden');
+      document.getElementById('confirm-airtime-screen').classList.remove('hidden');
     });
+}
+
+// Handle airtime payment
+function payAirtime() {
+  const network = document.getElementById('confirm-network').textContent;
+  const phone = document.getElementById('confirm-phone').textContent;
+  const amount = document.getElementById('confirm-amount').textContent;
+  const pin = document.getElementById('confirm-pin').value;
+
+  if (!pin) {
+    alert('Please enter your PIN');
+    return;
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  // Send payment request to server
+  fetch('/purchase-airtime', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      network,
+      phone,
+      amount,
+      pin,
+    }),
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Airtime purchase successful');
+        // Navigate back to dashboard
+        activateTab('dashboard');
+      } else {
+        alert('Airtime purchase failed');
+      }
+    });
+}
 
 
 
