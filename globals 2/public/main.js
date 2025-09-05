@@ -404,6 +404,56 @@ function pressKey(num) {
 }
 
 
+
+
+
+
+
+
+  // PAYMENT Detect user on reload FUNCTION 
+	
+  firebase.auth().onAuthStateChanged(async (user) => {
+    if (user) {
+      const userId = user.uid;
+      const userRef = db.collection("users").doc(userId);
+      const doc = await userRef.get();
+
+      // If no PIN → show intro sheet
+      if (!doc.exists || !doc.data().pin) {
+        showPinIntro();
+      }
+    }
+  });
+
+  // Show sheet
+  function showPinIntro() {
+    const overlay = document.getElementById("pinIntroSheet");
+    const drawer = document.getElementById("pinIntroDrawer");
+    overlay.classList.remove("hidden");
+    setTimeout(() => {
+      drawer.classList.remove("translate-y-full");
+    }, 50);
+  }
+
+  // Hide sheet & go to pin tab
+  function goToPinSetup() {
+    const overlay = document.getElementById("pinIntroSheet");
+    const drawer = document.getElementById("pinIntroDrawer");
+    drawer.classList.add("translate-y-full");
+    setTimeout(() => {
+      overlay.classList.add("hidden");
+      openPinTab(); // 🚀 send to PIN setup screen
+    }, 300);
+  }
+
+
+
+
+
+
+
+
+
                                                                  //OVERVIEW SECTION (ME SECTION) FUNCTION
 
 
@@ -4664,6 +4714,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
