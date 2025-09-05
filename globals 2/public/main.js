@@ -4631,12 +4631,13 @@ function openService(serviceName) {
 
 
 
-  let selectedAmount = 0;
 
-  // Firebase Auth & User Reference
+  let selectedAmount = 0;
   let currentUser, userRef;
+
+  // Firebase Auth
   firebase.auth().onAuthStateChanged(user => {
-    if (user) {
+    if(user) {
       currentUser = user;
       userRef = db.collection('users').doc(user.uid);
     }
@@ -4647,67 +4648,69 @@ function openService(serviceName) {
     document.getElementById('airtime-amount').value = val;
   }
 
-  // Open drawer
-  async function openConfirmDrawer() {
+  // Navigate to Confirm Screen
+  async function goToConfirmScreen() {
     const network = document.getElementById('airtime-network').value;
     const phone = document.getElementById('airtime-phone').value;
-    const amountInput = document.getElementById('airtime-amount').value;
-    const amount = parseInt(amountInput) || selectedAmount;
+    const amountInput = parseInt(document.getElementById('airtime-amount').value) || selectedAmount;
 
-    if (!network || !phone || !amount || amount < 50) {
-      alert('Please select network, enter valid phone and amount');
+    if(!network || !phone || !amountInput || amountInput < 50) {
+      alert('Please fill in all details and ensure amount is at least ₦50');
       return;
     }
 
-    // Get user balance and PIN
+    // Fetch user balance and PIN
     const doc = await userRef.get();
-    const userData = doc.data();
-    if (!userData.pin) {
+    const data = doc.data();
+
+    if(!data.pin) {
       alert('Payment PIN not set. Please set your PIN first.');
       return;
     }
 
-    document.getElementById('drawer-network').innerText = network;
-    document.getElementById('drawer-phone').innerText = phone;
-    document.getElementById('drawer-amount').innerText = amount.toLocaleString();
-    document.getElementById('drawer-balance').innerText = (userData.balance || 0).toLocaleString();
+    document.getElementById('confirm-network').innerText = network;
+    document.getElementById('confirm-phone').innerText = phone;
+    document.getElementById('confirm-amount').innerText = amountInput.toLocaleString();
+    document.getElementById('confirm-balance').innerText = (data.balance || 0).toLocaleString();
 
-    document.getElementById('drawer-pin').value = '';
-    document.getElementById('airtime-drawer').classList.remove('hidden');
+    activateTab('confirm-airtime-screen');
   }
 
-  function closeDrawer() {
-    document.getElementById('airtime-drawer').classList.add('hidden');
-  }
+  // Pay Airtime
+  async function payAirtime() {
+    const pin = document.getElementById('confirm-pin').value;
 
-  // Process Airtime Payment
-  async function processAirtimePayment() {
-    const pinInput = document.getElementById('drawer-pin').value;
     const doc = await userRef.get();
-    const userData = doc.data();
+    const data = doc.data();
 
-    if (!userData.pin || pinInput !== userData.pin) {
-      alert('Invalid PIN');
+    const amount = parseInt(document.getElementById('confirm-amount').innerText.replace(/,/g,''));
+
+    if(pin !== data.pin) {
+      alert('Incorrect PIN');
       return;
     }
 
-    const network = document.getElementById('drawer-network').innerText;
-    const phone = document.getElementById('drawer-phone').innerText;
-    const amount = parseInt(document.getElementById('drawer-amount').innerText.replace(/,/g, ''));
+    if(amount > (data.balance || 0)) {
+      alert('Insufficient balance');
+      return;
+    }
 
-    // Call backend API (do NOT expose API key in frontend)
-    fetch('/api/airtime', {
+    const network = document.getElementById('confirm-network').innerText;
+    const phone = document.getElementById('confirm-phone').innerText;
+
+    // Call backend API
+    fetch('/api/clubconnect/airtime', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ network, phone, amount, userId: currentUser.uid })
+      body: JSON.stringify({ userId: currentUser.uid, network, phone, amount })
     })
     .then(res => res.json())
-    .then(data => {
-      if (data.success) {
+    .then(resp => {
+      if(resp.success) {
         alert('Airtime purchase successful!');
-        closeDrawer();
+        activateTab('airtime-screen');
       } else {
-        alert('Transaction failed: ' + data.message);
+        alert('Transaction failed: ' + resp.message);
       }
     })
     .catch(err => {
@@ -4715,6 +4718,8 @@ function openService(serviceName) {
       alert('Transaction error, try again.');
     });
   }
+
+
 
 
 
