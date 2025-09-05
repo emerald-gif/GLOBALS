@@ -541,120 +541,88 @@
 
                                                            <!-- 📱 Airtime Screen -->
 
-<!-- Airtime Screen -->
-<div id="airtime-screen" class="tab-section hidden bg-white min-h-screen">
-<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Airtime</button>
+<!-- ================= Airtime Screen ================= -->
+<div id="airtime-screen" class="tab-section hidden bg-gray-50 min-h-screen p-4">
+
   <!-- Header -->
-  <div class="flex items-center justify-between p-4 border-b">
-    <h2 class="text-lg font-semibold text-blue-700">Airtime</h2>
-    <button onclick="activateTab('dashboard')" class="text-blue-500 text-sm">← Back</button>
+  <div class="flex items-center justify-between mb-4">
+    <button onclick="activateTab('dashboard')" class="text-blue-600 font-medium">← Back</button>
+    <h2 class="text-xl font-semibold text-gray-800">Airtime & Data</h2>
+    <div></div>
   </div>
 
-  <!-- Banner -->
-  <div class="p-4">
-    <div class="rounded-xl overflow-hidden mb-4">
-      <img src="optimus.jpg" alt="Banner" class="w-full h-24 object-cover rounded-xl" />
-    </div>
-
-    <div class="flex items-center justify-between gap-4 mt-6">
-  <!-- Network Dropdown -->
-  <div class="relative w-1/2">
-    <label for="network" class="block text-sm text-gray-600 mb-1"></label>
-    <select id="airtime-network" class="w-full border rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-      <option value="">Network</option>
-      <option value="mtn">MTN</option>
-      <option value="glo">GLO</option>
-      <option value="airtel">Airtel</option>
-      <option value="9mobile">9mobile</option>
+  <!-- Network & Phone -->
+  <div class="grid grid-cols-2 gap-4 mb-4">
+    <select id="airtime-network" class="w-full border rounded-lg px-3 py-2 text-gray-700 focus:ring-2 focus:ring-blue-500">
+      <option value="">Select Network</option>
+      <option value="01">MTN</option>
+      <option value="02">GLO</option>
+      <option value="04">Airtel</option>
+      <option value="03">9mobile</option>
     </select>
+
+    <input type="tel" id="airtime-phone" maxlength="11" placeholder="Recipient Phone" 
+           class="w-full border rounded-lg px-3 py-2 text-gray-700 focus:ring-2 focus:ring-blue-500" />
   </div>
 
-  <!-- Phone Number Input -->
-  <div class="w-1/2">
-    <label for="airtime-phone" class="block text-sm text-gray-600 mb-1"></label>
-    <input type="tel" id="airtime-phone" maxlength="11" placeholder="0**********" class="w-full border rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+  <!-- Amount Quick Buttons -->
+  <div class="mb-4">
+    <h3 class="text-sm font-semibold text-gray-700 mb-2">Top Up</h3>
+    <div class="grid grid-cols-3 gap-3">
+      <button onclick="setAmount(50)" class="bg-blue-50 text-blue-800 rounded-lg py-2 font-bold">₦50</button>
+      <button onclick="setAmount(100)" class="bg-blue-50 text-blue-800 rounded-lg py-2 font-bold">₦100</button>
+      <button onclick="setAmount(200)" class="bg-blue-50 text-blue-800 rounded-lg py-2 font-bold">₦200</button>
+      <button onclick="setAmount(500)" class="bg-blue-50 text-blue-800 rounded-lg py-2 font-bold">₦500</button>
+      <button onclick="setAmount(1000)" class="bg-blue-50 text-blue-800 rounded-lg py-2 font-bold">₦1,000</button>
+      <button onclick="setAmount(2000)" class="bg-blue-50 text-blue-800 rounded-lg py-2 font-bold">₦2,000</button>
+    </div>
   </div>
-</div>
-	
-	
-	
-	<!-- Top-Up Grid -->
-<div class="mb-4">
-  <h3 class="text-sm font-semibold text-gray-700 mb-2">Top up</h3>
-  <div class="grid grid-cols-3 gap-3">
-    <button onclick="setAmount(50)" class="bg-blue-50 text-blue-800 text-sm rounded-lg p-2 text-center">
-      <span class="text-base font-bold">₦50</span>
-    </button>
-    <button onclick="setAmount(100)" class="bg-blue-50 text-blue-800 text-sm rounded-lg p-2 text-center">
-      <span class="text-base font-bold">₦100</span>
-    </button>
-    <button onclick="setAmount(200)" class="bg-blue-50 text-blue-800 text-sm rounded-lg p-2 text-center">
-      <span class="text-base font-bold">₦200</span>
-    </button>
-    <button onclick="setAmount(500)" class="bg-blue-50 text-blue-800 text-sm rounded-lg p-2 text-center">
-      <span class="text-base font-bold">₦500</span>
-    </button>
-    <button onclick="setAmount(1000)" class="bg-blue-50 text-blue-800 text-sm rounded-lg p-2 text-center">
-      <span class="text-base font-bold">₦1,000</span>
-    </button>
-    <button onclick="setAmount(2000)" class="bg-blue-50 text-blue-800 text-sm rounded-lg p-2 text-center">
-      <span class="text-base font-bold">₦2,000</span>
+
+  <!-- Manual Amount Input -->
+  <div class="mb-4">
+    <input type="number" id="airtime-amount" min="50" max="500000" placeholder="Enter Amount ₦50 - ₦500,000" 
+           class="w-full border rounded-lg px-3 py-2 text-gray-700 focus:ring-2 focus:ring-blue-500" />
+    <button onclick="openConfirmDrawer()" class="w-full mt-3 py-3 bg-blue-600 text-white rounded-lg font-semibold">
+      Continue
     </button>
   </div>
+
+  <!-- Response Box -->
+  <div id="airtime-response" class="mt-4 text-sm text-center text-green-600 font-medium"></div>
 </div>
 
-
-
-
-
-<!-- Manual Input -->
-    <div class="mb-4">
-      <input
-        id="airtime-amount"
-        type="number"
-        min="50"
-        max="500000"
-        class="w-full border border-gray-300 rounded p-2 text-sm"
-        placeholder="₦ 50 - 500,000"
-      />
-      <button onclick="continueAirtimePurchase()" class="w-1/4 mt-2 py-2 bg-blue-600 text- white font-semibold rounded text-sm ">
-        
-      
-        Continue</button>
+<!-- ================= Bottom Drawer ================= -->
+<div id="airtime-drawer" class="fixed inset-0 z-50 hidden items-end justify-center bg-black bg-opacity-40">
+  <div class="bg-white w-full max-w-md rounded-t-3xl p-6">
+    
+    <!-- Grab Handle -->
+    <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
+    
+    <!-- Drawer Content -->
+    <div class="text-center mb-4">
+      <svg class="mx-auto w-12 h-12 text-blue-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <path d="M12 11c.828 0 1.5-.672 1.5-1.5S12.828 8 12 8s-1.5.672-1.5 1.5S11.172 11 12 11z"/>
+        <path d="M5 20h14v-2c0-2.21-1.79-4-4-4H9c-2.21 0-4 1.79-4 4v2z"/>
+      </svg>
+      <h2 class="text-lg font-bold text-gray-800 mb-1">Confirm Airtime</h2>
+      <p class="text-sm text-gray-500">Check details and enter your payment PIN</p>
     </div>
 
-    <!-- Airtime Service (Dummy Section) -->
-    <div class="mt-6">
-      <h3 class="text-sm font-semibold text-gray-700 mb-2">Airtime Service</h3>
-	  
-	  
-      <div class="bg-white rounded-lg p-3 flex items-center justify-between border">
-        <div class="flex items-center space-x-2">
-          <img src="icons/ussd.png" alt="ussd" class="w-5 h-5" />
-          <div>
-            <p class="text-sm font-medium">Airtime To Cash</p>
-            <p class="text-xs text-gray-500">Turn your excess airtime to cash now</p>
-          </div>
-        </div>
-        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-        </svg>
-      </div>
-    </div>
-	
-	
-
-    <!-- Dummy More Events -->
-    <div class="mt-4">
-      <h3 class="text-sm font-semibold text-gray-700 mb-2">More Events</h3>
-      <div class="bg-white rounded-lg p-3 border">
-        <p class="text-sm text-gray-600"> OPEN MYSTRY BOX NOW!!! <li> Up to 70GB free data! </li> <li> 5K instant cash </li> </p>
-		
-      </div>
+    <!-- Airtime Details -->
+    <div class="mb-4 text-left space-y-2">
+      <p><span class="font-medium">Network:</span> <span id="drawer-network">-</span></p>
+      <p><span class="font-medium">Recipient:</span> <span id="drawer-phone">-</span></p>
+      <p><span class="font-medium">Amount:</span> ₦<span id="drawer-amount">0</span></p>
+      <p><span class="font-medium">Available Balance:</span> ₦<span id="drawer-balance">0</span></p>
     </div>
 
-    <!-- Response Box -->
-    <div id="airtime-response" class="mt-4 text-sm text-center text-green-600 font-medium"></div>
+    <!-- PIN Input -->
+    <input type="password" id="drawer-pin" maxlength="6" placeholder="Enter 6-digit PIN" 
+           class="w-full border rounded-lg px-3 py-2 mb-4 text-center focus:ring-2 focus:ring-blue-500" />
+
+    <!-- Pay Button -->
+    <button onclick="processAirtimePayment()" class="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold">Pay Now</button>
+    <button onclick="closeDrawer()" class="w-full mt-2 py-2 bg-gray-200 text-gray-700 rounded-lg">Cancel</button>
   </div>
 </div>
 
@@ -3637,6 +3605,7 @@
 </body>
 
 </html>
+
 
 
 
