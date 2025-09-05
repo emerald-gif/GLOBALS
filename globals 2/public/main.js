@@ -358,10 +358,24 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
     });
   }
 
-  // 🔹 Switch focus
+
+// 🔹 set input and highlights 
+
   function setInput(type) {
-    currentInput = type;
-  }
+  currentInput = type;
+
+  // highlight active field
+  ["old", "new", "confirm"].forEach(t => {
+    const display = document.getElementById(t + "PinDisplay");
+    if (display) {
+      if (t === type) {
+        display.classList.add("border-b-2", "border-blue-500");
+      } else {
+        display.classList.remove("border-b-2", "border-blue-500");
+      }
+    }
+  });
+}
 
   // 🔹 When opening the tab
   function openPinTab() {
@@ -4651,6 +4665,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
