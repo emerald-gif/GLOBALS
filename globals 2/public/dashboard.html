@@ -3043,27 +3043,62 @@
 	
 	
 	
-	
 <!-- ================= PIN SETTINGS TAB ================= -->
 <div id="pinTab" class="tab-section hidden">
-  <div class="bg-white p-6 rounded-2xl shadow-sm">
+  <div class="bg-white p-6 rounded-2xl shadow-sm text-center">
     <h2 class="text-lg font-semibold text-gray-800 mb-6" id="pinTabTitle">Set Payment PIN</h2>
 
     <!-- Old PIN (only visible if changing) -->
-    <div id="oldPinGroup" class="hidden mb-4">
-      <label class="text-sm text-gray-600">Enter Old PIN</label>
-      <input type="password" id="oldPin" maxlength="6"
-        class="w-full mt-1 p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+    <div id="oldPinGroup" class="hidden mb-6">
+      <p class="text-sm text-gray-600 mb-2">Enter Old PIN</p>
+      <div id="oldPinDisplay" class="flex justify-center gap-3 mb-3">
+        <span class="w-4 h-4 border-b-2 border-gray-400"></span>
+        <span class="w-4 h-4 border-b-2 border-gray-400"></span>
+        <span class="w-4 h-4 border-b-2 border-gray-400"></span>
+        <span class="w-4 h-4 border-b-2 border-gray-400"></span>
+        <span class="w-4 h-4 border-b-2 border-gray-400"></span>
+        <span class="w-4 h-4 border-b-2 border-gray-400"></span>
+      </div>
     </div>
 
-    <label class="text-sm text-gray-600">Enter New PIN</label>
-    <input type="password" id="newPin" maxlength="6"
-      class="w-full mt-1 p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none mb-4" />
+    <!-- New PIN -->
+    <p class="text-sm text-gray-600 mb-2">Enter New PIN</p>
+    <div id="newPinDisplay" class="flex justify-center gap-3 mb-3">
+      <span class="w-4 h-4 border-b-2 border-gray-400"></span>
+      <span class="w-4 h-4 border-b-2 border-gray-400"></span>
+      <span class="w-4 h-4 border-b-2 border-gray-400"></span>
+      <span class="w-4 h-4 border-b-2 border-gray-400"></span>
+      <span class="w-4 h-4 border-b-2 border-gray-400"></span>
+      <span class="w-4 h-4 border-b-2 border-gray-400"></span>
+    </div>
 
-    <label class="text-sm text-gray-600">Confirm PIN</label>
-    <input type="password" id="confirmPin" maxlength="6"
-      class="w-full mt-1 p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none mb-6" />
+    <!-- Confirm PIN -->
+    <p class="text-sm text-gray-600 mb-2">Confirm PIN</p>
+    <div id="confirmPinDisplay" class="flex justify-center gap-3 mb-6">
+      <span class="w-4 h-4 border-b-2 border-gray-400"></span>
+      <span class="w-4 h-4 border-b-2 border-gray-400"></span>
+      <span class="w-4 h-4 border-b-2 border-gray-400"></span>
+      <span class="w-4 h-4 border-b-2 border-gray-400"></span>
+      <span class="w-4 h-4 border-b-2 border-gray-400"></span>
+      <span class="w-4 h-4 border-b-2 border-gray-400"></span>
+    </div>
 
+    <!-- Keypad -->
+    <div class="grid grid-cols-3 gap-4 mb-6 text-lg font-semibold">
+      <button onclick="pressKey('1')" class="py-4 bg-gray-100 rounded-xl hover:bg-gray-200">1</button>
+      <button onclick="pressKey('2')" class="py-4 bg-gray-100 rounded-xl hover:bg-gray-200">2</button>
+      <button onclick="pressKey('3')" class="py-4 bg-gray-100 rounded-xl hover:bg-gray-200">3</button>
+      <button onclick="pressKey('4')" class="py-4 bg-gray-100 rounded-xl hover:bg-gray-200">4</button>
+      <button onclick="pressKey('5')" class="py-4 bg-gray-100 rounded-xl hover:bg-gray-200">5</button>
+      <button onclick="pressKey('6')" class="py-4 bg-gray-100 rounded-xl hover:bg-gray-200">6</button>
+      <button onclick="pressKey('7')" class="py-4 bg-gray-100 rounded-xl hover:bg-gray-200">7</button>
+      <button onclick="pressKey('8')" class="py-4 bg-gray-100 rounded-xl hover:bg-gray-200">8</button>
+      <button onclick="pressKey('9')" class="py-4 bg-gray-100 rounded-xl hover:bg-gray-200">9</button>
+      <button onclick="deleteKey()" class="py-4 bg-red-100 rounded-xl hover:bg-red-200 col-span-2">⌫</button>
+      <button onclick="pressKey('0')" class="py-4 bg-gray-100 rounded-xl hover:bg-gray-200">0</button>
+    </div>
+
+    <!-- Actions -->
     <div class="flex justify-between">
       <button onclick="activateTab('me')" class="px-4 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-700">Back</button>
       <button onclick="savePin()" id="pinActionBtn"
@@ -3071,7 +3106,6 @@
     </div>
   </div>
 </div>
-	
 	
 
 
@@ -3547,6 +3581,7 @@
 </body>
 
 </html>
+
 
 
 
