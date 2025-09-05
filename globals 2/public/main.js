@@ -371,7 +371,24 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
 
 
 
+function pressKey(num) {
+  if (pinValues[currentInput].length < 6) {
+    pinValues[currentInput] += num;
+    updatePinDisplay();
 
+    // ✅ Auto move to next field if full
+    if (pinValues[currentInput].length === 6) {
+      if (currentInput === "old") {
+        currentInput = "new";
+      } else if (currentInput === "new") {
+        currentInput = "confirm";
+      } else if (currentInput === "confirm") {
+        // optional: auto save
+        // savePin();
+      }
+    }
+  }
+}
 
 
                                                                  //OVERVIEW SECTION (ME SECTION) FUNCTION
@@ -4634,6 +4651,7 @@ async function sendAirtimeToVTpass() {
     document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
 }
+
 
 
 
