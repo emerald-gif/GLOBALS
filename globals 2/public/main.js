@@ -4631,93 +4631,103 @@ function openService(serviceName) {
 
 
 
+  let selectedAmount = 0;
 
+  // Firebase Auth & User Reference
+  let currentUser, userRef;
+  firebase.auth().onAuthStateChanged(user => {
+    if (user) {
+      currentUser = user;
+      userRef = db.collection('users').doc(user.uid);
+    }
+  });
 
+  function setAmount(val) {
+    selectedAmount = val;
+    document.getElementById('airtime-amount').value = val;
+  }
 
+  // Open drawer
+  async function openConfirmDrawer() {
+    const network = document.getElementById('airtime-network').value;
+    const phone = document.getElementById('airtime-phone').value;
+    const amountInput = document.getElementById('airtime-amount').value;
+    const amount = parseInt(amountInput) || selectedAmount;
 
-
-
-
-
-
-
-const networkMap = {
-  mtn: 'mtn-data',
-  glo: 'glo-data',
-  airtel: 'airtel-data',
-  '9mobile': 'etisalat-data'
-};
-
-document.getElementById('data-network').addEventListener('change', async function () {
-  const network = this.value;
-  const serviceID = networkMap[network];
-  const packageBox = document.getElementById('data-packages');
-
-  packageBox.innerHTML = '';
-  packageBox.classList.add('hidden');
-
-  if (!serviceID) return;
-
-  try {
-    const response = await fetch(`/api/data-packages?serviceID=${serviceID}`);
-    const result = await response.json();
-
-    if (result && result.variations) {
-      packageBox.classList.remove('hidden');
-
-      result.variations.forEach(pkg => {
-        const div = document.createElement('div');
-        div.className = 'bg-gray-100 p-3 rounded-xl text-sm text-center cursor-pointer hover:bg-green-200 transition';
-        div.innerText = `${pkg.name} - ₦${pkg.amount}`;
-        div.setAttribute('data-code', pkg.variation_code);
-        div.onclick = function () {
-          document.getElementById('selected-package').value = pkg.variation_code;
-          document.getElementById('data-amount').value = pkg.amount;
-        };
-        packageBox.appendChild(div);
-      });
-    } else {
-      alert('No packages available');
+    if (!network || !phone || !amount || amount < 50) {
+      alert('Please select network, enter valid phone and amount');
+      return;
     }
 
-  } catch (error) {
-    console.error('Failed to load VTpass packages:', error);
-    alert('Could not fetch packages. Try again.');
+    // Get user balance and PIN
+    const doc = await userRef.get();
+    const userData = doc.data();
+    if (!userData.pin) {
+      alert('Payment PIN not set. Please set your PIN first.');
+      return;
+    }
+
+    document.getElementById('drawer-network').innerText = network;
+    document.getElementById('drawer-phone').innerText = phone;
+    document.getElementById('drawer-amount').innerText = amount.toLocaleString();
+    document.getElementById('drawer-balance').innerText = (userData.balance || 0).toLocaleString();
+
+    document.getElementById('drawer-pin').value = '';
+    document.getElementById('airtime-drawer').classList.remove('hidden');
   }
-});
 
+  function closeDrawer() {
+    document.getElementById('airtime-drawer').classList.add('hidden');
+  }
 
+  // Process Airtime Payment
+  async function processAirtimePayment() {
+    const pinInput = document.getElementById('drawer-pin').value;
+    const doc = await userRef.get();
+    const userData = doc.data();
 
+    if (!userData.pin || pinInput !== userData.pin) {
+      alert('Invalid PIN');
+      return;
+    }
 
+    const network = document.getElementById('drawer-network').innerText;
+    const phone = document.getElementById('drawer-phone').innerText;
+    const amount = parseInt(document.getElementById('drawer-amount').innerText.replace(/,/g, ''));
 
-
-
-async function sendAirtimeToVTpass() {
-  const phone = document.getElementById('airtime-phone').value;
-  const amount = document.getElementById('airtime-amount').value;
-  const network = document.getElementById('airtime-network').value;
-
-  try {
-    const res = await fetch('/api/airtime', {
+    // Call backend API (do NOT expose API key in frontend)
+    fetch('/api/airtime', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        phone,
-        amount,
-        serviceID: network
-      })
+      body: JSON.stringify({ network, phone, amount, userId: currentUser.uid })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        alert('Airtime purchase successful!');
+        closeDrawer();
+      } else {
+        alert('Transaction failed: ' + data.message);
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert('Transaction error, try again.');
     });
-
-    const result = await res.json();
-    document.getElementById('airtime-response').innerText =
-      result.code === '000'
-        ? '✅ Airtime purchase successful!'
-        : '❌ ' + result.response_description;
-
-  } catch (err) {
-    document.getElementById('airtime-response').innerText = '⚠️ Error: ' + err.message;
   }
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
