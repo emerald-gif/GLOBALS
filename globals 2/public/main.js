@@ -4805,19 +4805,14 @@ async function payAirtime(){
 
 
 
-  function resetAirtimeForm() {
-    document.getElementById("airtime-phone").value = "";
-    document.getElementById("airtime-amount").value = "";
-    document.getElementById("confirm-pin").value = "";
-    selectedNetwork = null;
-    showScreen('airtime');
-  }
+
 
 
 
 
 // run initial screen
 showScreen('airtime-screen');
+
 
 
 
