@@ -542,85 +542,82 @@
                                                            <!-- 📱 Airtime Screen -->
 
 <!-- ================= Airtime (Upgraded 2025 UI) ================= -->
-<div id="airtime-screen" class="tab-section min-h-screen bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-700 relative">
+<!-- 🌐 Airtime Screen (Fintech 2025 UI) -->
+<div id="airtime-screen" class="tab-section min-h-screen bg-gradient-to-br from-indigo-600 via-purple-700 to-pink-700 relative">
   <!-- Header -->
   <div class="px-6 pt-10 flex items-center justify-between text-white">
-    <button onclick="showScreen('home')" class="flex items-center gap-2 font-medium text-lg">← Back</button>
+    <button onclick="showScreen('home')" class="flex items-center gap-1 font-medium text-lg">← Back</button>
     <h2 class="text-xl font-bold">Buy Airtime</h2>
     <div></div>
   </div>
 
   <!-- Content Container -->
   <div class="absolute inset-0 mt-24 bg-white rounded-t-3xl shadow-2xl p-6 overflow-y-auto">
-    <!-- Choose Network -->
-    <div class="mb-6">
-      <p class="text-sm font-semibold text-gray-600 mb-3">Choose Network</p>
-      <div id="network-grid" class="grid grid-cols-4 gap-4">
-        <!-- buttons will be styled & toggled selected via JS -->
-        <button data-code="01" onclick="selectNetwork('01')" class="network-card flex flex-col items-center gap-2 p-3 rounded-2xl border border-transparent hover:shadow-md transition">
-          <!-- simple inline icon -->
-          <div class="w-12 h-12 rounded-full flex items-center justify-center bg-yellow-100 text-yellow-700 font-bold">MTN</div>
-          <p class="text-xs font-medium text-gray-700">MTN</p>
+    
+    <!-- Select Network -->
+    <div class="mb-8">
+      <p class="text-sm font-semibold text-gray-500 mb-3">Choose Network</p>
+      <div class="grid grid-cols-4 gap-4">
+        <button onclick="selectNetwork('MTN')" class="network-card">
+          <img src="MTN.jpg" class="w-10 h-10 mx-auto"/>
+          <p class="text-xs mt-1 font-medium">MTN</p>
         </button>
-
-        <button data-code="02" onclick="selectNetwork('02')" class="network-card flex flex-col items-center gap-2 p-3 rounded-2xl border border-transparent hover:shadow-md transition">
-          <div class="w-12 h-12 rounded-full flex items-center justify-center bg-green-100 text-green-700 font-bold">GLO</div>
-          <p class="text-xs font-medium text-gray-700">GLO</p>
+        <button onclick="selectNetwork('GLO')" class="network-card">
+          <img src="GLO.jpg" class="w-10 h-10 mx-auto"/>
+          <p class="text-xs mt-1 font-medium">GLO</p>
         </button>
-
-        <button data-code="04" onclick="selectNetwork('04')" class="network-card flex flex-col items-center gap-2 p-3 rounded-2xl border border-transparent hover:shadow-md transition">
-          <div class="w-12 h-12 rounded-full flex items-center justify-center bg-red-100 text-red-600 font-bold">A</div>
-          <p class="text-xs font-medium text-gray-700">Airtel</p>
+        <button onclick="selectNetwork('AIRTEL')" class="network-card">
+          <img src="AIRTEL.jpg" class="w-10 h-10 mx-auto"/>
+          <p class="text-xs mt-1 font-medium">Airtel</p>
         </button>
-
-        <button data-code="03" onclick="selectNetwork('03')" class="network-card flex flex-col items-center gap-2 p-3 rounded-2xl border border-transparent hover:shadow-md transition">
-          <div class="w-12 h-12 rounded-full flex items-center justify-center bg-indigo-50 text-indigo-700 font-bold">9M</div>
-          <p class="text-xs font-medium text-gray-700">9mobile</p>
+        <button onclick="selectNetwork('9MOBILE')" class="network-card">
+          <img src="9MOBILE.jpg" class="w-10 h-10 mx-auto"/>
+          <p class="text-xs mt-1 font-medium">9mobile</p>
         </button>
       </div>
     </div>
 
     <!-- Phone -->
-    <div class="mb-6">
-      <label class="block text-sm font-semibold text-gray-600 mb-2">Recipient Number</label>
+    <div class="mb-8">
+      <label class="block text-sm font-semibold text-gray-500 mb-2">Recipient Number</label>
       <input type="tel" id="airtime-phone" maxlength="11"
              class="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-indigo-500 text-lg outline-none"
              placeholder="08012345678">
     </div>
 
     <!-- Quick Top-Up -->
-    <div class="mb-6">
-      <p class="text-sm font-semibold text-gray-600 mb-2">Quick Top-Up</p>
+    <div class="mb-8">
+      <p class="text-sm font-semibold text-gray-500 mb-2">Quick Top-Up</p>
       <div class="grid grid-cols-3 gap-3">
-        <button onclick="setAmount(100)" class="py-3 rounded-2xl bg-gray-50 border border-gray-200 hover:shadow-sm">₦100</button>
-        <button onclick="setAmount(200)" class="py-3 rounded-2xl bg-gray-50 border border-gray-200 hover:shadow-sm">₦200</button>
-        <button onclick="setAmount(500)" class="py-3 rounded-2xl bg-gray-50 border border-gray-200 hover:shadow-sm">₦500</button>
-        <button onclick="setAmount(1000)" class="py-3 rounded-2xl bg-gray-50 border border-gray-200 hover:shadow-sm">₦1,000</button>
-        <button onclick="setAmount(2000)" class="py-3 rounded-2xl bg-gray-50 border border-gray-200 hover:shadow-sm">₦2,000</button>
-        <button onclick="setAmount(5000)" class="py-3 rounded-2xl bg-gray-50 border border-gray-200 hover:shadow-sm">₦5,000</button>
+        <button onclick="setAmount(100)" class="amount-card">₦100</button>
+        <button onclick="setAmount(200)" class="amount-card">₦200</button>
+        <button onclick="setAmount(500)" class="amount-card">₦500</button>
+        <button onclick="setAmount(1000)" class="amount-card">₦1k</button>
+        <button onclick="setAmount(2000)" class="amount-card">₦2k</button>
+        <button onclick="setAmount(5000)" class="amount-card">₦5k</button>
       </div>
     </div>
 
     <!-- Custom Amount -->
-    <div class="mb-36">
-      <label class="block text-sm font-semibold text-gray-600 mb-2">Custom Amount</label>
+    <div class="mb-24">
+      <label class="block text-sm font-semibold text-gray-500 mb-2">Custom Amount</label>
       <input type="number" id="airtime-amount" min="50" max="500000"
              class="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-indigo-500 text-lg outline-none"
              placeholder="Enter ₦50 - ₦500,000">
-      <p id="airtime-error" class="text-sm text-red-600 mt-3 hidden"></p>
     </div>
   </div>
 
   <!-- Floating Continue Button -->
   <div class="absolute bottom-0 left-0 right-0 p-6 bg-white/90 backdrop-blur-md border-t">
-    <button onclick="goToConfirmScreen()" id="continue-btn" class="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-lg shadow-lg hover:opacity-95 transition">
+    <button onclick="goToConfirmScreen()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-lg shadow-lg hover:opacity-90 transition">
       Continue
     </button>
+    <p id="airtime-error" class="text-sm text-red-600 mt-2 hidden"></p>
   </div>
 </div>
 
-<!-- ================= Confirm Airtime Screen ================= -->
-<div id="confirm-airtime-screen" class="tab-section hidden min-h-screen bg-gradient-to-br from-indigo-50 to-white relative">
+<!-- 🌐 Confirm Airtime Screen -->
+<div id="confirm-airtime-screen" class="tab-section hidden min-h-screen bg-gradient-to-br from-gray-50 to-white relative">
   <div class="px-6 pt-10 flex items-center justify-between">
     <button onclick="showScreen('airtime')" class="text-indigo-600 font-medium">← Back</button>
     <h2 class="text-xl font-bold text-gray-800">Confirm Purchase</h2>
@@ -628,28 +625,23 @@
   </div>
 
   <div class="mt-6 bg-white rounded-3xl shadow-xl p-6 space-y-6 mx-4">
-    <!-- summary -->
+    <!-- Summary -->
     <div class="flex items-center gap-4">
-      <div id="confirm-network-badge" class="w-16 h-16 rounded-full flex items-center justify-center bg-indigo-50 text-indigo-700 font-bold">MTN</div>
+      <img id="confirm-network-logo" src="" class="w-14 h-14 rounded-full border shadow"/>
       <div class="flex-1">
-        <p class="text-sm text-gray-500">Network</p>
         <p id="confirm-network" class="text-lg font-semibold">-</p>
+        <p id="confirm-phone" class="text-md text-gray-600">-</p>
       </div>
       <div class="text-right">
         <p class="text-sm text-gray-500">Amount</p>
-        <p id="confirm-amount" class="text-lg font-semibold text-indigo-700">₦0</p>
+        <p id="confirm-amount" class="text-lg font-bold text-indigo-700">₦0</p>
       </div>
     </div>
 
-    <div class="grid grid-cols-2 gap-4">
-      <div>
-        <p class="text-sm text-gray-500">Recipient</p>
-        <p id="confirm-phone" class="text-md font-medium text-gray-800">-</p>
-      </div>
-      <div>
-        <p class="text-sm text-gray-500">Available Balance</p>
-        <p id="confirm-balance" class="text-md font-medium text-gray-800">₦0</p>
-      </div>
+    <!-- Balance -->
+    <div class="p-4 rounded-2xl bg-gray-50 flex justify-between items-center">
+      <p class="text-sm text-gray-500">Available Balance</p>
+      <p id="confirm-balance" class="text-md font-semibold text-gray-800">₦0</p>
     </div>
 
     <!-- PIN -->
@@ -661,26 +653,33 @@
     </div>
   </div>
 
-  <!-- Bottom action -->
+  <!-- Floating Action -->
   <div class="absolute bottom-0 left-0 right-0 p-6 bg-white/90 backdrop-blur-md border-t flex gap-4">
     <button onclick="showScreen('airtime')" class="flex-1 py-4 bg-gray-100 text-gray-700 rounded-2xl font-semibold hover:bg-gray-200">Back</button>
-    <button id="pay-btn" onclick="payAirtime()" class="flex-1 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-bold hover:opacity-95">Pay Now</button>
+    <button id="pay-btn" onclick="payAirtime()" class="flex-1 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-bold hover:opacity-90">Pay Now</button>
   </div>
 </div>
 
-<!-- ================= Success Screen ================= -->
+<!-- 🌐 Success Screen -->
 <div id="success-screen" class="tab-section hidden min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center p-6">
   <div class="text-center">
-    <div class="mx-auto w-32 h-32 rounded-full bg-white shadow-lg flex items-center justify-center mb-6 animate-pulse">
+    <div class="mx-auto w-32 h-32 rounded-full bg-white shadow-lg flex items-center justify-center mb-6 animate-bounce">
       <svg class="w-20 h-20 text-green-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" d="M20 6L9 17l-5-5"/>
       </svg>
     </div>
     <h3 class="text-2xl font-bold text-gray-800 mb-2">Purchase Successful</h3>
-    <p class="text-gray-600 mb-6">Your airtime will be delivered shortly. Check <strong>Transactions</strong>.</p>
-    <button onclick="showScreen('airtime')" class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-semibold hover:opacity-95">Back to Airtime</button>
+    <p class="text-gray-600 mb-6">Your airtime will be delivered shortly. Track it in <strong>Transactions</strong>.</p>
+    <button onclick="resetAirtimeForm()" class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-semibold hover:opacity-90">Back to Airtime</button>
   </div>
 </div>
+
+<!-- 🌐 Custom Styles -->
+<style>
+  .network-card { @apply bg-gray-50 rounded-2xl p-3 shadow-sm hover:shadow-md transition text-center; }
+  .amount-card { @apply bg-gradient-to-br from-indigo-50 to-purple-50 text-indigo-700 rounded-2xl py-3 font-semibold hover:from-indigo-100 hover:to-purple-100 transition; }
+</style>
+
 
    
 
@@ -3663,6 +3662,7 @@
 </body>
 
 </html>
+
 
 
 
