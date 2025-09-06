@@ -541,7 +541,6 @@
 
                                                            <!-- 📱 Airtime Screen -->
 
-<!-- ================= Airtime (Upgraded 2025 UI) ================= -->
 <!-- 🌐 Airtime Screen -->
 <div id="airtime-screen" class="tab-section min-h-screen bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-700 relative">
   <!-- Header -->
@@ -558,19 +557,19 @@
       <p class="text-sm font-semibold text-gray-500 mb-3">Choose Network</p>
       <div id="network-grid" class="grid grid-cols-4 gap-4">
         <button data-code="01" onclick="selectNetwork('01', this)" class="network-card">
-          <img src="MTN.jpg" class="w-14 h-14 mx-auto rounded-full"/>
+          <img src="MTN.jpg" class="w-12 h-12 mx-auto rounded-full"/>
           <p class="text-xs mt-1 font-medium">MTN</p>
         </button>
         <button data-code="02" onclick="selectNetwork('02', this)" class="network-card">
-          <img src="GLO.jpg" class="w-14 h-14 mx-auto rounded-full"/>
+          <img src="GLO.jpg" class="w-12 h-12 mx-auto rounded-full"/>
           <p class="text-xs mt-1 font-medium">GLO</p>
         </button>
         <button data-code="04" onclick="selectNetwork('04', this)" class="network-card">
-          <img src="AIRTEL.jpg" class="w-14 h-14 mx-auto rounded-full"/>
+          <img src="AIRTEL.jpg" class="w-12 h-12 mx-auto rounded-full"/>
           <p class="text-xs mt-1 font-medium">Airtel</p>
         </button>
         <button data-code="03" onclick="selectNetwork('03', this)" class="network-card">
-          <img src="9MOBILE.jpg" class="w-14 h-14 mx-auto rounded-full"/>
+          <img src="9MOBILE.jpg" class="w-12 h-12 mx-auto rounded-full"/>
           <p class="text-xs mt-1 font-medium">9mobile</p>
         </button>
       </div>
@@ -625,7 +624,7 @@
   <div class="mt-6 bg-white rounded-3xl shadow-xl p-6 space-y-6 mx-4">
     <!-- Summary -->
     <div class="flex items-center gap-4">
-      <img id="confirm-network-logo" src="" class="w-14 h-14 rounded-full shadow-md"/>
+      <img id="confirm-network-logo" src="" class="w-12 h-12 rounded-full shadow-md"/>
       <div class="flex-1">
         <p class="text-sm text-gray-500">Network</p>
         <p id="confirm-network" class="text-lg font-semibold">-</p>
@@ -654,12 +653,12 @@
              placeholder="Enter 6-digit PIN"/>
       <p id="confirm-error" class="text-sm text-red-600 mt-2 hidden"></p>
     </div>
-  </div>
 
-  <!-- Floating Action -->
-  <div class="absolute bottom-0 left-0 right-0 p-6 bg-white/90 backdrop-blur-md border-t flex gap-4">
-    <button onclick="showScreen('airtime')" class="flex-1 py-4 bg-gray-100 text-gray-700 rounded-2xl font-semibold hover:bg-gray-200">Back</button>
-    <button id="pay-btn" onclick="payAirtime()" class="flex-1 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-bold hover:opacity-90">Pay Now</button>
+    <!-- Action Buttons (moved up inside the card) -->
+    <div class="flex gap-4 pt-4">
+      <button onclick="showScreen('airtime')" class="flex-1 py-4 bg-gray-100 text-gray-700 rounded-2xl font-semibold hover:bg-gray-200">Back</button>
+      <button id="pay-btn" onclick="payAirtime()" class="flex-1 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-bold hover:opacity-90">Pay Now</button>
+    </div>
   </div>
 </div>
 
@@ -695,8 +694,6 @@
     background: rgba(255, 255, 255, 0.4);
   }
 </style>
-  
-
 
    
 
@@ -3679,6 +3676,7 @@
 </body>
 
 </html>
+
 
 
 
