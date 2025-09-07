@@ -4920,7 +4920,8 @@ async function payData(){
 
 
 
-renderPlans();
+
+
 
 
 
