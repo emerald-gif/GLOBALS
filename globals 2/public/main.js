@@ -245,186 +245,186 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
 
 
 
-                                                                 // PAYMENT PIN FUNCTION 
+                                                                 // PAYMENT PIN 
 
 
 
-  let currentInput = "new"; // "old" | "new" | "confirm"
-  let pinValues = { old: "", new: "", confirm: "" };
-  let userRef; // ✅ global user reference
 
-  // 🔹 Single Auth Listener
-  firebase.auth().onAuthStateChanged(async (user) => {
-    if (user) {
-      const userId = user.uid;
-      userRef = db.collection("users").doc(userId);
 
-      const doc = await userRef.get();
+let currentInput = "new"; // "old" | "new" | "confirm"
+let pinValues = { old: "", new: "", confirm: "" };
+let userRef; // ✅ keep global
 
-      if (!doc.exists || !doc.data().pin) {
-        // No PIN → show intro
-        showPinIntro();
-      } else {
-        // PIN exists → go straight to Change PIN
-        setupPinTab();
-      }
+// ✅ Detect logged in user automatically
+firebase.auth().onAuthStateChanged(async (user) => {
+  if (user) {
+    const userId = user.uid;
+    userRef = db.collection("users").doc(userId); // store globally
+
+    const doc = await userRef.get();
+
+    if (!doc.exists || !doc.data().pin) {
+      // No PIN → show intro
+      showPinIntro();
     } else {
-      console.log("No user logged in");
+      // Has PIN → go straight to Change PIN
+      await setupPinTab();
+    }
+  } else {
+    console.log("No user logged in");
+  }
+});
+
+// 🔹 Setup PIN Tab when opened
+async function setupPinTab() {
+  const doc = await userRef.get();
+  const hasPin = doc.exists && doc.data().pin;
+
+  if (hasPin) {  
+    // Change PIN flow  
+    document.getElementById("pinTabTitle").innerText = "Change Payment PIN";  
+    document.getElementById("oldPinGroup").classList.remove("hidden");  
+    document.getElementById("pinActionBtn").innerText = "Update PIN";  
+    document.getElementById("pinLabel").innerText = "Change Payment PIN";  
+    currentInput = "old";  
+  } else {  
+    // Set PIN flow  
+    document.getElementById("pinTabTitle").innerText = "Set Payment PIN";  
+    document.getElementById("oldPinGroup").classList.add("hidden");  
+    document.getElementById("pinActionBtn").innerText = "Set PIN";  
+    document.getElementById("pinLabel").innerText = "Set Payment PIN";  
+    currentInput = "new";  
+  }  
+
+  // reset pins  
+  pinValues = { old: "", new: "", confirm: "" };  
+  updatePinDisplay();
+}
+
+// 🔹 Save or Update PIN
+async function savePin() {
+  const doc = await userRef.get();
+  const hasPin = doc.exists && doc.data().pin;
+
+  const oldPin = pinValues.old;  
+  const newPin = pinValues.new;  
+  const confirmPin = pinValues.confirm;  
+
+  if (newPin.length < 6) {  
+    alert("PIN must be 6 digits");  
+    return;  
+  }  
+
+  if (newPin !== confirmPin) {  
+    alert("PINs do not match");  
+    return;  
+  }  
+
+  if (hasPin) {  
+    if (oldPin !== doc.data().pin) {  
+      alert("Old PIN is incorrect");  
+      return;  
+    }  
+    await userRef.update({ pin: newPin });  
+    alert("PIN updated successfully!");  
+  } else {  
+    await userRef.set({ pin: newPin }, { merge: true });  
+    alert("PIN set successfully!");  
+    closePinIntro(); // ✅ hide intro after first set
+  }  
+
+  // ✅ Reset pins  
+  pinValues = { old: "", new: "", confirm: "" };  
+  updatePinDisplay();  
+
+  // ✅ Auto redirect back to Me tab  
+  activateTab('me');  
+  setupPinTab(); // refresh button label
+}
+
+// 🔹 Keypad functions
+function pressKey(num) {
+  if (pinValues[currentInput].length < 6) {
+    pinValues[currentInput] += num;
+    updatePinDisplay();
+
+    // ✅ Auto move to next field if full  
+    if (pinValues[currentInput].length === 6) {  
+      if (currentInput === "old") {  
+        currentInput = "new";  
+      } else if (currentInput === "new") {  
+        currentInput = "confirm";  
+      }  
+    }
+  }
+}
+
+function deleteKey() {
+  if (pinValues[currentInput].length > 0) {
+    pinValues[currentInput] = pinValues[currentInput].slice(0, -1);
+    updatePinDisplay();
+  }
+}
+
+function updatePinDisplay() {
+  ["old", "new", "confirm"].forEach(type => {
+    const display = document.getElementById(type + "PinDisplay");
+    if (display) {
+      [...display.children].forEach((dot, i) => {
+        dot.classList.remove("bg-gray-800", "rounded-full");
+        if (pinValues[type][i]) {
+          dot.classList.add("bg-gray-800", "rounded-full");
+        }
+      });
     }
   });
+}
 
-  // 🔹 Setup PIN Tab when opened
-  async function setupPinTab() {
-    const doc = await userRef.get();
-    const hasPin = doc.exists && doc.data().pin;
-
-    if (hasPin) {
-      // Change PIN flow
-      document.getElementById("pinTabTitle").innerText = "Change Payment PIN";
-      document.getElementById("oldPinGroup").classList.remove("hidden");
-      document.getElementById("pinActionBtn").innerText = "Update PIN";
-      document.getElementById("pinLabel").innerText = "Change Payment PIN";
-      currentInput = "old";
-    } else {
-      // Set PIN flow
-      document.getElementById("pinTabTitle").innerText = "Set Payment PIN";
-      document.getElementById("oldPinGroup").classList.add("hidden");
-      document.getElementById("pinActionBtn").innerText = "Set PIN";
-      document.getElementById("pinLabel").innerText = "Set Payment PIN";
-      currentInput = "new";
-    }
-
-    // reset pins
-    pinValues = { old: "", new: "", confirm: "" };
-    updatePinDisplay();
-  }
-
-  // 🔹 Save or Update PIN
-  async function savePin() {
-    const doc = await userRef.get();
-    const hasPin = doc.exists && doc.data().pin;
-
-    const oldPin = pinValues.old;
-    const newPin = pinValues.new;
-    const confirmPin = pinValues.confirm;
-
-    if (newPin.length < 6) {
-      alert("PIN must be 6 digits");
-      return;
-    }
-
-    if (newPin !== confirmPin) {
-      alert("PINs do not match");
-      return;
-    }
-
-    if (hasPin) {
-      if (oldPin !== doc.data().pin) {
-        alert("Old PIN is incorrect");
-        return;
-      }
-      await userRef.update({ pin: newPin });
-      alert("PIN updated successfully!");
-    } else {
-      await userRef.set({ pin: newPin }, { merge: true });
-      alert("PIN set successfully!");
-      closePinIntro(); // ✅ hide intro once set
-    }
-
-    // ✅ Reset pins
-    pinValues = { old: "", new: "", confirm: "" };
-    updatePinDisplay();
-
-    // ✅ Auto redirect back to Me tab
-    activateTab('me');
-    setupPinTab(); // refresh button label
-  }
-
-  // 🔹 Keypad functions
-  function pressKey(num) {
-    if (pinValues[currentInput].length < 6) {
-      pinValues[currentInput] += num;
-      updatePinDisplay();
-
-      // ✅ Auto move to next field if full
-      if (pinValues[currentInput].length === 6) {
-        if (currentInput === "old") {
-          currentInput = "new";
-        } else if (currentInput === "new") {
-          currentInput = "confirm";
-        }
+// 🔹 set input and highlights
+function setInput(type) {
+  currentInput = type;
+  ["old", "new", "confirm"].forEach(t => {
+    const el = document.getElementById(t + "PinDisplay");
+    if (el) {
+      if (t === type) {
+        el.classList.add("border-blue-500", "bg-blue-50", "shadow-sm");
+      } else {
+        el.classList.remove("border-blue-500", "bg-blue-50", "shadow-sm");
       }
     }
-  }
+  });
+}
 
-  function deleteKey() {
-    if (pinValues[currentInput].length > 0) {
-      pinValues[currentInput] = pinValues[currentInput].slice(0, -1);
-      updatePinDisplay();
-    }
-  }
+// 🔹 When opening the tab
+function openPinTab() {
+  setupPinTab();
+  activateTab('pinTab');
+}
 
-  function updatePinDisplay() {
-    ["old", "new", "confirm"].forEach(type => {
-      const display = document.getElementById(type + "PinDisplay");
-      if (display) {
-        [...display.children].forEach((dot, i) => {
-          dot.classList.remove("bg-gray-800", "rounded-full");
-          if (pinValues[type][i]) {
-            dot.classList.add("bg-gray-800", "rounded-full");
-          }
-        });
-      }
-    });
-  }
+// 🔹 Intro Sheet
+function showPinIntro() {
+  const overlay = document.getElementById("pinIntroSheet");
+  const drawer = document.getElementById("pinIntroDrawer");
+  overlay.classList.remove("hidden");
+  setTimeout(() => {
+    drawer.classList.remove("translate-y-full");
+  }, 50);
+}
 
-  // 🔹 set input and highlights 
-  function setInput(type) {
-    currentInput = type;
-    ["old", "new", "confirm"].forEach(t => {
-      const el = document.getElementById(t + "PinDisplay");
-      if (el) {
-        if (t === type) {
-          el.classList.add("border-blue-500", "bg-blue-50", "shadow-sm");
-        } else {
-          el.classList.remove("border-blue-500", "bg-blue-50", "shadow-sm");
-        }
-      }
-    });
-  }
+function closePinIntro() {
+  const overlay = document.getElementById("pinIntroSheet");
+  const drawer = document.getElementById("pinIntroDrawer");
+  drawer.classList.add("translate-y-full");
+  setTimeout(() => {
+    overlay.classList.add("hidden");
+  }, 300);
+}
 
-  // 🔹 When opening the tab
-  function openPinTab() {
-    setupPinTab();
-    activateTab('pinTab');
-  }
-
-  // 🔹 Intro Sheet
-  function showPinIntro() {
-    const overlay = document.getElementById("pinIntroSheet");
-    const drawer = document.getElementById("pinIntroDrawer");
-    overlay.classList.remove("hidden");
-    setTimeout(() => {
-      drawer.classList.remove("translate-y-full");
-    }, 50);
-  }
-
-  function closePinIntro() {
-    const overlay = document.getElementById("pinIntroSheet");
-    const drawer = document.getElementById("pinIntroDrawer");
-    drawer.classList.add("translate-y-full");
-    setTimeout(() => {
-      overlay.classList.add("hidden");
-    }, 300);
-  }
-
-  function goToPinSetup() {
-    closePinIntro();
-    setTimeout(() => openPinTab(), 300); // 🚀 send to PIN setup screen
-  }
-
-
-
+// Hide + go to pin tab
+function goToPinSetup() {
+  closePinIntro();
+  setTimeout(() => openPinTab(), 300); // 🚀 send to PIN setup screen
+}
 
 
 
@@ -4887,6 +4887,7 @@ async function payData(){
     showScreen("data-success-screen");
   },800);
 }
+
 
 
 
