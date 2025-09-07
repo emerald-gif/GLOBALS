@@ -255,20 +255,11 @@ let currentInput = "new"; // "old" | "new" | "confirm"
 let pinValues = { old: "", new: "", confirm: "" };
 
 // ✅ Detect logged in user automatically
-// ✅ Detect user and handle PIN intro + setup
 firebase.auth().onAuthStateChanged(async (user) => {
   if (user) {
     const userId = user.uid;
     window.userRef = db.collection("users").doc(userId); // store globally
-    const doc = await userRef.get();
-
-    if (!doc.exists || !doc.data().pin) {
-      // No PIN → show intro drawer
-      showPinIntro();
-    } else {
-      // Has PIN → setup tab as Change PIN
-      setupPinTab();
-    }
+    await setupPinTab();
   } else {
     console.log("No user logged in");
   }
@@ -412,37 +403,6 @@ currentInput = "confirm";
 }
 
 }
-}
-
-// PAYMENT Detect user on reload FUNCTION
-
-// ✅ Detect user on reload (fixed)
-
-
-// Show sheet
-function showPinIntro() {
-const overlay = document.getElementById("pinIntroSheet");
-const drawer = document.getElementById("pinIntroDrawer");
-overlay.classList.remove("hidden");
-setTimeout(() => {
-drawer.classList.remove("translate-y-full");
-}, 50);
-}
-
-// Hide sheet
-function closePinIntro() {
-const overlay = document.getElementById("pinIntroSheet");
-const drawer = document.getElementById("pinIntroDrawer");
-drawer.classList.add("translate-y-full");
-setTimeout(() => {
-overlay.classList.add("hidden");
-}, 300);
-}
-
-// Hide + go to pin tab
-function goToPinSetup() {
-closePinIntro();
-setTimeout(() => openPinTab(), 300); // 🚀 send to PIN setup screen
 }
 
 
@@ -4909,6 +4869,7 @@ async function payData(){
     showScreen("data-success-screen");
   },800);
 }
+
 
 
 
