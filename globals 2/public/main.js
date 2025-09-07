@@ -450,7 +450,60 @@ function openPinTab() {
 
 
 
-		  
+
+
+
+
+// PAYMENT Detect user on reload FUNCTION
+
+// Detect user on reload
+firebase.auth().onAuthStateChanged(async (user) => {
+  if (user) {
+    const userId = user.uid;
+    const userRef = db.collection("users").doc(userId);
+    const doc = await userRef.get();
+
+    // If no PIN → show intro sheet
+    if (!doc.exists || !doc.data().pin) {
+      showPinIntro();
+    }
+  }
+});
+
+// Show sheet function
+function showPinIntro() {
+  const overlay = document.getElementById("pinIntroSheet");
+  const drawer = document.getElementById("pinIntroDrawer");
+  overlay.classList.remove("hidden");
+  setTimeout(() => {
+    drawer.classList.remove("translate-y-full");
+  }, 50);
+}
+
+// Hide sheet function
+function closePinIntro() {
+  const overlay = document.getElementById("pinIntroSheet");
+  const drawer = document.getElementById("pinIntroDrawer");
+  drawer.classList.add("translate-y-full");
+  setTimeout(() => {
+    overlay.classList.add("hidden");
+  }, 300);
+}
+
+// Hide + go to pin tab
+function goToPinSetup() {
+  closePinIntro();
+  setTimeout(() => openPinTab(), 300); // 🚀 send to PIN setup screen
+}
+
+
+
+
+
+
+
+
+
                                                                  //OVERVIEW SECTION (ME SECTION) FUNCTION
 
 
@@ -4909,6 +4962,7 @@ async function payData(){
     showScreen("data-success-screen");
   },800);
 }
+
 
 
 
