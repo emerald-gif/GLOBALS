@@ -4817,23 +4817,22 @@ showScreen('airtime-screen');
 
 
 
-
 let selectedDataNetwork = '01'; // default MTN
 let selectedCategory = 'hot';
 let selectedPlan = null;
 
-// Data Plans (use Airtel list for now, can copy to others)
+// Data Plans (using your screenshot style with cashback + notes)
 const DATA_PLANS = {
-  '01': { // MTN
+  '01': { // MTN (HOT)
     hot: [
-      { size: "250MB", validity: "1 Day", price: 50 },
-      { size: "1.5GB", validity: "1 Day", price: 500 },
-      { size: "3.2GB", validity: "2 Days", price: 1000 },
-      { size: "5GB", validity: "2 Days", price: 1500 },
-      { size: "6GB", validity: "7 Days", price: 2500 },
-      { size: "10GB", validity: "7 Days", price: 3000 },
-      { size: "12GB", validity: "30 Days", price: 5000 },
-      { size: "18GB", validity: "7 Days", price: 5000 }
+      { size: "250MB", validity: "1 Day", price: 50, cashback: 1.75, note: "Night Plan" },
+      { size: "1.5GB", validity: "1 Day", price: 500, cashback: 17.5 },
+      { size: "3.2GB", validity: "2 Days", price: 1000, cashback: 20 },
+      { size: "5GB", validity: "2 Days", price: 1500, cashback: 30, note: "2GB YouTube Night" },
+      { size: "6GB", validity: "7 Days", price: 2500, cashback: 50, note: "2GB YouTube Night" },
+      { size: "10GB", validity: "7 Days", price: 3000, cashback: 60, note: "2GB YouTube Night" },
+      { size: "12GB", validity: "30 Days", price: 5000, cashback: 50, note: "100 mins + 5 SMS" },
+      { size: "18GB", validity: "7 Days", price: 5000, cashback: 50, note: "2GB YouTube Night" }
     ],
     daily: [ { size: "75MB", validity: "1 Day", price: 75 }, { size: "250MB", validity: "1 Day", price: 50 } ],
     weekly: [ { size: "500MB", validity: "7 Days", price: 500 }, { size: "1GB", validity: "7 Days", price: 800 } ],
@@ -4877,6 +4876,8 @@ function renderPlans(){
       <p class="text-lg font-bold text-indigo-700">${plan.size}</p>
       <p class="text-sm text-gray-500">${plan.validity}</p>
       <p class="text-md font-semibold mt-2">₦${fmt(plan.price)}</p>
+      ${plan.cashback ? `<p class="cashback">₦${plan.cashback} Cashback</p>` : ""}
+      ${plan.note ? `<p class="note">${plan.note} <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="1"/></svg></p>` : ""}
     `;
     card.onclick = ()=> goToConfirmData(plan);
     grid.appendChild(card);
@@ -4885,6 +4886,9 @@ function renderPlans(){
 
 async function goToConfirmData(plan){
   hide('data-error');
+  const phone = (document.getElementById('data-phone').value||'').trim();
+  if(phone.length!==11){ show('data-error','Enter valid phone number'); return; }
+
   if(!currentUser || !userRef){ show('data-error','You must be signed in.'); return; }
 
   try{
@@ -4901,10 +4905,12 @@ async function goToConfirmData(plan){
     document.getElementById('confirm-data-amount').innerText = '₦'+fmt(plan.price);
     document.getElementById('confirm-data-balance').innerText = '₦'+fmt(u.balance||0);
     document.getElementById('confirm-data-logo').src = net.logo;
+    document.getElementById('confirm-data-phone').innerText = phone;
 
     const confirmEl = document.getElementById('confirm-data-screen');
     confirmEl.dataset.networkCode = selectedDataNetwork;
     confirmEl.dataset.plan = JSON.stringify(plan);
+    confirmEl.dataset.phone = phone;
 
     showScreen('confirm-data-screen');
   }catch(err){
@@ -4922,6 +4928,7 @@ async function payData(){
 
   const confirmEl = document.getElementById('confirm-data-screen');
   const networkCode = confirmEl.dataset.networkCode;
+  const phone = confirmEl.dataset.phone;
   const plan = JSON.parse(confirmEl.dataset.plan||'{}');
   if(!plan.price){ show('confirm-data-error','Missing plan details.'); return; }
 
@@ -4943,6 +4950,7 @@ async function payData(){
         userId:currentUser.uid,
         networkCode,
         network: NETWORKS[networkCode]?NETWORKS[networkCode].label:networkCode,
+        phone,
         plan: plan,
         amount: plan.price,
         status:'submitted',
@@ -4973,7 +4981,10 @@ function resetDataForm(){
 }
 
 
+    
+
 renderPlans();
+
 
 
 
