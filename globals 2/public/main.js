@@ -891,7 +891,7 @@ function waitForAuthReady(timeout = 4000) {
 }
 
 // ---------- Modal / Submit logic ----------
-function showTaskDetails(jobId, jobData) {
+async function showTaskDetails(jobId, jobData) {
   if (!jobId || !jobData) {
     console.error("showTaskDetails missing jobId or jobData", { jobId, jobData });
     alert("Internal error: missing job data. Refresh and try again.");
@@ -908,6 +908,7 @@ function showTaskDetails(jobId, jobData) {
   const safeDesc = escapeHtml(jobData.description || 'No description provided');
   const safeProofText = escapeHtml(jobData.proof || 'Provide the necessary screenshot or details.');
 
+  // Initial UI (we’ll replace proof area later if already submitted)
   fullScreen.innerHTML = `
     <div class="max-w-2xl mx-auto space-y-6">
       <button id="closeTaskBtn" class="text-blue-600 font-bold text-sm underline">← Back to Tasks</button>
@@ -930,19 +931,19 @@ function showTaskDetails(jobId, jobData) {
         <p class="text-sm text-gray-700">${safeProofText}</p>
       </div>
 
-      <div class="mt-6">
+      <div id="proofSection" class="mt-6">
         <h2 class="text-lg font-bold text-gray-800 mb-4">Proof</h2>
         <div id="proofFields">${generateProofUploadFields(proofCount)}</div>
         <input id="proofTextInput" type="text" placeholder="Enter email/username used (if needed)"
           class="w-full p-2 border border-gray-300 rounded-lg text-sm mt-2"
         />
-      </div>
 
-      <div class="flex items-center gap-3 mt-4">
-        <button id="submitTaskBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
-          Submit Task
-        </button>
-        <div id="submitStatus" class="text-sm text-gray-600"></div>
+        <div class="flex items-center gap-3 mt-4">
+          <button id="submitTaskBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
+            Submit Task
+          </button>
+          <div id="submitStatus" class="text-sm text-gray-600"></div>
+        </div>
       </div>
     </div>
   `;
@@ -952,7 +953,43 @@ function showTaskDetails(jobId, jobData) {
   // close
   fullScreen.querySelector("#closeTaskBtn").addEventListener("click", () => fullScreen.remove());
 
-  // submit
+  // ✅ Check if already submitted by this user
+  const user = await waitForAuthReady();
+  if (user) {
+    const snap = await firebase.firestore()
+      .collection("task_submissions")
+      .where("taskId", "==", jobId)
+      .where("userId", "==", user.uid)
+      .limit(1)
+      .get();
+
+    if (!snap.empty) {
+      const sub = snap.docs[0].data();
+
+      // Replace proofSection with submitted proof
+      const proofSection = fullScreen.querySelector("#proofSection");
+      proofSection.innerHTML = `
+        <h2 class="text-lg font-bold text-gray-800 mb-4">Your Submission</h2>
+        <p class="text-sm text-gray-700 mb-2"><strong>Submitted Text:</strong> ${escapeHtml(sub.proofText || "—")}</p>
+        <div class="grid grid-cols-2 gap-2">
+          ${(sub.proofImages || []).map(url => `
+            <img src="${url}" class="w-full h-32 object-cover rounded-lg border" />
+          `).join("")}
+        </div>
+        <p class="mt-3 text-green-600 font-semibold">✅ Submitted</p>
+      `;
+    } else {
+      // attach submit handler only if not submitted yet
+      attachSubmitHandler(fullScreen, jobId, jobData);
+    }
+  } else {
+    attachSubmitHandler(fullScreen, jobId, jobData); // allow guest to try, will block later
+  }
+}
+
+
+// 🔗 Extracted submit handler
+function attachSubmitHandler(fullScreen, jobId, jobData) {
   const submitBtn = fullScreen.querySelector("#submitTaskBtn");
   const status = fullScreen.querySelector("#submitStatus");
 
@@ -962,7 +999,6 @@ function showTaskDetails(jobId, jobData) {
 
     try {
       const user = await waitForAuthReady();
-      console.log("submit: currentUser ->", user);
       if (!user) {
         alert("Please log in to submit task.");
         submitBtn.disabled = false;
@@ -975,14 +1011,11 @@ function showTaskDetails(jobId, jobData) {
       const fileInputs = fullScreen.querySelectorAll('input[type="file"]');
       const uploadedFiles = [];
 
-      // upload files sequentially so we can show progress
       for (let i = 0; i < fileInputs.length; i++) {
         const fEl = fileInputs[i];
         const file = fEl.files[0];
         if (file) {
           status.textContent = `Uploading ${i + 1}/${fileInputs.length}...`;
-          console.log("Uploading file:", file.name, file.size);
-          // uses your global uploadToCloudinary(file) that returns a Promise with URL
           const url = await uploadToCloudinary(file);
           uploadedFiles.push(url);
           status.textContent = `Uploaded ${uploadedFiles.length}/${fileInputs.length}`;
@@ -991,15 +1024,6 @@ function showTaskDetails(jobId, jobData) {
 
       if (uploadedFiles.length === 0) {
         alert("❗ Please upload at least one proof image.");
-        submitBtn.disabled = false;
-        status.textContent = "";
-        return;
-      }
-
-      // ensure job data exists
-      if (!jobId || !jobData) {
-        console.error("Missing jobId/jobData at submit time");
-        alert("❗ Missing job info. Refresh and try again.");
         submitBtn.disabled = false;
         status.textContent = "";
         return;
@@ -1017,20 +1041,21 @@ function showTaskDetails(jobId, jobData) {
         workerEarn: jobData.workerEarn || 0
       };
 
-      const docRef = await firebase.firestore().collection("task_submissions").add(submissionData);
-      console.log("Submission saved:", docRef.id);
+      await firebase.firestore().collection("task_submissions").add(submissionData);
 
       alert("✅ Task submitted for review!");
       fullScreen.remove();
     } catch (err) {
       console.error("Submit error:", err);
-      alert("❗ Failed to submit task: " + (err && err.message ? err.message : String(err)));
+      alert("❗ Failed to submit task: " + (err?.message || err));
       submitBtn.disabled = false;
       status.textContent = "";
     }
   });
 }
 
+
+		  
 // ---------- Card rendering + live feed ----------
 function createTaskCard(jobId, jobData) {
   const taskContainer = document.getElementById("task-jobs");
@@ -4962,6 +4987,7 @@ async function payData(){
     showScreen("data-success-screen");
   },800);
 }
+
 
 
 
