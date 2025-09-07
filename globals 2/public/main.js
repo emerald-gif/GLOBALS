@@ -1603,12 +1603,33 @@ async function showTaskSubmissionDetailsUser(submissionId) {
     }
 
     // show job details in modal overlay (only when view clicked)
-    function showAffiliateJobDetails(jobId, jobData) {
+    async function showAffiliateJobDetails(jobId, jobData) {
       ensureDetailStyles();
       const detailsSection = ensureDetailScreen();
 
+      // hide grid and show modal
       if (affiliateTasksContainer) affiliateTasksContainer.style.display = 'none';
       detailsSection.style.display = 'flex';
+
+      // try to detect existing submission by current user
+      const currentUser = firebase.auth().currentUser;
+      let existingSubmission = null;
+      const proofFileCount = jobData.proofFileCount || 1;
+
+      if (currentUser) {
+        try {
+          const subSnap = await db.collection('affiliate_submissions')
+            .where('jobId', '==', jobId)
+            .where('userId', '==', currentUser.uid)
+            .limit(1)
+            .get();
+          if (!subSnap.empty) {
+            existingSubmission = { id: subSnap.docs[0].id, ...subSnap.docs[0].data() };
+          }
+        } catch (err) {
+          console.warn('Error checking existing submission', err);
+        }
+      }
 
       function safeHtmlText(s) {
         return escapeHtml(s || '').replace(/\n/g, '<br>');
@@ -1621,9 +1642,7 @@ async function showTaskSubmissionDetailsUser(submissionId) {
       const proofHtml = safeHtmlText(jobData.proofRequired || 'Proof details not provided');
       const instructionsHtml = safeHtmlText(jobData.instructions || 'No instructions provided');
 
-      const proofFileCount = jobData.proofFileCount || 1;
-
-      // Template includes a small modal progress area (modalProgressText + modalProgressBar) which we'll populate below
+      // Build modal, with a single #proofContainer we can replace after submit
       detailsSection.innerHTML = `
         <div class="aff-sheet">
           <button class="aff-close" title="Back">←</button>
@@ -1687,26 +1706,40 @@ async function showTaskSubmissionDetailsUser(submissionId) {
               <div style="color:#374151">${proofHtml}</div>
             </div>
 
-            <!-- Submit Proof Section -->
-            <div style="padding:12px;border-radius:12px;border:1px solid #dbeafe;background:#f8fafc;margin-bottom:16px">
-              <div style="font-weight:700;margin-bottom:10px;color:#1e3a8a">Submit Proof</div>
-              <form id="proofForm" style="display:flex;flex-direction:column;gap:10px">
-                ${Array.from({ length: proofFileCount }).map((_, i) => `
-                  <div>
-                    <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">Upload File ${i+1}</label>
-                    <input type="file" name="proofFile${i+1}" accept="image/*" style="border:1px solid #cbd5e1;border-radius:8px;padding:6px;width:100%">
-                  </div>
-                `).join("")}
-                <div>
-                  <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">Extra Proof (e.g email/phone)</label>
-                  <textarea name="extraProof" rows="3" placeholder="Enter additional proof..." style="border:1px solid #cbd5e1;border-radius:8px;padding:8px;width:100%"></textarea>
+            <!-- PROOF CONTAINER (will show form OR submitted info) -->
+            <div id="proofContainer">
+              ${ existingSubmission ? (
+                `
+                <div id="submissionProofSection" style="padding:12px;border-radius:12px;border:1px solid #bbf7d0;background:#ecfdf5;margin-bottom:16px;">
+                  <div style="font-weight:700;margin-bottom:10px;color:#065f46">Your Submission</div>
+                  ${ (existingSubmission.files && existingSubmission.files.length > 0) ? (`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">` + existingSubmission.files.map(u=>`<img src="${escapeHtml(u)}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;border:1px solid #e6fffa;" />`).join('') + `</div>`) : `<p class="text-sm text-gray-500">No proof images uploaded.</p>` }
+                  <p style="margin-top:8px;font-size:13px"><strong>Extra Proof:</strong> ${escapeHtml(existingSubmission.extraProof || existingSubmission.proofText || '—')}</p>
+                  <p style="margin-top:8px;color:#065f46;font-weight:700">✅ Submitted</p>
                 </div>
-                <button id="submitTaskBtn" class="btn-primary" style="width:100%;padding:10px;border-radius:10px;font-weight:600">Submit Task</button>
-              </form>
+                `
+              ) : (
+                `
+                <div style="padding:12px;border-radius:12px;border:1px solid #dbeafe;background:#f8fafc;margin-bottom:16px">
+                  <div style="font-weight:700;margin-bottom:10px;color:#1e3a8a">Submit Proof</div>
+                  <form id="proofForm" style="display:flex;flex-direction:column;gap:10px">
+                    ${Array.from({ length: proofFileCount }).map((_, i) => `
+                      <div>
+                        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">Upload File ${i+1}</label>
+                        <input type="file" name="proofFile${i+1}" accept="image/*" style="border:1px solid #cbd5e1;border-radius:8px;padding:6px;width:100%">
+                      </div>
+                    `).join('')}
+                    <div>
+                      <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">Extra Proof (e.g email/phone)</label>
+                      <textarea name="extraProof" rows="3" placeholder="Enter additional proof..." style="border:1px solid #cbd5e1;border-radius:8px;padding:8px;width:100%"></textarea>
+                    </div>
+                    <button id="submitTaskBtn" class="btn-primary" style="width:100%;padding:10px;border-radius:10px;font-weight:600">Submit Task</button>
+                  </form>
+                  <div id="submitStatus" style="margin-top:8px;color:#334155;font-size:13px"></div>
+                </div>
+                `
+              ) }
             </div>
 
-            <!-- Submitted Info -->
-            <div id="submittedInfo" style="display:none;padding:12px;border-radius:12px;border:1px solid #bbf7d0;background:#ecfdf5;color:#065f46"></div>
           </div>
         </div>
       `;
@@ -1762,118 +1795,104 @@ async function showTaskSubmissionDetailsUser(submissionId) {
         });
       }
 
-// handle proof submission
-const form = detailsSection.querySelector('#proofForm');
-const submitInfo = detailsSection.querySelector('#submittedInfo');
-const submitBtn = detailsSection.querySelector('#submitTaskBtn');
+      // If the proof form exists (user hasn't submitted) attach handler
+      const proofContainer = detailsSection.querySelector('#proofContainer');
+      if (proofContainer && !existingSubmission) {
+        const form = proofContainer.querySelector('#proofForm');
+        const submitStatus = proofContainer.querySelector('#submitStatus');
+        const submitBtn = proofContainer.querySelector('#submitTaskBtn');
 
-if (form) {
-  // 🔹 On load, check if already submitted
-  (async () => {
-    const user = firebase.auth().currentUser;
-    if (!user) return;
+        if (form) {
+          form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = firebase.auth().currentUser;
+            if (!user) return alert("You must be logged in.");
 
-    const existing = await db.collection("affiliate_submissions")
-      .where("jobId", "==", jobId)
-      .where("userId", "==", user.uid)
-      .limit(1)
-      .get();
+            // disable and show submitting
+            submitBtn.disabled = true;
+            const prevText = submitBtn.textContent;
+            submitBtn.textContent = 'Submitting...';
+            submitStatus.textContent = 'Uploading files...';
 
-    if (!existing.empty) {
-      // already submitted → hide form & show info
-      const sub = existing.docs[0].data();
-      form.style.display = "none";
-      submitInfo.style.display = "block";
-      submitInfo.innerHTML = `
-        ✅ You already submitted this task.<br>
-        Status: <b>${sub.status}</b><br>
-        Extra Proof: ${escapeHtml(sub.extraProof || "—")}<br>
-        ${sub.files?.length ? sub.files.map(url => `<img src="${url}" style="max-width:100%;margin-top:6px;border-radius:8px;border:1px solid #ddd">`).join("") : ""}
-      `;
-    }
-  })();
+            const proofData = {
+              jobId,
+              userId: user.uid,
+              submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+              extraProof: form.extraProof.value || "",
+              files: [],
+              status: "on review",
+              workerEarn: jobData.workerPay || 0
+            };
 
-  // 🔹 On new submission
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const user = firebase.auth().currentUser;
-    if (!user) return alert("You must be logged in.");
+            // upload files to Cloudinary
+            try {
+              for (let i = 0; i < proofFileCount; i++) {
+                const fileInput = form[`proofFile${i+1}`];
+                if (fileInput && fileInput.files.length > 0) {
+                  const url = await uploadToCloudinary(fileInput.files[0]);
+                  proofData.files.push(url);
+                }
+              }
+            } catch (err) {
+              console.error("Cloudinary upload failed", err);
+              alert("File upload failed. Please try again.");
+              submitBtn.disabled = false;
+              submitBtn.textContent = prevText;
+              submitStatus.textContent = '';
+              return;
+            }
 
-    // change button state
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Submitting...";
+            // check duplicate submission again
+            try {
+              const existing = await db.collection('affiliate_submissions')
+                .where('jobId', '==', jobId)
+                .where('userId', '==', user.uid)
+                .limit(1)
+                .get();
 
-    const proofData = {
-      jobId,
-      userId: user.uid,
-      submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      extraProof: form.extraProof.value || "",
-      files: [],
-      status: "on review",
-      workerEarn: jobData.workerPay || 0
-    };
+              if (!existing.empty) {
+                alert('You have already submitted this task.');
+                // replace form with the existing submission data
+                const doc = existing.docs[0];
+                const d = doc.data();
+                proofContainer.innerHTML = `\n                  <div id="submissionProofSection" style="padding:12px;border-radius:12px;border:1px solid #bbf7d0;background:#ecfdf5;margin-bottom:16px;">\n                    <div style="font-weight:700;margin-bottom:10px;color:#065f46">Your Submission</div>\n                    ${ (d.files && d.files.length > 0) ? (`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">` + d.files.map(u=>`<img src="${escapeHtml(u)}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;border:1px solid #e6fffa;" />`).join('') + `</div>`) : `<p class="text-sm text-gray-500">No proof images uploaded.</p>` }\n                    <p style="margin-top:8px;font-size:13px"><strong>Extra Proof:</strong> ${escapeHtml(d.extraProof || d.proofText || '—')}</p>\n                    <p style="margin-top:8px;color:#065f46;font-weight:700">✅ Submitted</p>\n                  </div>\n                `;
+                return;
+              }
+            } catch (err) {
+              console.warn('Duplicate check failed', err);
+            }
 
-    // upload files
-    for (let i = 0; i < proofFileCount; i++) {
-      const fileInput = form[`proofFile${i+1}`];
-      if (fileInput && fileInput.files.length > 0) {
-        try {
-          const url = await uploadToCloudinary(fileInput.files[0]);
-          proofData.files.push(url);
-        } catch (err) {
-          console.error("Cloudinary upload failed", err);
-          alert("File upload failed. Please try again.");
-          submitBtn.disabled = false;
-          submitBtn.textContent = "Submit Task";
-          return;
+            // save submission
+            try {
+              await db.collection('affiliate_submissions').add(proofData);
+            } catch (err) {
+              console.error('Saving submission failed', err);
+              alert('Failed to save submission. Try again.');
+              submitBtn.disabled = false;
+              submitBtn.textContent = prevText;
+              submitStatus.textContent = '';
+              return;
+            }
+
+            // success — replace UI with submitted view
+            proofContainer.innerHTML = `
+              <div id="submissionProofSection" style="padding:12px;border-radius:12px;border:1px solid #bbf7d0;background:#ecfdf5;margin-bottom:16px;">
+                <div style="font-weight:700;margin-bottom:10px;color:#065f46">Your Submission</div>
+                ${ proofData.files && proofData.files.length > 0 ? (`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">` + proofData.files.map(u=>`<img src="${escapeHtml(u)}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;border:1px solid #e6fffa;" />`).join('') + `</div>`) : `<p class="text-sm text-gray-500">No proof images uploaded.</p>` }
+                <p style="margin-top:8px;font-size:13px"><strong>Extra Proof:</strong> ${escapeHtml(proofData.extraProof || '—')}</p>
+                <p style="margin-top:8px;color:#065f46;font-weight:700">✅ Submitted</p>
+              </div>
+            `;
+
+            submitStatus.textContent = '✅ You have submitted your proof. Awaiting review.';
+          });
         }
       }
     }
 
-    // check again if already submitted
-    const existing = await db.collection("affiliate_submissions")
-      .where("jobId", "==", jobId)
-      .where("userId", "==", user.uid)
-      .limit(1)
-      .get();
 
-    if (!existing.empty) {
-      alert("You have already submitted this task.");
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Submit Task";
-      return;
-    }
 
-    // add submission
-    await db.collection("affiliate_submissions").add(proofData);
-
-    form.style.display = "none";
-    submitInfo.style.display = "block";
-    submitInfo.innerHTML = `
-      ✅ You submitted your proof.<br>
-      Status: <b>${proofData.status}</b><br>
-      Extra Proof: ${escapeHtml(proofData.extraProof || "—")}<br>
-      ${proofData.files.length ? proofData.files.map(url => `<img src="${url}" style="max-width:100%;margin-top:6px;border-radius:8px;border:1px solid #ddd">`).join("") : ""}
-    `;
-
-    // reset button
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Submit Task";
-  });
-}
-
-          // update modal progress (the global submissions listener will update the grid; we reflect locally too)
-          const cached = jobCache.get(jobId) || {};
-          const newApproved = cached.approvedCount || 0; // still requires admin approval to increment approvedCount
-          const total = jobData.numWorkers || 0;
-          const percent = total ? Math.min(100, Math.round((newApproved / total) * 100)) : 0;
-          const txt = detailsSection.querySelector('#modalProgressText');
-          const bar = detailsSection.querySelector('#modalProgressBar > i');
-          if (txt) txt.textContent = `${newApproved}/${total} workers • ${percent}%`;
-          if (bar) bar.style.width = percent + '%';
-        });
-      }
-    }
+	  
 
     // --- ADMIN SWIPER (kept guarded) ---
     function initAdminSwiper() {
@@ -5036,6 +5055,7 @@ async function payData(){
     showScreen("data-success-screen");
   },800);
 }
+
 
 
 
