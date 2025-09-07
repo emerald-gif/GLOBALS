@@ -251,19 +251,22 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
 
 
 
-  let currentInput = "new"; // "old" | "new" | "confirm"
+let currentInput = "new"; // "old" | "new" | "confirm"
 let pinValues = { old: "", new: "", confirm: "" };
-let userRef = null; // ✅ keep this global
+let userRef = null; // global userRef (kept for compatibility with window.userRef)
 
-// ✅ Detect logged in user automatically
+// ✅ Detect logged in user automatically (single listener)
 firebase.auth().onAuthStateChanged(async (user) => {
   if (user) {
     const userId = user.uid;
-    userRef = db.collection("users").doc(userId); // ✅ assign globally
+    userRef = db.collection("users").doc(userId); // store globally
+    window.userRef = userRef; // keep existing code compatibility
+
+    // prepare UI according to user doc
+    const doc = await userRef.get();
     await setupPinTab();
 
-    // ✅ Check PIN existence on reload
-    const doc = await userRef.get();
+    // If no PIN → show intro sheet
     if (!doc.exists || !doc.data().pin) {
       showPinIntro();
     }
@@ -274,20 +277,39 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
 // 🔹 Setup PIN Tab when opened
 async function setupPinTab() {
+  if (!userRef) return;
   const doc = await userRef.get();
   const hasPin = doc.exists && doc.data().pin;
 
   if (hasPin) {
     // Change PIN flow
-    document.getElementById("pinTabTitle").innerText = "Change Payment PIN";
-    document.getElementById("oldPinGroup").classList.remove("hidden");
-    document.getElementById("pinActionBtn").innerText = "Update PIN";
+    const t = document.getElementById("pinTabTitle");
+    if (t) t.innerText = "Change Payment PIN";
+
+    const oldGroup = document.getElementById("oldPinGroup");
+    if (oldGroup) oldGroup.classList.remove("hidden");
+
+    const actionBtn = document.getElementById("pinActionBtn");
+    if (actionBtn) actionBtn.innerText = "Update PIN";
+
+    const pinLabelEl = document.getElementById("pinLabel");
+    if (pinLabelEl) pinLabelEl.innerText = "Change Payment PIN";
+
     currentInput = "old";
   } else {
     // Set PIN flow
-    document.getElementById("pinTabTitle").innerText = "Set Payment PIN";
-    document.getElementById("oldPinGroup").classList.add("hidden");
-    document.getElementById("pinActionBtn").innerText = "Set PIN";
+    const t = document.getElementById("pinTabTitle");
+    if (t) t.innerText = "Set Payment PIN";
+
+    const oldGroup = document.getElementById("oldPinGroup");
+    if (oldGroup) oldGroup.classList.add("hidden");
+
+    const actionBtn = document.getElementById("pinActionBtn");
+    if (actionBtn) actionBtn.innerText = "Set PIN";
+
+    const pinLabelEl = document.getElementById("pinLabel");
+    if (pinLabelEl) pinLabelEl.innerText = "Set Payment PIN";
+
     currentInput = "new";
   }
 
@@ -298,6 +320,8 @@ async function setupPinTab() {
 
 // 🔹 Save or Update PIN
 async function savePin() {
+  if (!userRef) return alert("No user detected");
+
   const doc = await userRef.get();
   const hasPin = doc.exists && doc.data().pin;
 
@@ -325,6 +349,8 @@ async function savePin() {
   } else {
     await userRef.set({ pin: newPin }, { merge: true });
     alert("PIN set successfully!");
+    // hide intro after first set
+    closePinIntro();
   }
 
   // ✅ Reset pins
@@ -332,12 +358,14 @@ async function savePin() {
   updatePinDisplay();
 
   // ✅ Auto redirect back to Me tab
-  activateTab("me");
-  setupPinTab(); // refresh button label
+  if (typeof activateTab === "function") activateTab("me");
+  // refresh UI
+  await setupPinTab();
 }
 
-// 🔹 Keypad functions
+// 🔹 Keypad functions (single pressKey definition)
 function pressKey(num) {
+  if (!currentInput) currentInput = "new";
   if (pinValues[currentInput].length < 6) {
     pinValues[currentInput] += num;
     updatePinDisplay();
@@ -348,6 +376,9 @@ function pressKey(num) {
         currentInput = "new";
       } else if (currentInput === "new") {
         currentInput = "confirm";
+      } else if (currentInput === "confirm") {
+        // optional: auto save (commented out)
+        // savePin();
       }
     }
   }
@@ -361,12 +392,12 @@ function deleteKey() {
 }
 
 function updatePinDisplay() {
-  ["old", "new", "confirm"].forEach((type) => {
+  ["old", "new", "confirm"].forEach(type => {
     const display = document.getElementById(type + "PinDisplay");
     if (display) {
       [...display.children].forEach((dot, i) => {
         dot.classList.remove("bg-gray-800", "rounded-full");
-        if (pinValues[type][i]) {
+        if (pinValues[type] && pinValues[type][i]) {
           dot.classList.add("bg-gray-800", "rounded-full");
         }
       });
@@ -378,7 +409,7 @@ function updatePinDisplay() {
 function setInput(type) {
   currentInput = type;
 
-  ["old", "new", "confirm"].forEach((t) => {
+  ["old", "new", "confirm"].forEach(t => {
     const el = document.getElementById(t + "PinDisplay");
     if (el) {
       if (t === type) {
@@ -393,13 +424,14 @@ function setInput(type) {
 // 🔹 When opening the tab
 function openPinTab() {
   setupPinTab();
-  activateTab("pinTab");
+  if (typeof activateTab === "function") activateTab('pinTab');
 }
 
-// 🔹 Intro sheet functions
+// 🔹 Intro Sheet
 function showPinIntro() {
   const overlay = document.getElementById("pinIntroSheet");
   const drawer = document.getElementById("pinIntroDrawer");
+  if (!overlay || !drawer) return;
   overlay.classList.remove("hidden");
   setTimeout(() => {
     drawer.classList.remove("translate-y-full");
@@ -409,17 +441,19 @@ function showPinIntro() {
 function closePinIntro() {
   const overlay = document.getElementById("pinIntroSheet");
   const drawer = document.getElementById("pinIntroDrawer");
+  if (!overlay || !drawer) return;
   drawer.classList.add("translate-y-full");
   setTimeout(() => {
     overlay.classList.add("hidden");
   }, 300);
 }
 
+// Hide + go to pin tab
 function goToPinSetup() {
   closePinIntro();
   setTimeout(() => openPinTab(), 300); // 🚀 send to PIN setup screen
 }
-    
+
 
 
 
@@ -4882,6 +4916,7 @@ async function payData(){
     showScreen("data-success-screen");
   },800);
 }
+
 
 
 
