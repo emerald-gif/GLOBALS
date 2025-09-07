@@ -292,45 +292,68 @@ updatePinDisplay();
 
 }
 
+// 🔹 Setup PIN Tab when opened
+async function setupPinTab() {
+  const doc = await userRef.get();
+  const data = doc.exists ? doc.data() : {};
+  const hasPin = data && typeof data.pin === "string" && data.pin.length === 6;
+
+  if (hasPin) {
+    // Change PIN flow
+    document.getElementById("pinTabTitle").innerText = "Change Payment PIN";
+    document.getElementById("oldPinGroup").classList.remove("hidden");
+    document.getElementById("pinActionBtn").innerText = "Update PIN";
+    currentInput = "old";
+  } else {
+    // Set PIN flow
+    document.getElementById("pinTabTitle").innerText = "Set Payment PIN";
+    document.getElementById("oldPinGroup").classList.add("hidden");
+    document.getElementById("pinActionBtn").innerText = "Set PIN";
+    currentInput = "new";
+  }
+
+  // reset pins
+  pinValues = { old: "", new: "", confirm: "" };
+  updatePinDisplay();
+}
+
 // 🔹 Save or Update PIN
 async function savePin() {
-const doc = await userRef.get();
-const hasPin = doc.exists && doc.data().pin;
+  const doc = await userRef.get();
+  const data = doc.exists ? doc.data() : {};
+  const hasPin = data && typeof data.pin === "string" && data.pin.length === 6;
 
-const oldPin = pinValues.old;
-const newPin = pinValues.new;
-const confirmPin = pinValues.confirm;
+  const oldPin = pinValues.old;
+  const newPin = pinValues.new;
+  const confirmPin = pinValues.confirm;
 
-if (newPin.length < 6) {
-alert("PIN must be 6 digits");
-return;
-}
+  if (newPin.length < 6) {
+    alert("PIN must be 6 digits");
+    return;
+  }
 
-if (newPin !== confirmPin) {
-alert("PINs do not match");
-return;
-}
+  if (newPin !== confirmPin) {
+    alert("PINs do not match");
+    return;
+  }
 
-if (hasPin) {
-if (oldPin !== doc.data().pin) {
-alert("Old PIN is incorrect");
-return;
-}
-await userRef.update({ pin: newPin });
-alert("PIN updated successfully!");
-} else {
-await userRef.set({ pin: newPin }, { merge: true });
-alert("PIN set successfully!");
-}
+  if (hasPin) {
+    if (oldPin !== data.pin) {
+      alert("Old PIN is incorrect");
+      return;
+    }
+    await userRef.update({ pin: newPin });
+    alert("PIN updated successfully!");
+  } else {
+    await userRef.set({ pin: newPin }, { merge: true });
+    alert("PIN set successfully!");
+  }
 
-// ✅ Reset pins
-pinValues = { old: "", new: "", confirm: "" };
-updatePinDisplay();
+  // ✅ Refresh from Firestore after save
+  await setupPinTab();
 
-// ✅ Auto redirect back to Me tab
-activateTab('me');
-setupPinTab(); // refresh button label
-
+  // ✅ Redirect back
+  activateTab('me');
 }
 
 // 🔹 Keypad functions
@@ -4869,6 +4892,7 @@ async function payData(){
     showScreen("data-success-screen");
   },800);
 }
+
 
 
 
