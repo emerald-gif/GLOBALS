@@ -251,13 +251,23 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
 
   let currentInput = "new"; // "old" | "new" | "confirm"
   let pinValues = { old: "", new: "", confirm: "" };
+  let userRef; // ✅ global user reference
 
-  // ✅ Detect logged in user automatically
+  // 🔹 Single Auth Listener
   firebase.auth().onAuthStateChanged(async (user) => {
     if (user) {
       const userId = user.uid;
-      window.userRef = db.collection("users").doc(userId); // store globally
-      await setupPinTab();
+      userRef = db.collection("users").doc(userId);
+
+      const doc = await userRef.get();
+
+      if (!doc.exists || !doc.data().pin) {
+        // No PIN → show intro
+        showPinIntro();
+      } else {
+        // PIN exists → go straight to Change PIN
+        setupPinTab();
+      }
     } else {
       console.log("No user logged in");
     }
@@ -318,6 +328,7 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
     } else {
       await userRef.set({ pin: newPin }, { merge: true });
       alert("PIN set successfully!");
+      closePinIntro(); // ✅ hide intro once set
     }
 
     // ✅ Reset pins
@@ -334,6 +345,15 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
     if (pinValues[currentInput].length < 6) {
       pinValues[currentInput] += num;
       updatePinDisplay();
+
+      // ✅ Auto move to next field if full
+      if (pinValues[currentInput].length === 6) {
+        if (currentInput === "old") {
+          currentInput = "new";
+        } else if (currentInput === "new") {
+          currentInput = "confirm";
+        }
+      }
     }
   }
 
@@ -358,23 +378,20 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
     });
   }
 
-
-// 🔹 set input and highlights 
-
+  // 🔹 set input and highlights 
   function setInput(type) {
-  currentInput = type;
-
-  ["old", "new", "confirm"].forEach(t => {
-    const el = document.getElementById(t + "PinDisplay");
-    if (el) {
-      if (t === type) {
-        el.classList.add("border-blue-500", "bg-blue-50", "shadow-sm");
-      } else {
-        el.classList.remove("border-blue-500", "bg-blue-50", "shadow-sm");
+    currentInput = type;
+    ["old", "new", "confirm"].forEach(t => {
+      const el = document.getElementById(t + "PinDisplay");
+      if (el) {
+        if (t === type) {
+          el.classList.add("border-blue-500", "bg-blue-50", "shadow-sm");
+        } else {
+          el.classList.remove("border-blue-500", "bg-blue-50", "shadow-sm");
+        }
       }
-    }
-  });
-}
+    });
+  }
 
   // 🔹 When opening the tab
   function openPinTab() {
@@ -382,51 +399,7 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
     activateTab('pinTab');
   }
 
-
-
-function pressKey(num) {
-  if (pinValues[currentInput].length < 6) {
-    pinValues[currentInput] += num;
-    updatePinDisplay();
-
-    // ✅ Auto move to next field if full
-    if (pinValues[currentInput].length === 6) {
-      if (currentInput === "old") {
-        currentInput = "new";
-      } else if (currentInput === "new") {
-        currentInput = "confirm";
-      } else if (currentInput === "confirm") {
-        // optional: auto save
-        // savePin();
-      }
-    }
-  }
-}
-
-
-
-
-
-
-
-
-  // PAYMENT Detect user on reload FUNCTION 
-	
-  // Detect user on reload
-  firebase.auth().onAuthStateChanged(async (user) => {
-    if (user) {
-      const userId = user.uid;
-      const userRef = db.collection("users").doc(userId);
-      const doc = await userRef.get();
-
-      // If no PIN → show intro sheet
-      if (!doc.exists || !doc.data().pin) {
-        showPinIntro();
-      }
-    }
-  });
-
-  // Show sheet
+  // 🔹 Intro Sheet
   function showPinIntro() {
     const overlay = document.getElementById("pinIntroSheet");
     const drawer = document.getElementById("pinIntroDrawer");
@@ -436,7 +409,6 @@ function pressKey(num) {
     }, 50);
   }
 
-  // Hide sheet
   function closePinIntro() {
     const overlay = document.getElementById("pinIntroSheet");
     const drawer = document.getElementById("pinIntroDrawer");
@@ -446,7 +418,6 @@ function pressKey(num) {
     }, 300);
   }
 
-  // Hide + go to pin tab
   function goToPinSetup() {
     closePinIntro();
     setTimeout(() => openPinTab(), 300); // 🚀 send to PIN setup screen
@@ -4916,6 +4887,7 @@ async function payData(){
     showScreen("data-success-screen");
   },800);
 }
+
 
 
 
