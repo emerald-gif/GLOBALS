@@ -4814,34 +4814,25 @@ showScreen('airtime-screen');
 
 
 
-
-
-
-let selectedDataNetwork = '01'; // default MTN
+let selectedDataNetwork = '01'; 
 let selectedCategory = 'hot';
 let selectedPlan = null;
 
-// Data Plans (using your screenshot style with cashback + notes)
 const DATA_PLANS = {
-  '01': { // MTN (HOT)
+  '01': { // MTN
     hot: [
-      { size: "250MB", validity: "1 Day", price: 50, cashback: 1.75, note: "Night Plan" },
-      { size: "1.5GB", validity: "1 Day", price: 500, cashback: 17.5 },
-      { size: "3.2GB", validity: "2 Days", price: 1000, cashback: 20 },
-      { size: "5GB", validity: "2 Days", price: 1500, cashback: 30, note: "2GB YouTube Night" },
-      { size: "6GB", validity: "7 Days", price: 2500, cashback: 50, note: "2GB YouTube Night" },
-      { size: "10GB", validity: "7 Days", price: 3000, cashback: 60, note: "2GB YouTube Night" },
-      { size: "12GB", validity: "30 Days", price: 5000, cashback: 50, note: "100 mins + 5 SMS" },
-      { size: "18GB", validity: "7 Days", price: 5000, cashback: 50, note: "2GB YouTube Night" }
-    ],
-    daily: [ { size: "75MB", validity: "1 Day", price: 75 }, { size: "250MB", validity: "1 Day", price: 50 } ],
-    weekly: [ { size: "500MB", validity: "7 Days", price: 500 }, { size: "1GB", validity: "7 Days", price: 800 } ],
-    monthly:[ { size: "2GB", validity: "30 Days", price: 1500 }, { size: "3GB", validity: "30 Days", price: 2000 } ],
-    social: [ { size: "200MB", validity: "2 Days (Social)", price: 100 }, { size: "1GB", validity: "3 Days (Social)", price: 300 } ]
+      { size: "250MB", validity: "1 Day", price: 50 },
+      { size: "1.5GB", validity: "1 Day", price: 500 },
+      { size: "3.2GB", validity: "2 Days", price: 1000 },
+      { size: "5GB", validity: "2 Days", price: 1500 },
+      { size: "6GB", validity: "7 Days", price: 2500 },
+      { size: "10GB", validity: "7 Days", price: 3000 },
+      { size: "12GB", validity: "30 Days", price: 5000 },
+      { size: "18GB", validity: "7 Days", price: 5000 }
+    ]
   },
   '02': {}, '03': {}, '04': {}
 };
-// clone MTN plans to others for now
 DATA_PLANS['02'] = JSON.parse(JSON.stringify(DATA_PLANS['01']));
 DATA_PLANS['03'] = JSON.parse(JSON.stringify(DATA_PLANS['01']));
 DATA_PLANS['04'] = JSON.parse(JSON.stringify(DATA_PLANS['01']));
@@ -4858,13 +4849,6 @@ function selectDataNetwork(code){
   renderPlans();
 }
 
-function selectCategory(cat){
-  selectedCategory = cat;
-  document.querySelectorAll('.data-tab-btn').forEach(t=>t.classList.remove('active'));
-  document.getElementById('tab-'+cat).classList.add('active');
-  renderPlans();
-}
-
 function renderPlans(){
   const grid = document.getElementById('plans-grid');
   grid.innerHTML = "";
@@ -4875,9 +4859,7 @@ function renderPlans(){
     card.innerHTML = `
       <p class="text-lg font-bold text-indigo-700">${plan.size}</p>
       <p class="text-sm text-gray-500">${plan.validity}</p>
-      <p class="text-md font-semibold mt-2">₦${fmt(plan.price)}</p>
-      ${plan.cashback ? `<p class="cashback">₦${plan.cashback} Cashback</p>` : ""}
-      ${plan.note ? `<p class="note">${plan.note} <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="1"/></svg></p>` : ""}
+      <p class="text-md font-semibold mt-2">₦${plan.price}</p>
     `;
     card.onclick = ()=> goToConfirmData(plan);
     grid.appendChild(card);
@@ -4885,105 +4867,61 @@ function renderPlans(){
 }
 
 async function goToConfirmData(plan){
-  hide('data-error');
-  const phone = (document.getElementById('data-phone').value||'').trim();
-  if(phone.length!==11){ show('data-error','Enter valid phone number'); return; }
+  selectedPlan = plan;
+  const net = NETWORKS[selectedDataNetwork] || { label:"",logo:"" };
 
-  if(!currentUser || !userRef){ show('data-error','You must be signed in.'); return; }
+  // update UI
+  document.getElementById('confirm-data-network').innerText = net.label;
+  document.getElementById('confirm-data-plan').innerText = plan.size+" - "+plan.validity;
+  document.getElementById('confirm-data-amount').innerText = '₦'+plan.price;
+  document.getElementById('confirm-data-logo').src = net.logo;
 
-  try{
-    const doc = await userRef.get();
-    if(!doc.exists){ show('data-error','User record not found.'); return; }
-    const u = doc.data();
-    if(!u || !u.pin){ show('data-error','Payment PIN not set.'); return; }
-
-    selectedPlan = plan;
-    const net = NETWORKS[selectedDataNetwork] || { label:"",logo:"" };
-
-    document.getElementById('confirm-data-network').innerText = net.label;
-    document.getElementById('confirm-data-plan').innerText = plan.size+" - "+plan.validity;
-    document.getElementById('confirm-data-amount').innerText = '₦'+fmt(plan.price);
-    document.getElementById('confirm-data-balance').innerText = '₦'+fmt(u.balance||0);
-    document.getElementById('confirm-data-logo').src = net.logo;
-    document.getElementById('confirm-data-phone').innerText = phone;
-
-    const confirmEl = document.getElementById('confirm-data-screen');
-    confirmEl.dataset.networkCode = selectedDataNetwork;
-    confirmEl.dataset.plan = JSON.stringify(plan);
-    confirmEl.dataset.phone = phone;
-
-    showScreen('confirm-data-screen');
-  }catch(err){
-    console.error('goToConfirmData',err);
-    show('data-error','Could not read account. Try again later.');
+  // fetch balance
+  if(currentUser && userRef){
+    try {
+      const doc = await userRef.get();
+      if(doc.exists){
+        const u = doc.data();
+        document.getElementById('confirm-data-balance').innerText = '₦'+(u.balance || 0);
+      }
+    } catch(err){
+      console.error("Balance fetch failed", err);
+    }
   }
-}
 
-async function payData(){
-  hide('confirm-data-error');
-  const pinInput = (document.getElementById('confirm-data-pin').value||'').trim();
-  const btn = document.getElementById('pay-data-btn');
-  if(!pinInput){ show('confirm-data-error','Enter your payment PIN'); return; }
-  if(!currentUser || !userRef){ show('confirm-data-error','You must be signed in.'); return; }
-
-  const confirmEl = document.getElementById('confirm-data-screen');
-  const networkCode = confirmEl.dataset.networkCode;
-  const phone = confirmEl.dataset.phone;
-  const plan = JSON.parse(confirmEl.dataset.plan||'{}');
-  if(!plan.price){ show('confirm-data-error','Missing plan details.'); return; }
-
-  btn.disabled=true; const orig=btn.innerHTML; btn.innerHTML="Processing...";
-  try{
-    await db.runTransaction(async (tx)=>{
-      const uSnap=await tx.get(userRef);
-      if(!uSnap.exists) throw new Error('USER_NOT_FOUND');
-      const u=uSnap.data();
-      if(!u.pin) throw new Error('PIN_NOT_SET');
-      if(String(u.pin)!==String(pinInput)) throw new Error('INCORRECT_PIN');
-      const bal=Number(u.balance||0);
-      if(bal<plan.price) throw new Error('INSUFFICIENT_BALANCE');
-      tx.update(userRef,{balance:bal-plan.price});
-
-      const billsRef=db.collection('bill_submissions');
-      const newBill=billsRef.doc();
-      tx.set(newBill,{
-        userId:currentUser.uid,
-        networkCode,
-        network: NETWORKS[networkCode]?NETWORKS[networkCode].label:networkCode,
-        phone,
-        plan: plan,
-        amount: plan.price,
-        status:'submitted',
-        processed:false,
-        createdAt:firebase.firestore.FieldValue.serverTimestamp()
-      });
-    });
-    showScreen('data-success-screen');
-  }catch(err){
-    console.error('payData',err);
-    if(err.message==='USER_NOT_FOUND') show('confirm-data-error','User record not found.');
-    else if(err.message==='PIN_NOT_SET') show('confirm-data-error','PIN not set.');
-    else if(err.message==='INCORRECT_PIN') show('confirm-data-error','Incorrect PIN.');
-    else if(err.message==='INSUFFICIENT_BALANCE') show('confirm-data-error','Insufficient balance.');
-    else show('confirm-data-error','Transaction failed.');
-  }finally{
-    btn.disabled=false; btn.innerHTML=orig;
-  }
+  showScreen('confirm-data-screen');
 }
 
 function resetDataForm(){
   selectedPlan=null;
   selectedDataNetwork='01';
   selectedCategory='hot';
+  document.getElementById("confirm-data-phone").value="";
   document.getElementById("confirm-data-pin").value="";
   renderPlans();
   showScreen('data-screen');
 }
 
+async function payData(){
+  const phone = document.getElementById("confirm-data-phone").value;
+  const pin = document.getElementById("confirm-data-pin").value;
 
-    
+  if(!phone || !selectedPlan || !pin){
+    alert("Please fill all fields");
+    return;
+  }
+
+  // 🚀 simulate successful transaction
+  setTimeout(()=>{
+    showScreen("data-success-screen");
+  },800);
+}
+
+
+
 
 renderPlans();
+
 
 
 
