@@ -407,19 +407,21 @@ currentInput = "confirm";
 
 // PAYMENT Detect user on reload FUNCTION
 
-// Detect user on reload
+// ✅ Detect user on reload (fixed)
 firebase.auth().onAuthStateChanged(async (user) => {
-if (user) {
-const userId = user.uid;
-const userRef = db.collection("users").doc(userId);
-const doc = await userRef.get();
+  if (user) {
+    const userId = user.uid;
+    window.userRef = db.collection("users").doc(userId); // use global
+    const doc = await userRef.get();
 
-// If no PIN → show intro sheet
-if (!doc.exists || !doc.data().pin) {
-showPinIntro();
-}
-}
-
+    if (!doc.exists || !doc.data().pin) {
+      // No PIN → show intro drawer
+      showPinIntro();
+    } else {
+      // Has PIN → setup tab directly as Change PIN
+      setupPinTab();
+    }
+  }
 });
 
 // Show sheet
@@ -4912,6 +4914,7 @@ async function payData(){
     showScreen("data-success-screen");
   },800);
 }
+
 
 
 
