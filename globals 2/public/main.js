@@ -251,24 +251,21 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
 
 
 
-let currentInput = "new"; // "old" | "new" | "confirm"
+  let currentInput = "new"; // "old" | "new" | "confirm"
 let pinValues = { old: "", new: "", confirm: "" };
-let userRef; // ✅ keep global
+let userRef = null; // ✅ keep this global
 
 // ✅ Detect logged in user automatically
 firebase.auth().onAuthStateChanged(async (user) => {
   if (user) {
     const userId = user.uid;
-    userRef = db.collection("users").doc(userId); // store globally
+    userRef = db.collection("users").doc(userId); // ✅ assign globally
+    await setupPinTab();
 
+    // ✅ Check PIN existence on reload
     const doc = await userRef.get();
-
     if (!doc.exists || !doc.data().pin) {
-      // No PIN → show intro
       showPinIntro();
-    } else {
-      // Has PIN → go straight to Change PIN
-      await setupPinTab();
     }
   } else {
     console.log("No user logged in");
@@ -280,24 +277,22 @@ async function setupPinTab() {
   const doc = await userRef.get();
   const hasPin = doc.exists && doc.data().pin;
 
-  if (hasPin) {  
-    // Change PIN flow  
-    document.getElementById("pinTabTitle").innerText = "Change Payment PIN";  
-    document.getElementById("oldPinGroup").classList.remove("hidden");  
-    document.getElementById("pinActionBtn").innerText = "Update PIN";  
-    document.getElementById("pinLabel").innerText = "Change Payment PIN";  
-    currentInput = "old";  
-  } else {  
-    // Set PIN flow  
-    document.getElementById("pinTabTitle").innerText = "Set Payment PIN";  
-    document.getElementById("oldPinGroup").classList.add("hidden");  
-    document.getElementById("pinActionBtn").innerText = "Set PIN";  
-    document.getElementById("pinLabel").innerText = "Set Payment PIN";  
-    currentInput = "new";  
-  }  
+  if (hasPin) {
+    // Change PIN flow
+    document.getElementById("pinTabTitle").innerText = "Change Payment PIN";
+    document.getElementById("oldPinGroup").classList.remove("hidden");
+    document.getElementById("pinActionBtn").innerText = "Update PIN";
+    currentInput = "old";
+  } else {
+    // Set PIN flow
+    document.getElementById("pinTabTitle").innerText = "Set Payment PIN";
+    document.getElementById("oldPinGroup").classList.add("hidden");
+    document.getElementById("pinActionBtn").innerText = "Set PIN";
+    currentInput = "new";
+  }
 
-  // reset pins  
-  pinValues = { old: "", new: "", confirm: "" };  
+  // reset pins
+  pinValues = { old: "", new: "", confirm: "" };
   updatePinDisplay();
 }
 
@@ -306,39 +301,38 @@ async function savePin() {
   const doc = await userRef.get();
   const hasPin = doc.exists && doc.data().pin;
 
-  const oldPin = pinValues.old;  
-  const newPin = pinValues.new;  
-  const confirmPin = pinValues.confirm;  
+  const oldPin = pinValues.old;
+  const newPin = pinValues.new;
+  const confirmPin = pinValues.confirm;
 
-  if (newPin.length < 6) {  
-    alert("PIN must be 6 digits");  
-    return;  
-  }  
+  if (newPin.length < 6) {
+    alert("PIN must be 6 digits");
+    return;
+  }
 
-  if (newPin !== confirmPin) {  
-    alert("PINs do not match");  
-    return;  
-  }  
+  if (newPin !== confirmPin) {
+    alert("PINs do not match");
+    return;
+  }
 
-  if (hasPin) {  
-    if (oldPin !== doc.data().pin) {  
-      alert("Old PIN is incorrect");  
-      return;  
-    }  
-    await userRef.update({ pin: newPin });  
-    alert("PIN updated successfully!");  
-  } else {  
-    await userRef.set({ pin: newPin }, { merge: true });  
-    alert("PIN set successfully!");  
-    closePinIntro(); // ✅ hide intro after first set
-  }  
+  if (hasPin) {
+    if (oldPin !== doc.data().pin) {
+      alert("Old PIN is incorrect");
+      return;
+    }
+    await userRef.update({ pin: newPin });
+    alert("PIN updated successfully!");
+  } else {
+    await userRef.set({ pin: newPin }, { merge: true });
+    alert("PIN set successfully!");
+  }
 
-  // ✅ Reset pins  
-  pinValues = { old: "", new: "", confirm: "" };  
-  updatePinDisplay();  
+  // ✅ Reset pins
+  pinValues = { old: "", new: "", confirm: "" };
+  updatePinDisplay();
 
-  // ✅ Auto redirect back to Me tab  
-  activateTab('me');  
+  // ✅ Auto redirect back to Me tab
+  activateTab("me");
   setupPinTab(); // refresh button label
 }
 
@@ -348,13 +342,13 @@ function pressKey(num) {
     pinValues[currentInput] += num;
     updatePinDisplay();
 
-    // ✅ Auto move to next field if full  
-    if (pinValues[currentInput].length === 6) {  
-      if (currentInput === "old") {  
-        currentInput = "new";  
-      } else if (currentInput === "new") {  
-        currentInput = "confirm";  
-      }  
+    // ✅ Auto move to next field if full
+    if (pinValues[currentInput].length === 6) {
+      if (currentInput === "old") {
+        currentInput = "new";
+      } else if (currentInput === "new") {
+        currentInput = "confirm";
+      }
     }
   }
 }
@@ -367,7 +361,7 @@ function deleteKey() {
 }
 
 function updatePinDisplay() {
-  ["old", "new", "confirm"].forEach(type => {
+  ["old", "new", "confirm"].forEach((type) => {
     const display = document.getElementById(type + "PinDisplay");
     if (display) {
       [...display.children].forEach((dot, i) => {
@@ -383,7 +377,8 @@ function updatePinDisplay() {
 // 🔹 set input and highlights
 function setInput(type) {
   currentInput = type;
-  ["old", "new", "confirm"].forEach(t => {
+
+  ["old", "new", "confirm"].forEach((t) => {
     const el = document.getElementById(t + "PinDisplay");
     if (el) {
       if (t === type) {
@@ -398,10 +393,10 @@ function setInput(type) {
 // 🔹 When opening the tab
 function openPinTab() {
   setupPinTab();
-  activateTab('pinTab');
+  activateTab("pinTab");
 }
 
-// 🔹 Intro Sheet
+// 🔹 Intro sheet functions
 function showPinIntro() {
   const overlay = document.getElementById("pinIntroSheet");
   const drawer = document.getElementById("pinIntroDrawer");
@@ -420,13 +415,11 @@ function closePinIntro() {
   }, 300);
 }
 
-// Hide + go to pin tab
 function goToPinSetup() {
   closePinIntro();
   setTimeout(() => openPinTab(), 300); // 🚀 send to PIN setup screen
 }
-
-
+    
 
 
 
@@ -4889,6 +4882,7 @@ async function payData(){
     showScreen("data-success-screen");
   },800);
 }
+
 
 
 
