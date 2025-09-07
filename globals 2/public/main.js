@@ -251,152 +251,206 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
 
 
 
-let currentInput = "new"; // "old" | "new" | "confirm"
+/* ---------- PIN MODULE (drop into main.js, remove old pin code) ---------- */
+
+let currentInput = "new"; // old | new | confirm
 let pinValues = { old: "", new: "", confirm: "" };
 
-// ✅ Detect logged in user automatically
-firebase.auth().onAuthStateChanged(async (user) => {
-  if (user) {
-    const userId = user.uid;
-    window.userRef = db.collection("users").doc(userId); // store globally
-    await setupPinTab();
-  } else {
-    console.log("No user logged in");
-  }
-});
+// We'll keep a global unsubscribe so we don't attach many listeners by accident
+window.__pinUnsub = window.__pinUnsub || null;
 
-// 🔹 Setup PIN Tab when opened
-async function setupPinTab() {
-  const doc = await userRef.get();
-  const data = doc.exists ? doc.data() : {};
+// ---------- Helper: update DOM based on server doc ----------
+function updatePinUIFromDoc(data) {
   const hasPin = data && typeof data.pin === "string" && data.pin.length === 6;
+  const titleEl = document.getElementById("pinTabTitle");
+  const oldGroup = document.getElementById("oldPinGroup");
+  const actionBtn = document.getElementById("pinActionBtn");
+
+  if (!titleEl || !actionBtn) {
+    console.warn("[PIN] Missing required DOM elements (pinTabTitle / pinActionBtn).");
+    return;
+  }
 
   if (hasPin) {
-    // Change PIN flow
-    document.getElementById("pinTabTitle").innerText = "Change Payment PIN";
-    document.getElementById("oldPinGroup").classList.remove("hidden");
-    document.getElementById("pinActionBtn").innerText = "Update PIN";
-    currentInput = "old";
+    titleEl.innerText = "Change Payment PIN";
+    if (oldGroup) oldGroup.classList.remove("hidden");
+    actionBtn.innerText = "Update PIN";
+
+    // If user hasn't started typing anything, default focus to old PIN
+    if (!pinValues.old && !pinValues.new && !pinValues.confirm) {
+      setInput("old");
+    }
   } else {
-    // Set PIN flow
-    document.getElementById("pinTabTitle").innerText = "Set Payment PIN";
-    document.getElementById("oldPinGroup").classList.add("hidden");
-    document.getElementById("pinActionBtn").innerText = "Set PIN";
-    currentInput = "new";
+    titleEl.innerText = "Set Payment PIN";
+    if (oldGroup) oldGroup.classList.add("hidden");
+    actionBtn.innerText = "Set PIN";
+
+    if (!pinValues.new && !pinValues.confirm) setInput("new");
   }
 
-  // reset pins
-  pinValues = { old: "", new: "", confirm: "" };
+  // Update the dots to reflect whatever the local pinValues currently are.
   updatePinDisplay();
 }
 
-// 🔹 Save or Update PIN
+// ---------- Attach auth + real-time listener ----------
+firebase.auth().onAuthStateChanged(async (user) => {
+  // detach old listener if any
+  if (window.__pinUnsub) {
+    try { window.__pinUnsub(); } catch(e){/* ignore */ }
+    window.__pinUnsub = null;
+  }
+
+  if (!user) {
+    console.log("[PIN] No user logged in.");
+    return;
+  }
+
+  window.userRef = db.collection("users").doc(user.uid);
+
+  // Attach snapshot so UI ALWAYS reflects server doc changes immediately
+  window.__pinUnsub = window.userRef.onSnapshot(doc => {
+    console.log("[PIN] onSnapshot:", doc.exists ? doc.data() : null);
+    updatePinUIFromDoc(doc.exists ? doc.data() : null);
+  }, err => {
+    console.error("[PIN] snapshot error:", err);
+  });
+
+  // Quick initial fetch (onSnapshot usually calls immediately but do this for safety)
+  const doc = await window.userRef.get();
+  updatePinUIFromDoc(doc.exists ? doc.data() : null);
+});
+
+// ---------- Save (uses transaction to prevent race/stale old-pin checks) ----------
 async function savePin() {
-  const doc = await userRef.get();
-  const data = doc.exists ? doc.data() : {};
-  const hasPin = data && typeof data.pin === "string" && data.pin.length === 6;
+  if (!window.userRef) { alert("User not ready. Try again."); return; }
 
   const oldPin = pinValues.old;
   const newPin = pinValues.new;
   const confirmPin = pinValues.confirm;
 
-  if (newPin.length < 6) {
-    alert("PIN must be 6 digits");
-    return;
-  }
+  if (newPin.length < 6) { alert("PIN must be 6 digits"); return; }
+  if (newPin !== confirmPin) { alert("PINs do not match"); return; }
 
-  if (newPin !== confirmPin) {
-    alert("PINs do not match");
-    return;
-  }
+  try {
+    await db.runTransaction(async (transaction) => {
+      const snap = await transaction.get(window.userRef);
+      const data = snap.exists ? snap.data() : {};
+      const hasPin = data && typeof data.pin === "string" && data.pin.length === 6;
 
-  if (hasPin) {
-    if (oldPin !== data.pin) {
+      if (hasPin) {
+        // verify old pin inside transaction (atomic)
+        if (oldPin !== data.pin) {
+          // Throw a specific error we can catch below
+          const err = new Error("OLD_PIN_MISMATCH");
+          err.code = "OLD_PIN_MISMATCH";
+          throw err;
+        }
+        transaction.update(window.userRef, { pin: newPin });
+      } else {
+        transaction.set(window.userRef, { pin: newPin }, { merge: true });
+      }
+    });
+
+    console.log("[PIN] Transaction saved.");
+
+    // clear local inputs (UI will reflect server via snapshot)
+    pinValues = { old: "", new: "", confirm: "" };
+    updatePinDisplay();
+
+    // Ensure UI shows Change mode immediately
+    setInput("old");
+    // go back to Me tab
+    activateTab('me');
+
+    alert("PIN saved successfully!");
+  } catch (err) {
+    console.error("[PIN] save error:", err);
+    if (err && err.code === "OLD_PIN_MISMATCH") {
       alert("Old PIN is incorrect");
-      return;
+    } else {
+      alert("Failed to save PIN. Try again.");
     }
-    await userRef.update({ pin: newPin });
-    alert("PIN updated successfully!");
-  } else {
-    await userRef.set({ pin: newPin }, { merge: true });
-    alert("PIN set successfully!");
   }
-
-  // ✅ Reset pins after save
-  pinValues = { old: "", new: "", confirm: "" };
-  updatePinDisplay();
-
-  // ✅ Immediately refresh UI to "Change PIN" mode
-  await setupPinTab();
-
-  // ✅ Redirect back to Me tab
-  activateTab('me');
 }
 
-// 🔹 Keypad functions
+// ---------- Keypad handlers (single, canonical definitions) ----------
 function pressKey(num) {
+  if (!currentInput) return;
   if (pinValues[currentInput].length < 6) {
     pinValues[currentInput] += num;
     updatePinDisplay();
 
-    // ✅ Auto move to next field if full
+    // Auto-advance when field is full
     if (pinValues[currentInput].length === 6) {
-      if (currentInput === "old") {
-        currentInput = "new";
-        setInput("new");
-      } else if (currentInput === "new") {
-        currentInput = "confirm";
-        setInput("confirm");
+      if (currentInput === "old") setInput("new");
+      else if (currentInput === "new") setInput("confirm");
+      else if (currentInput === "confirm") {
+        // optional: auto-save when confirm completes
+        // savePin();
       }
     }
   }
 }
 
 function deleteKey() {
+  if (!currentInput) return;
   if (pinValues[currentInput].length > 0) {
     pinValues[currentInput] = pinValues[currentInput].slice(0, -1);
     updatePinDisplay();
+  } else {
+    // If empty, move focus back to previous field
+    if (currentInput === "confirm") setInput("new");
+    else if (currentInput === "new") setInput("old");
   }
 }
 
+// ---------- Visual dots update ----------
 function updatePinDisplay() {
   ["old", "new", "confirm"].forEach(type => {
     const display = document.getElementById(type + "PinDisplay");
-    if (display) {
-      [...display.children].forEach((dot, i) => {
-        dot.classList.remove("bg-gray-800");
-        if (pinValues[type][i]) {
-          dot.classList.add("bg-gray-800");
-        }
-      });
-    }
+    if (!display) return;
+    [...display.children].forEach((dot, i) => {
+      dot.classList.remove("bg-gray-800", "bg-gray-200");
+      dot.classList.add("rounded-full");
+      if (pinValues[type][i]) {
+        dot.classList.add("bg-gray-800");
+      } else {
+        dot.classList.add("bg-gray-200");
+      }
+    });
   });
 }
 
-// 🔹 set input and highlights
+// ---------- focus / highlight a field ----------
 function setInput(type) {
   currentInput = type;
-
   ["old", "new", "confirm"].forEach(t => {
     const el = document.getElementById(t + "PinDisplay");
-    if (el) {
-      if (t === type) {
-        el.classList.add("border-blue-500", "bg-blue-50", "shadow-sm");
-      } else {
-        el.classList.remove("border-blue-500", "bg-blue-50", "shadow-sm");
-      }
+    if (!el) return;
+    if (t === type) {
+      el.classList.add("border-blue-500", "bg-blue-50", "shadow-sm");
+    } else {
+      el.classList.remove("border-blue-500", "bg-blue-50", "shadow-sm");
     }
   });
 }
 
-// 🔹 When opening the tab
+// ---------- open tab helper ----------
 function openPinTab() {
-  setupPinTab();
+  // Activate tab UI
   activateTab('pinTab');
+
+  // Force a one-time read so UI is correct immediately
+  if (window.userRef) {
+    window.userRef.get().then(doc => updatePinUIFromDoc(doc.exists ? doc.data() : null));
+  }
 }
 
+/* ---------- End PIN MODULE ---------- */
 
 
+
+		  
                                                                  //OVERVIEW SECTION (ME SECTION) FUNCTION
 
 
@@ -4855,6 +4909,7 @@ async function payData(){
     showScreen("data-success-screen");
   },800);
 }
+
 
 
 
