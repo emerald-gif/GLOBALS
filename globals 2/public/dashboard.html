@@ -3163,7 +3163,52 @@
 
 
 
-
+‎
+‎<!-- ================= BOTTOM SHEET FOR PIN ================= -->
+‎<!-- ================= BOTTOM SHEET ================= -->
+‎<div id="pinIntroSheet" 
+‎     class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-end z-50">
+‎  <div class="w-full bg-white rounded-t-2xl p-6 transform translate-y-full transition-transform duration-300"
+‎       id="pinIntroDrawer">
+‎    
+‎    <!-- Grab handle (clickable for swipe down) -->
+‎    <div onclick="closePinIntro()" 
+‎         class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4 cursor-pointer"></div>
+‎
+‎    <!-- Close button -->
+‎    <button onclick="closePinIntro()" 
+‎            class="absolute top-3 right-4 text-gray-400 hover:text-gray-600">
+‎      ✕
+‎    </button>
+‎
+‎    <!-- Icon -->
+‎    <div class="flex justify-center mb-4 mt-2">
+‎      <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
+‎        <svg xmlns="http://www.w3.org/2000/svg" 
+‎             class="h-8 w-8 text-blue-600" 
+‎             fill="none" viewBox="0 0 24 24" stroke="currentColor">
+‎          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+‎                d="M3 10h18M5 6h14M4 15h16M6 19h12" />
+‎        </svg>
+‎      </div>
+‎    </div>
+‎
+‎    <!-- Headline -->
+‎    <h2 class="text-xl font-bold text-center text-gray-900 mb-2">Set Payment PIN</h2>
+‎
+‎    <!-- Subtext -->
+‎    <p class="text-sm text-gray-600 text-center mb-6">
+‎      Set your payment PIN to make withdrawals and other services seamlessly.
+‎    </p>
+‎
+‎    <!-- CTA Button -->
+‎    <button onclick="goToPinSetup()" 
+‎            class="w-full py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">
+‎      LET’S GO
+‎    </button>
+‎  </div>
+‎</div>
+‎
 
 
 
@@ -3635,6 +3680,7 @@
 </body>
 
 </html>
+
 
 
 
