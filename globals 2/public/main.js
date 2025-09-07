@@ -5075,6 +5075,47 @@ async function payData(){
 
 
 
+// ===== FORCE HIDE OUTSIDE SCREENS (DASHBOARD SAFE) =====
+document.addEventListener("DOMContentLoaded", () => {
+  const allTabs = document.querySelectorAll(".tab-section");
+  const dashboard = document.getElementById("dashboard");
+
+  // Hide all except dashboard
+  function hideAllExceptDashboard() {
+    allTabs.forEach(sec => {
+      if (sec !== dashboard) {
+        sec.style.display = "none";
+      }
+    });
+    dashboard.style.display = "block";
+  }
+
+  // Run once on load
+  hideAllExceptDashboard();
+
+  // Wrap your existing switchTab so it still works
+  if (typeof window.switchTab === "function") {
+    const originalSwitchTab = window.switchTab;
+    window.switchTab = function(tabId) {
+      // First hide everything
+      allTabs.forEach(sec => sec.style.display = "none");
+      // Then run your normal logic
+      originalSwitchTab.call(this, tabId);
+    };
+  }
+
+  // MutationObserver: if new rogue sections appear, hide them again
+  const obs = new MutationObserver(() => {
+    allTabs.forEach(sec => {
+      if (sec !== dashboard && sec.style.display !== "block") {
+        sec.style.display = "none";
+      }
+    });
+  });
+  obs.observe(document.body, { childList: true, subtree: true });
+});
+
+
 
 
 
