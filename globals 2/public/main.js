@@ -1762,56 +1762,105 @@ async function showTaskSubmissionDetailsUser(submissionId) {
         });
       }
 
-      // handle proof submission
-      const form = detailsSection.querySelector('#proofForm');
-      const submitInfo = detailsSection.querySelector('#submittedInfo');
-      if (form) {
-        form.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          const user = firebase.auth().currentUser;
-          if (!user) return alert("You must be logged in.");
+// handle proof submission
+const form = detailsSection.querySelector('#proofForm');
+const submitInfo = detailsSection.querySelector('#submittedInfo');
+const submitBtn = detailsSection.querySelector('#submitTaskBtn');
 
-          const proofData = {
-            jobId,
-            userId: user.uid,
-            submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            extraProof: form.extraProof.value || "",
-            files: [],
-            status: "on review",
-            workerEarn: jobData.workerPay || 0
-          };
+if (form) {
+  // 🔹 On load, check if already submitted
+  (async () => {
+    const user = firebase.auth().currentUser;
+    if (!user) return;
 
-          // upload files to Cloudinary
-          for (let i = 0; i < proofFileCount; i++) {
-            const fileInput = form[`proofFile${i+1}`];
-            if (fileInput && fileInput.files.length > 0) {
-              try {
-                const url = await uploadToCloudinary(fileInput.files[0]);
-                proofData.files.push(url);
-              } catch (err) {
-                console.error("Cloudinary upload failed", err);
-                alert("File upload failed. Please try again.");
-                return;
-              }
-            }
-          }
+    const existing = await db.collection("affiliate_submissions")
+      .where("jobId", "==", jobId)
+      .where("userId", "==", user.uid)
+      .limit(1)
+      .get();
 
-          // check if user already submitted
-          const existing = await db.collection("affiliate_submissions")
-            .where("jobId", "==", jobId)
-            .where("userId", "==", user.uid)
-            .get();
+    if (!existing.empty) {
+      // already submitted → hide form & show info
+      const sub = existing.docs[0].data();
+      form.style.display = "none";
+      submitInfo.style.display = "block";
+      submitInfo.innerHTML = `
+        ✅ You already submitted this task.<br>
+        Status: <b>${sub.status}</b><br>
+        Extra Proof: ${escapeHtml(sub.extraProof || "—")}<br>
+        ${sub.files?.length ? sub.files.map(url => `<img src="${url}" style="max-width:100%;margin-top:6px;border-radius:8px;border:1px solid #ddd">`).join("") : ""}
+      `;
+    }
+  })();
 
-          if (!existing.empty) {
-            alert("You have already submitted this task.");
-            return;
-          }
+  // 🔹 On new submission
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const user = firebase.auth().currentUser;
+    if (!user) return alert("You must be logged in.");
 
-          await db.collection("affiliate_submissions").add(proofData);
+    // change button state
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
 
-          form.style.display = "none";
-          submitInfo.style.display = "block";
-          submitInfo.textContent = "✅ You have submitted your proof. Awaiting review.";
+    const proofData = {
+      jobId,
+      userId: user.uid,
+      submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      extraProof: form.extraProof.value || "",
+      files: [],
+      status: "on review",
+      workerEarn: jobData.workerPay || 0
+    };
+
+    // upload files
+    for (let i = 0; i < proofFileCount; i++) {
+      const fileInput = form[`proofFile${i+1}`];
+      if (fileInput && fileInput.files.length > 0) {
+        try {
+          const url = await uploadToCloudinary(fileInput.files[0]);
+          proofData.files.push(url);
+        } catch (err) {
+          console.error("Cloudinary upload failed", err);
+          alert("File upload failed. Please try again.");
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Submit Task";
+          return;
+        }
+      }
+    }
+
+    // check again if already submitted
+    const existing = await db.collection("affiliate_submissions")
+      .where("jobId", "==", jobId)
+      .where("userId", "==", user.uid)
+      .limit(1)
+      .get();
+
+    if (!existing.empty) {
+      alert("You have already submitted this task.");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Task";
+      return;
+    }
+
+    // add submission
+    await db.collection("affiliate_submissions").add(proofData);
+
+    form.style.display = "none";
+    submitInfo.style.display = "block";
+    submitInfo.innerHTML = `
+      ✅ You submitted your proof.<br>
+      Status: <b>${proofData.status}</b><br>
+      Extra Proof: ${escapeHtml(proofData.extraProof || "—")}<br>
+      ${proofData.files.length ? proofData.files.map(url => `<img src="${url}" style="max-width:100%;margin-top:6px;border-radius:8px;border:1px solid #ddd">`).join("") : ""}
+    `;
+
+    // reset button
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Submit Task";
+  });
+}
 
           // update modal progress (the global submissions listener will update the grid; we reflect locally too)
           const cached = jobCache.get(jobId) || {};
@@ -4987,6 +5036,7 @@ async function payData(){
     showScreen("data-success-screen");
   },800);
 }
+
 
 
 
