@@ -251,6 +251,7 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
 
 
 
+
 let currentInput = "new"; // "old" | "new" | "confirm"
 let pinValues = { old: "", new: "", confirm: "" };
 let userRef; // ✅ keep global
@@ -425,6 +426,8 @@ function goToPinSetup() {
   closePinIntro();
   setTimeout(() => openPinTab(), 300); // 🚀 send to PIN setup screen
 }
+ 
+  
 
 
 
@@ -4887,6 +4890,7 @@ async function payData(){
     showScreen("data-success-screen");
   },800);
 }
+
 
 
 
