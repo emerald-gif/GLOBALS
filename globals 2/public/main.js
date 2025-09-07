@@ -5075,45 +5075,217 @@ async function payData(){
 
 
 
-// ===== FORCE HIDE OUTSIDE SCREENS (DASHBOARD SAFE) =====
-document.addEventListener("DOMContentLoaded", () => {
-  const allTabs = document.querySelectorAll(".tab-section");
-  const dashboard = document.getElementById("dashboard");
+/* ===== DASHBOARD PROTECTOR – paste at the VERY END of main.js ===== */
+(function(){
+  'use strict';
 
-  // Hide all except dashboard
-  function hideAllExceptDashboard() {
-    allTabs.forEach(sec => {
-      if (sec !== dashboard) {
-        sec.style.display = "none";
+  const DASH_ID = 'dashboard';
+  const HIDE_CLASS = 'dp-hidden-force';
+  let enabled = true;
+
+  // Add small, strong CSS to forcibly hide elements
+  if (!document.head.querySelector('#dp-protector-style')) {
+    const style = document.createElement('style');
+    style.id = 'dp-protector-style';
+    style.textContent = `
+      .${HIDE_CLASS} {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
       }
-    });
-    dashboard.style.display = "block";
+    `;
+    document.head.appendChild(style);
   }
 
-  // Run once on load
-  hideAllExceptDashboard();
+  function whenReady(fn){
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      setTimeout(fn, 0);
+    } else document.addEventListener('DOMContentLoaded', fn);
+  }
 
-  // Wrap your existing switchTab so it still works
-  if (typeof window.switchTab === "function") {
-    const originalSwitchTab = window.switchTab;
-    window.switchTab = function(tabId) {
-      // First hide everything
-      allTabs.forEach(sec => sec.style.display = "none");
-      // Then run your normal logic
-      originalSwitchTab.call(this, tabId);
+  whenReady(() => {
+    const DASH = document.getElementById(DASH_ID) || null;
+
+    // Helpers
+    function isDescendantOfDashboard(el){
+      return DASH && el && DASH.contains(el);
+    }
+    function isCandidateTab(el){
+      return el instanceof HTMLElement && el.classList.contains('tab-section') && el !== DASH && !isDescendantOfDashboard(el);
+    }
+    function cssEscapeSafe(s){
+      try { return CSS && CSS.escape ? CSS.escape(s) : s; } catch(e) { return s; }
+    }
+
+    // Get all current candidates (tab-sections outside dashboard)
+    function getCandidates(){
+      return Array.from(document.querySelectorAll('.tab-section')).filter(isCandidateTab);
+    }
+
+    // Detection heuristics for the intentionally-active tab
+    function detectActiveTab(){
+      const all = Array.from(document.querySelectorAll('.tab-section'));
+      if (!all.length) return null;
+
+      // 1) explicit flags
+      const explicit = all.find(t => t.dataset.tabActive === 'true' || t.dataset.dpForceShow === '1' || t.hasAttribute('data-active'));
+      if (explicit) return explicit;
+
+      // 2) known active-ish classes
+      const clsCandidates = ['active','is-active','show','open','current','visible','selected'];
+      const withClass = all.find(t => clsCandidates.some(c => t.classList && t.classList.contains(c)));
+      if (withClass) return withClass;
+
+      // 3) aria-hidden explicitly false
+      const aria = all.find(t => t.getAttribute('aria-hidden') === 'false');
+      if (aria) return aria;
+
+      // 4) computed style visible (best-effort)
+      const visible = all.find(t => {
+        try {
+          const cs = getComputedStyle(t);
+          return cs && cs.display !== 'none' && cs.visibility !== 'hidden' && t.offsetWidth > 0 && t.offsetHeight > 0;
+        } catch(e) { return false; }
+      });
+      if (visible) return visible;
+
+      // 5) fallback null (we'll show dashboard)
+      return null;
+    }
+
+    // Show / hide helpers
+    function hideEl(el){
+      if (!el || !(el instanceof HTMLElement)) return;
+      el.classList.add(HIDE_CLASS);
+      el.setAttribute('aria-hidden', 'true');
+    }
+    function showEl(el){
+      if (!el || !(el instanceof HTMLElement)) return;
+      el.classList.remove(HIDE_CLASS);
+      el.removeAttribute('aria-hidden');
+    }
+
+    // Core: ensure only the desired tab (or dashboard) is visible
+    function enforceVisibility(activeElem = null){
+      if (!enabled) return;
+      const candidates = getCandidates();
+
+      // If caller didn't provide, detect it
+      if (!activeElem) activeElem = detectActiveTab();
+
+      // If active is inside dashboard (or no active found) -> show dashboard and hide outside screens
+      if (!activeElem || (DASH && DASH.contains(activeElem))) {
+        if (DASH) showEl(DASH);
+        candidates.forEach(c => hideEl(c));
+        return;
+      }
+
+      // Active exists and is outside dashboard: show it, hide all other outside screens and hide dashboard to avoid overlap
+      showEl(activeElem);
+      candidates.forEach(c => { if (c !== activeElem) hideEl(c); });
+      if (DASH && activeElem !== DASH) hideEl(DASH);
+    }
+
+    // Try to derive HTMLElement from id/selector strings
+    function findTabById(id){
+      if (!id) return null;
+      // direct id
+      let el = document.getElementById(id);
+      if (el && el.classList.contains('tab-section')) return el;
+      // common data attributes
+      el = document.querySelector(`.tab-section[data-tab="${id}"], .tab-section[data-id="${id}"], .tab-section[data-name="${id}"]`);
+      if (el) return el;
+      // fallback query (escaped)
+      try {
+        el = document.querySelector(`.tab-section#${cssEscapeSafe(id)}`);
+        if (el) return el;
+      } catch(e){}
+      return null;
+    }
+
+    // Initial enforcement after a short delay so other startup scripts can set the initial active tab
+    setTimeout(() => enforceVisibility(null), 120);
+
+    // Wrap existing switchTab safely (if present) so original behaviour remains, then we enforce
+    if (typeof window.switchTab === 'function') {
+      try {
+        const orig = window.switchTab;
+        window.switchTab = function(...args){
+          const result = orig.apply(this, args);
+          // pick potential target from first arg if it's an id or element
+          const arg0 = args[0];
+          let targetEl = null;
+          if (typeof arg0 === 'string') targetEl = findTabById(arg0);
+          if (arg0 instanceof HTMLElement) targetEl = arg0;
+          // enforce shortly after original finishes its DOM work
+          setTimeout(() => enforceVisibility(targetEl || null), 25);
+          return result;
+        };
+        // keep reference to original (helpful for debugging)
+        window.switchTab._original = orig;
+      } catch(e){ /* swallow – don't break user code */ }
+    }
+
+    // Intercept clicks on common tab anchors/controls and re-enforce after they run
+    document.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('[data-tab-target], [data-target], [data-show], a[href^="#"]');
+      if (!btn) return;
+      setTimeout(() => {
+        let id = btn.dataset.tabTarget || btn.dataset.target || btn.dataset.show || null;
+        if (!id && btn.tagName === 'A') {
+          const href = btn.getAttribute('href') || '';
+          if (href.startsWith('#')) id = href.slice(1);
+        }
+        const found = findTabById(id);
+        enforceVisibility(found || null);
+      }, 15);
+    }, true);
+
+    // MutationObserver with debounce: watch for dynamically injected screens or class/style changes
+    let timer = null;
+    const mo = new MutationObserver(() => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => enforceVisibility(null), 80);
+    });
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class','style','hidden','aria-hidden','open'] });
+
+    // Expose a small API to override or interact
+    window.DashboardProtector = {
+      enable(){ enabled = true; enforceVisibility(null); },
+      disable(){ enabled = false; const all = getCandidates(); all.forEach(c => showEl(c)); if (DASH) showEl(DASH); },
+      enforce(){ enforceVisibility(null); },
+      showTabById(id){
+        const t = findTabById(id);
+        if (t) {
+          t.dataset.dpForceShow = '1';
+          enforceVisibility(t);
+          return true;
+        }
+        return false;
+      },
+      unhideElement(selOrEl){
+        const el = typeof selOrEl === 'string' ? document.querySelector(selOrEl) : selOrEl;
+        if (el) {
+          el.dataset.dpForceShow = '1';
+          showEl(el);
+          return true;
+        }
+        return false;
+      },
+      getCandidates,
+      _isEnabled(){ return enabled; }
     };
-  }
 
-  // MutationObserver: if new rogue sections appear, hide them again
-  const obs = new MutationObserver(() => {
-    allTabs.forEach(sec => {
-      if (sec !== dashboard && sec.style.display !== "block") {
-        sec.style.display = "none";
-      }
-    });
+    // Safety: if user dev tools want cluster debugging, uncomment:
+    // console.log('DashboardProtector ready – Dashboard element:', DASH, 'Candidates:', getCandidates());
   });
-  obs.observe(document.body, { childList: true, subtree: true });
-});
+})();
+
 
 
 
