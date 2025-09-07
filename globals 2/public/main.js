@@ -267,33 +267,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
 // 🔹 Setup PIN Tab when opened
 async function setupPinTab() {
-const doc = await userRef.get();
-const hasPin = doc.exists && doc.data().pin;
-
-if (hasPin) {
-// Change PIN flow
-document.getElementById("pinTabTitle").innerText = "Change Payment PIN";
-document.getElementById("oldPinGroup").classList.remove("hidden");
-document.getElementById("pinActionBtn").innerText = "Update PIN";
-document.getElementById("pinLabel").innerText = "Change Payment PIN";
-currentInput = "old";
-} else {
-// Set PIN flow
-document.getElementById("pinTabTitle").innerText = "Set Payment PIN";
-document.getElementById("oldPinGroup").classList.add("hidden");
-document.getElementById("pinActionBtn").innerText = "Set PIN";
-document.getElementById("pinLabel").innerText = "Set Payment PIN";
-currentInput = "new";
-}
-
-// reset pins
-pinValues = { old: "", new: "", confirm: "" };
-updatePinDisplay();
-
-}
-
-// 🔹 Setup PIN Tab when opened
-async function setupPinTab() {
   const doc = await userRef.get();
   const data = doc.exists ? doc.data() : {};
   const hasPin = data && typeof data.pin === "string" && data.pin.length === 6;
@@ -349,88 +322,78 @@ async function savePin() {
     alert("PIN set successfully!");
   }
 
-  // ✅ Refresh from Firestore after save
+  // ✅ Reset pins after save
+  pinValues = { old: "", new: "", confirm: "" };
+  updatePinDisplay();
+
+  // ✅ Immediately refresh UI to "Change PIN" mode
   await setupPinTab();
 
-  // ✅ Redirect back
+  // ✅ Redirect back to Me tab
   activateTab('me');
 }
 
 // 🔹 Keypad functions
 function pressKey(num) {
-if (pinValues[currentInput].length < 6) {
-pinValues[currentInput] += num;
-updatePinDisplay();
-}
+  if (pinValues[currentInput].length < 6) {
+    pinValues[currentInput] += num;
+    updatePinDisplay();
+
+    // ✅ Auto move to next field if full
+    if (pinValues[currentInput].length === 6) {
+      if (currentInput === "old") {
+        currentInput = "new";
+        setInput("new");
+      } else if (currentInput === "new") {
+        currentInput = "confirm";
+        setInput("confirm");
+      }
+    }
+  }
 }
 
 function deleteKey() {
-if (pinValues[currentInput].length > 0) {
-pinValues[currentInput] = pinValues[currentInput].slice(0, -1);
-updatePinDisplay();
-}
+  if (pinValues[currentInput].length > 0) {
+    pinValues[currentInput] = pinValues[currentInput].slice(0, -1);
+    updatePinDisplay();
+  }
 }
 
 function updatePinDisplay() {
-["old", "new", "confirm"].forEach(type => {
-const display = document.getElementById(type + "PinDisplay");
-if (display) {
-[...display.children].forEach((dot, i) => {
-dot.classList.remove("bg-gray-800", "rounded-full");
-if (pinValues[type][i]) {
-dot.classList.add("bg-gray-800", "rounded-full");
-}
-});
-}
-});
+  ["old", "new", "confirm"].forEach(type => {
+    const display = document.getElementById(type + "PinDisplay");
+    if (display) {
+      [...display.children].forEach((dot, i) => {
+        dot.classList.remove("bg-gray-800");
+        if (pinValues[type][i]) {
+          dot.classList.add("bg-gray-800");
+        }
+      });
+    }
+  });
 }
 
 // 🔹 set input and highlights
-
 function setInput(type) {
-currentInput = type;
+  currentInput = type;
 
-["old", "new", "confirm"].forEach(t => {
-const el = document.getElementById(t + "PinDisplay");
-if (el) {
-if (t === type) {
-el.classList.add("border-blue-500", "bg-blue-50", "shadow-sm");
-} else {
-el.classList.remove("border-blue-500", "bg-blue-50", "shadow-sm");
-}
-}
-});
+  ["old", "new", "confirm"].forEach(t => {
+    const el = document.getElementById(t + "PinDisplay");
+    if (el) {
+      if (t === type) {
+        el.classList.add("border-blue-500", "bg-blue-50", "shadow-sm");
+      } else {
+        el.classList.remove("border-blue-500", "bg-blue-50", "shadow-sm");
+      }
+    }
+  });
 }
 
 // 🔹 When opening the tab
 function openPinTab() {
-setupPinTab();
-activateTab('pinTab');
+  setupPinTab();
+  activateTab('pinTab');
 }
-
-function pressKey(num) {
-if (pinValues[currentInput].length < 6) {
-pinValues[currentInput] += num;
-updatePinDisplay();
-
-// ✅ Auto move to next field if full
-if (pinValues[currentInput].length === 6) {
-if (currentInput === "old") {
-currentInput = "new";
-} else if (currentInput === "new") {
-currentInput = "confirm";
-} else if (currentInput === "confirm") {
-// optional: auto save
-// savePin();
-}
-}
-
-}
-}
-
-
-
-
 
 
 
@@ -4892,6 +4855,7 @@ async function payData(){
     showScreen("data-success-screen");
   },800);
 }
+
 
 
 
