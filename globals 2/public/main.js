@@ -255,14 +255,23 @@ let currentInput = "new"; // "old" | "new" | "confirm"
 let pinValues = { old: "", new: "", confirm: "" };
 
 // ✅ Detect logged in user automatically
+// ✅ Detect user and handle PIN intro + setup
 firebase.auth().onAuthStateChanged(async (user) => {
-if (user) {
-const userId = user.uid;
-window.userRef = db.collection("users").doc(userId); // store globally
-await setupPinTab();
-} else {
-console.log("No user logged in");
-}
+  if (user) {
+    const userId = user.uid;
+    window.userRef = db.collection("users").doc(userId); // store globally
+    const doc = await userRef.get();
+
+    if (!doc.exists || !doc.data().pin) {
+      // No PIN → show intro drawer
+      showPinIntro();
+    } else {
+      // Has PIN → setup tab as Change PIN
+      setupPinTab();
+    }
+  } else {
+    console.log("No user logged in");
+  }
 });
 
 // 🔹 Setup PIN Tab when opened
@@ -408,21 +417,7 @@ currentInput = "confirm";
 // PAYMENT Detect user on reload FUNCTION
 
 // ✅ Detect user on reload (fixed)
-firebase.auth().onAuthStateChanged(async (user) => {
-  if (user) {
-    const userId = user.uid;
-    window.userRef = db.collection("users").doc(userId); // use global
-    const doc = await userRef.get();
 
-    if (!doc.exists || !doc.data().pin) {
-      // No PIN → show intro drawer
-      showPinIntro();
-    } else {
-      // Has PIN → setup tab directly as Change PIN
-      setupPinTab();
-    }
-  }
-});
 
 // Show sheet
 function showPinIntro() {
@@ -4914,6 +4909,7 @@ async function payData(){
     showScreen("data-success-screen");
   },800);
 }
+
 
 
 
