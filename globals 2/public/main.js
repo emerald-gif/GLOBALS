@@ -502,6 +502,159 @@ function goToPinSetup() {
 
 
 
+                    /* main.js — Upload Drawer auto-integration */
+
+
+
+(function() {
+  const overlay = document.getElementById('uploadOverlay');
+  const sheet = overlay?.querySelector('.upload-sheet');
+  const openStateAttr = 'data-open';
+  const closeBtn = document.getElementById('uploadCloseBtn');
+  const cameraBtn = document.getElementById('uploadCameraBtn');
+  const galleryBtn = document.getElementById('uploadGalleryBtn');
+  const fileInputCamera = document.getElementById('fileInputCamera');
+  const fileInputGallery = document.getElementById('fileInputGallery');
+
+  if (!overlay || !sheet) {
+    console.warn('Upload Drawer: missing HTML snippet');
+    return;
+  }
+
+  let previouslyFocused = null;
+  let currentOriginalInput = null; // the <input type="file"> that triggered us
+
+  function getFocusableElements() {
+    return sheet.querySelectorAll('a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])');
+  }
+
+  function handleTabKey(e) {
+    if (e.key !== 'Tab') return;
+    const focusables = Array.from(getFocusableElements()).filter(el => el.offsetParent !== null);
+    if (!focusables.length) {
+      e.preventDefault();
+      return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  }
+
+  function openUploadDrawer(originalInput = null) {
+    currentOriginalInput = originalInput;
+    previouslyFocused = document.activeElement;
+    overlay.setAttribute(openStateAttr, 'true');
+    overlay.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => {
+      const focusables = getFocusableElements();
+      if (focusables.length) focusables[0].focus();
+      else sheet.focus();
+    });
+    document.addEventListener('keydown', onDocumentKeyDown);
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeUploadDrawer() {
+    overlay.setAttribute(openStateAttr, 'false');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.removeEventListener('keydown', onDocumentKeyDown);
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+    if (previouslyFocused && previouslyFocused.focus) previouslyFocused.focus();
+    currentOriginalInput = null;
+  }
+
+  function onDocumentKeyDown(e) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeUploadDrawer();
+    } else if (e.key === 'Tab') {
+      handleTabKey(e);
+    }
+  }
+
+  overlay.addEventListener('pointerdown', (ev) => {
+    if (ev.target === overlay) {
+      closeUploadDrawer();
+    }
+  });
+
+  closeBtn.addEventListener('click', () => closeUploadDrawer());
+
+  cameraBtn.addEventListener('click', () => {
+    fileInputCamera.value = '';
+    fileInputCamera.click();
+  });
+
+  galleryBtn.addEventListener('click', () => {
+    fileInputGallery.value = '';
+    fileInputGallery.click();
+  });
+
+  function handleFileInputChange(ev, source) {
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    closeUploadDrawer();
+
+    if (currentOriginalInput) {
+      // put the file back into the original input so the platform sees it
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      currentOriginalInput.files = dt.files;
+
+      // trigger change event for listeners
+      const event = new Event('change', { bubbles: true });
+      currentOriginalInput.dispatchEvent(event);
+    }
+
+    // optional: custom handler hook
+    if (typeof window.onUploadFile === 'function') {
+      window.onUploadFile(file, source);
+    }
+  }
+
+  fileInputCamera.addEventListener('change', (e) => handleFileInputChange(e, 'camera'));
+  fileInputGallery.addEventListener('change', (e) => handleFileInputChange(e, 'gallery'));
+
+  // ✅ Auto-bind: intercept all <input type=file> clicks
+  document.addEventListener('click', (ev) => {
+    const target = ev.target.closest('input[type=file], .browse-file-btn, .custom-upload-trigger');
+    if (target && !overlay.contains(target)) {
+      ev.preventDefault();
+      openUploadDrawer(target);
+    }
+  });
+
+  // expose globally if you ever want to open manually
+  window.openUploadDrawer = openUploadDrawer;
+  window.closeUploadDrawer = closeUploadDrawer;
+})();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
                                                                  //OVERVIEW SECTION (ME SECTION) FUNCTION
@@ -4959,6 +5112,7 @@ function openService(serviceName) {
 
 
                     
+
 
 
 
