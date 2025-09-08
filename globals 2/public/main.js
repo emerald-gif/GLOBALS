@@ -4236,6 +4236,8 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
 // NOTIFICATION
 
+
+
 const auth = firebase.auth();
 const db = firebase.firestore();
 
@@ -4245,20 +4247,19 @@ auth.onAuthStateChanged(user => {
   if (user) {
     const uid = user.uid;
 
-    // Listen for new notifications
+    // Listen to notifications in real time
     unsubscribeNotif = db.collection("notifications")
       .orderBy("timestamp", "desc")
       .onSnapshot(async snapshot => {
         const userStateDoc = await db.collection("notification_user_state").doc(uid).get();
         const lastReadAt = userStateDoc.exists ? userStateDoc.data().lastReadAt?.toDate() : new Date(0);
 
-        // Filter unread
         const unread = snapshot.docs.filter(doc => doc.data().timestamp?.toDate() > lastReadAt);
 
         // Update red dot
         document.getElementById("notifDot").classList.toggle("hidden", unread.length === 0);
 
-        // Show popup only if there are new unread notifications
+        // Show popup
         if (unread.length > 0) {
           document.getElementById("notifMessage").textContent =
             `You have ${unread.length} new notification${unread.length > 1 ? 's' : ''}`;
@@ -4270,11 +4271,12 @@ auth.onAuthStateChanged(user => {
   }
 });
 
-// Mark as read when opening notifications
+// ✅ Tab switcher (fix so dashboard works again)
 function activateTab(tabId) {
   document.querySelectorAll('.tab-section').forEach(el => el.classList.add('hidden'));
   document.getElementById(tabId).classList.remove('hidden');
 
+  // Mark notifications as read
   if (tabId === 'notifications' && auth.currentUser) {
     db.collection("notification_user_state").doc(auth.currentUser.uid).set({
       lastReadAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -4289,9 +4291,39 @@ function closeNotifPopup() {
   document.getElementById("notifPopup").classList.add("hidden");
 }
 
+// ✅ Fixed loadNotifications()
+function loadNotifications() {
+  const notifList = document.getElementById("notificationList");
+  notifList.innerHTML = `<p class="text-gray-500 text-center">Loading...</p>`;
 
+  firebase.firestore().collection("notifications")
+    .orderBy("timestamp", "desc")
+    .get()
+    .then(snapshot => {
+      notifList.innerHTML = "";
+      if (snapshot.empty) {
+        notifList.innerHTML = `<p class="text-gray-400 text-center">No notifications yet.</p>`;
+      } else {
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const date = data.timestamp?.toDate().toLocaleString() || "Just now";
+          notifList.innerHTML += `
+            <div class="bg-white rounded-xl p-4 shadow-md border-l-4 border-blue-400 animate-fade-in">
+              <p class="text-gray-800 font-semibold">${data.title}</p>
+              <p class="text-sm text-gray-600">${data.message}</p>
+              <p class="text-xs text-gray-500 mt-1">${date}</p>
+            </div>`;
+        });
+      }
+    })
+    .catch(err => {
+      notifList.innerHTML = `<p class="text-red-500 text-center">Failed to load notifications</p>`;
+      console.error(err);
+    });
+}
 
-
+// Call once
+loadNotifications();
 
 
 
@@ -4792,6 +4824,7 @@ function openService(serviceName) {
 
 
                     
+
 
 
 
