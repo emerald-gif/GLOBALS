@@ -3634,9 +3634,10 @@
                                                                 <!-- GLOBALS AI Help Center Section -->
 
 
+<!-- GLOBALS AI Help Center Section -->
 <div id="aiHelpCenter" class="tab-section hidden bg-gray-50 min-h-screen flex flex-col">
 
-<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← customer support</button>
+  <button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← customer support</button>
 
   <!-- Header -->
   <div class="p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-xl">
@@ -3665,6 +3666,11 @@
     </button>
   </div>
 
+  <!-- Static Guide Container (for Payment/Withdrawal/Task/eBook) -->
+  <div id="guideContainer" class="p-4 hidden">
+    <!-- content injected by openAiTopic(...) -->
+  </div>
+
   <!-- Conversation Area -->
   <div id="chatContainer" class="flex-1 p-4 overflow-y-auto hidden">
     <div id="chatMessages" class="space-y-3 text-sm text-gray-800"></div>
@@ -3675,8 +3681,6 @@
     </div>
   </div>
 </div>
-
-
 
 
 
@@ -3774,6 +3778,7 @@
 </body>
 
 </html>
+
 
 
 
