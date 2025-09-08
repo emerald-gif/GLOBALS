@@ -620,118 +620,30 @@ function goToPinSetup() {
    * - dispatches custom event 'drawer-file-selected' on original input and window
    * - if common global upload helpers exist, calls them
    */
-  async function handleFileInputChange(ev, source) {
-    const file = ev.target.files && ev.target.files[0];
-    if (!file) {
-      log('no file selected');
-      return;
-    }
-    closeUploadDrawer();
 
-    const blobUrl = URL.createObjectURL(file);
-    let injectedFiles = false;
 
-    // Attach meta to original input for direct access
-    if (currentOriginalInput) {
-      try {
-        // Try injecting via DataTransfer (works in modern Chromium, Firefox)
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        currentOriginalInput.files = dt.files;
-        injectedFiles = true;
-        log('DataTransfer injection succeeded for', currentOriginalInput);
-      } catch (err) {
-        log('DataTransfer injection failed:', err);
-        injectedFiles = false;
-      }
 
-      // Always store extras so platform code can read them
-      currentOriginalInput.dataset.drawerBlobUrl = blobUrl;
-      try { currentOriginalInput._drawerFile = file; } catch (e) { /* ignore */ }
+function handleFileInputChange(ev, source) {
+  const file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  closeUploadDrawer();
 
-      // If the original is a text input (some forms expect a URL string) set value
-      if (currentOriginalInput.tagName === 'INPUT' && currentOriginalInput.type === 'text') {
-        currentOriginalInput.value = blobUrl;
-        currentOriginalInput.dispatchEvent(new Event('input', { bubbles: true }));
-        log('Set blobUrl into text input value for', currentOriginalInput);
-      }
+  if (currentOriginalInput) {
+    // ✅ Reattach the file into the real input
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    currentOriginalInput.files = dt.files;
 
-      // If injection worked, fire a normal change event so existing listeners run
-      if (injectedFiles) {
-        try {
-          const changeEvent = new Event('change', { bubbles: true });
-          currentOriginalInput.dispatchEvent(changeEvent);
-          log('Dispatched change event on original input');
-        } catch (err) {
-          log('Failed to dispatch change event:', err);
-        }
-      } else {
-        // injection failed — still dispatch a custom event so your code can handle it
-        log('Injection failed; will dispatch custom event with file detail.');
-      }
-    } else {
-      log('No original input (currentOriginalInput is null). Dispatching global event only.');
-    }
-
-    // Custom event detail
-    const detail = {
-      file,
-      source,      // 'camera' | 'gallery'
-      blobUrl,
-      originalInput: currentOriginalInput || null,
-      injectedFiles
-    };
-
-    // Dispatch custom event on the original input (if present)
-    try {
-      if (currentOriginalInput) {
-        const customEvent = new CustomEvent('drawer-file-selected', { detail, bubbles: true });
-        currentOriginalInput.dispatchEvent(customEvent);
-        log('Dispatched drawer-file-selected on original input');
-      }
-    } catch (err) { log('Error dispatching custom event on element', err); }
-
-    // Dispatch on window as well for global listeners
-    try {
-      window.dispatchEvent(new CustomEvent('drawer-file-selected', { detail }));
-      log('Dispatched drawer-file-selected on window');
-    } catch (err) { log('Error dispatching custom event on window', err); }
-
-    /* === Auto-call common global handlers (optional convenience) ===
-       If your code exposes a global upload helper, this will call it.
-       Replace or remove these names if your project uses other functions.
-    */
-    try {
-      // Common function names some projects use
-      const commonFns = [
-        'uploadToCloudinary', 'uploadFile', 'handleFileUpload',
-        'uploadImage', 'cloudinaryUpload', 'sendFile'
-      ];
-      for (const name of commonFns) {
-        const fn = window[name];
-        if (typeof fn === 'function') {
-          try {
-            log('Calling global upload helper', name);
-            // allow both (file) and (file, blobUrl) signatures
-            fn(file, blobUrl, currentOriginalInput);
-            // NOTE: do not break — allow multiple helpers if present
-          } catch (err) {
-            log('Error calling handler', name, err);
-          }
-        }
-      }
-    } catch (err) {
-      log('auto-call helper error', err);
-    }
-
-    // Developer hook
-    if (typeof window.onUploadFile === 'function') {
-      try { window.onUploadFile(file, source, blobUrl, currentOriginalInput); } catch (e) { log('onUploadFile hook error', e); }
-    }
-
-    // Clean up blobUrl later (when you no longer need it)
-    // URL.revokeObjectURL(blobUrl) // DON'T revoke immediately if some code needs it
+    // ✅ Trigger change so your existing Cloudinary/Firebase code runs
+    const event = new Event('change', { bubbles: true });
+    currentOriginalInput.dispatchEvent(event);
   }
+}
+
+
+
+
+	
 
   fileInputCamera.addEventListener('change', (e) => handleFileInputChange(e, 'camera'));
   fileInputGallery.addEventListener('change', (e) => handleFileInputChange(e, 'gallery'));
@@ -5253,6 +5165,7 @@ function openService(serviceName) {
 
 
                     
+
 
 
 
