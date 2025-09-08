@@ -3101,7 +3101,7 @@
 
   <!-- Logout Button -->
   <div class="mt-8 px-6 pb-10">
-    <button id="logoutBtn" class="w-full bg-red-600 text-white py-3 rounded-xl font-semibold text-base hover:bg-red-700 transition">
+    <button id="showLogoutModal()" class="w-full bg-red-600 text-white py-3 rounded-xl font-semibold text-base hover:bg-red-700 transition">
       Logout
     </button>
   </div>
@@ -3680,8 +3680,13 @@
 
 
 <!-- Logout Modal -->
-<div id="logoutModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
-  <div class="bg-white rounded-xl shadow-lg w-80 p-5 text-center">
+<div id="logoutModal" class="fixed inset-0 hidden z-50 flex items-center justify-center">
+  
+  <!-- Overlay -->
+  <div class="absolute inset-0 bg-black bg-opacity-50" onclick="closeLogoutModal()"></div>
+  
+  <!-- Modal Box -->
+  <div class="relative bg-white rounded-xl shadow-lg w-80 p-5 text-center z-50">
     <h2 class="text-lg font-semibold mb-3">Logout</h2>
     <p class="text-gray-600 mb-5">Are you sure you want to log out?</p>
     <div class="flex justify-between gap-3">
@@ -3804,6 +3809,7 @@
 </body>
 
 </html>
+
 
 
 
