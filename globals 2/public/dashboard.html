@@ -53,6 +53,274 @@
 </style>
 
 
+
+
+
+
+<!-- Upload Drawer (paste into dashboard.html, near end of <body>) -->
+
+
+
+
+
+
+	
+<style>
+  :root{
+    /* global vars — adapt as needed */
+    --primary-blue: #1e6fff; /* your global blue */
+    --overlay-bg: rgba(0,0,0,0.5);
+    --sheet-bg: #ffffff;
+    --text: #111827;
+    --muted: #6b7280;
+    --radius-sheet: 16px;
+    --pill-radius: 12px;
+    --shadow: 0 -10px 30px rgba(15,23,42,0.18);
+    --surface-elev: 0 8px 24px rgba(15,23,42,0.12);
+    --max-sheet-height: 78vh;
+    --safe-bottom: env(safe-area-inset-bottom, 16px);
+    --transition: 320ms cubic-bezier(.2,.9,.2,1);
+  }
+
+  /* overlay */
+  .upload-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--overlay-bg);
+    display: none; /* toggled via JS */
+    align-items: flex-end; /* anchor sheet to bottom */
+    justify-content: center;
+    z-index: 1200;
+  }
+
+  .upload-overlay[data-open="true"] {
+    display: flex;
+  }
+
+  /* sheet */
+  .upload-sheet {
+    width: 100%;
+    max-width: 760px; /* desktop limit */
+    background: var(--sheet-bg);
+    border-top-left-radius: var(--radius-sheet);
+    border-top-right-radius: var(--radius-sheet);
+    box-shadow: var(--shadow);
+    transform: translateY(110%); /* hidden by default */
+    transition: transform var(--transition);
+    will-change: transform;
+    padding: 18px 18px calc(18px + var(--safe-bottom));
+    margin: 0 12px;
+    max-height: var(--max-sheet-height);
+    overflow: auto;
+    /* accessible container */
+  }
+
+  /* open state */
+  .upload-overlay[aria-hidden="false"] .upload-sheet,
+  .upload-overlay[data-open="true"] .upload-sheet {
+    transform: translateY(0%);
+  }
+
+  /* header row */
+  .upload-sheet-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  /* circular close button top-left */
+  .upload-close {
+    border: none;
+    background: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--surface-elev);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .upload-close:focus {
+    outline: 3px solid color-mix(in srgb, var(--primary-blue) 24%, transparent);
+    outline-offset: 2px;
+  }
+
+  .upload-title {
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--text);
+    margin: 0;
+    flex: 1;
+  }
+
+  .upload-subtle {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 4px;
+  }
+
+  .divider {
+    height: 1px;
+    background: #ececec;
+    border-radius: 1px;
+    margin: 12px 0;
+  }
+
+  /* action pill rows */
+  .upload-actions {
+    display: grid;
+    gap: 12px;
+  }
+
+  .upload-pill {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--pill-radius);
+    border: 1px solid #f1f1f1;
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(12,12,12,0.04);
+    cursor: pointer;
+    user-select: none;
+    transition: transform 140ms ease, box-shadow 140ms ease;
+  }
+  .upload-pill:active { transform: translateY(1px); }
+  .upload-pill:focus {
+    outline: 3px solid color-mix(in srgb, var(--primary-blue) 22%, transparent);
+    outline-offset: 2px;
+  }
+
+  .icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: inline-grid;
+    place-items: center;
+    background: color-mix(in srgb, var(--primary-blue) 10%, white);
+    color: var(--primary-blue);
+    flex-shrink: 0;
+  }
+
+  .pill-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .pill-title {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1;
+  }
+  .pill-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+
+  /* accessibility helpers / visually hidden */
+  .visually-hidden {
+    position: absolute !important;
+    height: 1px; width: 1px;
+    overflow: hidden;
+    clip: rect(1px, 1px, 1px, 1px);
+    white-space: nowrap;
+  }
+
+  /* small screens tweaks */
+  @media (max-width: 520px){
+    .upload-sheet {
+      margin: 0 8px;
+      padding: 14px 14px calc(14px + var(--safe-bottom));
+      border-radius: 14px 14px 0 0;
+    }
+    .upload-close { width: 36px; height: 36px; }
+  }
+
+  /* prefers-reduced-motion */
+  @media (prefers-reduced-motion: reduce) {
+    .upload-sheet { transition: none; }
+    .upload-pill { transition: none; }
+  }
+</style>
+
+<!-- The overlay + sheet -->
+<div id="uploadOverlay" class="upload-overlay" role="presentation" aria-hidden="true" data-open="false">
+  <!-- clicking overlay outside sheet will close (handled in JS) -->
+  <div
+    class="upload-sheet"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="uploadTitle"
+    aria-describedby="uploadDesc"
+  >
+    <div class="upload-sheet-header">
+      <button id="uploadCloseBtn" class="upload-close" aria-label="Close upload dialog" title="Close">
+        <!-- X icon -->
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+        </svg>
+      </button>
+
+      <div style="flex:1;">
+        <h2 id="uploadTitle" class="upload-title">Add a picture</h2>
+        <div id="uploadDesc" class="upload-subtle">Choose an image from your camera or gallery</div>
+      </div>
+    </div>
+
+    <div class="divider" aria-hidden="true"></div>
+
+    <div class="upload-actions" role="group" aria-label="Upload actions">
+      <!-- Camera pill -->
+      <button type="button" class="upload-pill" id="uploadCameraBtn">
+        <span class="icon-box" aria-hidden="true">
+          <!-- camera svg -->
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3l2-3h6l2 3h3a2 2 0 0 1 2 2z"></path>
+            <circle cx="12" cy="13" r="4"></circle>
+          </svg>
+        </span>
+        <span class="pill-text">
+          <span class="pill-title">Camera</span>
+          <span class="pill-sub">Take a new photo</span>
+        </span>
+      </button>
+
+      <!-- Gallery pill -->
+      <button type="button" class="upload-pill" id="uploadGalleryBtn">
+        <span class="icon-box" aria-hidden="true">
+          <!-- gallery svg -->
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <path d="M8 14l2.5-3 2 2.5L16 10l3 4H8z"></path>
+          </svg>
+        </span>
+        <span class="pill-text">
+          <span class="pill-title">Upload from gallery</span>
+          <span class="pill-sub">Choose existing photo</span>
+        </span>
+      </button>
+    </div>
+
+    <!-- Hidden file inputs (used by JS) -->
+    <input id="fileInputCamera" class="visually-hidden" type="file" accept="image/*" capture="environment">
+    <input id="fileInputGallery" class="visually-hidden" type="file" accept="image/*">
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+	
 	
 
 <!-- ✅ Top Navbar -->
@@ -3493,6 +3761,7 @@
 </body>
 
 </html>
+
 
 
 
