@@ -4236,40 +4236,83 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
 // NOTIFICATION
 
-function loadNotifications() {
-    const notifList = document.getElementById("notificationList");
-    notifList.innerHTML = `<p class="text-gray-500 text-center">Loading...</p>`;
+// Listen in realtime for notifications
+function listenForNotifications(uid) {
+  const banner = document.getElementById("notifBanner");
+  const bannerText = document.getElementById("notifBannerText");
+  const notifDot = document.getElementById("notifDot");
+  const notifList = document.getElementById("notificationList");
 
-    firebase.firestore().collection("notifications")
+  const stateRef = db.collection("notification_user_state").doc(uid);
+
+  // Get user's lastReadAt once
+  stateRef.get().then(stateDoc => {
+    let lastReadAt = stateDoc.exists && stateDoc.data().lastReadAt 
+      ? stateDoc.data().lastReadAt 
+      : new Date(0);
+
+    // Real-time listener
+    db.collection("notifications")
       .orderBy("timestamp", "desc")
-      .get()
-      .then(snapshot => {
+      .onSnapshot(snapshot => {
         notifList.innerHTML = "";
-        if (snapshot.empty) {
-          notifList.innerHTML = `<p class="text-gray-400 text-center">No notifications yet.</p>`;
+        let unreadCount = 0;
+
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const isUnread = data.timestamp.toDate() > lastReadAt;
+
+          if (isUnread) unreadCount++;
+
+          // Build notification card (only inside notifications tab)
+          const div = document.createElement("div");
+          div.className = `p-3 rounded-md shadow ${isUnread ? "bg-blue-50 border border-blue-300" : "bg-gray-50"}`;
+          div.innerHTML = `
+            <h3 class="font-semibold">${data.title || "No Title"}</h3>
+            <p>${data.message || ""}</p>
+            <small class="text-gray-500">${data.timestamp.toDate().toLocaleString()}</small>
+          `;
+          notifList.appendChild(div);
+        });
+
+        // Show unread count only on dashboard banner + dot
+        if (unreadCount > 0) {
+          bannerText.innerText = `You have ${unreadCount} unread message${unreadCount > 1 ? "s" : ""}`;
+          banner.classList.remove("hidden");
+          notifDot.classList.remove("hidden");
         } else {
-          snapshot.forEach(doc => {
-            const data = doc.data();
-            const date = data.timestamp?.toDate().toLocaleString() || "Just now";
-            notifList.innerHTML += `
-              <div class="bg-white rounded-xl p-4 shadow-md border-l-4 border-blue-400 animate-fade-in">
-                <p class="text-gray-800 font-semibold">${data.title}</p>
-                <p class="text-sm text-gray-600">${data.message}</p>
-                <p class="text-xs text-gray-500 mt-1">${date}</p>
-              </div>`;
-          });
+          banner.classList.add("hidden");
+          notifDot.classList.add("hidden");
         }
-      })
-      .catch(err => {
-        notifList.innerHTML = `<p class="text-red-500 text-center">Failed to load notifications</p>`;
-        console.error(err);
       });
+  });
+}
+
+// Mark notifications as read
+async function markNotificationsAsRead(uid) {
+  await db.collection("notification_user_state").doc(uid).set({
+    lastReadAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+
+  // Hide red dot + banner instantly
+  document.getElementById("notifBanner").classList.add("hidden");
+  document.getElementById("notifDot").classList.add("hidden");
+}
+
+// Open notifications tab + mark read
+document.getElementById("notifBell").addEventListener("click", () => {
+  const user = firebase.auth().currentUser;
+  if (!user) return;
+  activateTab("notifications");
+  markNotificationsAsRead(user.uid);
+});
+
+// Start listener once logged in
+firebase.auth().onAuthStateChanged(user => {
+  if (user) {
+    listenForNotifications(user.uid);
   }
-
-  // Call this on page/tab load
-  loadNotifications();
-
-
+});
 
 
 
@@ -4767,6 +4810,7 @@ function openService(serviceName) {
 
 
                     
+
 
 
 
