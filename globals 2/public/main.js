@@ -5070,32 +5070,6 @@ async function payData(){
 
 
 
-// ==== PIN DOWN SECTIONS SAFELY ====
-document.addEventListener("DOMContentLoaded", () => {
-  const allTabs = document.querySelectorAll(".tab-section");
-  const dashboard = document.getElementById("dashboard");
-
-  // Ensure only dashboard is visible on load
-  allTabs.forEach(sec => sec.style.display = "none");
-  if (dashboard) dashboard.style.display = "block";
-
-  // Wrap your existing switchTab without breaking it
-  if (typeof window.switchTab === "function") {
-    const originalSwitchTab = window.switchTab;
-    window.switchTab = function(tabId) {
-      // First hide all
-      allTabs.forEach(sec => sec.style.display = "none");
-
-      // Then show the chosen one
-      const target = document.getElementById(tabId);
-      if (target) target.style.display = "block";
-
-      // Still run your old logic (animations, etc.)
-      return originalSwitchTab.call(this, tabId);
-    };
-  }
-});
-
 
 
 
