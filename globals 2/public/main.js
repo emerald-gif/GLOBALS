@@ -4236,83 +4236,65 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
 // NOTIFICATION
 
-// Listen in realtime for notifications
-function listenForNotifications(uid) {
-  const banner = document.getElementById("notifBanner");
-  const bannerText = document.getElementById("notifBannerText");
-  const notifDot = document.getElementById("notifDot");
-  const notifList = document.getElementById("notificationList");
+const auth = firebase.auth();
+const db = firebase.firestore();
 
-  const stateRef = db.collection("notification_user_state").doc(uid);
+let unsubscribeNotif = null;
 
-  // Get user's lastReadAt once
-  stateRef.get().then(stateDoc => {
-    let lastReadAt = stateDoc.exists && stateDoc.data().lastReadAt 
-      ? stateDoc.data().lastReadAt 
-      : new Date(0);
+auth.onAuthStateChanged(user => {
+  if (user) {
+    const uid = user.uid;
 
-    // Real-time listener
-    db.collection("notifications")
+    // Listen for new notifications
+    unsubscribeNotif = db.collection("notifications")
       .orderBy("timestamp", "desc")
-      .onSnapshot(snapshot => {
-        notifList.innerHTML = "";
-        let unreadCount = 0;
+      .onSnapshot(async snapshot => {
+        const userStateDoc = await db.collection("notification_user_state").doc(uid).get();
+        const lastReadAt = userStateDoc.exists ? userStateDoc.data().lastReadAt?.toDate() : new Date(0);
 
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          const isUnread = data.timestamp.toDate() > lastReadAt;
+        // Filter unread
+        const unread = snapshot.docs.filter(doc => doc.data().timestamp?.toDate() > lastReadAt);
 
-          if (isUnread) unreadCount++;
+        // Update red dot
+        document.getElementById("notifDot").classList.toggle("hidden", unread.length === 0);
 
-          // Build notification card (only inside notifications tab)
-          const div = document.createElement("div");
-          div.className = `p-3 rounded-md shadow ${isUnread ? "bg-blue-50 border border-blue-300" : "bg-gray-50"}`;
-          div.innerHTML = `
-            <h3 class="font-semibold">${data.title || "No Title"}</h3>
-            <p>${data.message || ""}</p>
-            <small class="text-gray-500">${data.timestamp.toDate().toLocaleString()}</small>
-          `;
-          notifList.appendChild(div);
-        });
-
-        // Show unread count only on dashboard banner + dot
-        if (unreadCount > 0) {
-          bannerText.innerText = `You have ${unreadCount} unread message${unreadCount > 1 ? "s" : ""}`;
-          banner.classList.remove("hidden");
-          notifDot.classList.remove("hidden");
-        } else {
-          banner.classList.add("hidden");
-          notifDot.classList.add("hidden");
+        // Show popup only if there are new unread notifications
+        if (unread.length > 0) {
+          document.getElementById("notifMessage").textContent =
+            `You have ${unread.length} new notification${unread.length > 1 ? 's' : ''}`;
+          document.getElementById("notifPopup").classList.remove("hidden");
         }
       });
-  });
-}
-
-// Mark notifications as read
-async function markNotificationsAsRead(uid) {
-  await db.collection("notification_user_state").doc(uid).set({
-    lastReadAt: firebase.firestore.FieldValue.serverTimestamp()
-  }, { merge: true });
-
-  // Hide red dot + banner instantly
-  document.getElementById("notifBanner").classList.add("hidden");
-  document.getElementById("notifDot").classList.add("hidden");
-}
-
-// Open notifications tab + mark read
-document.getElementById("notifBell").addEventListener("click", () => {
-  const user = firebase.auth().currentUser;
-  if (!user) return;
-  activateTab("notifications");
-  markNotificationsAsRead(user.uid);
-});
-
-// Start listener once logged in
-firebase.auth().onAuthStateChanged(user => {
-  if (user) {
-    listenForNotifications(user.uid);
+  } else {
+    if (unsubscribeNotif) unsubscribeNotif();
   }
 });
+
+// Mark as read when opening notifications
+function activateTab(tabId) {
+  document.querySelectorAll('.tab-section').forEach(el => el.classList.add('hidden'));
+  document.getElementById(tabId).classList.remove('hidden');
+
+  if (tabId === 'notifications' && auth.currentUser) {
+    db.collection("notification_user_state").doc(auth.currentUser.uid).set({
+      lastReadAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    document.getElementById("notifDot").classList.add("hidden");
+    document.getElementById("notifPopup").classList.add("hidden");
+  }
+}
+
+function closeNotifPopup() {
+  document.getElementById("notifPopup").classList.add("hidden");
+}
+
+
+
+
+
+
+
 
 
 
@@ -4810,6 +4792,7 @@ function openService(serviceName) {
 
 
                     
+
 
 
 
