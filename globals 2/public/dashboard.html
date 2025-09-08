@@ -55,25 +55,21 @@
 
 	
 
-
-<!-- ✅ Top Navbar -->
 <!-- ✅ Top Navbar -->
 <div id="topNavbar" class="bg-white shadow-md px-4 py-3 flex justify-between items-center sticky top-0 z-10">
   
   <!-- LEFT SIDE -->
   <div class="flex items-center gap-3">
-    <!-- 📱 Modern Hamburger Menu -->
+    <!-- 📱 Hamburger -->
     <button id="hamburgerBtn" class="text-2xl focus:outline-none">
-       <svg id="hamburgerIcon" xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg id="hamburgerIcon" xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
       </svg>
     </button>
 
-    <!-- 👋 Hello + Username -->
+    <!-- 👋 Greeting -->
     <div class="flex flex-col leading-tight">
-      <span class="flex items-center text-gray-800 font-semibold text-sm">
-        Hello 👋
-      </span>
+      <span class="flex items-center text-gray-800 font-semibold text-sm">Hello 👋</span>
       <span id="navbarUsername" class="text-gray-600 text-xs">Loading...</span>
     </div>
   </div>
@@ -81,57 +77,46 @@
   <!-- RIGHT SIDE -->
   <div class="flex items-center gap-4">
     
-    <!-- AI Chat (Headphone Icon) -->
+    <!-- AI Chat -->
     <button onclick="activateTab('contactus')" class="text-gray-700 hover:text-blue-600 transition">
       <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 18v-6a9 9 0 1118 0v6a3 3 0 01-3 3h-1v-4h-2v4H9v-4H7v4H6a3 3 0 01-3-3z" />
       </svg>
     </button>
 
+    <!-- 🔔 Notifications -->
+    <div class="relative">
+      <button id="notifBell" onclick="activateTab('notifications')" class="relative text-gray-700 hover:text-blue-600 transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-9.33-4.918A6 6 0 006 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+        <!-- Red Dot -->
+        <span id="notifDot" class="hidden absolute -top-1 -right-1 bg-red-600 w-3 h-3 rounded-full animate-pulse"></span>
+      </button>
 
-
-
-	  
-    <!-- Notifications (Modern Bell) -->
-    <!-- Notification Bell -->
-<div class="relative">
-  <button id="notifBell" onclick="activateTab('notifications')" class="relative text-gray-700 hover:text-blue-600 transition">
-    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-9.33-4.918A6 6 0 006 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-    </svg>
-    <!-- Red Dot (hidden by default) -->
-    <span id="notifDot" class="hidden absolute -top-1 -right-1 bg-red-600 w-3 h-3 rounded-full animate-pulse"></span>
-  </button>
-
-  <!-- Blue Popup -->
-  <div id="notifPopup"
-    class="hidden absolute right-0 mt-2 w-64 bg-blue-500 text-white text-sm rounded-lg shadow-lg animate-fade-in">
-    <div class="relative p-3">
-      <p id="notifMessage">You have new notifications</p>
-      <button onclick="closeNotifPopup()" class="absolute top-1 right-1 text-white hover:text-gray-200">✕</button>
+      <!-- Blue Popup -->
+      <div id="notifPopup" class="hidden absolute right-0 mt-2 w-64 bg-blue-500 text-white text-sm rounded-lg shadow-lg animate-fade-in">
+        <div class="relative p-3">
+          <p id="notifMessage">You have new notifications</p>
+          <button onclick="closeNotifPopup()" class="absolute top-1 right-1 text-white hover:text-gray-200">✕</button>
+        </div>
+        <div class="absolute -top-2 right-4 w-4 h-4 bg-blue-500 transform rotate-45"></div>
+      </div>
     </div>
-    <!-- Arrow -->
-    <div class="absolute -top-2 right-4 w-4 h-4 bg-blue-500 transform rotate-45"></div>
   </div>
 </div>
-	  
 
+<!-- ✅ Styles should be OUTSIDE navbar -->
 <style>
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-5px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .animate-fade-in {
-    animation: fadeIn 0.3s ease-out;
-  }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
 </style>
-
-
-	  
-  </div>
-</div>
-
 
 	
 <!-- 📱 Slide-out Sidebar -->
@@ -3508,6 +3493,7 @@
 </body>
 
 </html>
+
 
 
 
