@@ -4865,7 +4865,7 @@ auth.onAuthStateChanged(async user => {
 // ✅ DEPOSIT FUNCTION (FIXED CALLBACK)
 // ---------- Replace your old deposit script with this ----------
 
-const PAYSTACK_PUBLIC_KEY = "pk_live_8490c2179be3d6cb47b027152bdc2e04b774d22d";
+
 
 function debugLog(...args) { try { console.log('[DEPOSIT]', ...args); } catch(e){} }
 
@@ -5426,6 +5426,7 @@ function openService(serviceName) {
 
 
                     
+
 
 
 
