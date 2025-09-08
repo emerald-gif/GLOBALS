@@ -4240,7 +4240,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
 // ---------- Notifications JS (replace your broken JS with this) ----------
 
-const db = firebase.firestore();
+
 
 let unsubscribeNotif = null; // holds the notifications listener
 
@@ -4967,6 +4967,7 @@ function openService(serviceName) {
 
 
                     
+
 
 
 
