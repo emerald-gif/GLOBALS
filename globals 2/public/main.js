@@ -4424,15 +4424,7 @@ async function loadNotificationsOnce() {
   }
 }
 
-// Escape HTML to avoid XSS when rendering admin-provided content
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+
 
 // Wire up click handling for the bell if element exists (keeps inline onclick safe or redundant)
 document.addEventListener('DOMContentLoaded', () => {
@@ -4967,6 +4959,7 @@ function openService(serviceName) {
 
 
                     
+
 
 
 
