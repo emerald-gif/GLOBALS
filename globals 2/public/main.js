@@ -4238,94 +4238,237 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
 
 
+// ---------- Notifications JS (replace your broken JS with this) ----------
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-let unsubscribeNotif = null;
+let unsubscribeNotif = null; // holds the notifications listener
 
-auth.onAuthStateChanged(user => {
-  if (user) {
-    const uid = user.uid;
+// Ensure the notification_user_state doc exists for the user (new users won't see old notifications)
+async function ensureUserState(uid) {
+  try {
+    const ref = db.collection('notification_user_state').doc(uid);
+    const doc = await ref.get();
+    if (!doc.exists) {
+      // create joinedAt + lastReadAt as serverTimestamp so new users start from "now"
+      await ref.set({
+        joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastReadAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
 
-    // Listen to notifications in real time
-    unsubscribeNotif = db.collection("notifications")
-      .orderBy("timestamp", "desc")
-      .onSnapshot(async snapshot => {
-        const userStateDoc = await db.collection("notification_user_state").doc(uid).get();
-        const lastReadAt = userStateDoc.exists ? userStateDoc.data().lastReadAt?.toDate() : new Date(0);
-
-        const unread = snapshot.docs.filter(doc => doc.data().timestamp?.toDate() > lastReadAt);
-
-        // Update red dot
-        document.getElementById("notifDot").classList.toggle("hidden", unread.length === 0);
-
-        // Show popup
-        if (unread.length > 0) {
-          document.getElementById("notifMessage").textContent =
-            `You have ${unread.length} new notification${unread.length > 1 ? 's' : ''}`;
-          document.getElementById("notifPopup").classList.remove("hidden");
-        }
-      });
-  } else {
-    if (unsubscribeNotif) unsubscribeNotif();
-  }
-});
-
-// ✅ Tab switcher (fix so dashboard works again)
-function activateTab(tabId) {
-  document.querySelectorAll('.tab-section').forEach(el => el.classList.add('hidden'));
-  document.getElementById(tabId).classList.remove('hidden');
-
-  // Mark notifications as read
-  if (tabId === 'notifications' && auth.currentUser) {
-    db.collection("notification_user_state").doc(auth.currentUser.uid).set({
-      lastReadAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-
-    document.getElementById("notifDot").classList.add("hidden");
-    document.getElementById("notifPopup").classList.add("hidden");
+      // re-read so later reads get the server timestamp value
+      return await ref.get();
+    }
+    return doc;
+  } catch (err) {
+    console.error("ensureUserState error:", err);
+    throw err;
   }
 }
 
-function closeNotifPopup() {
-  document.getElementById("notifPopup").classList.add("hidden");
-}
+// Start listening to notifications realtime and update UI (dot, popup, dashboard banner, list)
+async function listenForNotifications(uid) {
+  // detach previous listener if any
+  if (unsubscribeNotif) {
+    unsubscribeNotif();
+    unsubscribeNotif = null;
+  }
 
-// ✅ Fixed loadNotifications()
-function loadNotifications() {
-  const notifList = document.getElementById("notificationList");
-  notifList.innerHTML = `<p class="text-gray-500 text-center">Loading...</p>`;
+  // make sure user's state exists before listening
+  await ensureUserState(uid);
 
-  firebase.firestore().collection("notifications")
-    .orderBy("timestamp", "desc")
-    .get()
-    .then(snapshot => {
-      notifList.innerHTML = "";
-      if (snapshot.empty) {
-        notifList.innerHTML = `<p class="text-gray-400 text-center">No notifications yet.</p>`;
-      } else {
+  // attach realtime listener to notifications (most recent first)
+  unsubscribeNotif = db.collection('notifications')
+    .orderBy('timestamp', 'desc')
+    .onSnapshot(async snapshot => {
+      try {
+        // read the user's lastReadAt each time (keeps accurate after mark-as-read)
+        const stateDoc = await db.collection('notification_user_state').doc(uid).get();
+        const lastReadAt = (stateDoc.exists && stateDoc.data().lastReadAt)
+          ? stateDoc.data().lastReadAt.toDate()
+          : new Date(0);
+
+        // UI elements (may or may not exist depending on page)
+        const notifDot = document.getElementById('notifDot');
+        const notifPopup = document.getElementById('notifPopup');
+        const notifMessage = document.getElementById('notifMessage');
+        const notifList = document.getElementById('notificationList');
+        const banner = document.getElementById('notifBanner');
+        const bannerText = document.getElementById('notifBannerText');
+
+        // Count unread and render list
+        let unreadCount = 0;
+        // Build HTML for notifications list (if element exists)
+        if (notifList) notifList.innerHTML = '';
+
         snapshot.forEach(doc => {
           const data = doc.data();
-          const date = data.timestamp?.toDate().toLocaleString() || "Just now";
-          notifList.innerHTML += `
-            <div class="bg-white rounded-xl p-4 shadow-md border-l-4 border-blue-400 animate-fade-in">
-              <p class="text-gray-800 font-semibold">${data.title}</p>
-              <p class="text-sm text-gray-600">${data.message}</p>
-              <p class="text-xs text-gray-500 mt-1">${date}</p>
-            </div>`;
+          const ts = data.timestamp;
+          const tsDate = ts ? ts.toDate() : null;
+          const isUnread = tsDate ? (tsDate > lastReadAt) : false;
+          if (isUnread) unreadCount++;
+
+          // render into notifications list (notifications tab)
+          if (notifList) {
+            const dateStr = tsDate ? tsDate.toLocaleString() : 'Just now';
+            // Keep your style: rounded card, left blue border for emphasis
+            const card = document.createElement('div');
+            card.className = `bg-white rounded-xl p-4 shadow-md border-l-4 ${isUnread ? 'border-blue-400' : 'border-gray-200'} animate-fade-in`;
+            card.innerHTML = `
+              <p class="text-gray-800 font-semibold">${escapeHtml(data.title || 'No Title')}</p>
+              <p class="text-sm text-gray-600 mt-1">${escapeHtml(data.message || '')}</p>
+              <p class="text-xs text-gray-500 mt-2">${escapeHtml(dateStr)}</p>
+            `;
+            notifList.appendChild(card);
+          }
         });
+
+        // Update red dot (nav)
+        if (notifDot) {
+          notifDot.classList.toggle('hidden', unreadCount === 0);
+        }
+
+        // Update popup (small blue popup under bell)
+        if (notifPopup && notifMessage) {
+          if (unreadCount > 0) {
+            notifMessage.textContent = `You have ${unreadCount} new notification${unreadCount > 1 ? 's' : ''}`;
+            notifPopup.classList.remove('hidden');
+          } else {
+            notifPopup.classList.add('hidden');
+          }
+        }
+
+        // Update dashboard banner (only visible on dashboard)
+        if (banner && bannerText) {
+          if (unreadCount > 0) {
+            bannerText.textContent = `You have ${unreadCount} unread message${unreadCount > 1 ? 's' : ''}`;
+            banner.classList.remove('hidden');
+          } else {
+            banner.classList.add('hidden');
+          }
+        }
+      } catch (err) {
+        console.error("onSnapshot processing error:", err);
       }
-    })
-    .catch(err => {
-      notifList.innerHTML = `<p class="text-red-500 text-center">Failed to load notifications</p>`;
-      console.error(err);
+    }, err => {
+      console.error("notifications onSnapshot error:", err);
     });
 }
 
-// Call once
-loadNotifications();
+// Mark all notifications as read for this user (update lastReadAt)
+async function markNotificationsAsRead(uid) {
+  try {
+    await db.collection('notification_user_state').doc(uid).set({
+      lastReadAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
 
+    // hide UI elements immediately for best UX
+    const notifDot = document.getElementById('notifDot');
+    const notifPopup = document.getElementById('notifPopup');
+    const banner = document.getElementById('notifBanner');
+    if (notifDot) notifDot.classList.add('hidden');
+    if (notifPopup) notifPopup.classList.add('hidden');
+    if (banner) banner.classList.add('hidden');
+  } catch (err) {
+    console.error("markNotificationsAsRead error:", err);
+  }
+}
 
+// Close popup without marking as read
+function closeNotifPopup() {
+  const notifPopup = document.getElementById('notifPopup');
+  if (notifPopup) notifPopup.classList.add('hidden');
+}
+
+// Basic activateTab that won't break clicks — ensures tab switching works
+function activateTab(tabId) {
+  document.querySelectorAll('.tab-section').forEach(el => el.classList.add('hidden'));
+  const el = document.getElementById(tabId);
+  if (el) el.classList.remove('hidden');
+
+  // if opening the notifications tab, load / mark as read
+  if (tabId === 'notifications') {
+    const user = auth.currentUser;
+    if (user) {
+      // mark read & ensure latest list shown
+      markNotificationsAsRead(user.uid).catch(console.error);
+      // loadNotifications not required because the realtime listener already populates #notificationList
+    }
+  }
+}
+
+// OPTIONAL: on-demand load (one-time) if you need it elsewhere — fallback if realtime hasn't triggered
+async function loadNotificationsOnce() {
+  try {
+    const notifList = document.getElementById('notificationList');
+    if (notifList) notifList.innerHTML = `<p class="text-gray-500 text-center">Loading...</p>`;
+    const snapshot = await db.collection('notifications').orderBy('timestamp','desc').get();
+    if (notifList) notifList.innerHTML = '';
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const date = data.timestamp ? data.timestamp.toDate().toLocaleString() : 'Just now';
+      if (notifList) {
+        notifList.innerHTML += `
+          <div class="bg-white rounded-xl p-4 shadow-md border-l-4 border-blue-400 animate-fade-in">
+            <p class="text-gray-800 font-semibold">${escapeHtml(data.title || 'No Title')}</p>
+            <p class="text-sm text-gray-600">${escapeHtml(data.message || '')}</p>
+            <p class="text-xs text-gray-500 mt-1">${escapeHtml(date)}</p>
+          </div>`;
+      }
+    });
+    if (notifList && snapshot.empty) notifList.innerHTML = `<p class="text-gray-400 text-center">No notifications yet.</p>`;
+  } catch (err) {
+    console.error("loadNotificationsOnce error:", err);
+    const notifList = document.getElementById('notificationList');
+    if (notifList) notifList.innerHTML = `<p class="text-red-500 text-center">Failed to load notifications</p>`;
+  }
+}
+
+// Escape HTML to avoid XSS when rendering admin-provided content
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// Wire up click handling for the bell if element exists (keeps inline onclick safe or redundant)
+document.addEventListener('DOMContentLoaded', () => {
+  const bell = document.getElementById('notifBell');
+  if (bell) {
+    bell.addEventListener('click', (e) => {
+      // default activateTab might already be called inline; call it to be safe
+      activateTab('notifications');
+
+      // mark as read when user intentionally opens notifications
+      const user = auth.currentUser;
+      if (user) markNotificationsAsRead(user.uid).catch(console.error);
+    });
+  }
+
+  const closeBtn = document.getElementById('notifPopupClose'); // optional close button id
+  if (closeBtn) closeBtn.addEventListener('click', closeNotifPopup);
+});
+
+// Auth state: start/stop listeners
+auth.onAuthStateChanged(async user => {
+  if (user) {
+    try {
+      await ensureUserState(user.uid);   // make sure user state doc exists and uses serverTimestamp
+      listenForNotifications(user.uid); // start realtime listener (updates dot/banner/popup/list)
+    } catch (err) {
+      console.error("Error initializing notifications for user:", err);
+    }
+  } else {
+    // cleanup
+    if (unsubscribeNotif) {
+      unsubscribeNotif();
+      unsubscribeNotif = null;
+    }
+  }
+});
 
 
 
@@ -4824,6 +4967,7 @@ function openService(serviceName) {
 
 
                     
+
 
 
 
