@@ -771,7 +771,26 @@ function goToPinSetup() {
 
 
 
+// Example bridge: listen for drawer event and call your upload function
+window.addEventListener('drawer-file-selected', (e) => {
+  console.log('bridge received drawer-file-selected', e.detail);
+  // Suppose your app has function window.uploadToCloudinary(file) — call it:
+  if (typeof window.uploadToCloudinary === 'function') {
+    window.uploadToCloudinary(e.detail.file, e.detail.blobUrl, e.detail.originalInput);
+    return;
+  }
+  // Otherwise, if your upload expects input element, try:
+  const orig = e.detail.originalInput;
+  if (orig && typeof orig.dispatchEvent === 'function') {
+    // If orig already has files set, re-dispatch change; otherwise, handle with your logic
+    orig.dispatchEvent(new Event('change', { bubbles: true }));
+  }
 
+  // If nothing else, you can fallback to calling a generic handler
+  if (typeof window.handleFileUpload === 'function') {
+    window.handleFileUpload(e.detail.file, e.detail.blobUrl);
+  }
+});
 
 
 
@@ -5234,6 +5253,7 @@ function openService(serviceName) {
 
 
                     
+
 
 
 
