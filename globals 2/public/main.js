@@ -506,155 +506,92 @@ function goToPinSetup() {
 
 
 
-
-
-/* main.js — Upload Drawer integration */
+/* main.js — Debug version */
 (function() {
   const overlay = document.getElementById('uploadOverlay');
   const sheet = overlay?.querySelector('.upload-sheet');
-  const openStateAttr = 'data-open';
   const closeBtn = document.getElementById('uploadCloseBtn');
   const cameraBtn = document.getElementById('uploadCameraBtn');
   const galleryBtn = document.getElementById('uploadGalleryBtn');
   const fileInputCamera = document.getElementById('fileInputCamera');
   const fileInputGallery = document.getElementById('fileInputGallery');
 
-  if (!overlay || !sheet) return;
-
-  let previouslyFocused = null;
-  let currentOriginalInput = null; // the <input type="file"> that triggered us
-
-  function getFocusableElements() {
-    return sheet.querySelectorAll(
-      'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
-    );
+  if (!overlay || !sheet) {
+    console.warn('Upload Drawer: missing HTML snippet');
+    return;
   }
 
-  function handleTabKey(e) {
-    if (e.key !== 'Tab') return;
-    const focusables = Array.from(getFocusableElements()).filter(el => el.offsetParent !== null);
-    if (!focusables.length) { e.preventDefault(); return; }
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    if (e.shiftKey) {
-      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
-    } else {
-      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
-    }
-  }
+  let currentOriginalInput = null;
 
-  function openUploadDrawer(originalInput = null) {
+  function openUploadDrawer(originalInput) {
+    console.log("[drawer] opening for:", originalInput);
     currentOriginalInput = originalInput;
-    previouslyFocused = document.activeElement;
-    overlay.setAttribute(openStateAttr, 'true');
-    overlay.setAttribute('aria-hidden', 'false');
-    requestAnimationFrame(() => {
-      const focusables = getFocusableElements();
-      if (focusables.length) focusables[0].focus();
-      else sheet.focus();
-    });
-    document.addEventListener('keydown', onDocumentKeyDown);
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
+    overlay.setAttribute("data-open", "true");
+    overlay.setAttribute("aria-hidden", "false");
   }
 
   function closeUploadDrawer() {
-    overlay.setAttribute(openStateAttr, 'false');
-    overlay.setAttribute('aria-hidden', 'true');
-    document.removeEventListener('keydown', onDocumentKeyDown);
-    document.documentElement.style.overflow = '';
-    document.body.style.overflow = '';
-    if (previouslyFocused && previouslyFocused.focus) previouslyFocused.focus();
+    overlay.setAttribute("data-open", "false");
+    overlay.setAttribute("aria-hidden", "true");
+    console.log("[drawer] closed");
     currentOriginalInput = null;
   }
 
-  function onDocumentKeyDown(e) {
-    if (e.key === 'Escape') {
-      e.preventDefault(); closeUploadDrawer();
-    } else if (e.key === 'Tab') {
-      handleTabKey(e);
-    }
-  }
+  closeBtn.addEventListener("click", () => closeUploadDrawer());
 
-  overlay.addEventListener('pointerdown', (ev) => {
-    if (ev.target === overlay) closeUploadDrawer();
-  });
-
-  closeBtn.addEventListener('click', () => closeUploadDrawer());
-
-  cameraBtn.addEventListener('click', () => {
-    fileInputCamera.value = '';
+  cameraBtn.addEventListener("click", () => {
+    console.log("[drawer] camera clicked");
+    fileInputCamera.value = "";
     fileInputCamera.click();
   });
 
-  galleryBtn.addEventListener('click', () => {
-    fileInputGallery.value = '';
+  galleryBtn.addEventListener("click", () => {
+    console.log("[drawer] gallery clicked");
+    fileInputGallery.value = "";
     fileInputGallery.click();
   });
 
   function handleFileInputChange(ev, source) {
     const file = ev.target.files && ev.target.files[0];
-    if (!file) return;
-    closeUploadDrawer();
+    if (!file) {
+      console.log("[drawer] no file selected");
+      return;
+    }
+    console.log("[drawer] file selected from", source, file);
 
     if (currentOriginalInput) {
-      // ✅ Put the file back into the original input
-      const dt = new DataTransfer();
-      dt.items.add(file);
-      currentOriginalInput.files = dt.files;
+      try {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        currentOriginalInput.files = dt.files;
+        console.log("[drawer] file injected back into original input", currentOriginalInput);
 
-      // ✅ Trigger change so your platform’s uploader runs
-      const event = new Event('change', { bubbles: true });
-      currentOriginalInput.dispatchEvent(event);
+        // trigger change event
+        const event = new Event("change", { bubbles: true });
+        currentOriginalInput.dispatchEvent(event);
+        console.log("[drawer] dispatched change event");
+      } catch (err) {
+        console.error("[drawer] injection failed:", err);
+      }
+    } else {
+      console.warn("[drawer] no original input to inject file into");
     }
+
+    closeUploadDrawer();
   }
 
-  fileInputCamera.addEventListener('change', (e) => handleFileInputChange(e, 'camera'));
-  fileInputGallery.addEventListener('change', (e) => handleFileInputChange(e, 'gallery'));
+  fileInputCamera.addEventListener("change", (e) => handleFileInputChange(e, "camera"));
+  fileInputGallery.addEventListener("change", (e) => handleFileInputChange(e, "gallery"));
 
-  // ✅ Intercept all <input type=file> clicks across your platform
-  document.addEventListener('click', (ev) => {
-    const target = ev.target.closest('input[type=file]');
+  // Intercept all <input type=file> clicks
+  document.addEventListener("click", (ev) => {
+    const target = ev.target.closest("input[type=file]");
     if (target && !overlay.contains(target)) {
       ev.preventDefault();
       openUploadDrawer(target);
     }
   });
-
-  // Optional global control
-  window.openUploadDrawer = openUploadDrawer;
-  window.closeUploadDrawer = closeUploadDrawer;
 })();
-
-
-
-
-
-
-
-
-// Example bridge: listen for drawer event and call your upload function
-window.addEventListener('drawer-file-selected', (e) => {
-  console.log('bridge received drawer-file-selected', e.detail);
-  // Suppose your app has function window.uploadToCloudinary(file) — call it:
-  if (typeof window.uploadToCloudinary === 'function') {
-    window.uploadToCloudinary(e.detail.file, e.detail.blobUrl, e.detail.originalInput);
-    return;
-  }
-  // Otherwise, if your upload expects input element, try:
-  const orig = e.detail.originalInput;
-  if (orig && typeof orig.dispatchEvent === 'function') {
-    // If orig already has files set, re-dispatch change; otherwise, handle with your logic
-    orig.dispatchEvent(new Event('change', { bubbles: true }));
-  }
-
-  // If nothing else, you can fallback to calling a generic handler
-  if (typeof window.handleFileUpload === 'function') {
-    window.handleFileUpload(e.detail.file, e.detail.blobUrl);
-  }
-});
-
-
 
 
 
@@ -5115,6 +5052,7 @@ function openService(serviceName) {
 
 
                     
+
 
 
 
