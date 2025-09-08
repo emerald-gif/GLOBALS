@@ -3108,7 +3108,7 @@
 
   <!-- Logout Button -->
   <div class="mt-8 px-6 pb-10">
-    <button onclick="showLogoutModal()" class="w-full bg-red-600 text-white py-3 rounded-xl font-semibold text-base hover:bg-red-700 transition">
+    <button onclick="logoutBtn" class="w-full bg-red-600 text-white py-3 rounded-xl font-semibold text-base hover:bg-red-700 transition">
       Logout
     </button>
   </div>
@@ -3690,48 +3690,6 @@
 
 ‎
 ‎
-‎
-‎
-‎<!-- Logout Modal -->
-‎<div id="logoutModal" class="fixed inset-0 hidden z-50 flex items-center justify-center">
-‎  
-‎  <!-- Overlay -->
-‎  <div class="absolute inset-0 bg-black bg-opacity-50" onclick="closeLogoutModal()"></div>
-‎  
-‎  <!-- Modal Box -->
-‎  <div class="relative bg-white rounded-xl shadow-lg w-80 p-5 text-center z-50">
-‎    <h2 class="text-lg font-semibold mb-3">Logout</h2>
-‎    <p class="text-gray-600 mb-5">Are you sure you want to log out?</p>
-‎    <div class="flex justify-between gap-3">
-‎      <button onclick="closeLogoutModal()" class="flex-1 py-2 rounded-lg border border-gray-300 text-gray-600">Cancel</button>
-‎      <button onclick="confirmLogout()" class="flex-1 py-2 rounded-lg bg-blue-600 text-white">Yes, Logout</button>
-‎    </div>
-‎  </div>
-‎</div>
-‎
-‎
-‎
-‎<script>
-‎  // Show the logout modal
-‎  function showLogoutModal() {
-‎    document.getElementById('logoutModal').classList.remove('hidden');
-‎  }
-‎
-‎  // Close the modal
-‎  function closeLogoutModal() {
-‎    document.getElementById('logoutModal').classList.add('hidden');
-‎  }
-‎
-‎  // Confirm logout action
-‎  function confirmLogout() {
-‎    closeLogoutModal();
-‎    // 🚀 Put your actual logout logic here
-‎    // Example: redirect to login page
-‎    window.location.href = "login.html";
-‎    // Or if you're using Firebase/Auth: firebase.auth().signOut();
-‎  }
-‎</script>
-‎
 
 
 
@@ -3815,6 +3773,7 @@
 </body>
 
 </html>
+
 
 
 
