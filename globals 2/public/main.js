@@ -5070,221 +5070,285 @@ async function payData(){
 
 
 
-
-
-
-
-
-/* ===== DASHBOARD PROTECTOR – paste at the VERY END of main.js ===== */
+/* ===== DP PIN-DOWN PROTECTOR (paste at the VERY END of main.js) =====
+   Purpose: aggressively hide interfering ".tab-section" screens (and modal/overlay-like
+   nodes) that are outside #dashboard, but allow your own tab logic to show sections
+   when you intend to. Non-invasive: no automatic wrapping of your functions.
+*/
 (function(){
   'use strict';
 
-  const DASH_ID = 'dashboard';
-  const HIDE_CLASS = 'dp-hidden-force';
-  let enabled = true;
+  // Config
+  const DASH_ID = 'dashboard';                      // <-- your dashboard element id
+  const CAND_SELECTOR = '.tab-section';            // primary targets
+  const EXTRA_KEYWORDS = ['modal','overlay','popup','drawer','offcanvas','contact','help','settings','payment','dialog','sheet']; // heuristics
+  const MIN_AREA = 2000; // px^2 — ignore tiny nodes
+  const HIGH_ZINDEX = 300; // treat elements with z-index >= this as suspect
+  const HIDE_PROPS = ['display','visibility','pointer-events','opacity','height','width','max-height','max-width','transform'];
 
-  // Add small, strong CSS to forcibly hide elements
-  if (!document.head.querySelector('#dp-protector-style')) {
-    const style = document.createElement('style');
-    style.id = 'dp-protector-style';
-    style.textContent = `
-      .${HIDE_CLASS} {
-        display: none !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-        opacity: 0 !important;
-        height: 0 !important;
-        width: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-      }
-    `;
-    document.head.appendChild(style);
+  // Debug flag (set to true from console to see logs)
+  window.DP_PROTECTOR_DEBUG = window.DP_PROTECTOR_DEBUG || false;
+  function dbg(...a){ if(window.DP_PROTECTOR_DEBUG) console.log('[DP_PROTECTOR]', ...a); }
+
+  const DASH = document.getElementById(DASH_ID);
+  if (!DASH) {
+    console.warn('DP_PROTECTOR: no element with id="' + DASH_ID + '" found — protector disabled.');
+    return;
   }
 
-  function whenReady(fn){
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-      setTimeout(fn, 0);
-    } else document.addEventListener('DOMContentLoaded', fn);
+  // helpers to store/restore inline style values safely
+  function storePrevStyle(el){
+    if (!el || el.dataset.dpPrevStyleStored === '1') return;
+    const map = {};
+    HIDE_PROPS.forEach(p => {
+      const val = el.style.getPropertyValue(p) || '';
+      const pr  = el.style.getPropertyPriority(p) || '';
+      map[p] = { v: val, pr };
+    });
+    try { el.dataset.dpPrev = JSON.stringify(map); el.dataset.dpPrevStyleStored = '1'; } catch(e){ /* ignore */ }
   }
-
-  whenReady(() => {
-    const DASH = document.getElementById(DASH_ID) || null;
-
-    // Helpers
-    function isDescendantOfDashboard(el){
-      return DASH && el && DASH.contains(el);
-    }
-    function isCandidateTab(el){
-      return el instanceof HTMLElement && el.classList.contains('tab-section') && el !== DASH && !isDescendantOfDashboard(el);
-    }
-    function cssEscapeSafe(s){
-      try { return CSS && CSS.escape ? CSS.escape(s) : s; } catch(e) { return s; }
-    }
-
-    // Get all current candidates (tab-sections outside dashboard)
-    function getCandidates(){
-      return Array.from(document.querySelectorAll('.tab-section')).filter(isCandidateTab);
-    }
-
-    // Detection heuristics for the intentionally-active tab
-    function detectActiveTab(){
-      const all = Array.from(document.querySelectorAll('.tab-section'));
-      if (!all.length) return null;
-
-      // 1) explicit flags
-      const explicit = all.find(t => t.dataset.tabActive === 'true' || t.dataset.dpForceShow === '1' || t.hasAttribute('data-active'));
-      if (explicit) return explicit;
-
-      // 2) known active-ish classes
-      const clsCandidates = ['active','is-active','show','open','current','visible','selected'];
-      const withClass = all.find(t => clsCandidates.some(c => t.classList && t.classList.contains(c)));
-      if (withClass) return withClass;
-
-      // 3) aria-hidden explicitly false
-      const aria = all.find(t => t.getAttribute('aria-hidden') === 'false');
-      if (aria) return aria;
-
-      // 4) computed style visible (best-effort)
-      const visible = all.find(t => {
-        try {
-          const cs = getComputedStyle(t);
-          return cs && cs.display !== 'none' && cs.visibility !== 'hidden' && t.offsetWidth > 0 && t.offsetHeight > 0;
-        } catch(e) { return false; }
+  function restorePrevStyle(el){
+    if (!el || !el.dataset.dpPrev) return;
+    try {
+      const map = JSON.parse(el.dataset.dpPrev);
+      HIDE_PROPS.forEach(p => {
+        const entry = map[p] || { v: '', pr: '' };
+        if (entry.v) el.style.setProperty(p, entry.v, entry.pr);
+        else el.style.removeProperty(p);
       });
-      if (visible) return visible;
+      delete el.dataset.dpPrev;
+      delete el.dataset.dpPrevStyleStored;
+    } catch(e){ /* ignore */ }
+  }
 
-      // 5) fallback null (we'll show dashboard)
-      return null;
+  // Forcefully hide (store prev first)
+  function forceHide(el){
+    if (!el || el.dataset.dpHidden === '1') return;
+    dbg('HIDE →', el);
+    storePrevStyle(el);
+    // set inline styles with !important (strongest possible)
+    el.style.setProperty('display','none','important');
+    el.style.setProperty('visibility','hidden','important');
+    el.style.setProperty('pointer-events','none','important');
+    el.style.setProperty('opacity','0','important');
+    el.style.setProperty('height','0','important');
+    el.style.setProperty('width','0','important');
+    el.dataset.dpHidden = '1';
+  }
+
+  // Release because user intended to show:
+  // two modes:
+  //  - keepUserStyle = true  => user recently set a style (style.display changed) -> keep that style
+  //  - keepUserStyle = false => remove our hide props so CSS classes can take over (restore prev values for props we saved)
+  function release(el, keepUserStyle = false){
+    if (!el || el.dataset.dpHidden !== '1') return;
+    dbg('RELEASE →', el, 'keepUserStyle=', keepUserStyle);
+    if (keepUserStyle) {
+      // remove only the extra "visibility/pointer-events/opacity/height/width/transform" we added,
+      // keep display as the user's newly-set inline value (so we don't wipe the user's change).
+      ['visibility','pointer-events','opacity','height','width','max-height','max-width','transform'].forEach(p => el.style.removeProperty(p));
+      // clear the dpHidden marker, but do not restore dpPrev yet (we'll allow future forced hides to store/restore)
+      delete el.dataset.dpHidden;
+      // don't restore display since user explicitly changed it
+      return;
     }
+    // else: restore previous style values for our props to avoid stomping unrelated inline styles
+    restorePrevStyle(el);
+    delete el.dataset.dpHidden;
+  }
 
-    // Show / hide helpers
-    function hideEl(el){
-      if (!el || !(el instanceof HTMLElement)) return;
-      el.classList.add(HIDE_CLASS);
-      el.setAttribute('aria-hidden', 'true');
+  // Determine candidates: current elements matching .tab-section outside dashboard OR heuristics
+  function collectCandidates() {
+    const set = new Set();
+    // 1) explicit .tab-section outside dashboard
+    document.querySelectorAll(CAND_SELECTOR).forEach(el => {
+      if (el !== DASH && !DASH.contains(el)) set.add(el);
+    });
+    // 2) heuristic: elements with keywords in class/id, role=dialog, and large/floating or high z-index
+    const all = Array.from(document.querySelectorAll('body *'));
+    for (const el of all) {
+      if (!(el instanceof HTMLElement)) continue;
+      if (DASH.contains(el) || el === DASH) continue;
+      if (el.matches('script, style, meta, link, head')) continue;
+      const idcls = (el.id + ' ' + el.className).toLowerCase();
+      // quick keyword match
+      const hasKw = EXTRA_KEYWORDS.some(k => idcls.includes(k));
+      const role = (el.getAttribute('role') || '').toLowerCase();
+      const rect = el.getBoundingClientRect();
+      const area = rect.width * rect.height;
+      const cs = getComputedStyle(el);
+      const z = Number(cs.zIndex) || 0;
+      const posFloating = cs.position === 'fixed' || cs.position === 'absolute' || cs.position === 'sticky';
+      if (role === 'dialog' || hasKw || (posFloating && (area > MIN_AREA || z >= HIGH_ZINDEX))) {
+        set.add(el);
+      }
     }
-    function showEl(el){
-      if (!el || !(el instanceof HTMLElement)) return;
-      el.classList.remove(HIDE_CLASS);
-      el.removeAttribute('aria-hidden');
+    return Array.from(set);
+  }
+
+  // Hide all collected candidates except optionally a single active element
+  function hideAllExcept(activeEl = null){
+    const candidates = collectCandidates();
+    candidates.forEach(c => {
+      if (c === activeEl) {
+        // ensure activeEl is released (show)
+        release(c, /*keepUserStyle=*/ false);
+      } else {
+        forceHide(c);
+      }
+    });
+    // Ensure dashboard visible if no outside active element; if an outside element is active, hide dashboard to avoid overlap
+    if (!activeEl || DASH.contains(activeEl)) {
+      // show dashboard (restore prev values)
+      release(DASH, /*keepUserStyle=*/ false);
+    } else {
+      // hide dashboard to avoid overlap
+      forceHide(DASH);
     }
+  }
 
-    // Core: ensure only the desired tab (or dashboard) is visible
-    function enforceVisibility(activeElem = null){
-      if (!enabled) return;
-      const candidates = getCandidates();
+  // Detect if mutation indicates user attempted to show this element
+  const ACTIVE_CLASSES = ['active','is-active','show','open','current','visible','selected'];
+  function mutationSignalsShow(el, mutation){
+    try {
+      if (!el) return false;
+      // 1) style changed and now has a non-none display (user likely set display)
+      if (mutation.attributeName === 'style') {
+        const newDisplay = el.style.getPropertyValue('display') || '';
+        if (newDisplay && newDisplay.trim().toLowerCase() !== 'none') return { reason: 'style-display', keepUserStyle: true };
+      }
+      // 2) class added that looks "active-ish"
+      if (mutation.attributeName === 'class') {
+        // compare old/new if available (mutation.oldValue)
+        const newHas = ACTIVE_CLASSES.some(c => el.classList.contains(c));
+        if (newHas) return { reason: 'class-active', keepUserStyle: false };
+      }
+      // 3) aria-hidden changed to "false" or hidden attribute removed
+      if (mutation.attributeName === 'aria-hidden') {
+        if (el.getAttribute('aria-hidden') === 'false') return { reason: 'aria', keepUserStyle: false };
+      }
+      if (mutation.attributeName === 'hidden') {
+        if (el.hidden === false) return { reason: 'hidden-attr', keepUserStyle: false };
+      }
+      // 4) direct dataset flags someone might toggle (data-active, data-tab-active)
+      if (el.dataset && (el.dataset.active === 'true' || el.dataset.tabActive === 'true' || el.dataset.dpForceShow === '1')) {
+        return { reason: 'dataset-active', keepUserStyle: false };
+      }
+    } catch(e){}
+    return false;
+  }
 
-      // If caller didn't provide, detect it
-      if (!activeElem) activeElem = detectActiveTab();
-
-      // If active is inside dashboard (or no active found) -> show dashboard and hide outside screens
-      if (!activeElem || (DASH && DASH.contains(activeElem))) {
-        if (DASH) showEl(DASH);
-        candidates.forEach(c => hideEl(c));
+  // If user clicked a tab control (anchor with href="#id" or data-tab-target), reveal target after small delay
+  document.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('[data-tab-target], [data-target], [data-show], a[href^="#"]');
+    if (!btn) return;
+    setTimeout(() => {
+      let id = btn.dataset.tabTarget || btn.dataset.target || btn.dataset.show || null;
+      if (!id && btn.tagName === 'A') {
+        const href = btn.getAttribute('href') || '';
+        if (href.startsWith('#')) id = href.slice(1);
+      }
+      if (!id) {
+        // fallback: re-run global enforcement to discover any newly-visible node
+        hideAllExcept(null);
         return;
       }
+      const target = document.getElementById(id) || document.querySelector(`.tab-section#${CSS ? CSS.escape(id) : id}`);
+      if (target) {
+        // If user clicked to show an outside-of-dashboard section -> release and hide others
+        hideAllExcept(target);
+      } else {
+        hideAllExcept(null);
+      }
+    }, 40);
+  }, true);
 
-      // Active exists and is outside dashboard: show it, hide all other outside screens and hide dashboard to avoid overlap
-      showEl(activeElem);
-      candidates.forEach(c => { if (c !== activeElem) hideEl(c); });
-      if (DASH && activeElem !== DASH) hideEl(DASH);
-    }
-
-    // Try to derive HTMLElement from id/selector strings
-    function findTabById(id){
-      if (!id) return null;
-      // direct id
-      let el = document.getElementById(id);
-      if (el && el.classList.contains('tab-section')) return el;
-      // common data attributes
-      el = document.querySelector(`.tab-section[data-tab="${id}"], .tab-section[data-id="${id}"], .tab-section[data-name="${id}"]`);
-      if (el) return el;
-      // fallback query (escaped)
-      try {
-        el = document.querySelector(`.tab-section#${cssEscapeSafe(id)}`);
-        if (el) return el;
-      } catch(e){}
-      return null;
-    }
-
-    // Initial enforcement after a short delay so other startup scripts can set the initial active tab
-    setTimeout(() => enforceVisibility(null), 120);
-
-    // Wrap existing switchTab safely (if present) so original behaviour remains, then we enforce
-    if (typeof window.switchTab === 'function') {
-      try {
-        const orig = window.switchTab;
-        window.switchTab = function(...args){
-          const result = orig.apply(this, args);
-          // pick potential target from first arg if it's an id or element
-          const arg0 = args[0];
-          let targetEl = null;
-          if (typeof arg0 === 'string') targetEl = findTabById(arg0);
-          if (arg0 instanceof HTMLElement) targetEl = arg0;
-          // enforce shortly after original finishes its DOM work
-          setTimeout(() => enforceVisibility(targetEl || null), 25);
-          return result;
-        };
-        // keep reference to original (helpful for debugging)
-        window.switchTab._original = orig;
-      } catch(e){ /* swallow – don't break user code */ }
-    }
-
-    // Intercept clicks on common tab anchors/controls and re-enforce after they run
-    document.addEventListener('click', (ev) => {
-      const btn = ev.target.closest('[data-tab-target], [data-target], [data-show], a[href^="#"]');
-      if (!btn) return;
-      setTimeout(() => {
-        let id = btn.dataset.tabTarget || btn.dataset.target || btn.dataset.show || null;
-        if (!id && btn.tagName === 'A') {
-          const href = btn.getAttribute('href') || '';
-          if (href.startsWith('#')) id = href.slice(1);
+  // Observe attribute changes and child nodes; use attributeOldValue to help decisions
+  const mo = new MutationObserver((mutations) => {
+    let recheck = false;
+    for (const m of mutations) {
+      if (m.type === 'childList') {
+        // new nodes added -> if they look like candidates, hide them
+        for (const n of m.addedNodes) {
+          if (!(n instanceof HTMLElement)) continue;
+          if (DASH.contains(n) || n === DASH) continue;
+          // if newly-added node is candidate-ish -> force hide
+          const rect = n.getBoundingClientRect();
+          const area = rect.width * rect.height;
+          const cs = getComputedStyle(n);
+          const posFloating = cs.position === 'fixed' || cs.position === 'absolute' || cs.position === 'sticky';
+          const z = Number(cs.zIndex) || 0;
+          const idcls = (n.id + ' ' + n.className).toLowerCase();
+          const hasKw = EXTRA_KEYWORDS.some(k => idcls.includes(k));
+          if (n.matches && n.matches(CAND_SELECTOR) || hasKw || m.addedNodes.length > 0 && (posFloating && (area > MIN_AREA || z >= HIGH_ZINDEX)) ) {
+            forceHide(n);
+            dbg('childList-hide new node', n);
+          } else {
+            // still re-evaluate globally
+            recheck = true;
+          }
         }
-        const found = findTabById(id);
-        enforceVisibility(found || null);
-      }, 15);
-    }, true);
-
-    // MutationObserver with debounce: watch for dynamically injected screens or class/style changes
-    let timer = null;
-    const mo = new MutationObserver(() => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => enforceVisibility(null), 80);
-    });
-    mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class','style','hidden','aria-hidden','open'] });
-
-    // Expose a small API to override or interact
-    window.DashboardProtector = {
-      enable(){ enabled = true; enforceVisibility(null); },
-      disable(){ enabled = false; const all = getCandidates(); all.forEach(c => showEl(c)); if (DASH) showEl(DASH); },
-      enforce(){ enforceVisibility(null); },
-      showTabById(id){
-        const t = findTabById(id);
-        if (t) {
-          t.dataset.dpForceShow = '1';
-          enforceVisibility(t);
-          return true;
+      } else if (m.type === 'attributes') {
+        const el = m.target;
+        const sig = mutationSignalsShow(el, m);
+        if (sig) {
+          // user signaled they want this shown
+          dbg('mutation signaled show', el, sig);
+          // if style change with display != none -> keepUserStyle true
+          release(el, !!sig.keepUserStyle);
+          // hide others & hide dashboard if necessary
+          if (!DASH.contains(el)) forceHide(DASH);
+          // hide other candidates
+          collectCandidates().forEach(c => { if (c !== el) forceHide(c); });
+        } else {
+          // attributes changed but not a show-signal -> re-evaluate
+          recheck = true;
         }
-        return false;
-      },
-      unhideElement(selOrEl){
-        const el = typeof selOrEl === 'string' ? document.querySelector(selOrEl) : selOrEl;
-        if (el) {
-          el.dataset.dpForceShow = '1';
-          showEl(el);
-          return true;
-        }
-        return false;
-      },
-      getCandidates,
-      _isEnabled(){ return enabled; }
-    };
-
-    // Safety: if user dev tools want cluster debugging, uncomment:
-    // console.log('DashboardProtector ready – Dashboard element:', DASH, 'Candidates:', getCandidates());
+      }
+    }
+    if (recheck) {
+      // minor debounce
+      clearTimeout(window.__dpProtectorTimer);
+      window.__dpProtectorTimer = setTimeout(() => hideAllExcept(null), 60);
+    }
   });
+
+  mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class','style','hidden','aria-hidden','open','data-active','data-tab-active'], attributeOldValue: true });
+
+  // Initial pass: hide what we should hide
+  setTimeout(() => {
+    hideAllExcept(null);
+    dbg('Initial enforcement done. Candidates:', collectCandidates());
+  }, 80);
+
+  // Public API
+  window.DashboardProtector = {
+    hideAllExcept: (selOrEl) => {
+      const el = typeof selOrEl === 'string' ? document.querySelector(selOrEl) : selOrEl;
+      hideAllExcept(el || null);
+    },
+    forceHideElement: (selOrEl) => {
+      const el = typeof selOrEl === 'string' ? document.querySelector(selOrEl) : selOrEl;
+      if (el) forceHide(el);
+    },
+    forceShowElement: (selOrEl) => {
+      const el = typeof selOrEl === 'string' ? document.querySelector(selOrEl) : selOrEl;
+      if (el) release(el, /*keepUserStyle=*/ true);
+    },
+    disable(){ mo.disconnect(); dbg('DP_PROTECTOR disabled'); },
+    enable(){ mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class','style','hidden','aria-hidden','open','data-active','data-tab-active'], attributeOldValue: true }); dbg('DP_PROTECTOR enabled'); },
+    collectCandidates,
+    _debug(on){ window.DP_PROTECTOR_DEBUG = !!on; }
+  };
+
+  // tiny safety log
+  dbg('DP_PROTECTOR ready. Dashboard:', DASH);
+
 })();
+
+
+
+
 
 
 
