@@ -603,26 +603,30 @@ function goToPinSetup() {
   });
 
   function handleFileInputChange(ev, source) {
-    const file = ev.target.files && ev.target.files[0];
-    if (!file) return;
-    closeUploadDrawer();
+  const file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  closeUploadDrawer();
 
-    if (currentOriginalInput) {
-      // put the file back into the original input so the platform sees it
+  if (currentOriginalInput) {
+    try {
+      // ✅ Reattach file back into original input
       const dt = new DataTransfer();
       dt.items.add(file);
       currentOriginalInput.files = dt.files;
 
-      // trigger change event for listeners
+      // ✅ Trigger change so platform's upload logic runs
       const event = new Event('change', { bubbles: true });
       currentOriginalInput.dispatchEvent(event);
-    }
-
-    // optional: custom handler hook
-    if (typeof window.onUploadFile === 'function') {
-      window.onUploadFile(file, source);
+    } catch (err) {
+      console.error("Could not reattach file to input:", err);
     }
   }
+
+  // Optional: if you want to log/debug or add hooks
+  if (typeof window.onUploadFile === 'function') {
+    window.onUploadFile(file, source);
+  }
+}
 
   fileInputCamera.addEventListener('change', (e) => handleFileInputChange(e, 'camera'));
   fileInputGallery.addEventListener('change', (e) => handleFileInputChange(e, 'gallery'));
@@ -5112,6 +5116,7 @@ function openService(serviceName) {
 
 
                     
+
 
 
 
