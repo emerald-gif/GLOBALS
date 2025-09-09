@@ -922,16 +922,7 @@ const GUIDES = {
 // ---------- UI helpers ----------
 function showElement(id) { const el = document.getElementById(id); if(el) el.classList.remove('hidden'); }
 function hideElement(id) { const el = document.getElementById(id); if(el) el.classList.add('hidden'); }
-function appendUserBubble(msg) {
-  const chat = document.getElementById("chatMessages");
-  chat.innerHTML += `<div class="bg-gray-100 p-3 rounded-lg w-fit max-w-xs ml-auto text-right">${escapeHtml(msg)}</div>`;
-  chat.scrollTop = chat.scrollHeight;
-}
-function appendAssistantBubble(html) {
-  const chat = document.getElementById("chatMessages");
-  chat.innerHTML += `<div class="bg-white border p-3 rounded-lg w-fit max-w-xs text-left">${html}</div>`;
-  chat.scrollTop = chat.scrollHeight;
-}
+
 
 
 // ---------- Tab activation (keeps your nav hiding logic) ----------
@@ -5720,6 +5711,7 @@ function openService(serviceName) {
 
 
                     
+
 
 
 
