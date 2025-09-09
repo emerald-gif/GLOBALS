@@ -5626,204 +5626,234 @@ function openService(serviceName) {
 
 
 // ===== Airtime UI State (namespaced, no conflict) =====
-let airtimeSelectedAmount = 0;
-let airtimeSelectedNetwork = '';
-let airtimeCurrentUser = null;
-let airtimeUserRef = null;
 
-const AIRTIME_SCREENS = ['airtime-screen','confirm-airtime-screen','success-screen'];
 
-const AIRTIME_NETWORKS = {
-  '01': { label: 'MTN', logo: 'MTN.jpg' },
-  '02': { label: 'GLO', logo: 'GLO.jpg' },
-  '04': { label: 'Airtel', logo: 'AIRTEL.jpg' },
-  '03': { label: '9mobile', logo: '9MOBILE.jpg' }
-};
+(() => {
+  // Expose these for onclick attributes (safe namespace)
+  window.airtimeOpen = airtimeOpen;
+  window.airtimeClose = airtimeClose;
+  window.airtimeSelectNetwork = airtimeSelectNetwork;
+  window.airtimeSetAmount = airtimeSetAmount;
+  window.airtimeGoToConfirm = airtimeGoToConfirm;
+  window.airtimePay = airtimePay;
+  window.airtimeReset = airtimeReset;
 
-function airtimeFmt(n){ return Number(n).toLocaleString(); }
+  // State
+  let airtimeSelectedAmount = 0;
+  let airtimeSelectedNetwork = '';
+  let airtimeCurrentUser = null;
+  let airtimeUserRef = null;
 
-function airtimeHide(id){ const e=document.getElementById(id); if(e) e.classList.add('hidden'); }
-function airtimeShow(id){
-  AIRTIME_SCREENS.forEach(s => {
-    const el = document.getElementById(s);
-    if(!el) return;
-    if(s === id) el.classList.remove('hidden'); else el.classList.add('hidden');
-  });
-  // lock page scroll while overlay is open
-  document.body.classList.add('overflow-hidden');
-}
-function airtimeHideAll(){
-  AIRTIME_SCREENS.forEach(s => airtimeHide(s));
-  document.body.classList.remove('overflow-hidden');
-}
+  const AIRTIME_SCREENS = ['airtime-screen','confirm-airtime-screen','success-screen'];
+  const AIRTIME_NETWORKS = {
+    '01': { label: 'MTN', logo: 'MTN.jpg' },
+    '02': { label: 'GLO', logo: 'GLO.jpg' },
+    '04': { label: 'Airtel', logo: 'AIRTEL.jpg' },
+    '03': { label: '9mobile', logo: '9MOBILE.jpg' }
+  };
 
-// Public helpers to integrate with your dashboard
-function airtimeOpen(){ airtimeShow('airtime-screen'); }
-function airtimeClose(route){ 
-  airtimeHideAll();
-  if (route && typeof window.showScreen === 'function') {
-    try { window.showScreen(route); } catch(_) {}
+  function fmt(n){ return Number(n).toLocaleString(); }
+
+  // Show/hide utilities
+  function _showScreen(id){
+    AIRTIME_SCREENS.forEach(s => {
+      const el = document.getElementById(s);
+      if (!el) return;
+      if (s === id) { el.classList.remove('hidden'); el.setAttribute('aria-hidden','false'); }
+      else { el.classList.add('hidden'); el.setAttribute('aria-hidden','true'); }
+    });
+    // add scroll lock when any airtime overlay visible
+    document.body.classList.add('overflow-hidden');
   }
-}
+  function _hideAll(){
+    AIRTIME_SCREENS.forEach(s => {
+      const el = document.getElementById(s);
+      if (!el) return;
+      el.classList.add('hidden');
+      el.setAttribute('aria-hidden','true');
+    });
+    document.body.classList.remove('overflow-hidden');
+  }
 
-// Firebase (read-only here)
-if (typeof firebase !== 'undefined' && typeof db !== 'undefined') {
-  firebase.auth().onAuthStateChanged(u => {
-    airtimeCurrentUser = u;
-    airtimeUserRef = u ? db.collection('users').doc(u.uid) : null;
-  });
-} else {
-  console.warn('[Airtime] Firebase not found. Ensure SDK + `db` are available.');
-}
-
-// ===== Interactions =====
-function airtimeSelectNetwork(code, btn){
-  airtimeSelectedNetwork = code;
-  document.querySelectorAll('#network-grid button').forEach(b => {
-    if (b.dataset.code === code) {
-      b.classList.add('ring-2','ring-indigo-500','shadow-lg');
-    } else {
-      b.classList.remove('ring-2','ring-indigo-500','shadow-lg');
+  // Public open/close
+  function airtimeOpen(){
+    _showScreen('airtime-screen');
+    // focus phone input
+    setTimeout(()=>{ const i = document.getElementById('airtime-phone'); if(i) i.focus(); }, 80);
+  }
+  function airtimeClose(){
+    // just hide overlays and return to dashboard if possible
+    _hideAll();
+    // If your dashboard uses showScreen('home'), call it safely
+    if (typeof window.showScreen === 'function') {
+      try { window.showScreen('home'); } catch(e){ /* ignore */ }
     }
-  });
-}
+  }
 
-function airtimeSetAmount(v){
-  airtimeSelectedAmount = v;
-  const inp = document.getElementById('airtime-amount');
-  if (inp) inp.value = v;
-}
+  // Initialize firebase user ref if present
+  if (typeof firebase !== 'undefined' && typeof db !== 'undefined') {
+    firebase.auth().onAuthStateChanged(u => {
+      airtimeCurrentUser = u;
+      airtimeUserRef = u ? db.collection('users').doc(u.uid) : null;
+    });
+  } else {
+    // don't throw — we'll show friendly error when user tries to transact
+    console.warn('[Airtime] firebase/db not available');
+  }
 
-async function airtimeGoToConfirm(){
-  airtimeHide('airtime-error');
+  // Interaction helpers
+  function airtimeSelectNetwork(code, btn){
+    airtimeSelectedNetwork = code;
+    document.querySelectorAll('#network-grid button').forEach(b=>{
+      if (b.dataset.code === code) b.classList.add('ring','ring-indigo-500');
+      else b.classList.remove('ring','ring-indigo-500');
+    });
+  }
+  function airtimeSetAmount(v){
+    airtimeSelectedAmount = v;
+    const inp = document.getElementById('airtime-amount'); if(inp) inp.value = v;
+  }
 
-  const network = airtimeSelectedNetwork;
-  const phone = (document.getElementById('airtime-phone').value || '').trim();
-  const raw = document.getElementById('airtime-amount').value;
-  const amount = parseInt(raw || airtimeSelectedAmount || 0, 10);
+  // messages
+  function showAirtimeMsg(id, text){
+    const e = document.getElementById(id);
+    if(!e) return;
+    e.textContent = text; e.classList.remove('hidden');
+  }
+  function hideAirtimeMsg(id){
+    const e = document.getElementById(id);
+    if(!e) return;
+    e.classList.add('hidden');
+  }
 
-  if(!network){ showAirtimeMsg('airtime-error','Please select a network.'); return; }
-  if(!phone || !/^0\d{10}$/.test(phone)){ showAirtimeMsg('airtime-error','Enter a valid 11-digit phone number.'); return; }
-  if(!amount || amount < 50){ showAirtimeMsg('airtime-error','Amount must be at least ₦50.'); return; }
-  if(!airtimeCurrentUser || !airtimeUserRef){ showAirtimeMsg('airtime-error','You must be signed in.'); return; }
+  // Continue => populate confirm overlay values and show it
+  async function airtimeGoToConfirm(){
+    hideAirtimeMsg('airtime-error');
 
-  try {
-    const doc = await airtimeUserRef.get();
-    if(!doc.exists){ showAirtimeMsg('airtime-error','User record not found.'); return; }
-    const u = doc.data();
-    if(!u || !u.pin){ showAirtimeMsg('airtime-error','Payment PIN not set.'); return; }
+    const network = airtimeSelectedNetwork;
+    const phone = (document.getElementById('airtime-phone')?.value || '').trim();
+    const raw = document.getElementById('airtime-amount')?.value;
+    const amount = parseInt(raw || airtimeSelectedAmount || 0, 10);
 
-    const net = AIRTIME_NETWORKS[network] || { label: network, logo: '' };
+    if(!network){ showAirtimeMsg('airtime-error','Please select a network.'); return; }
+    if(!phone || !/^0\d{10}$/.test(phone)){ showAirtimeMsg('airtime-error','Enter a valid 11-digit phone number.'); return; }
+    if(!amount || amount < 50){ showAirtimeMsg('airtime-error','Amount must be at least ₦50.'); return; }
+    if(!airtimeCurrentUser || !airtimeUserRef){ showAirtimeMsg('airtime-error','You must be signed in.'); return; }
 
-    document.getElementById('confirm-network').innerText = net.label;
-    document.getElementById('confirm-phone').innerText = phone;
-    document.getElementById('confirm-amount').innerText = '₦' + airtimeFmt(amount);
-    document.getElementById('confirm-balance').innerText = '₦' + airtimeFmt(u.balance || 0);
-    document.getElementById('confirm-network-logo').src = net.logo;
+    try {
+      // guard if airtimeUserRef is not a firestore doc ref
+      if (!airtimeUserRef || typeof airtimeUserRef.get !== 'function') {
+        showAirtimeMsg('airtime-error','Service temporarily unavailable.'); return;
+      }
+      const doc = await airtimeUserRef.get();
+      if(!doc.exists){ showAirtimeMsg('airtime-error','User record not found.'); return; }
+      const u = doc.data();
+      if(!u || !u.pin){ showAirtimeMsg('airtime-error','Payment PIN not set.'); return; }
+
+      const net = AIRTIME_NETWORKS[network] || { label: network, logo: '' };
+
+      document.getElementById('confirm-network').innerText = net.label;
+      document.getElementById('confirm-phone').innerText = phone;
+      document.getElementById('confirm-amount').innerText = '₦' + fmt(amount);
+      document.getElementById('confirm-balance').innerText = '₦' + fmt(u.balance || 0);
+      document.getElementById('confirm-network-logo').src = net.logo || '';
+
+      const confirmEl = document.getElementById('confirm-airtime-screen');
+      confirmEl.dataset.networkCode = network;
+      confirmEl.dataset.phone = phone;
+      confirmEl.dataset.amount = amount;
+
+      _showScreen('confirm-airtime-screen');
+    } catch (err) {
+      console.error('[Airtime] goToConfirm error', err);
+      showAirtimeMsg('airtime-error','Could not read account. Try again later.');
+    }
+  }
+
+  // Pay flow (safe guards for missing db)
+  async function airtimePay(){
+    hideAirtimeMsg('confirm-error');
+    const pinInput = (document.getElementById('confirm-pin')?.value || '').trim();
+    const btn = document.getElementById('pay-btn');
+    if(!pinInput){ showAirtimeMsg('confirm-error','Enter your payment PIN'); return; }
+    if(!airtimeCurrentUser || !airtimeUserRef){ showAirtimeMsg('confirm-error','You must be signed in.'); return; }
 
     const confirmEl = document.getElementById('confirm-airtime-screen');
-    confirmEl.dataset.networkCode = network;
-    confirmEl.dataset.phone = phone;
-    confirmEl.dataset.amount = amount;
+    const networkCode = confirmEl?.dataset.networkCode;
+    const phone = confirmEl?.dataset.phone;
+    const amount = parseInt(confirmEl?.dataset.amount || 0, 10);
+    if(!networkCode || !phone || !amount){ showAirtimeMsg('confirm-error','Missing transaction details.'); return; }
 
-    airtimeShow('confirm-airtime-screen');
-  } catch (err) {
-    console.error('[Airtime] goToConfirm error', err);
-    showAirtimeMsg('airtime-error','Could not read account. Try again later.');
+    // ensure db.runTransaction available
+    if (typeof db === 'undefined' || typeof db.runTransaction !== 'function') {
+      showAirtimeMsg('confirm-error','Service temporarily unavailable.'); return;
+    }
+
+    btn.disabled = true;
+    const orig = btn.innerHTML;
+    btn.innerHTML = 'Processing...';
+
+    try {
+      await db.runTransaction(async (tx) => {
+        const uSnap = await tx.get(airtimeUserRef);
+        if(!uSnap.exists) throw new Error('USER_NOT_FOUND');
+        const u = uSnap.data();
+        if(!u.pin) throw new Error('PIN_NOT_SET');
+        if(String(u.pin) !== String(pinInput)) throw new Error('INCORRECT_PIN');
+        const currentBalance = Number(u.balance || 0);
+        if(currentBalance < amount) throw new Error('INSUFFICIENT_BALANCE');
+
+        tx.update(airtimeUserRef, { balance: currentBalance - amount });
+
+        const billsRef = db.collection('bill_submissions');
+        const newBill = billsRef.doc();
+        tx.set(newBill, {
+          userId: airtimeCurrentUser.uid,
+          networkCode,
+          network: AIRTIME_NETWORKS[networkCode] ? AIRTIME_NETWORKS[networkCode].label : networkCode,
+          phone,
+          amount,
+          status: 'submitted',
+          processed: false,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      });
+
+      _showScreen('success-screen');
+    } catch (err) {
+      console.error('[Airtime] pay error', err);
+      if(err.message === 'USER_NOT_FOUND'){ showAirtimeMsg('confirm-error','User record not found.'); }
+      else if(err.message === 'PIN_NOT_SET'){ showAirtimeMsg('confirm-error','Payment PIN not set.'); }
+      else if(err.message === 'INCORRECT_PIN'){ showAirtimeMsg('confirm-error','Incorrect PIN.'); }
+      else if(err.message === 'INSUFFICIENT_BALANCE'){ showAirtimeMsg('confirm-error','Insufficient balance.'); }
+      else showAirtimeMsg('confirm-error','Transaction failed. Try again later.');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = orig;
+    }
   }
-}
 
-async function airtimePay(){
-  hideAirtimeMsg('confirm-error');
-
-  const pinInput = (document.getElementById('confirm-pin').value || '').trim();
-  const btn = document.getElementById('pay-btn');
-  if(!pinInput){ showAirtimeMsg('confirm-error','Enter your payment PIN'); return; }
-  if(!airtimeCurrentUser || !airtimeUserRef){ showAirtimeMsg('confirm-error','You must be signed in.'); return; }
-
-  const confirmEl = document.getElementById('confirm-airtime-screen');
-  const networkCode = confirmEl.dataset.networkCode;
-  const phone = confirmEl.dataset.phone;
-  const amount = parseInt(confirmEl.dataset.amount || 0, 10);
-  if(!networkCode || !phone || !amount){ showAirtimeMsg('confirm-error','Missing transaction details.'); return; }
-
-  btn.disabled = true;
-  const orig = btn.innerHTML;
-  btn.innerHTML = 'Processing...';
-
-  try {
-    await db.runTransaction(async (tx) => {
-      const uSnap = await tx.get(airtimeUserRef);
-      if(!uSnap.exists) throw new Error('USER_NOT_FOUND');
-
-      const u = uSnap.data();
-      if(!u.pin) throw new Error('PIN_NOT_SET');
-      if(String(u.pin) !== String(pinInput)) throw new Error('INCORRECT_PIN');
-
-      const currentBalance = Number(u.balance || 0);
-      if(currentBalance < amount) throw new Error('INSUFFICIENT_BALANCE');
-
-      tx.update(airtimeUserRef, { balance: currentBalance - amount });
-
-      const billsRef = db.collection('bill_submissions');
-      const newBill = billsRef.doc();
-      const payload = {
-        userId: airtimeCurrentUser.uid,
-        networkCode,
-        network: AIRTIME_NETWORKS[networkCode] ? AIRTIME_NETWORKS[networkCode].label : networkCode,
-        phone,
-        amount,
-        status: 'submitted',
-        processed: false,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      };
-      tx.set(newBill, payload);
-    });
-
-    airtimeShow('success-screen');
-  } catch (err) {
-    console.error('[Airtime] pay error', err);
-    if(err.message === 'USER_NOT_FOUND'){ showAirtimeMsg('confirm-error','User record not found.'); }
-    else if(err.message === 'PIN_NOT_SET'){ showAirtimeMsg('confirm-error','Payment PIN not set.'); }
-    else if(err.message === 'INCORRECT_PIN'){ showAirtimeMsg('confirm-error','Incorrect PIN.'); }
-    else if(err.message === 'INSUFFICIENT_BALANCE'){ showAirtimeMsg('confirm-error','Insufficient balance.'); }
-    else showAirtimeMsg('confirm-error','Transaction failed. Try again later.');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = orig;
+  // Reset and return to airtime form
+  function airtimeReset(){
+    document.getElementById("airtime-phone").value = "";
+    document.getElementById("airtime-amount").value = "";
+    const pin = document.getElementById("confirm-pin"); if (pin) pin.value = "";
+    airtimeSelectedNetwork = '';
+    airtimeSelectedAmount = 0;
+    document.querySelectorAll('#network-grid button').forEach(b => b.classList.remove('ring','ring-indigo-500'));
+    _showScreen('airtime-screen');
   }
-}
 
-function airtimeReset(){
-  document.getElementById("airtime-phone").value = "";
-  document.getElementById("airtime-amount").value = "";
-  const pin = document.getElementById("confirm-pin");
-  if (pin) pin.value = "";
+  // Expose debug helper
+  window.airtimeDebug = function(){
+    return {
+      open: !!(document.getElementById('airtime-screen') && !document.getElementById('airtime-screen').classList.contains('hidden')),
+      user: !!airtimeCurrentUser,
+      airtimeUserRefExists: !!airtimeUserRef
+    };
+  };
 
-  airtimeSelectedNetwork = '';
-  airtimeSelectedAmount = 0;
-
-  // clear selected ring
-  document.querySelectorAll('#network-grid button').forEach(b => {
-    b.classList.remove('ring-2','ring-indigo-500','shadow-lg');
-  });
-
-  airtimeShow('airtime-screen');
-}
-
-// small helpers for messages
-function showAirtimeMsg(id, text){ const e=document.getElementById(id); if(e){ e.textContent=text; e.classList.remove('hidden'); } }
-function hideAirtimeMsg(id){ const e=document.getElementById(id); if(e){ e.classList.add('hidden'); } }
-
-
-
-
-
-function airtimeClose(){ 
-  airtimeHideAll();
-  document.body.classList.remove('overflow-hidden');
-}
-
+})(); // IIFE end
 
 
 
