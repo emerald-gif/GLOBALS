@@ -341,7 +341,7 @@
 	<div class="flex items-center gap-4">
 
 <!-- AI Chat (Headphone Icon) -->
-    <button onclick="activateTab('aiHelpCenter')" class="text-gray-700 hover:text-blue-600 transition">
+    <button onclick="activateTab('contactus')" class="text-gray-700 hover:text-blue-600 transition">
       <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 18v-6a9 9 0 1118 0v6a3 3 0 01-3 3h-1v-4h-2v4H9v-4H7v4H6a3 3 0 01-3-3z" />
       </svg>
@@ -3674,15 +3674,42 @@
     <!-- content injected by openAiTopic(...) -->
   </div>
 
-  <!-- Conversation Area -->
-  <div id="chatContainer" class="flex-1 p-4 overflow-y-auto hidden">
-    <div id="chatMessages" class="space-y-3 text-sm text-gray-800"></div>
-
-    <div class="flex mt-4">
-      <input id="userMessage" type="text" class="flex-1 p-3 rounded-l-lg border border-gray-300 focus:outline-none" placeholder="Ask me anything..." />
-      <button onclick="sendMessage()" class="bg-blue-600 text-white px-4 rounded-r-lg hover:bg-blue-700">Send</button>
+<!-- Conversation Area -->
+<div id="chatContainer" class="flex-1 flex flex-col hidden">
+  <!-- Chat Header -->
+  <div class="flex items-center gap-2 p-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md sticky top-0 z-10">
+    <button onclick="openAiTopic('')" class="text-white text-lg">←</button>
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-full bg-white text-blue-600 flex items-center justify-center font-bold">G</div>
+      <div>
+        <div class="font-semibold text-sm">Globals Support</div>
+        <div class="text-xs text-gray-200">Online</div>
+      </div>
     </div>
   </div>
+
+  <!-- Messages -->
+  <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50"></div>
+
+  <!-- Input bar -->
+  <div class="p-3 flex items-center gap-2 border-t bg-white">
+    <!-- Plus Button -->
+    <button onclick="openUploadDrawer()" class="p-2 rounded-full hover:bg-gray-200">
+      <span class="text-2xl text-gray-500">＋</span>
+    </button>
+
+    <!-- Text input -->
+    <input id="userMessage" type="text" 
+      class="flex-1 p-3 rounded-full border border-gray-300 focus:outline-none text-sm"
+      placeholder="Type a message..." />
+
+    <!-- Send button -->
+    <button onclick="sendMessage()" 
+      class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-full hover:opacity-90">
+      Send
+    </button>
+  </div>
+</div>
 </div>
 
 
@@ -3781,6 +3808,7 @@
 </body>
 
 </html>
+
 
 
 
