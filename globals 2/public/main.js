@@ -852,7 +852,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 // ---------- CONFIG ----------
-const OPENAI_API_KEY = ""; // leave empty for local fallback
+const OPENAI_API_KEY = "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"; // leave empty for local fallback
 
 // ---------- GUIDE CONTENT (HTML strings) ----------
 const GUIDES = {
@@ -951,7 +951,8 @@ function appendUserBubble(msg) {
   const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
   const avatar = USER.avatar || assistantAvatarFallback;
 
-
+}
+});
 
 
 
@@ -5444,3 +5445,4 @@ function openService(serviceName) {
   }
 
  
+
