@@ -932,8 +932,7 @@ function appendAssistantBubble(html) {
   chat.innerHTML += `<div class="bg-white border p-3 rounded-lg w-fit max-w-xs text-left">${html}</div>`;
   chat.scrollTop = chat.scrollHeight;
 }
-// simple html escape for user message
-function escapeHtml(text) { return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
 
 // ---------- Tab activation (keeps your nav hiding logic) ----------
 function activateTab(tabId) {
@@ -5603,6 +5602,7 @@ function openService(serviceName) {
 
 
                     
+
 
 
 
