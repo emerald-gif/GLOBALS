@@ -1012,15 +1012,27 @@ async function sendMessage() {
   const msg = input.value.trim();
   if (!msg) return;
   input.value = "";
+
+  // show user bubble
   appendUserBubble(msg);
 
-  // If we have a configured key (NOT recommended client-side) use it; otherwise use local fallback
-  if (!OPENAI_API_KEY) {
-    // local assistant (rule-based)
-    const replyHtml = localAssistantResponse(msg);
-    appendAssistantBubble(replyHtml);
-    return;
-  }
+  // show typing indicator
+  showTypingIndicator();
+
+  // wait 3–5 seconds before showing reply
+  const delay = Math.floor(Math.random() * (5000 - 3000 + 1)) + 3000; 
+  setTimeout(() => {
+    hideTypingIndicator();
+
+    if (!OPENAI_API_KEY) {
+      const replyHtml = localAssistantResponse(msg);
+      appendAssistantBubble(replyHtml);
+      return;
+    }
+
+    // (Optional: your OpenAI fetch logic goes here for real AI)
+  }, delay);
+}
 
   // If OPENAI_API_KEY set (for advanced users only) -> call OpenAI (recommend server-side instead)
   const chatBox = document.getElementById("chatMessages");
@@ -1114,22 +1126,43 @@ function openUploadDrawer() {
   document.getElementById("uploadDrawer").classList.remove("hidden");
 }
 
-// Handle image after user picks one
-function handleImageUpload(file) {
+
+
+
+// Handle image upload 
+
+
+async function handleImageUpload(file, userId) {
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    appendUserImageBubble(e.target.result);
-  };
-  reader.readAsDataURL(file);
+
+  try {
+    // 1. Upload to Cloudinary
+    const cloudRes = await uploadToCloudinary(file);
+    const imageUrl = cloudRes.secure_url;
+
+    // 2. Show bubble immediately
+    appendUserImageBubble(imageUrl);
+
+    // 3. Save to Firebase support collection
+    await firebase.firestore().collection("support").add({
+      userId: userId,
+      type: "image",
+      url: imageUrl,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+  } catch (err) {
+    console.error("Upload error:", err);
+    appendAssistantBubble(`<div class="text-red-500 text-sm">❌ Failed to upload image. Try again.</div>`);
+  }
 }
 
 // Append image bubble for user
-function appendUserImageBubble(imgSrc) {
+function appendUserImageBubble(imgUrl) {
   const chat = document.getElementById("chatMessages");
   chat.innerHTML += `
     <div class="flex justify-end">
-      <img src="${imgSrc}" class="max-w-[200px] rounded-xl shadow-md"/>
+      <img src="${imgUrl}" class="max-w-[200px] rounded-2xl shadow-md border"/>
     </div>
   `;
   chat.scrollTop = chat.scrollHeight;
@@ -1162,6 +1195,32 @@ function appendAssistantBubble(html) {
   `;
   chat.scrollTop = chat.scrollHeight;
 }
+
+
+
+
+
+function showTypingIndicator() {
+  const chat = document.getElementById("chatMessages");
+  const typingId = "typing-indicator";
+  if (document.getElementById(typingId)) return; // prevent duplicates
+  chat.innerHTML += `
+    <div id="${typingId}" class="flex justify-start">
+      <div class="bg-white border px-4 py-2 rounded-2xl max-w-xs text-sm shadow-md flex gap-1">
+        <span class="dot w-2 h-2 bg-gray-500 rounded-full animate-bounce"></span>
+        <span class="dot w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-150"></span>
+        <span class="dot w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-300"></span>
+      </div>
+    </div>
+  `;
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function hideTypingIndicator() {
+  const el = document.getElementById("typing-indicator");
+  if (el) el.remove();
+}
+
 
 
 
@@ -5660,6 +5719,7 @@ function openService(serviceName) {
 
 
                     
+
 
 
 
