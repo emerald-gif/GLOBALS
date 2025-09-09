@@ -6,6 +6,7 @@
   <title>Dashboard | Globals</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+  <link rel="shortcut icon" href="META1.jpg" type="image/jpg">
   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="styles.css">
@@ -340,11 +341,23 @@
   <div class="flex items-center gap-4">
     
     <!-- AI Chat -->
-    <button onclick="activateTab('contactus')" class="text-gray-700 hover:text-blue-600 transition">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 18v-6a9 9 0 1118 0v6a3 3 0 01-3 3h-1v-4h-2v4H9v-4H7v4H6a3 3 0 01-3-3z" />
-      </svg>
-    </button>
+    <button onclick="activateTab('contactus')" 
+  class="relative flex items-center justify-center p-2 text-gray-700 hover:text-blue-600 transition">
+
+  <!-- Headset Icon -->
+  <svg xmlns="http://www.w3.org/2000/svg" 
+       class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+    <path stroke-linecap="round" stroke-linejoin="round" 
+          d="M12 1a9 9 0 00-9 9v5a3 3 0 003 3h1v-4H5v-4a7 7 0 1114 0v4h-2v4h1a3 3 0 003-3v-5a9 9 0 00-9-9z" />
+    <path stroke-linecap="round" stroke-linejoin="round" 
+          d="M8 15h.01M16 15h.01" />
+  </svg>
+
+  <!-- HELP bubble -->
+  <span class="absolute -top-2 -right-4 bg-pink-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
+    HELP
+  </span>
+</button>
 
     <!-- 🔔 Notifications -->
     <div class="relative">
@@ -3778,6 +3791,7 @@
 </body>
 
 </html>
+
 
 
 
