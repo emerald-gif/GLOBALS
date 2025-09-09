@@ -5819,3 +5819,24 @@ function hideAirtimeMsg(id){ const e=document.getElementById(id); if(e){ e.class
 
 
 
+function airtimeClose(){ 
+  airtimeHideAll();
+  document.body.classList.remove('overflow-hidden');
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
