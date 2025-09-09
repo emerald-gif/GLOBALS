@@ -848,9 +848,6 @@ document.addEventListener("DOMContentLoaded", function () {
                                                             // GLOBALS CHAT ASSISTANT LOGIC
 
 
-
-
-
 // ---------- CONFIG ----------
 const OPENAI_API_KEY = "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"; // leave empty for local fallback
 
@@ -936,7 +933,7 @@ function setUserProfileFromFirebase() {
           document.getElementById('userHeaderAvatar').classList.remove('hidden');
           document.getElementById('userHeaderName').classList.remove('hidden');
         }
-        // Per request: set assistant avatar to the same profile picture if available
+        // assistant avatar uses user profile if available
         const a = document.getElementById('assistantAvatar');
         a.src = USER.avatar || assistantAvatarFallback;
       }
@@ -946,14 +943,90 @@ function setUserProfileFromFirebase() {
   }
 }
 
+// ---------- Chat bubbles ----------
 function appendUserBubble(msg) {
   const chat = document.getElementById('chatMessages');
   const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
   const avatar = USER.avatar || assistantAvatarFallback;
 
+  chat.innerHTML += `
+    <div class="flex items-end justify-end space-x-2 mt-2">
+      <div class="bg-blue-500 text-white p-3 rounded-2xl max-w-xs text-sm">
+        ${escapeHtml(msg)}
+        <div class="text-xs text-gray-200 mt-1 text-right">${time}</div>
+      </div>
+      <img src="${avatar}" class="w-8 h-8 rounded-full" alt="you">
+    </div>
+  `;
+
+  chat.scrollTop = chat.scrollHeight;
 }
 
+function appendAssistantBubble(msg, isHtml = false) {
+  const chat = document.getElementById('chatMessages');
+  const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  const avatar = USER.avatar || assistantAvatarFallback;
 
+  chat.innerHTML += `
+    <div class="flex items-start space-x-2 mt-2">
+      <img src="${avatar}" id="assistantAvatar" class="w-8 h-8 rounded-full" alt="assistant">
+      <div class="bg-gray-100 p-3 rounded-2xl max-w-xs text-sm">
+        ${isHtml ? msg : escapeHtml(msg)}
+        <div class="text-xs text-gray-400 mt-1">${time}</div>
+      </div>
+    </div>
+  `;
+
+  chat.scrollTop = chat.scrollHeight;
+}
+
+// ---------- Typing indicator ----------
+function showTypingIndicator() {
+  const chat = document.getElementById('chatMessages');
+  if (!document.getElementById("typing-indicator")) {
+    chat.innerHTML += `
+      <div id="typing-indicator" class="flex items-start space-x-2 mt-2">
+        <img src="${USER.avatar || assistantAvatarFallback}" class="w-8 h-8 rounded-full" alt="assistant">
+        <div class="bg-gray-100 p-3 rounded-2xl max-w-xs text-sm">
+          <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
+        </div>
+      </div>
+    `;
+    chat.scrollTop = chat.scrollHeight;
+  }
+}
+
+function hideTypingIndicator() {
+  const el = document.getElementById("typing-indicator");
+  if (el) el.remove();
+}
+
+// ---------- Escape helper ----------
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// ---------- Topic handler ----------
+function openAITopic(topicKey) {
+  const content = GUIDES[topicKey];
+  if (!content) {
+    console.warn("No guide found for:", topicKey);
+    return;
+  }
+
+  appendUserBubble(`Show me: ${topicKey}`);
+  showTypingIndicator();
+
+  setTimeout(() => {
+    hideTypingIndicator();
+    appendAssistantBubble(content, true);
+  }, 2000);
+}
 
 
                                               // 🔄 Load and display selected language on page load(LANGUAGE SECTION)
@@ -5445,5 +5518,6 @@ function openService(serviceName) {
   }
 
  
+
 
 
