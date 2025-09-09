@@ -639,7 +639,7 @@
   <div class="grid grid-cols-4 gap-4">
 
     <!-- Airtime -->
-    <div onclick="activateTab('airtime-screen')" 
+    <div onclick="airtimeOpen()" 
          class="flex flex-col items-center cursor-pointer group">
       <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
                   bg-white border border-gray-100
@@ -850,15 +850,13 @@
                                                            <!-- 📱 Airtime Screen -->
 
 
-
-
-<!-- 🌐 Airtime Sheet (hidden until opened) -->
-<div id="airtime-screen" class="tab-section hidden fixed inset-0 z-40">
+<!-- Airtime Overlays (unique class -> won't clash with dashboard) -->
+<!-- 1) Airtime form -->
+<div id="airtime-screen" class="airtime-overlay hidden fixed inset-0 z-50">
   <div class="flex min-h-full flex-col bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-700">
 
     <!-- Header -->
     <div class="px-6 pt-8 pb-4 flex items-center justify-between text-white">
-      <!-- Close & optionally route back to your app's home -->
       <button onclick="airtimeClose()" class="flex items-center gap-1 font-medium text-lg">← Back</button>
       <h2 class="text-xl font-bold">Buy Airtime</h2>
       <div class="w-8"></div>
@@ -870,25 +868,17 @@
       <div class="mb-8">
         <p class="text-sm font-semibold text-gray-500 mb-3">Choose Network</p>
         <div id="network-grid" class="grid grid-cols-4 gap-4">
-          <button data-code="01" onclick="airtimeSelectNetwork('01', this)"
-                  class="bg-white/80 rounded-2xl p-3 shadow-sm hover:shadow-md transition text-center border border-transparent flex flex-col items-center gap-1">
-            <img src="MTN.jpg" class="w-12 h-12 rounded-full" />
-            <p class="text-xs font-medium">MTN</p>
+          <button data-code="01" onclick="airtimeSelectNetwork('01', this)" class="net-btn">
+            <img src="MTN.jpg" class="w-12 h-12 rounded-full" /><p class="text-xs font-medium">MTN</p>
           </button>
-          <button data-code="02" onclick="airtimeSelectNetwork('02', this)"
-                  class="bg-white/80 rounded-2xl p-3 shadow-sm hover:shadow-md transition text-center border border-transparent flex flex-col items-center gap-1">
-            <img src="GLO.jpg" class="w-12 h-12 rounded-full" />
-            <p class="text-xs font-medium">GLO</p>
+          <button data-code="02" onclick="airtimeSelectNetwork('02', this)" class="net-btn">
+            <img src="GLO.jpg" class="w-12 h-12 rounded-full" /><p class="text-xs font-medium">GLO</p>
           </button>
-          <button data-code="04" onclick="airtimeSelectNetwork('04', this)"
-                  class="bg-white/80 rounded-2xl p-3 shadow-sm hover:shadow-md transition text-center border border-transparent flex flex-col items-center gap-1">
-            <img src="AIRTEL.jpg" class="w-12 h-12 rounded-full" />
-            <p class="text-xs font-medium">Airtel</p>
+          <button data-code="04" onclick="airtimeSelectNetwork('04', this)" class="net-btn">
+            <img src="AIRTEL.jpg" class="w-12 h-12 rounded-full" /><p class="text-xs font-medium">Airtel</p>
           </button>
-          <button data-code="03" onclick="airtimeSelectNetwork('03', this)"
-                  class="bg-white/80 rounded-2xl p-3 shadow-sm hover:shadow-md transition text-center border border-transparent flex flex-col items-center gap-1">
-            <img src="9MOBILE.jpg" class="w-12 h-12 rounded-full" />
-            <p class="text-xs font-medium">9mobile</p>
+          <button data-code="03" onclick="airtimeSelectNetwork('03', this)" class="net-btn">
+            <img src="9MOBILE.jpg" class="w-12 h-12 rounded-full" /><p class="text-xs font-medium">9mobile</p>
           </button>
         </div>
       </div>
@@ -905,50 +895,45 @@
       <div class="mb-8">
         <p class="text-sm font-semibold text-gray-500 mb-2">Quick Top-Up</p>
         <div class="grid grid-cols-3 gap-3">
-          <button onclick="airtimeSetAmount(100)"
-                  class="rounded-2xl py-3 font-semibold transition text-indigo-700 border border-white/40 bg-white/30 backdrop-blur-md hover:bg-white/50">₦100</button>
-          <button onclick="airtimeSetAmount(200)"
-                  class="rounded-2xl py-3 font-semibold transition text-indigo-700 border border-white/40 bg-white/30 backdrop-blur-md hover:bg-white/50">₦200</button>
-          <button onclick="airtimeSetAmount(500)"
-                  class="rounded-2xl py-3 font-semibold transition text-indigo-700 border border-white/40 bg-white/30 backdrop-blur-md hover:bg-white/50">₦500</button>
-          <button onclick="airtimeSetAmount(1000)"
-                  class="rounded-2xl py-3 font-semibold transition text-indigo-700 border border-white/40 bg-white/30 backdrop-blur-md hover:bg-white/50">₦1k</button>
-          <button onclick="airtimeSetAmount(2000)"
-                  class="rounded-2xl py-3 font-semibold transition text-indigo-700 border border-white/40 bg-white/30 backdrop-blur-md hover:bg-white/50">₦2k</button>
-          <button onclick="airtimeSetAmount(5000)"
-                  class="rounded-2xl py-3 font-semibold transition text-indigo-700 border border-white/40 bg-white/30 backdrop-blur-md hover:bg-white/50">₦5k</button>
+          <button onclick="airtimeSetAmount(100)" class="amt-btn">₦100</button>
+          <button onclick="airtimeSetAmount(200)" class="amt-btn">₦200</button>
+          <button onclick="airtimeSetAmount(500)" class="amt-btn">₦500</button>
+          <button onclick="airtimeSetAmount(1000)" class="amt-btn">₦1k</button>
+          <button onclick="airtimeSetAmount(2000)" class="amt-btn">₦2k</button>
+          <button onclick="airtimeSetAmount(5000)" class="amt-btn">₦5k</button>
         </div>
       </div>
 
-        <!-- Custom Amount -->
-<div class="mb-6">
-  <label class="block text-sm font-semibold text-gray-500 mb-2">Custom Amount</label>
-  <input type="number" id="airtime-amount" min="50" max="500000"
-         class="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-indigo-500 text-lg outline-none"
-         placeholder="Enter ₦50 - ₦500,000">
+      <!-- Custom Amount -->
+      <div class="mb-4">
+        <label class="block text-sm font-semibold text-gray-500 mb-2">Custom Amount</label>
+        <input type="number" id="airtime-amount" min="50" max="500000"
+               class="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-indigo-500 text-lg outline-none"
+               placeholder="Enter ₦50 - ₦500,000">
+      </div>
+
+      <!-- Continue Button (moved up immediately after Custom Amount) -->
+      <div class="mt-2">
+        <button id="airtime-continue" onclick="airtimeGoToConfirm()"
+                class="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-lg shadow-lg hover:opacity-90 transition">
+          Continue
+        </button>
+        <p id="airtime-error" class="text-sm text-red-600 mt-2 hidden"></p>
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- Continue Button (moved up) -->
-<div class="mt-4">
-  <button onclick="airtimeGoToConfirm()" 
-          class="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-lg shadow-lg hover:opacity-90 transition">
-    Continue
-  </button>
-  <p id="airtime-error" class="text-sm text-red-600 mt-2 hidden"></p>
-</div>
-</div> <!-- closes content -->
-
-<!-- 🌐 Confirm Airtime Screen -->
-<div id="confirm-airtime-screen" class="tab-section hidden fixed inset-0 z-40">
+<!-- Confirm overlay (separate, still an overlay) -->
+<div id="confirm-airtime-screen" class="airtime-overlay hidden fixed inset-0 z-50">
   <div class="flex min-h-full flex-col bg-gradient-to-br from-indigo-50 to-white">
     <div class="px-6 pt-8 pb-4 flex items-center justify-between">
-      <button onclick="airtimeShow('airtime-screen')" class="text-indigo-600 font-medium">← Back</button>
+      <button onclick="airtimeClose()" class="text-indigo-600 font-medium">← Back</button>
       <h2 class="text-xl font-bold text-gray-800">Confirm Purchase</h2>
       <div class="w-8"></div>
     </div>
 
     <div class="flex-1 bg-white rounded-t-3xl shadow-xl p-6 space-y-6 mx-4 overflow-y-auto">
-      <!-- Summary -->
       <div class="flex items-center gap-4">
         <img id="confirm-network-logo" src="" class="w-12 h-12 rounded-full shadow-md"/>
         <div class="flex-1">
@@ -972,7 +957,6 @@
         </div>
       </div>
 
-      <!-- PIN -->
       <div>
         <input type="password" id="confirm-pin" maxlength="6"
                class="w-full border border-gray-200 rounded-2xl px-4 py-4 text-center text-lg focus:ring-2 focus:ring-indigo-500"
@@ -980,17 +964,16 @@
         <p id="confirm-error" class="text-sm text-red-600 mt-2 hidden"></p>
       </div>
 
-      <!-- Actions -->
       <div class="flex gap-4 pt-2">
-        <button onclick="airtimeShow('airtime-screen')" class="flex-1 py-4 bg-gray-100 text-gray-700 rounded-2xl font-semibold hover:bg-gray-200">Back</button>
+        <button onclick="airtimeClose()" class="flex-1 py-4 bg-gray-100 text-gray-700 rounded-2xl font-semibold hover:bg-gray-200">Back</button>
         <button id="pay-btn" onclick="airtimePay()" class="flex-1 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-bold hover:opacity-90">Pay Now</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- 🌐 Success Screen -->
-<div id="success-screen" class="tab-section hidden fixed inset-0 z-40">
+<!-- Success overlay -->
+<div id="success-screen" class="airtime-overlay hidden fixed inset-0 z-50">
   <div class="flex min-h-full items-center justify-center bg-gradient-to-b from-green-50 to-white p-6">
     <div class="text-center bg-white rounded-3xl shadow-xl p-8 max-w-sm w-full">
       <div class="mx-auto w-28 h-28 rounded-full bg-white shadow-lg flex items-center justify-center mb-6">
@@ -1004,6 +987,15 @@
     </div>
   </div>
 </div>
+
+<!-- Minimal styles used by the markup (Tailwind utilities assumed) -->
+<style>
+  .net-btn { background: rgba(255,255,255,0.8); border-radius: 1rem; padding: .75rem; text-align:center; }
+  .net-btn.ring { box-shadow: 0 6px 18px rgba(99,102,241,0.12); border: 2px solid rgba(99,102,241,0.3); }
+  .amt-btn { border-radius: 1rem; padding: .8rem; font-weight:600; backdrop-filter: blur(6px); }
+  .airtime-overlay.hidden { display:none; pointer-events:none; }
+  .airtime-overlay { pointer-events:auto; }
+</style>
 
 
 
@@ -3932,6 +3924,7 @@
 </body>
 
 </html>
+
 
 
 
