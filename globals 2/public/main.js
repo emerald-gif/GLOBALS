@@ -952,7 +952,7 @@ function appendUserBubble(msg) {
   const avatar = USER.avatar || assistantAvatarFallback;
 
 }
-});
+
 
 
 
@@ -5445,4 +5445,5 @@ function openService(serviceName) {
   }
 
  
+
 
