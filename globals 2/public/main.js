@@ -1108,6 +1108,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+// Open drawer (your existing drawer function should handle this)
+function openUploadDrawer() {
+  // Example trigger — replace with your actual drawer logic
+  document.getElementById("uploadDrawer").classList.remove("hidden");
+}
+
+// Handle image after user picks one
+function handleImageUpload(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    appendUserImageBubble(e.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+
+// Append image bubble for user
+function appendUserImageBubble(imgSrc) {
+  const chat = document.getElementById("chatMessages");
+  chat.innerHTML += `
+    <div class="flex justify-end">
+      <img src="${imgSrc}" class="max-w-[200px] rounded-xl shadow-md"/>
+    </div>
+  `;
+  chat.scrollTop = chat.scrollHeight;
+}
+
+
+
+
+
+function appendUserBubble(msg) {
+  const chat = document.getElementById("chatMessages");
+  chat.innerHTML += `
+    <div class="flex justify-end">
+      <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 rounded-2xl max-w-xs text-sm shadow-md">
+        ${escapeHtml(msg)}
+      </div>
+    </div>
+  `;
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function appendAssistantBubble(html) {
+  const chat = document.getElementById("chatMessages");
+  chat.innerHTML += `
+    <div class="flex justify-start">
+      <div class="bg-white border p-3 rounded-2xl max-w-xs text-sm shadow-md">
+        ${html}
+      </div>
+    </div>
+  `;
+  chat.scrollTop = chat.scrollHeight;
+}
+
+
+
+
 
 
                                               // 🔄 Load and display selected language on page load(LANGUAGE SECTION)
@@ -5602,6 +5660,7 @@ function openService(serviceName) {
 
 
                     
+
 
 
 
