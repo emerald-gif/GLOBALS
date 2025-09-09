@@ -1006,7 +1006,7 @@ function topicLabel(topic) {
   }
 }
 
-// ---------- Send message (uses OpenAI only when OPENAI_API_KEY is set; otherwise local rules) ----------
+// ---------- Send message ----------
 async function sendMessage() {
   const input = document.getElementById("userMessage");
   const msg = input.value.trim();
@@ -1020,8 +1020,9 @@ async function sendMessage() {
   showTypingIndicator();
 
   // wait 3–5 seconds before showing reply
-  const delay = Math.floor(Math.random() * (5000 - 3000 + 1)) + 3000; 
-  setTimeout(() => {
+  const delay = Math.floor(Math.random() * (5000 - 3000 + 1)) + 3000;
+
+  setTimeout(async () => {
     hideTypingIndicator();
 
     if (!OPENAI_API_KEY) {
@@ -1030,46 +1031,46 @@ async function sendMessage() {
       return;
     }
 
-    // (Optional: your OpenAI fetch logic goes here for real AI)
+    // ---------- Real OpenAI fetch (only runs if API key is set) ----------
+    const chatBox = document.getElementById("chatMessages");
+    const loadingEl = document.createElement("div");
+    loadingEl.className = "text-sm text-gray-400";
+    loadingEl.id = "loading";
+    loadingEl.textContent = "Typing...";
+    chatBox.appendChild(loadingEl);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    try {
+      const systemPrompt = `You are the Globals support assistant. Only answer platform-related questions: Payments, Withdrawals, Tasks, eBooks, Referrals. If the user's question is unrelated, ask them if they meant one of those topics.`;
+
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: msg }
+          ],
+          max_tokens: 400
+        }),
+      });
+
+      const data = await res.json();
+      const reply = data?.choices?.[0]?.message?.content || "I couldn't understand that.";
+
+      loadingEl.remove();
+      appendAssistantBubble(escapeHtml(reply).replace(/\n/g, '<br/>'));
+    } catch (err) {
+      if (document.getElementById("loading")) document.getElementById("loading").remove();
+      appendAssistantBubble(`<div class="text-red-500">❌ Error contacting AI. Showing local help instead.</div>`);
+      appendAssistantBubble(localAssistantResponse(msg));
+    }
+
   }, delay);
-}
-
-  // If OPENAI_API_KEY set (for advanced users only) -> call OpenAI (recommend server-side instead)
-  const chatBox = document.getElementById("chatMessages");
-  // show loading text
-  const loadingEl = document.createElement("div");
-  loadingEl.className = "text-sm text-gray-400";
-  loadingEl.id = "loading";
-  loadingEl.textContent = "Typing...";
-  chatBox.appendChild(loadingEl);
-  chatBox.scrollTop = chatBox.scrollHeight;
-
-  try {
-    const systemPrompt = `You are the Globals support assistant. Only answer platform-related questions: Payments, Withdrawals, Tasks, eBooks, Referrals. If the user's question is unrelated, ask them if they meant one of those topics (and suggest the topics). Keep answers friendly and short.`;
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini", // change as you like on server
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: msg }
-        ],
-        max_tokens: 400
-      }),
-    });
-    const data = await res.json();
-    const reply = data?.choices?.[0]?.message?.content || "I couldn't understand that.";
-    loadingEl.remove();
-    appendAssistantBubble(escapeHtml(reply).replace(/\n/g, '<br/>'));
-  } catch (err) {
-    if (document.getElementById("loading")) document.getElementById("loading").remove();
-    appendAssistantBubble(`<div class="text-red-500">❌ Error contacting AI. Showing local help instead.</div>`);
-    appendAssistantBubble(localAssistantResponse(msg));
-  }
 }
 
 // ---------- Local assistant logic (simple keyword matching) ----------
@@ -5719,6 +5720,7 @@ function openService(serviceName) {
 
 
                     
+
 
 
 
