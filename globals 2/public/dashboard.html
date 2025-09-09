@@ -920,21 +920,24 @@
         </div>
       </div>
 
-      <!-- Custom Amount -->
-<div class="mb-6">
-  <label class="block text-sm font-semibold text-gray-500 mb-2">Custom Amount</label>
-  <input type="number" id="airtime-amount" min="50" max="500000"
-         class="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-indigo-500 text-lg outline-none"
-         placeholder="Enter ₦50 - ₦500,000">
-</div>
+        <!-- Custom Amount -->
+      <div class="mb-24">
+        <label class="block text-sm font-semibold text-gray-500 mb-2">Custom Amount</label>
+        <input type="number" id="airtime-amount" min="50" max="500000"
+               class="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-indigo-500 text-lg outline-none"
+               placeholder="Enter ₦50 - ₦500,000">
+      </div>
 
-<!-- Continue Button (moved up here) -->
-<div class="mt-4">
-  <button onclick="goToConfirmScreen()" 
-          class="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-lg shadow-lg hover:opacity-90 transition">
-    Continue
-  </button>
-  <p id="airtime-error" class="text-sm text-red-600 mt-2 hidden"></p>
+      <p id="airtime-error" class="text-sm text-red-600 mt-2 hidden"></p>
+    </div>
+
+    <!-- Bottom Action -->
+    <div class="p-6 bg-white border-t">
+      <button onclick="airtimeGoToConfirm()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-lg shadow-lg hover:opacity-90 transition">
+        Continue
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- 🌐 Confirm Airtime Screen -->
@@ -3931,6 +3934,7 @@
 </body>
 
 </html>
+
 
 
 
