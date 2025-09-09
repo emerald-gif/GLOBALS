@@ -1001,15 +1001,6 @@ function hideTypingIndicator() {
   if (el) el.remove();
 }
 
-// ---------- Escape helper ----------
-function escapeHtml(str) {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
 
 // ---------- Topic handler ----------
 function openAITopic(topicKey) {
@@ -5518,6 +5509,7 @@ function openService(serviceName) {
   }
 
  
+
 
 
 
