@@ -1138,8 +1138,8 @@ async function handleImageUpload(file, userId) {
 
   try {
     // 1. Upload to Cloudinary
-    const cloudRes = await uploadToCloudinary(file);
-    const imageUrl = cloudRes.secure_url;
+   const imageUrl = await
+   uploadToCloudinary(file);
 
     // 2. Show bubble immediately
     appendUserImageBubble(imageUrl);
@@ -5720,6 +5720,7 @@ function openService(serviceName) {
 
 
                     
+
 
 
 
