@@ -854,7 +854,7 @@ document.addEventListener("DOMContentLoaded", function () {
 /* IMPORTANT: For temporary local assistant we leave the API key empty.
    Do NOT store a secret OpenAI API key in client-side JS for production.
 */
-const OPENAI_API_KEY = "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"; // <-- leave empty for local fallback
+const OPENAI_API_KEY = ""; // <-- leave empty for local fallback
 
 /* ---------- GUIDE CONTENT (HTML strings) ---------- */
 const GUIDES = {
@@ -5618,6 +5618,7 @@ function openService(serviceName) {
   }
 
  
+
 
 
 
