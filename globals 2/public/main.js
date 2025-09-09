@@ -5870,3 +5870,212 @@ function openService(serviceName) {
 
 
 
+
+
+(() => {
+  // Expose globally
+  window.dataOpen = dataOpen;
+  window.dataClose = dataClose;
+  window.dataSelectNetwork = dataSelectNetwork;
+  window.dataSelectPlan = dataSelectPlan;
+  window.dataGoToConfirm = dataGoToConfirm;
+  window.dataPay = dataPay;
+  window.dataReset = dataReset;
+
+  // State
+  let dataSelectedNetwork = '';
+  let dataSelectedPlan = null;
+  let dataCurrentUser = null;
+  let dataUserRef = null;
+
+  const DATA_SCREENS = ['data-screen','confirm-data-screen','data-success-screen'];
+  const DATA_NETWORKS = {
+    '01': { label: 'MTN', logo: 'MTN.jpg' },
+    '02': { label: 'GLO', logo: 'GLO.jpg' },
+    '04': { label: 'Airtel', logo: 'AIRTEL.jpg' },
+    '03': { label: '9mobile', logo: '9MOBILE.jpg' }
+  };
+
+  // Example Data Bundles (you can expand later or fetch from DB)
+  const DATA_PLANS = {
+    '01': [
+      { id:'m1', label:'500MB - ₦200', amount:200 },
+      { id:'m2', label:'1.5GB - ₦1000', amount:1000 },
+      { id:'m3', label:'3GB - ₦1500', amount:1500 }
+    ],
+    '02': [
+      { id:'g1', label:'1GB - ₦500', amount:500 },
+      { id:'g2', label:'2.9GB - ₦1000', amount:1000 }
+    ],
+    '04': [
+      { id:'a1', label:'1.5GB - ₦1000', amount:1000 },
+      { id:'a2', label:'3GB - ₦1500', amount:1500 }
+    ],
+    '03': [
+      { id:'9a', label:'1GB - ₦500', amount:500 },
+      { id:'9b', label:'2GB - ₦1000', amount:1000 }
+    ]
+  };
+
+  function fmt(n){ return Number(n).toLocaleString(); }
+
+  function _showScreen(id){
+    DATA_SCREENS.forEach(s=>{
+      const el = document.getElementById(s);
+      if(!el) return;
+      if(s===id){ el.classList.remove('hidden'); el.setAttribute('aria-hidden','false'); }
+      else { el.classList.add('hidden'); el.setAttribute('aria-hidden','true'); }
+    });
+    document.body.classList.add('overflow-hidden');
+  }
+  function _hideAll(){
+    DATA_SCREENS.forEach(s=>{
+      const el=document.getElementById(s);
+      if(el){ el.classList.add('hidden'); el.setAttribute('aria-hidden','true'); }
+    });
+    document.body.classList.remove('overflow-hidden');
+  }
+
+  function dataOpen(){
+    _showScreen('data-screen');
+    setTimeout(()=>{ const i=document.getElementById('data-phone'); if(i) i.focus(); },80);
+  }
+  function dataClose(){ _hideAll(); if(window.showScreen) try{showScreen('home')}catch{} }
+
+  // Firebase
+  if(typeof firebase!=='undefined' && typeof db!=='undefined'){
+    firebase.auth().onAuthStateChanged(u=>{
+      dataCurrentUser=u;
+      dataUserRef=u? db.collection('users').doc(u.uid):null;
+    });
+  }
+
+  function dataSelectNetwork(code){
+    dataSelectedNetwork=code;
+    document.querySelectorAll('#data-network-grid button').forEach(b=>{
+      if(b.dataset.code===code) b.classList.add('ring','ring-indigo-500');
+      else b.classList.remove('ring','ring-indigo-500');
+    });
+    // load plans
+    const planWrap=document.getElementById('data-plans');
+    planWrap.innerHTML='';
+    (DATA_PLANS[code]||[]).forEach(plan=>{
+      const btn=document.createElement('button');
+      btn.className='plan-btn';
+      btn.textContent=plan.label;
+      btn.onclick=()=>dataSelectPlan(plan);
+      planWrap.appendChild(btn);
+    });
+  }
+
+  function dataSelectPlan(plan){
+    dataSelectedPlan=plan;
+    document.querySelectorAll('#data-plans button').forEach(b=>{
+      if(b.textContent===plan.label) b.classList.add('ring','ring-indigo-500');
+      else b.classList.remove('ring','ring-indigo-500');
+    });
+  }
+
+  function showDataMsg(id,text){ const e=document.getElementById(id); if(e){ e.textContent=text; e.classList.remove('hidden'); } }
+  function hideDataMsg(id){ const e=document.getElementById(id); if(e) e.classList.add('hidden'); }
+
+  async function dataGoToConfirm(){
+    hideDataMsg('data-error');
+    const network=dataSelectedNetwork;
+    const phone=(document.getElementById('data-phone')?.value||'').trim();
+    const plan=dataSelectedPlan;
+
+    if(!network){ showDataMsg('data-error','Select a network.'); return; }
+    if(!plan){ showDataMsg('data-error','Select a data plan.'); return; }
+    if(!phone||!/^0\d{10}$/.test(phone)){ showDataMsg('data-error','Enter valid 11-digit number.'); return; }
+    if(!dataCurrentUser||!dataUserRef){ showDataMsg('data-error','Sign in required.'); return; }
+
+    try{
+      const doc=await dataUserRef.get();
+      if(!doc.exists){ showDataMsg('data-error','User record missing'); return; }
+      const u=doc.data();
+      if(!u||!u.pin){ showDataMsg('data-error','Set your PIN first'); return; }
+
+      const net=DATA_NETWORKS[network];
+      document.getElementById('confirm-data-network').innerText=net.label;
+      document.getElementById('confirm-data-phone').innerText=phone;
+      document.getElementById('confirm-data-plan').innerText=plan.label;
+      document.getElementById('confirm-data-amount').innerText='₦'+fmt(plan.amount);
+      document.getElementById('confirm-data-balance').innerText='₦'+fmt(u.balance||0);
+      document.getElementById('confirm-data-logo').src=net.logo;
+
+      const c=document.getElementById('confirm-data-screen');
+      c.dataset.network=network;
+      c.dataset.phone=phone;
+      c.dataset.planId=plan.id;
+      c.dataset.amount=plan.amount;
+
+      _showScreen('confirm-data-screen');
+    }catch(e){ console.error(e); showDataMsg('data-error','Could not fetch account'); }
+  }
+
+  async function dataPay(){
+    hideDataMsg('confirm-data-error');
+    const pin=(document.getElementById('confirm-data-pin')?.value||'').trim();
+    if(!pin){ showDataMsg('confirm-data-error','Enter PIN'); return; }
+
+    const c=document.getElementById('confirm-data-screen');
+    const network=c?.dataset.network;
+    const phone=c?.dataset.phone;
+    const amount=parseInt(c?.dataset.amount||0,10);
+
+    if(!dataUserRef||!dataCurrentUser){ showDataMsg('confirm-data-error','Sign in required'); return; }
+    if(!network||!phone||!amount){ showDataMsg('confirm-data-error','Missing transaction details'); return; }
+
+    const btn=document.getElementById('data-pay-btn');
+    btn.disabled=true; const orig=btn.innerHTML; btn.innerHTML='Processing...';
+
+    try{
+      await db.runTransaction(async tx=>{
+        const uSnap=await tx.get(dataUserRef);
+        if(!uSnap.exists) throw new Error('USER_NOT_FOUND');
+        const u=uSnap.data();
+        if(String(u.pin)!==String(pin)) throw new Error('INCORRECT_PIN');
+        if((u.balance||0)<amount) throw new Error('INSUFFICIENT_BAL');
+        tx.update(dataUserRef,{balance:(u.balance||0)-amount});
+
+        const billsRef=db.collection('bill_submissions');
+        const newBill=billsRef.doc();
+        tx.set(newBill,{
+          userId:dataCurrentUser.uid,
+          type:'data',
+          networkCode:network,
+          phone, amount,
+          status:'submitted',
+          processed:false,
+          createdAt:firebase.firestore.FieldValue.serverTimestamp()
+        });
+      });
+      _showScreen('data-success-screen');
+    }catch(err){
+      console.error(err);
+      if(err.message==='INCORRECT_PIN') showDataMsg('confirm-data-error','Incorrect PIN');
+      else if(err.message==='INSUFFICIENT_BAL') showDataMsg('confirm-data-error','Insufficient balance');
+      else showDataMsg('confirm-data-error','Transaction failed');
+    }finally{ btn.disabled=false; btn.innerHTML=orig; }
+  }
+
+  function dataReset(){
+    document.getElementById("data-phone").value="";
+    const pin=document.getElementById("confirm-data-pin"); if(pin) pin.value="";
+    dataSelectedPlan=null; dataSelectedNetwork='';
+    document.getElementById("data-plans").innerHTML='';
+    _showScreen('data-screen');
+  }
+
+})();
+
+
+
+
+
+
+
+
+
+
