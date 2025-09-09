@@ -854,7 +854,7 @@ document.addEventListener("DOMContentLoaded", function () {
 /* IMPORTANT: For temporary local assistant we leave the API key empty.
    Do NOT store a secret OpenAI API key in client-side JS for production.
 */
-const OPENAI_API_KEY = ""; // <-- leave empty for local fallback
+const OPENAI_API_KEY = "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"; // <-- leave empty for local fallback
 
 /* ---------- GUIDE CONTENT (HTML strings) ---------- */
 const GUIDES = {
@@ -916,16 +916,7 @@ const GUIDES = {
   `
 };
 
-/* ---------- Helpers ---------- */
-function escapeHtml(str) {
-  if (str == null) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+
 
 function showElement(id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); }
 function hideElement(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
@@ -5627,6 +5618,7 @@ function openService(serviceName) {
   }
 
  
+
 
 
 
