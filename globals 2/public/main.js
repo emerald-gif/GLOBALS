@@ -305,23 +305,18 @@ function cardHtml(tx) {
       ? "text-red-600"
       : "text-yellow-600";
 
-  const amountText = formatAmount(tx.amount);
-  const statusText = (tx.status || "unknown").toLowerCase();
-  const desc = tx.description || tx.meta?.desc || "";
-
   return `
-    <div onclick="openTransactionDetails('${tx.id}')"
-         class="cursor-pointer bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition">
+    <div class="cursor-pointer bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition"
+         onclick="openTransactionDetails('${tx.id || ""}')">
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm font-semibold text-gray-900">${tx.type || "Unknown"}</p>
-          <p class="text-xs text-gray-500 mt-1">${desc}</p>
           <p class="text-xs text-gray-400 mt-1">${formatDatePretty(date)}</p>
         </div>
         <div class="text-right">
-          <p class="text-base font-bold ${amountClass}">${amountText}</p>
+          <p class="text-base font-bold ${amountClass}">${formatAmount(tx.amount)}</p>
           <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${amountClass} bg-opacity-10">
-            ${statusText}
+            ${tx.status || "—"}
           </span>
         </div>
       </div>
@@ -350,42 +345,39 @@ function renderTransactions(list) {
    Open Transaction Details Screen
    ---------------------- */
 function openTransactionDetails(id) {
+  console.log("🔍 Opening details for ID:", id);
+
   const tx = transactionsCache.find(t => t.id === id);
-  if (!tx) return;
+  if (!tx) {
+    console.error("❌ Transaction not found in cache", transactionsCache);
+    return;
+  }
 
   const tsFields = tx.timestamp || tx.createdAt || tx.time || tx.created_at || null;
   const date = parseTimestamp(tsFields);
 
   document.getElementById("transaction-details-content").innerHTML = `
     <div class="bg-white rounded-2xl p-6 shadow-sm space-y-4">
-      <div class="flex justify-between items-center">
-        <p class="text-sm text-gray-500">Type</p>
-        <p class="text-base font-semibold text-gray-900">${tx.type || "Unknown"}</p>
+      <div class="flex justify-between">
+        <span class="text-sm text-gray-500">Type</span>
+        <span class="text-base font-semibold text-gray-900">${tx.type}</span>
       </div>
-      <div class="flex justify-between items-center">
-        <p class="text-sm text-gray-500">Amount</p>
-        <p class="text-base font-semibold text-gray-900">${formatAmount(tx.amount)}</p>
+      <div class="flex justify-between">
+        <span class="text-sm text-gray-500">Amount</span>
+        <span class="text-base font-semibold">${formatAmount(tx.amount)}</span>
       </div>
-      <div class="flex justify-between items-center">
-        <p class="text-sm text-gray-500">Status</p>
-        <p class="text-sm font-medium capitalize">${tx.status || "—"}</p>
+      <div class="flex justify-between">
+        <span class="text-sm text-gray-500">Status</span>
+        <span class="capitalize">${tx.status}</span>
       </div>
-      <div class="flex justify-between items-center">
-        <p class="text-sm text-gray-500">Date</p>
-        <p class="text-sm">${formatDatePretty(date)}</p>
+      <div class="flex justify-between">
+        <span class="text-sm text-gray-500">Date</span>
+        <span>${formatDatePretty(date)}</span>
       </div>
-      <div class="flex justify-between items-center">
-        <p class="text-sm text-gray-500">Transaction ID</p>
-        <p class="text-xs text-gray-700">${tx.id}</p>
+      <div class="flex justify-between">
+        <span class="text-sm text-gray-500">Transaction ID</span>
+        <span class="text-xs">${tx.id}</span>
       </div>
-      ${
-        tx.description
-          ? `<div>
-              <p class="text-sm text-gray-500 mb-1">Description</p>
-              <p class="text-sm text-gray-800">${tx.description}</p>
-            </div>`
-          : ""
-      }
     </div>
   `;
 
@@ -448,42 +440,54 @@ function tryListenToCollection(collName, uid) {
       const q = baseRef.orderBy("timestamp", "desc");
       const unsub = q.onSnapshot(snapshot => {
         safeLog(`Snapshot from "${collName}" (with orderBy timestamp). docs:`, snapshot.size);
-        transactionsCache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        // client sort just in case
-        transactionsCache = sortByTimestampDesc(transactionsCache);
-        applyFiltersClient(categoryEl?.value || "All", statusEl?.value || "All");
+
+        // ✅ include doc.id
+        transactionsCache = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        // ✅ render directly
+        renderTransactions(transactionsCache);
       }, error => {
         console.error(`[TX-HISTORY] onSnapshot error for ${collName} (with orderBy):`, error.message || error);
+
         // fallback: unsubscribe and try without orderBy
         try { unsub(); } catch (e) {}
         safeLog(`FALLBACK: trying "${collName}" without orderBy`);
-        // try without orderBy
+
         const unsub2 = firebase.firestore().collection(collName).where("userId", "==", uid)
           .onSnapshot(snap2 => {
             safeLog(`Snapshot from "${collName}" (no orderBy). docs:`, snap2.size);
-            transactionsCache = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
-            transactionsCache = sortByTimestampDesc(transactionsCache);
-            applyFiltersClient(categoryEl?.value || "All", statusEl?.value || "All");
+
+            transactionsCache = snap2.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data(),
+            }));
+
+            renderTransactions(transactionsCache);
           }, err2 => {
             console.error(`[TX-HISTORY] onSnapshot fallback error for ${collName}:`, err2.message || err2);
           });
 
-        // resolve with unsub2
         resolve(unsub2);
       });
 
-      // if no immediate error thrown, resolve with unsub
       resolve(unsub);
     } catch (err) {
       console.error(`[TX-HISTORY] Exception trying onSnapshot with orderBy for ${collName}:`, err);
-      // try straight without orderBy
+
       try {
         const unsub3 = firebase.firestore().collection(collName).where("userId", "==", uid)
           .onSnapshot(snap3 => {
             safeLog(`Snapshot from "${collName}" (no orderBy, exception path). docs:`, snap3.size);
-            transactionsCache = snap3.docs.map(d => ({ id: d.id, ...d.data() }));
-            transactionsCache = sortByTimestampDesc(transactionsCache);
-            applyFiltersClient(categoryEl?.value || "All", statusEl?.value || "All");
+
+            transactionsCache = snap3.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data(),
+            }));
+
+            renderTransactions(transactionsCache);
           }, err3 => {
             console.error(`[TX-HISTORY] onSnapshot error (no orderBy) for ${collName}:`, err3.message || err3);
           });
@@ -495,7 +499,6 @@ function tryListenToCollection(collName, uid) {
     }
   });
 }
-
 /* ----------------------
    Start transactions listener, tries multiple collection names
    ---------------------- */
@@ -6448,6 +6451,7 @@ try {
   }
 
 })();
+
 
 
 
