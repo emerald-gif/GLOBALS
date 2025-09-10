@@ -246,147 +246,309 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
 
 // ---------- TRANSACTION HISTORY ----------
 
-// ================================
-// TRANSACTIONS FETCH (REAL-TIME)
-// ================================
-function initTransactions(user) {
-  console.log("✅ initTransactions called for UID:", user.uid);
+// -----------------------------
+// Robust Transactions Listener
+// -----------------------------
+// Works with firebase v8 (namespaced): firebase.auth(), firebase.firestore()
 
-  db.collection("Transaction")
-    .where("userId", "==", user.uid)
-    .orderBy("timestamp", "desc") // still keep, but we will catch error if missing
-    .onSnapshot(
-      (snapshot) => {
-        console.log("📥 Transactions snapshot received:", snapshot.size);
+let transactionsCache = [];
+let txUnsubscribe = null; // hold unsubscribe for current listener
+let activeCollectionName = null; // which collection we ended up using
 
-        transactionsCache = snapshot.docs.map((doc) => {
-          const data = doc.data();
-          console.log("📝 Transaction Doc:", doc.id, data);
-          return {
-            id: doc.id,
-            ...data,
-          };
-        });
+// DOM helpers
+const txListEl = document.getElementById("transactions-list");
+const txEmptyEl = document.getElementById("transactions-empty");
+const categoryEl = document.getElementById("category-filter");
+const statusEl = document.getElementById("status-filter");
 
-        renderTransactions(transactionsCache);
-      },
-      (error) => {
-        console.error("❌ Firestore onSnapshot error:", error);
+function safeLog(...args) { console.log("[TX-HISTORY]", ...args); }
 
-        // Fallback: retry without orderBy if error caused by missing timestamp
-        db.collection("Transaction")
-          .where("userId", "==", user.uid)
-          .onSnapshot((snapshot) => {
-            console.warn("⚠️ Retrying fetch without orderBy");
-            transactionsCache = snapshot.docs.map((doc) => ({
-              id: doc.id,
-              ...doc.data(),
-            }));
-            renderTransactions(transactionsCache);
-          });
-      }
-    );
+/* ----------------------
+   Timestamp helper
+   Accepts Firestore Timestamp, Date, number (ms), or string
+   ---------------------- */
+function parseTimestamp(val) {
+  if (!val) return null;
+  // Firestore Timestamp (has toDate)
+  if (typeof val === "object" && typeof val.toDate === "function") return val.toDate();
+  if (val instanceof Date) return val;
+  if (typeof val === "number") return new Date(val); // ms
+  if (typeof val === "string") {
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
 }
 
-// ================================
-// RENDER TRANSACTIONS
-// ================================
-function renderTransactions(transactions) {
-  console.log("🔄 Rendering Transactions:", transactions.length);
+function formatDatePretty(d) {
+  if (!d) return "No Timestamp";
+  return d.toLocaleString();
+}
 
-  const container = document.getElementById("transactions-list");
-  const emptyState = document.getElementById("transactions-empty");
+function formatAmount(amount) {
+  const n = Number(amount || 0);
+  const abs = Math.abs(n).toFixed(2);
+  const sign = n > 0 ? "+" : n < 0 ? "-" : "";
+  return `${sign}₦${abs}`;
+}
 
-  if (!container) {
-    console.error("❌ #transactions-list container not found in HTML");
-    return;
-  }
+/* ----------------------
+   Render single card HTML (Opay-like)
+   ---------------------- */
+function cardHtml(tx) {
+  const tsFields = tx.timestamp || tx.createdAt || tx.time || tx.created_at || null;
+  const date = parseTimestamp(tsFields);
+  const amountClass = tx.status === "successful" ? "text-green-600" : tx.status === "failed" ? "text-red-600" : "text-yellow-600";
+  const amountText = formatAmount(tx.amount);
+  const statusText = (tx.status || "unknown").toLowerCase();
 
-  container.innerHTML = "";
+  // description fallback
+  const desc = tx.description || tx.meta?.desc || "";
 
-  if (transactions.length === 0) {
-    container.classList.add("hidden");
-    emptyState.classList.remove("hidden");
-    console.log("ℹ️ No transactions to show");
-    return;
-  }
-
-  // Hide empty state when there are transactions
-  container.classList.remove("hidden");
-  emptyState.classList.add("hidden");
-
-  transactions.forEach((tx) => {
-    const amountColor =
-      tx.status === "successful"
-        ? "text-green-600"
-        : tx.status === "failed"
-        ? "text-red-600"
-        : "text-yellow-600";
-
-    const card = `
-      <div class="flex justify-between items-center p-4 border-b">
-        <div>
-          <p class="font-medium">${tx.type || "Unknown Type"}</p>
-          <p class="text-sm text-gray-500">${
-            tx.timestamp?.toDate
-              ? tx.timestamp.toDate().toLocaleString()
-              : "No Timestamp"
-          }</p>
-        </div>
-        <div class="text-right">
-          <p class="font-semibold ${amountColor}">₦${tx.amount || 0}</p>
-          <p class="text-xs ${amountColor}">${tx.status || "unknown"}</p>
-        </div>
+  return `
+    <div class="flex justify-between items-center p-4 border-b">
+      <div>
+        <div class="text-sm font-semibold text-gray-900">${tx.type || "Unknown"}</div>
+        <div class="text-xs text-gray-500 mt-1">${desc}</div>
+        <div class="text-xs text-gray-400 mt-1">${formatDatePretty(date)}</div>
       </div>
-    `;
-    container.innerHTML += card;
-  });
 
-  console.log("✅ Finished rendering transactions");
+      <div class="text-right">
+        <div class="text-lg font-bold ${amountClass}">${amountText}</div>
+        <div class="text-xs ${amountClass} mt-1 capitalize">${statusText}</div>
+      </div>
+    </div>
+  `;
 }
 
-// ================================
-// FILTERS HANDLER
-// ================================
-function applyFilters(category, status) {
-  console.log("🎛 Applying Filters:", category, status);
-
-  let filtered = [...transactionsCache];
-
-  if (category && category !== "All") {
-    filtered = filtered.filter(
-      (tx) => tx.type && tx.type.toLowerCase() === category.toLowerCase()
-    );
+/* ----------------------
+   Render list (with empty state)
+   ---------------------- */
+function renderTransactions(list) {
+  safeLog("Rendering transactions, count:", list.length);
+  if (!txListEl || !txEmptyEl) {
+    console.error("[TX-HISTORY] Missing DOM elements (#transactions-list or #transactions-empty).");
+    return;
   }
 
-  if (status && status !== "All") {
-    filtered = filtered.filter(
-      (tx) => tx.status && tx.status.toLowerCase() === status.toLowerCase()
-    );
+  if (!list.length) {
+    txListEl.classList.add("hidden");
+    txEmptyEl.classList.remove("hidden");
+    txListEl.innerHTML = "";
+    return;
   }
 
-  console.log("📊 Filtered Transactions Count:", filtered.length);
+  txEmptyEl.classList.add("hidden");
+  txListEl.classList.remove("hidden");
+
+  // Build HTML
+  let html = "";
+  list.forEach(tx => {
+    html += cardHtml(tx);
+  });
+  txListEl.innerHTML = html;
+}
+
+/* ----------------------
+   Client-side sort by best timestamp available (desc)
+   ---------------------- */
+function sortByTimestampDesc(arr) {
+  return arr.slice().sort((a, b) => {
+    const ta = parseTimestamp(a.timestamp || a.createdAt || a.time || a.created_at) || new Date(0);
+    const tb = parseTimestamp(b.timestamp || b.createdAt || b.time || b.created_at) || new Date(0);
+    return tb - ta;
+  });
+}
+
+/* ----------------------
+   Apply Category/Status filters (client-side)
+   ---------------------- */
+function applyFiltersClient(category, status) {
+  safeLog("Applying filters", { category, status });
+  let filtered = transactionsCache.slice();
+
+  if (category && category !== "All" && category !== "all") {
+    filtered = filtered.filter(tx => (tx.type || "").toLowerCase() === category.toLowerCase());
+  }
+  if (status && status !== "All" && status !== "all") {
+    filtered = filtered.filter(tx => (tx.status || "").toLowerCase() === status.toLowerCase());
+  }
+
+  // sort before render
+  filtered = sortByTimestampDesc(filtered);
   renderTransactions(filtered);
 }
 
-						
-	
-// ================================
-// FILTERS EVENTS
-// ================================
-document.getElementById("category-filter").addEventListener("change", (e) => {
-  const category = e.target.value;
-  const status = document.getElementById("status-filter").value;
-  applyFilters(category, status);
+/* ----------------------
+   Stop current listener if any
+   ---------------------- */
+function stopTransactionsListener() {
+  if (txUnsubscribe) {
+    try { txUnsubscribe(); } catch (e) { /* ignore */ }
+    txUnsubscribe = null;
+    safeLog("Stopped previous transactions listener.");
+  }
+}
+
+/* ----------------------
+   Try to attach onSnapshot to one collection name. 
+   Handles orderBy error by falling back to no orderBy.
+   ---------------------- */
+function tryListenToCollection(collName, uid) {
+  return new Promise((resolve) => {
+    safeLog(`Attempting listener on collection "${collName}" (with orderBy timestamp) for UID:`, uid);
+
+    const baseRef = firebase.firestore().collection(collName).where("userId", "==", uid);
+
+    // try with orderBy 'timestamp' first
+    try {
+      const q = baseRef.orderBy("timestamp", "desc");
+      const unsub = q.onSnapshot(snapshot => {
+        safeLog(`Snapshot from "${collName}" (with orderBy timestamp). docs:`, snapshot.size);
+        transactionsCache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        // client sort just in case
+        transactionsCache = sortByTimestampDesc(transactionsCache);
+        applyFiltersClient(categoryEl?.value || "All", statusEl?.value || "All");
+      }, error => {
+        console.error(`[TX-HISTORY] onSnapshot error for ${collName} (with orderBy):`, error.message || error);
+        // fallback: unsubscribe and try without orderBy
+        try { unsub(); } catch (e) {}
+        safeLog(`FALLBACK: trying "${collName}" without orderBy`);
+        // try without orderBy
+        const unsub2 = firebase.firestore().collection(collName).where("userId", "==", uid)
+          .onSnapshot(snap2 => {
+            safeLog(`Snapshot from "${collName}" (no orderBy). docs:`, snap2.size);
+            transactionsCache = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
+            transactionsCache = sortByTimestampDesc(transactionsCache);
+            applyFiltersClient(categoryEl?.value || "All", statusEl?.value || "All");
+          }, err2 => {
+            console.error(`[TX-HISTORY] onSnapshot fallback error for ${collName}:`, err2.message || err2);
+          });
+
+        // resolve with unsub2
+        resolve(unsub2);
+      });
+
+      // if no immediate error thrown, resolve with unsub
+      resolve(unsub);
+    } catch (err) {
+      console.error(`[TX-HISTORY] Exception trying onSnapshot with orderBy for ${collName}:`, err);
+      // try straight without orderBy
+      try {
+        const unsub3 = firebase.firestore().collection(collName).where("userId", "==", uid)
+          .onSnapshot(snap3 => {
+            safeLog(`Snapshot from "${collName}" (no orderBy, exception path). docs:`, snap3.size);
+            transactionsCache = snap3.docs.map(d => ({ id: d.id, ...d.data() }));
+            transactionsCache = sortByTimestampDesc(transactionsCache);
+            applyFiltersClient(categoryEl?.value || "All", statusEl?.value || "All");
+          }, err3 => {
+            console.error(`[TX-HISTORY] onSnapshot error (no orderBy) for ${collName}:`, err3.message || err3);
+          });
+        resolve(unsub3);
+      } catch (e2) {
+        console.error(`[TX-HISTORY] Failed to attach listener to ${collName}:`, e2);
+        resolve(null);
+      }
+    }
+  });
+}
+
+/* ----------------------
+   Start transactions listener, tries multiple collection names
+   ---------------------- */
+async function startTransactionsListenerForUser(uid) {
+  stopTransactionsListener();
+  activeCollectionName = null;
+
+  // try preferred names in order
+  const candidates = ["Transaction", "transaction", "transactions", "Transactions"];
+
+  for (const collName of candidates) {
+    // small delay to avoid race on error handling
+    try {
+      const unsub = await tryListenToCollection(collName, uid);
+      if (typeof unsub === "function") {
+        txUnsubscribe = unsub;
+        activeCollectionName = collName;
+        safeLog(`✅ Listening to transactions collection: "${collName}"`);
+        return;
+      } else {
+        safeLog(`No listener attached for "${collName}", trying next...`);
+      }
+    } catch (e) {
+      console.error("Error trying collection", collName, e);
+    }
+  }
+
+  // if we get here, none worked
+  console.error("[TX-HISTORY] Could not attach transactions listener to any collection (tried multiple names).");
+  if (txListEl) txListEl.innerHTML = `<p class="text-center p-6 text-red-500">Could not load transactions. Check console for errors.</p>`;
+}
+
+/* ----------------------
+   Public init: call this when user is available (after auth)
+   ---------------------- */
+function initTransactionsForCurrentUser() {
+  const user = firebase.auth().currentUser;
+  if (!user) {
+    safeLog("initTransactionsForCurrentUser: no user currently signed in. Waiting for auth.");
+    return;
+  }
+  safeLog("initTransactionsForCurrentUser -> uid:", user.uid);
+  startTransactionsListenerForUser(user.uid);
+}
+
+/* ----------------------
+   Auth hook: start once user logs in
+   ---------------------- */
+firebase.auth().onAuthStateChanged(user => {
+  if (user) {
+    safeLog("Auth state changed: user signed in:", user.uid);
+    initTransactionsForCurrentUser();
+  } else {
+    safeLog("Auth state changed: no user.");
+    stopTransactionsListener();
+    transactionsCache = [];
+    renderTransactions([]); // show empty state
+  }
 });
 
-document.getElementById("status-filter").addEventListener("change", (e) => {
-  const status = e.target.value;
-  const category = document.getElementById("category-filter").value;
-  applyFilters(category, status);
-});
+/* ----------------------
+   Wire filter selects to client-side filter
+   ---------------------- */
+if (categoryEl) {
+  categoryEl.addEventListener("change", (e) => {
+    applyFiltersClient(e.target.value, statusEl?.value || "All");
+  });
+}
+if (statusEl) {
+  statusEl.addEventListener("change", (e) => {
+    applyFiltersClient(categoryEl?.value || "All", e.target.value);
+  });
+}
 
-	  
+/* ----------------------
+   Debug helpers you can run in browser console:
+   - window.tx_debug_listAllUserDocs()
+   - window.tx_debug_showUID()
+   ---------------------- */
+window.tx_debug_showUID = function() {
+  const u = firebase.auth().currentUser;
+  console.log("[TX-HISTORY DEBUG] currentUser:", u ? u.uid : null, u || "(no user)");
+};
+
+window.tx_debug_listAllUserDocs = async function(collName) {
+  collName = collName || activeCollectionName || "Transaction";
+  try {
+    const snap = await firebase.firestore().collection(collName).get();
+    console.log(`[TX-HISTORY DEBUG] All docs in ${collName}: count=${snap.size}`);
+    snap.forEach(d => console.log(d.id, d.data()));
+  } catch (err) {
+    console.error(`[TX-HISTORY DEBUG] Error listing docs in ${collName}:`, err);
+  }
+};
+
+safeLog("Transactions module loaded. Waiting for auth to start listener.");
 	
 
 
@@ -6201,6 +6363,7 @@ function openService(serviceName) {
   }
 
 })();
+
 
 
 
