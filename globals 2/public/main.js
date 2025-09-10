@@ -6145,7 +6145,28 @@ function openService(serviceName) {
         });
       });
 
+
+		
       _showScreen('success-screen');
+
+// 👉 Add transaction record
+try {
+  if (airtimeCurrentUser && db) {
+    await db.collection("Transaction").add({
+      userId: airtimeCurrentUser.uid,
+      type: "Airtime",
+      amount: amount,
+      status: "processing",
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    console.log("[Airtime] Transaction added");
+  }
+} catch (err) {
+  console.error("[Airtime] Failed to add transaction:", err);
+}
+
+
+		
     } catch (err) {
       console.error('[Airtime] pay error', err);
       if(err.message === 'USER_NOT_FOUND'){ showAirtimeMsg('confirm-error','User record not found.'); }
@@ -6364,7 +6385,28 @@ function openService(serviceName) {
           createdAt:firebase.firestore.FieldValue.serverTimestamp()
         });
       });
+
+
+		
       _showScreen('data-success-screen');
+
+// 👉 Add transaction record
+try {
+  if (dataCurrentUser && db) {
+    await db.collection("Transaction").add({
+      userId: dataCurrentUser.uid,
+      type: "Data",
+      amount: amount,
+      status: "processing",
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    console.log("[Data] Transaction added");
+  }
+} catch (err) {
+  console.error("[Data] Failed to add transaction:", err);
+}
+
+		
     }catch(err){
       console.error(err);
       if(err.message==='INCORRECT_PIN') showDataMsg('confirm-data-error','Incorrect PIN');
@@ -6382,6 +6424,7 @@ function openService(serviceName) {
   }
 
 })();
+
 
 
 
