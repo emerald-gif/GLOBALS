@@ -5902,15 +5902,15 @@ function airtimeClose(){
       { id:'m1', label:'500MB - ₦200', amount:200 },
       { id:'m2', label:'1.5GB - ₦1000', amount:1000 },
       { id:'m3', label:'3GB - ₦1500', amount:1500 },
-	  { id:'m1', label:'500MB - ₦200', amount:200 },
-      { id:'m2', label:'1.5GB - ₦1000', amount:1000 },
-      { id:'m3', label:'3GB - ₦1500', amount:1500 }
+	  { id:'m4', label:'500MB - ₦200', amount:200 },
+      { id:'m5', label:'1.5GB - ₦1000', amount:1000 },
+      { id:'m6', label:'3GB - ₦1500', amount:1500 }
     ],
     '02': [
       { id:'g1', label:'1GB - ₦500', amount:500 },
       { id:'g2', label:'2.9GB - ₦1000', amount:1000 },
-	  { id:'g1', label:'1GB - ₦500', amount:500 },
-      { id:'g2', label:'2.9GB - ₦1000', amount:1000 }
+	  { id:'g3', label:'1GB - ₦500', amount:500 },
+      { id:'g4', label:'2.9GB - ₦1000', amount:1000 }
     ],
     '04': [
       { id:'a1', label:'1.5GB - ₦1000', amount:1000 },
@@ -6074,6 +6074,7 @@ function airtimeClose(){
   }
 
 })();
+
 
 
 
