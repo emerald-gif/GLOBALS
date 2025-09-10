@@ -322,31 +322,50 @@ function cardHtml(tx) {
 }
 
 /* ----------------------
-   Render list (with empty state)
-   ---------------------- */
-function renderTransactions(list) {
-  safeLog("Rendering transactions, count:", list.length);
-  if (!txListEl || !txEmptyEl) {
-    console.error("[TX-HISTORY] Missing DOM elements (#transactions-list or #transactions-empty).");
+Render list (with empty state)
+---------------------- */
+function renderTransactions(transactions) {
+  const list = document.getElementById("transactions-list");
+  const empty = document.getElementById("transactions-empty");
+
+  if (!transactions.length) {
+    list.innerHTML = "";
+    empty.classList.remove("hidden");
     return;
   }
 
-  if (!list.length) {
-    txListEl.classList.add("hidden");
-    txEmptyEl.classList.remove("hidden");
-    txListEl.innerHTML = "";
-    return;
-  }
+  empty.classList.add("hidden");
 
-  txEmptyEl.classList.add("hidden");
-  txListEl.classList.remove("hidden");
+  list.innerHTML = transactions.map(tx => {
+    const date = tx.timestamp?.toDate
+      ? tx.timestamp.toDate().toLocaleString()
+      : "—";
 
-  // Build HTML
-  let html = "";
-  list.forEach(tx => {
-    html += cardHtml(tx);
-  });
-  txListEl.innerHTML = html;
+    let statusColor =
+      tx.status === "successful"
+        ? "bg-green-100 text-green-700"
+        : tx.status === "failed"
+        ? "bg-red-100 text-red-700"
+        : "bg-yellow-100 text-yellow-700";
+
+    return `
+      <div class="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
+        <!-- Left: Type + Time -->
+        <div>
+          <p class="text-sm font-medium text-gray-800">${tx.type || "Unknown"}</p>
+          <p class="text-xs text-gray-500">${date}</p>
+        </div>
+
+        <!-- Right: Amount + Status -->
+        <div class="text-right">
+          <p class="text-sm font-semibold text-gray-900">₦${tx.amount?.toLocaleString() || "0"}</p>
+          <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${statusColor}">
+            ${tx.status || "—"}
+          </span>
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
 /* ----------------------
@@ -6363,6 +6382,7 @@ function openService(serviceName) {
   }
 
 })();
+
 
 
 
