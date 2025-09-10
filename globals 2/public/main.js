@@ -244,8 +244,106 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
 
 
 
+// ---------- TRANSACTION HISTORY ----------
 
-                                                                 // PAYMENT PIN 
+// Fetch and render user transactions
+async function loadTransactions() {
+  const user = firebase.auth().currentUser;
+  if (!user) return;
+
+  const list = document.getElementById("transactionList");
+  list.innerHTML = `<p class="text-center text-gray-500">Loading...</p>`;
+
+  try {
+    const snapshot = await db
+      .collection("Transaction")
+      .where("userId", "==", user.uid)
+      .orderBy("timestamp", "desc")
+      .get();
+
+    transactionsCache = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    renderTransactions(transactionsCache);
+  } catch (err) {
+    console.error("Error loading transactions:", err);
+    list.innerHTML = `<p class="text-center text-red-500">Failed to load</p>`;
+  }
+}
+
+// Render filtered transactions
+function renderTransactions(transactions) {
+  const list = document.getElementById("transactionList");
+  if (!transactions.length) {
+    list.innerHTML = `<p class="text-center text-gray-400">No transactions yet</p>`;
+    return;
+  }
+
+  list.innerHTML = "";
+  transactions.forEach(txn => {
+    const date = txn.timestamp?.toDate().toLocaleString() || "";
+    const statusColor =
+      txn.status === "successful"
+        ? "text-green-600"
+        : txn.status === "failed"
+        ? "text-red-600"
+        : "text-yellow-600";
+
+    const card = `
+      <div class="bg-white p-4 rounded-xl shadow flex justify-between items-center">
+        <div>
+          <p class="font-semibold">${txn.type || "Unknown"}</p>
+          <p class="text-xs text-gray-500">${date}</p>
+        </div>
+        <div class="text-right">
+          <p class="font-bold">₦${txn.amount || 0}</p>
+          <p class="text-xs ${statusColor} capitalize">${txn.status}</p>
+        </div>
+      </div>
+    `;
+    list.innerHTML += card;
+  });
+}
+
+// Filter by category + status
+function filterTransactions() {
+  const cat = document.getElementById("filterCategory").value;
+  const status = document.getElementById("filterStatus").value;
+
+  let filtered = [...transactionsCache];
+
+  if (cat !== "all") {
+    filtered = filtered.filter(txn => txn.type === cat);
+  }
+  if (status !== "all") {
+    filtered = filtered.filter(txn => txn.status === status);
+  }
+
+  renderTransactions(filtered);
+}
+
+// Cache to store loaded transactions
+let transactionsCache = [];
+
+// Hook when transaction tab is activated
+function showTransactionScreen() {
+  loadTransactions();
+  activateTab("transaction-screen");
+}
+   
+
+						
+	
+
+
+	  
+	
+
+
+
+                             // PAYMENT PIN 
 
 
 
@@ -6055,6 +6153,7 @@ function openService(serviceName) {
   }
 
 })();
+
 
 
 
