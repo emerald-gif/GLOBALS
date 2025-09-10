@@ -293,79 +293,103 @@ function formatAmount(amount) {
 }
 
 /* ----------------------
-   Render single card HTML (Opay-like)
+   Render single card HTML (Fintech 2025 style)
    ---------------------- */
 function cardHtml(tx) {
   const tsFields = tx.timestamp || tx.createdAt || tx.time || tx.created_at || null;
   const date = parseTimestamp(tsFields);
-  const amountClass = tx.status === "successful" ? "text-green-600" : tx.status === "failed" ? "text-red-600" : "text-yellow-600";
+  const amountClass =
+    tx.status === "successful"
+      ? "text-green-600"
+      : tx.status === "failed"
+      ? "text-red-600"
+      : "text-yellow-600";
+
   const amountText = formatAmount(tx.amount);
   const statusText = (tx.status || "unknown").toLowerCase();
-
-  // description fallback
   const desc = tx.description || tx.meta?.desc || "";
 
   return `
-    <div class="flex justify-between items-center p-4 border-b">
-      <div>
-        <div class="text-sm font-semibold text-gray-900">${tx.type || "Unknown"}</div>
-        <div class="text-xs text-gray-500 mt-1">${desc}</div>
-        <div class="text-xs text-gray-400 mt-1">${formatDatePretty(date)}</div>
-      </div>
-
-      <div class="text-right">
-        <div class="text-lg font-bold ${amountClass}">${amountText}</div>
-        <div class="text-xs ${amountClass} mt-1 capitalize">${statusText}</div>
+    <div onclick="openTransactionDetails('${tx.id}')"
+         class="cursor-pointer bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-semibold text-gray-900">${tx.type || "Unknown"}</p>
+          <p class="text-xs text-gray-500 mt-1">${desc}</p>
+          <p class="text-xs text-gray-400 mt-1">${formatDatePretty(date)}</p>
+        </div>
+        <div class="text-right">
+          <p class="text-base font-bold ${amountClass}">${amountText}</p>
+          <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${amountClass} bg-opacity-10">
+            ${statusText}
+          </span>
+        </div>
       </div>
     </div>
   `;
 }
 
 /* ----------------------
-Render list (with empty state)
----------------------- */
-function renderTransactions(transactions) {
-  const list = document.getElementById("transactions-list");
-  const empty = document.getElementById("transactions-empty");
+   Render list (with empty state)
+   ---------------------- */
+function renderTransactions(list) {
+  if (!txListEl || !txEmptyEl) return;
 
-  if (!transactions.length) {
-    list.innerHTML = "";
-    empty.classList.remove("hidden");
+  if (!list.length) {
+    txListEl.innerHTML = "";
+    txEmptyEl.classList.remove("hidden");
     return;
   }
 
-  empty.classList.add("hidden");
+  txEmptyEl.classList.add("hidden");
 
-  list.innerHTML = transactions.map(tx => {
-    const date = tx.timestamp?.toDate
-      ? tx.timestamp.toDate().toLocaleString()
-      : "—";
+  txListEl.innerHTML = list.map(tx => cardHtml(tx)).join("");
+}
 
-    let statusColor =
-      tx.status === "successful"
-        ? "bg-green-100 text-green-700"
-        : tx.status === "failed"
-        ? "bg-red-100 text-red-700"
-        : "bg-yellow-100 text-yellow-700";
+/* ----------------------
+   Open Transaction Details Screen
+   ---------------------- */
+function openTransactionDetails(id) {
+  const tx = transactionsCache.find(t => t.id === id);
+  if (!tx) return;
 
-    return `
-      <div class="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
-        <!-- Left: Type + Time -->
-        <div>
-          <p class="text-sm font-medium text-gray-800">${tx.type || "Unknown"}</p>
-          <p class="text-xs text-gray-500">${date}</p>
-        </div>
+  const tsFields = tx.timestamp || tx.createdAt || tx.time || tx.created_at || null;
+  const date = parseTimestamp(tsFields);
 
-        <!-- Right: Amount + Status -->
-        <div class="text-right">
-          <p class="text-sm font-semibold text-gray-900">₦${tx.amount?.toLocaleString() || "0"}</p>
-          <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${statusColor}">
-            ${tx.status || "—"}
-          </span>
-        </div>
+  document.getElementById("transaction-details-content").innerHTML = `
+    <div class="bg-white rounded-2xl p-6 shadow-sm space-y-4">
+      <div class="flex justify-between items-center">
+        <p class="text-sm text-gray-500">Type</p>
+        <p class="text-base font-semibold text-gray-900">${tx.type || "Unknown"}</p>
       </div>
-    `;
-  }).join("");
+      <div class="flex justify-between items-center">
+        <p class="text-sm text-gray-500">Amount</p>
+        <p class="text-base font-semibold text-gray-900">${formatAmount(tx.amount)}</p>
+      </div>
+      <div class="flex justify-between items-center">
+        <p class="text-sm text-gray-500">Status</p>
+        <p class="text-sm font-medium capitalize">${tx.status || "—"}</p>
+      </div>
+      <div class="flex justify-between items-center">
+        <p class="text-sm text-gray-500">Date</p>
+        <p class="text-sm">${formatDatePretty(date)}</p>
+      </div>
+      <div class="flex justify-between items-center">
+        <p class="text-sm text-gray-500">Transaction ID</p>
+        <p class="text-xs text-gray-700">${tx.id}</p>
+      </div>
+      ${
+        tx.description
+          ? `<div>
+              <p class="text-sm text-gray-500 mb-1">Description</p>
+              <p class="text-sm text-gray-800">${tx.description}</p>
+            </div>`
+          : ""
+      }
+    </div>
+  `;
+
+  showScreen("transaction-details-screen");
 }
 
 /* ----------------------
@@ -6424,6 +6448,7 @@ try {
   }
 
 })();
+
 
 
 
