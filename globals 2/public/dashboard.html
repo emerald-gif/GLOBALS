@@ -2580,84 +2580,46 @@
                                                            <!-- TRANSACTION HISTORY -->
 
 
-<div id="transaction" class="tab-section hidden px-4 py-6 max-w-2xl mx-auto">
-  <h2 class="text-2xl font-bold text-gray-800 mb-6">📜 Transaction History</h2>
+<!-- 📜 Transaction History Screen -->
+<div id="transaction-screen" class="tab-section hidden bg-gray-50 min-h-screen">
+  <!-- Header -->
+  <div class="flex items-center justify-between p-4 shadow bg-white sticky top-0 z-10">
+    <button onclick="activateTab('home')" class="text-blue-600 font-medium">← Back</button>
+    <h2 class="text-lg font-semibold text-gray-800">Transaction History</h2>
+    <div></div>
+  </div>
 
-  <!-- Filter (UI only for now) -->
-  <div class="flex items-center justify-between mb-4">
-    <select class="text-sm border border-gray-300 rounded px-3 py-1">
-      <option>All Categories</option>
-      <option>Referrals</option>
-      <option>Tasks</option>
-      <option>eBook Purchases</option>
-      <option>NFT Rewards</option>
+  <!-- Filter Dropdowns -->
+  <div class="p-4 flex gap-3 overflow-x-auto bg-white shadow">
+    <!-- Category -->
+    <select id="filterCategory" onchange="filterTransactions()" class="p-2 border rounded-lg text-sm">
+      <option value="all">All Categories</option>
+      <option value="Airtime">Airtime</option>
+      <option value="Data">Data</option>
+      <option value="Deposit">Deposit</option>
+      <option value="Withdraw">Withdraw</option>
+      <option value="Tasks">Tasks</option>
+      <option value="Affiliate">Affiliate</option>
+      <option value="TikTok/Instagram">TikTok/Instagram</option>
+      <option value="WhatsApp">WhatsApp</option>
+      <option value="Telegram">Telegram</option>
+      <option value="Electricity">Electricity</option>
+      <option value="Betting">Betting</option>
+      <option value="TV">TV</option>
     </select>
-    <select class="text-sm border border-gray-300 rounded px-3 py-1">
-      <option>All Status</option>
-      <option>Successful</option>
-      <option>Pending</option>
+
+    <!-- Status -->
+    <select id="filterStatus" onchange="filterTransactions()" class="p-2 border rounded-lg text-sm">
+      <option value="all">All Status</option>
+      <option value="successful">Successful</option>
+      <option value="processing">Processing</option>
+      <option value="failed">Failed</option>
     </select>
   </div>
 
-  <!-- Date Group -->
-  <div class="mb-4">
-    <p class="text-sm font-semibold text-gray-500 mb-2">July 2025</p>
-
-    <!-- Example Transactions -->
-    <div class="space-y-3">
-
-      <!-- ✅ Earned Task -->
-      <div class="bg-white rounded-lg p-4 shadow-sm border flex items-start justify-between">
-        <div>
-          <p class="font-medium text-gray-800">App Install - Palmpay</p>
-          <p class="text-sm text-gray-500 mt-1">July 10, 2025 · 10:23 AM</p>
-        </div>
-        <div class="text-right">
-          <p class="text-green-600 font-semibold text-sm">+₦100</p>
-          <span class="text-xs text-green-500">Successful</span>
-        </div>
-      </div>
-
-      <!-- ✅ Referral Bonus -->
-      <div class="bg-white rounded-lg p-4 shadow-sm border flex items-start justify-between">
-        <div>
-          <p class="font-medium text-gray-800">Referral Bonus - Level 1</p>
-          <p class="text-sm text-gray-500 mt-1">July 9, 2025 · 03:45 PM</p>
-        </div>
-        <div class="text-right">
-          <p class="text-green-600 font-semibold text-sm">+₦1,700</p>
-          <span class="text-xs text-green-500">Successful</span>
-        </div>
-      </div>
-
-      <!-- ✅ NFT Badge Reward -->
-      <div class="bg-white rounded-lg p-4 shadow-sm border flex items-start justify-between">
-        <div>
-          <p class="font-medium text-gray-800">NFT Badge - Bronze</p>
-          <p class="text-sm text-gray-500 mt-1">July 8, 2025 · 01:12 PM</p>
-        </div>
-        <div class="text-right">
-          <p class="text-green-600 font-semibold text-sm">+₦300</p>
-          <span class="text-xs text-green-500">Successful</span>
-        </div>
-      </div>
-
-      <!-- ❌ eBook Purchase -->
-      <div class="bg-white rounded-lg p-4 shadow-sm border flex items-start justify-between">
-        <div>
-          <p class="font-medium text-gray-800">eBook Purchase - Affiliate Guide</p>
-          <p class="text-sm text-gray-500 mt-1">July 7, 2025 · 11:42 AM</p>
-        </div>
-        <div class="text-right">
-          <p class="text-red-500 font-semibold text-sm">-₦3,000</p>
-          <span class="text-xs text-green-500">Successful</span>
-        </div>
-      </div>
-
-    </div>
-  </div>
+  <!-- Transaction List -->
+  <div id="transactionList" class="p-4 space-y-3"></div>
 </div>
-
 
 
 
@@ -4000,6 +3962,7 @@
 </body>
 
 </html>
+
 
 
 
