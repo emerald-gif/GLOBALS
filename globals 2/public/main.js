@@ -246,97 +246,145 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
 
 // ---------- TRANSACTION HISTORY ----------
 
-// Fetch and render user transactions
-async function loadTransactions() {
-  const user = firebase.auth().currentUser;
-  if (!user) return;
+// ================================
+// TRANSACTIONS FETCH (REAL-TIME)
+// ================================
+function initTransactions(user) {
+  console.log("✅ initTransactions called for UID:", user.uid);
 
-  const list = document.getElementById("transactionList");
-  list.innerHTML = `<p class="text-center text-gray-500">Loading...</p>`;
+  db.collection("Transaction")
+    .where("userId", "==", user.uid)
+    .orderBy("timestamp", "desc") // still keep, but we will catch error if missing
+    .onSnapshot(
+      (snapshot) => {
+        console.log("📥 Transactions snapshot received:", snapshot.size);
 
-  try {
-    const snapshot = await db
-      .collection("Transaction")
-      .where("userId", "==", user.uid)
-      .orderBy("timestamp", "desc")
-      .get();
+        transactionsCache = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          console.log("📝 Transaction Doc:", doc.id, data);
+          return {
+            id: doc.id,
+            ...data,
+          };
+        });
 
-    transactionsCache = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+        renderTransactions(transactionsCache);
+      },
+      (error) => {
+        console.error("❌ Firestore onSnapshot error:", error);
 
-    renderTransactions(transactionsCache);
-  } catch (err) {
-    console.error("Error loading transactions:", err);
-    list.innerHTML = `<p class="text-center text-red-500">Failed to load</p>`;
-  }
+        // Fallback: retry without orderBy if error caused by missing timestamp
+        db.collection("Transaction")
+          .where("userId", "==", user.uid)
+          .onSnapshot((snapshot) => {
+            console.warn("⚠️ Retrying fetch without orderBy");
+            transactionsCache = snapshot.docs.map((doc) => ({
+              id: doc.id,
+              ...doc.data(),
+            }));
+            renderTransactions(transactionsCache);
+          });
+      }
+    );
 }
 
-// Render filtered transactions
+// ================================
+// RENDER TRANSACTIONS
+// ================================
 function renderTransactions(transactions) {
-  const list = document.getElementById("transactionList");
-  if (!transactions.length) {
-    list.innerHTML = `<p class="text-center text-gray-400">No transactions yet</p>`;
+  console.log("🔄 Rendering Transactions:", transactions.length);
+
+  const container = document.getElementById("transactions-list");
+  const emptyState = document.getElementById("transactions-empty");
+
+  if (!container) {
+    console.error("❌ #transactions-list container not found in HTML");
     return;
   }
 
-  list.innerHTML = "";
-  transactions.forEach(txn => {
-    const date = txn.timestamp?.toDate().toLocaleString() || "";
-    const statusColor =
-      txn.status === "successful"
+  container.innerHTML = "";
+
+  if (transactions.length === 0) {
+    container.classList.add("hidden");
+    emptyState.classList.remove("hidden");
+    console.log("ℹ️ No transactions to show");
+    return;
+  }
+
+  // Hide empty state when there are transactions
+  container.classList.remove("hidden");
+  emptyState.classList.add("hidden");
+
+  transactions.forEach((tx) => {
+    const amountColor =
+      tx.status === "successful"
         ? "text-green-600"
-        : txn.status === "failed"
+        : tx.status === "failed"
         ? "text-red-600"
         : "text-yellow-600";
 
     const card = `
-      <div class="bg-white p-4 rounded-xl shadow flex justify-between items-center">
+      <div class="flex justify-between items-center p-4 border-b">
         <div>
-          <p class="font-semibold">${txn.type || "Unknown"}</p>
-          <p class="text-xs text-gray-500">${date}</p>
+          <p class="font-medium">${tx.type || "Unknown Type"}</p>
+          <p class="text-sm text-gray-500">${
+            tx.timestamp?.toDate
+              ? tx.timestamp.toDate().toLocaleString()
+              : "No Timestamp"
+          }</p>
         </div>
         <div class="text-right">
-          <p class="font-bold">₦${txn.amount || 0}</p>
-          <p class="text-xs ${statusColor} capitalize">${txn.status}</p>
+          <p class="font-semibold ${amountColor}">₦${tx.amount || 0}</p>
+          <p class="text-xs ${amountColor}">${tx.status || "unknown"}</p>
         </div>
       </div>
     `;
-    list.innerHTML += card;
+    container.innerHTML += card;
   });
+
+  console.log("✅ Finished rendering transactions");
 }
 
-// Filter by category + status
-function filterTransactions() {
-  const cat = document.getElementById("filterCategory").value;
-  const status = document.getElementById("filterStatus").value;
+// ================================
+// FILTERS HANDLER
+// ================================
+function applyFilters(category, status) {
+  console.log("🎛 Applying Filters:", category, status);
 
   let filtered = [...transactionsCache];
 
-  if (cat !== "all") {
-    filtered = filtered.filter(txn => txn.type === cat);
-  }
-  if (status !== "all") {
-    filtered = filtered.filter(txn => txn.status === status);
+  if (category && category !== "All") {
+    filtered = filtered.filter(
+      (tx) => tx.type && tx.type.toLowerCase() === category.toLowerCase()
+    );
   }
 
+  if (status && status !== "All") {
+    filtered = filtered.filter(
+      (tx) => tx.status && tx.status.toLowerCase() === status.toLowerCase()
+    );
+  }
+
+  console.log("📊 Filtered Transactions Count:", filtered.length);
   renderTransactions(filtered);
 }
 
-// Cache to store loaded transactions
-let transactionsCache = [];
-
-// Hook when transaction tab is activated
-function showTransactionScreen() {
-  loadTransactions();
-  activateTab("transaction-screen");
-}
-   
-
 						
 	
+// ================================
+// FILTERS EVENTS
+// ================================
+document.getElementById("category-filter").addEventListener("change", (e) => {
+  const category = e.target.value;
+  const status = document.getElementById("status-filter").value;
+  applyFilters(category, status);
+});
 
+document.getElementById("status-filter").addEventListener("change", (e) => {
+  const status = e.target.value;
+  const category = document.getElementById("category-filter").value;
+  applyFilters(category, status);
+});
 
 	  
 	
@@ -6153,6 +6201,7 @@ function openService(serviceName) {
   }
 
 })();
+
 
 
 
