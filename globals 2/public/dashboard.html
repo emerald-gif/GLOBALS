@@ -2582,16 +2582,16 @@
 
 <!-- 📜 Transaction History Screen -->
 <!-- ============================= -->
-<!-- 📒 Transaction History Screen -->
-<!-- ============================= -->
-<div id="transactions-screen" class="tab-section hidden min-h-screen bg-gray-50">
-  <div class="p-4 bg-white shadow">
-    <h2 class="text-xl font-bold text-gray-800">Transactions</h2>
+<!-- Transactions Screen -->
+<div id="transactions-screen" class="tab-section hidden min-h-screen bg-gray-100">
+  <!-- Header & Filters -->
+  <div class="bg-white border-b px-4 py-3">
+    <h2 class="text-lg font-semibold text-gray-800">Transactions</h2>
 
     <!-- Filters -->
-    <div class="mt-4 flex gap-3">
+    <div class="mt-3 flex gap-2">
       <!-- Category Dropdown -->
-      <select id="category-filter" class="flex-1 p-2 border rounded-lg text-gray-700">
+      <select id="category-filter" class="flex-1 px-2 py-1.5 border rounded-md text-sm text-gray-700">
         <option>All</option>
         <option>Airtime</option>
         <option>Data</option>
@@ -2608,7 +2608,7 @@
       </select>
 
       <!-- Status Dropdown -->
-      <select id="status-filter" class="flex-1 p-2 border rounded-lg text-gray-700">
+      <select id="status-filter" class="flex-1 px-2 py-1.5 border rounded-md text-sm text-gray-700">
         <option>All</option>
         <option>successful</option>
         <option>failed</option>
@@ -2618,19 +2618,18 @@
   </div>
 
   <!-- Transactions List -->
-<div id="transactions-list" class="divide-y bg-white mt-3 shadow-sm rounded-lg overflow-hidden">
-  <!-- JS will populate here -->
-</div>
+  <div id="transactions-list" class="bg-white divide-y mt-2 shadow-sm rounded-md overflow-hidden">
+    <!-- JS will populate here -->
+  </div>
 
-<!-- Empty State -->
-<div id="transactions-empty" class="hidden flex flex-col items-center justify-center py-16 text-center">
-  <img src="https://cdn-icons-png.flaticon.com/512/4076/4076549.png" alt="No Transactions" class="w-24 h-24 opacity-70 mb-4">
-  <p class="text-gray-600 text-lg font-medium">No Transactions Yet</p>
-  <p class="text-gray-400 text-sm">Your history will appear here once you start using services.</p>
+  <!-- Empty State -->
+  <div id="transactions-empty" class="hidden flex flex-col items-center justify-center py-12 text-center">
+    <img src="https://cdn-icons-png.flaticon.com/512/4076/4076549.png" 
+         alt="No Transactions" class="w-20 h-20 opacity-60 mb-3">
+    <p class="text-gray-600 text-base font-medium">No Transactions Yet</p>
+    <p class="text-gray-400 text-xs">Your history will appear here once you start using services.</p>
+  </div>
 </div>
-	
-</div>
-
 
 
 
@@ -3970,6 +3969,7 @@
 </body>
 
 </html>
+
 
 
 
