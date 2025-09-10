@@ -5681,14 +5681,11 @@ function openService(serviceName) {
     // focus phone input
     setTimeout(()=>{ const i = document.getElementById('airtime-phone'); if(i) i.focus(); }, 80);
   }
-  function airtimeClose(){
-    // just hide overlays and return to dashboard if possible
-    _hideAll();
-    // If your dashboard uses showScreen('home'), call it safely
-    if (typeof window.showScreen === 'function') {
-      try { window.showScreen('home'); } catch(e){ /* ignore */ }
-    }
-  }
+  function airtimeClose() {
+  document.getElementById("airtime-screen").classList.add("hidden");
+  document.body.classList.remove("overflow-hidden");
+  airtimeReset(); // clear airtime state + inputs
+}
 
   // Initialize firebase user ref if present
   if (typeof firebase !== 'undefined' && typeof db !== 'undefined') {
@@ -5940,8 +5937,11 @@ function openService(serviceName) {
     _showScreen('data-screen');
     setTimeout(()=>{ const i=document.getElementById('data-phone'); if(i) i.focus(); },80);
   }
-  function dataClose(){ _hideAll(); if(window.showScreen) try{showScreen('home')}catch{} }
-
+  function dataClose() {
+  document.getElementById("data-screen").classList.add("hidden");
+  document.body.classList.remove("overflow-hidden");
+  dataReset(); // clear data state + inputs
+}
   // Firebase
   if(typeof firebase!=='undefined' && typeof db!=='undefined'){
     firebase.auth().onAuthStateChanged(u=>{
@@ -6069,6 +6069,7 @@ function openService(serviceName) {
   }
 
 })();
+
 
 
 
