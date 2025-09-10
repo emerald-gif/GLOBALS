@@ -5627,7 +5627,6 @@ function openService(serviceName) {
 
 // ===== Airtime UI State (namespaced, no conflict) =====
 
-
 (() => {
   // Expose these for onclick attributes (safe namespace)
   window.airtimeOpen = airtimeOpen;
@@ -5681,14 +5680,14 @@ function openService(serviceName) {
     // focus phone input
     setTimeout(()=>{ const i = document.getElementById('airtime-phone'); if(i) i.focus(); }, 80);
   }
-function airtimeClose(){
-‎    // just hide overlays and return to dashboard if possible
-‎    _hideAll();
-‎    // If your dashboard uses showScreen('home'), call it safely
-‎    if (typeof window.showScreen === 'function') {
-‎      try { window.showScreen('home'); } catch(e){ /* ignore */ }
-‎    }
-‎  }
+  function airtimeClose(){
+    // just hide overlays and return to dashboard if possible
+    _hideAll();
+    // If your dashboard uses showScreen('home'), call it safely
+    if (typeof window.showScreen === 'function') {
+      try { window.showScreen('home'); } catch(e){ /* ignore */ }
+    }
+  }
 
   // Initialize firebase user ref if present
   if (typeof firebase !== 'undefined' && typeof db !== 'undefined') {
@@ -5859,19 +5858,6 @@ function airtimeClose(){
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 (() => {
   // Expose globally
   window.dataOpen = dataOpen;
@@ -5901,16 +5887,11 @@ function airtimeClose(){
     '01': [
       { id:'m1', label:'500MB - ₦200', amount:200 },
       { id:'m2', label:'1.5GB - ₦1000', amount:1000 },
-      { id:'m3', label:'3GB - ₦1500', amount:1500 },
-	  { id:'m4', label:'500MB - ₦200', amount:200 },
-      { id:'m5', label:'1.5GB - ₦1000', amount:1000 },
-      { id:'m6', label:'3GB - ₦1500', amount:1500 }
+      { id:'m3', label:'3GB - ₦1500', amount:1500 }
     ],
     '02': [
       { id:'g1', label:'1GB - ₦500', amount:500 },
-      { id:'g2', label:'2.9GB - ₦1000', amount:1000 },
-	  { id:'g3', label:'1GB - ₦500', amount:500 },
-      { id:'g4', label:'2.9GB - ₦1000', amount:1000 }
+      { id:'g2', label:'2.9GB - ₦1000', amount:1000 }
     ],
     '04': [
       { id:'a1', label:'1.5GB - ₦1000', amount:1000 },
@@ -5946,7 +5927,7 @@ function airtimeClose(){
     setTimeout(()=>{ const i=document.getElementById('data-phone'); if(i) i.focus(); },80);
   }
   function dataClose(){ _hideAll(); if(window.showScreen) try{showScreen('home')}catch{} }
-	
+
   // Firebase
   if(typeof firebase!=='undefined' && typeof db!=='undefined'){
     firebase.auth().onAuthStateChanged(u=>{
@@ -6074,6 +6055,12 @@ function airtimeClose(){
   }
 
 })();
+
+
+
+
+
+
 
 
 
