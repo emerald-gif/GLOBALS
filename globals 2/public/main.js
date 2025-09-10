@@ -381,7 +381,7 @@ function openTransactionDetails(id) {
     </div>
   `;
 
-  showScreen("transaction-details-screen");
+  activateTab("transaction-details-screen");
 }
 
 /* ----------------------
@@ -6451,6 +6451,7 @@ try {
   }
 
 })();
+
 
 
 
