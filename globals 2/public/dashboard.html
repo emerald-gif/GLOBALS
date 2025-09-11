@@ -3925,15 +3925,17 @@
       <span class="text-xs">Dashboard</span>
     </button>
 
-    <!-- Transaction -->
-    <button id="nav-transaction" onclick="activateTab('transactions-screen')" 
-            class="relative nav-btn flex flex-col items-center text-gray-600 hover:text-blue-600 transition">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>
-      </svg>
-      <span class="text-xs">Transaction</span>
-      <span id="txDot" class="hidden absolute -top-1 -right-1 w-3 h-3 bg-red-600 rounded-full animate-pulse"></span>
-    </button>
+<!-- Transaction -->
+<button id="nav-transaction" onclick="activateTab('transactions-screen')" 
+        class="relative nav-btn flex flex-col items-center text-gray-600 hover:text-blue-600 transition">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>
+  </svg>
+  <span class="text-xs">Transaction</span>
+
+  <!-- ✅ Red dot notification -->
+  <span id="txDot" class="hidden absolute top-0 right-3 w-3 h-3 bg-red-600 rounded-full animate-pulse"></span>
+</button>
 
     <!-- Games -->
     <button id="nav-games" onclick="activateTab('games')" 
@@ -3960,6 +3962,7 @@
 </body>
 
 </html>
+
 
 
 
