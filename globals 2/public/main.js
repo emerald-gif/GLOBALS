@@ -114,14 +114,15 @@ window.saveProfile = async function () {
 
 
 
-     // ✅ TOP NAV FUNCTION USERNAMES
+
+
+// ✅ TOP NAV FUNCTION USERNAMES
 firebase.auth().onAuthStateChanged(function (user) {
   const navbarGreeting = document.getElementById("navbarGreeting");
 
   if (user) {
     const uid = user.uid;
 
-    // Fetch user profile from Firestore
     firebase.firestore().collection("users").doc(uid).get()
       .then((doc) => {
         if (doc.exists) {
@@ -131,16 +132,12 @@ firebase.auth().onAuthStateChanged(function (user) {
           // ✅ Default greeting
           if (userData.is_Premium === true) {
             navbarGreeting.innerHTML = `
-              <span class="flex items-center gap-1">
-                Hello <span class="font-semibold">${username}</span>
-                <img src="VERIFIED.jpg" alt="Verified" class="w-4 h-4 inline-block">
-              </span>
+              Hello <span class="font-semibold">${username}</span>
+              <img src="VERIFIED.jpg" alt="Verified" class="w-4 h-4 ml-1 inline-block">
             `;
           } else {
             navbarGreeting.innerHTML = `
-              <span class="flex items-center gap-1">
-                Hello <span class="font-semibold">${username}</span> 👋
-              </span>
+              Hello <span class="font-semibold">${username}</span> 👋
             `;
           }
         } else {
@@ -155,6 +152,8 @@ firebase.auth().onAuthStateChanged(function (user) {
     navbarGreeting.textContent = "Hello Guest 👋";
   }
 });
+
+
 
 
 
@@ -6477,6 +6476,7 @@ try {
   }
 
 })();
+
 
 
 
