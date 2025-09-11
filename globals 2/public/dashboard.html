@@ -3815,7 +3815,22 @@
 
 
 
+<!-- ✅ Daily Check-In Screen -->
+<div id="checkin-screen" class="tab-section hidden min-h-screen bg-gray-50 p-6">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-xl font-bold text-gray-800">Daily Check-In</h2>
+    <button onclick="activateTab('dashboard')" class="text-blue-600">← Back</button>
+  </div>
 
+  <!-- Your check-in container -->
+  <div id="checkin-container" class="max-w-xl mx-auto p-4">
+    <div id="checkin-cards" class="flex gap-2 justify-between"></div>
+    <div class="mt-4 text-center">
+      <button id="checkin-btn" class="px-6 py-2 rounded-lg bg-blue-600 text-white font-semibold">Check in</button>
+    </div>
+    <p id="checkin-msg" class="mt-2 text-center text-sm text-gray-600"></p>
+  </div>
+</div>
 
 
 
@@ -3946,6 +3961,16 @@
       <span class="text-xs">Games</span>
     </button>
 
+
+	  <!-- Check-In -->
+<button id="nav-checkin" onclick="activateTab('checkin-screen')" 
+        class="relative nav-btn flex flex-col items-center text-gray-600 hover:text-blue-600 transition">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2v-7H3v7a2 2 0 002 2z"/>
+  </svg>
+  <span class="text-xs">Check-In</span>
+</button>
+
   </nav>
 </div>
 
@@ -3962,6 +3987,7 @@
 </body>
 
 </html>
+
 
 
 
