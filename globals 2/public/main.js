@@ -115,20 +115,46 @@ window.saveProfile = async function () {
 
 
      // ✅ TOP NAV FUNCTION USERNAMES
-	
-  firebase.auth().onAuthStateChanged(function(user) {
-    const navbarUsername = document.getElementById("navbarUsername");
+firebase.auth().onAuthStateChanged(function (user) {
+  const navbarGreeting = document.getElementById("navbarGreeting");
 
-    if (user) {
-      // Use displayName if set, otherwise fall back to email prefix
-      const name = user.displayName || user.email.split("@")[0];
-      navbarUsername.textContent = "@" + name;
-    } else {
-      navbarUsername.textContent = "@guest";
-    }
-  });
+  if (user) {
+    const uid = user.uid;
 
+    // Fetch user profile from Firestore
+    firebase.firestore().collection("users").doc(uid).get()
+      .then((doc) => {
+        if (doc.exists) {
+          const userData = doc.data();
+          const username = userData.username || "User";
 
+          // ✅ Default greeting
+          if (userData.is_Premium === true) {
+            navbarGreeting.innerHTML = `
+              <span class="flex items-center gap-1">
+                Hello <span class="font-semibold">${username}</span>
+                <img src="VERIFIED.jpg" alt="Verified" class="w-4 h-4 inline-block">
+              </span>
+            `;
+          } else {
+            navbarGreeting.innerHTML = `
+              <span class="flex items-center gap-1">
+                Hello <span class="font-semibold">${username}</span> 👋
+              </span>
+            `;
+          }
+        } else {
+          navbarGreeting.textContent = "Hello Guest 👋";
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching user data:", error);
+        navbarGreeting.textContent = "Hello Guest 👋";
+      });
+  } else {
+    navbarGreeting.textContent = "Hello Guest 👋";
+  }
+});
 
 
 
@@ -6451,6 +6477,7 @@ try {
   }
 
 })();
+
 
 
 
