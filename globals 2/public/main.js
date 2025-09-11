@@ -326,7 +326,6 @@ function formatDatePretty(d) {
 function formatAmount(amount) {
   const n = Number(amount || 0);
   const abs = Math.abs(n).toFixed(2);
-  const sign = n > 0 ? "+" : n < 0 ? "-" : "";
   return `${sign}₦${abs}`;
 }
 
@@ -6488,6 +6487,7 @@ try {
   }
 
 })();
+
 
 
 
