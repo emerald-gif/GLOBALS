@@ -115,44 +115,79 @@ window.saveProfile = async function () {
 
 
 
-
-// ✅ TOP NAV FUNCTION USERNAMES
+// ✅ TOP NAV FUNCTION USERNAMES (safe DOM manipulation — won't reflow navbar)
 firebase.auth().onAuthStateChanged(function (user) {
   const navbarGreeting = document.getElementById("navbarGreeting");
+  const navbarUsername = document.getElementById("navbarUsername");
 
-  if (user) {
-    const uid = user.uid;
-
-    firebase.firestore().collection("users").doc(uid).get()
-      .then((doc) => {
-        if (doc.exists) {
-          const userData = doc.data();
-          const username = userData.username || "User";
-
-          // ✅ Default greeting
-          if (userData.is_Premium === true) {
-            navbarGreeting.innerHTML = `
-              Hello <span class="font-semibold">${username}</span>
-              <img src="VERIFIED.jpg" alt="Verified" class="w-4 h-4 ml-1 inline-block">
-            `;
-          } else {
-            navbarGreeting.innerHTML = `
-              Hello <span class="font-semibold">${username}</span> 👋
-            `;
-          }
-        } else {
-          navbarGreeting.textContent = "Hello Guest 👋";
-        }
-      })
-      .catch((error) => {
-        console.error("Error fetching user data:", error);
-        navbarGreeting.textContent = "Hello Guest 👋";
-      });
-  } else {
+  // helper to set simple guest fallback
+  function setGuest() {
     navbarGreeting.textContent = "Hello Guest 👋";
+    navbarUsername.textContent = "";
   }
-});
 
+  if (!navbarGreeting || !navbarUsername) {
+    console.warn("Navbar elements missing. Make sure HTML block is present.");
+    return;
+  }
+
+  if (!user) {
+    setGuest();
+    return;
+  }
+
+  const uid = user.uid;
+  firebase.firestore().collection("users").doc(uid).get()
+    .then((doc) => {
+      if (!doc.exists) {
+        setGuest();
+        return;
+      }
+
+      const userData = doc.data();
+
+      // MUST use username field only (no email fallback)
+      const username = (typeof userData.username === "string" && userData.username.trim().length > 0)
+        ? userData.username.trim()
+        : "Guest";
+
+      // put username below greeting
+      navbarUsername.textContent = username;
+
+      // Build greeting using DOM methods (avoid innerHTML wrappers)
+      // Clear greeting node
+      while (navbarGreeting.firstChild) navbarGreeting.removeChild(navbarGreeting.firstChild);
+
+      // "Hello " text
+      navbarGreeting.appendChild(document.createTextNode("Hello "));
+
+      // username bold span
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "font-semibold";
+      nameSpan.textContent = username;
+      navbarGreeting.appendChild(nameSpan);
+
+      // premium check: append verified image OR wave
+      if (userData.is_Premium === true) {
+        const img = document.createElement("img");
+        img.src = "VERIFIED.jpg"; // make sure path & case are exact
+        img.alt = "Verified";
+        // small inline badge, vertically centered
+        img.className = "w-4 h-4 ml-1 inline-block align-middle object-contain";
+        // prevent breaking if image missing
+        img.onerror = () => { img.style.display = "none"; };
+        navbarGreeting.appendChild(img);
+      } else {
+        // wave — appended as a text node (keeps layout simple)
+        navbarGreeting.appendChild(document.createTextNode(" 👋"));
+      }
+
+    })
+    .catch((err) => {
+      console.error("Error fetching user doc:", err);
+      setGuest();
+    });
+});
 
 
 
@@ -6476,6 +6511,7 @@ try {
   }
 
 })();
+
 
 
 
