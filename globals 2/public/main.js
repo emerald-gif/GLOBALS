@@ -283,7 +283,6 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
 
 
 
-
 // ---------- TRANSACTION HISTORY ----------
 
 // -----------------------------
@@ -309,7 +308,6 @@ function safeLog(...args) { console.log("[TX-HISTORY]", ...args); }
    ---------------------- */
 function parseTimestamp(val) {
   if (!val) return null;
-  // Firestore Timestamp (has toDate)
   if (typeof val === "object" && typeof val.toDate === "function") return val.toDate();
   if (val instanceof Date) return val;
   if (typeof val === "number") return new Date(val); // ms
@@ -377,7 +375,6 @@ function renderTransactions(list) {
   }
 
   txEmptyEl.classList.add("hidden");
-
   txListEl.innerHTML = list.map(tx => cardHtml(tx)).join("");
 }
 
@@ -449,7 +446,6 @@ function applyFiltersClient(category, status) {
     filtered = filtered.filter(tx => (tx.status || "").toLowerCase() === status.toLowerCase());
   }
 
-  // sort before render
   filtered = sortByTimestampDesc(filtered);
   renderTransactions(filtered);
 }
@@ -459,86 +455,87 @@ function applyFiltersClient(category, status) {
    ---------------------- */
 function stopTransactionsListener() {
   if (txUnsubscribe) {
-    try { txUnsubscribe(); } catch (e) { /* ignore */ }
+    try { txUnsubscribe(); } catch (e) { }
     txUnsubscribe = null;
     safeLog("Stopped previous transactions listener.");
   }
 }
 
 /* ----------------------
-   Try to attach onSnapshot to one collection name. 
-   Handles orderBy error by falling back to no orderBy.
+   Update red dot helper
+   ---------------------- */
+function updateTxRedDot() {
+  const txDot = document.getElementById('txDot');
+  const user = firebase.auth().currentUser;
+  if (!txDot || !user) return;
+
+  firebase.firestore().collection('users').doc(user.uid).get()
+    .then(doc => {
+      const lastRead = doc.data()?.lastTxReadAt?.toDate() || new Date(0);
+      const showDot = transactionsCache.some(tx => {
+        const txTime = parseTimestamp(tx.timestamp || tx.createdAt || tx.time || tx.created_at);
+        return txTime && txTime > lastRead;
+      });
+      txDot.classList.toggle('hidden', !showDot);
+    })
+    .catch(console.error);
+}
+
+/* ----------------------
+   Try to attach onSnapshot to one collection name
    ---------------------- */
 function tryListenToCollection(collName, uid) {
   return new Promise((resolve) => {
     safeLog(`Attempting listener on collection "${collName}" (with orderBy timestamp) for UID:`, uid);
-
     const baseRef = firebase.firestore().collection(collName).where("userId", "==", uid);
 
-    // try with orderBy 'timestamp' first
     try {
       const q = baseRef.orderBy("timestamp", "desc");
       const unsub = q.onSnapshot(snapshot => {
         safeLog(`Snapshot from "${collName}" (with orderBy timestamp). docs:`, snapshot.size);
 
-        // ✅ include doc.id
         transactionsCache = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
         }));
 
-        // ✅ render directly
         renderTransactions(transactionsCache);
+        updateTxRedDot(); // ✅ ensure red dot updates
       }, error => {
         console.error(`[TX-HISTORY] onSnapshot error for ${collName} (with orderBy):`, error.message || error);
 
-        // fallback: unsubscribe and try without orderBy
         try { unsub(); } catch (e) {}
-        safeLog(`FALLBACK: trying "${collName}" without orderBy`);
-
         const unsub2 = firebase.firestore().collection(collName).where("userId", "==", uid)
           .onSnapshot(snap2 => {
-            safeLog(`Snapshot from "${collName}" (no orderBy). docs:`, snap2.size);
-
             transactionsCache = snap2.docs.map(doc => ({
               id: doc.id,
               ...doc.data(),
             }));
-
             renderTransactions(transactionsCache);
-          }, err2 => {
-            console.error(`[TX-HISTORY] onSnapshot fallback error for ${collName}:`, err2.message || err2);
-          });
-
+            updateTxRedDot(); // ✅ ensure red dot updates
+          }, err2 => console.error(`[TX-HISTORY] fallback error for ${collName}:`, err2));
         resolve(unsub2);
       });
 
       resolve(unsub);
     } catch (err) {
-      console.error(`[TX-HISTORY] Exception trying onSnapshot with orderBy for ${collName}:`, err);
-
+      console.error(`[TX-HISTORY] Exception for ${collName}:`, err);
       try {
         const unsub3 = firebase.firestore().collection(collName).where("userId", "==", uid)
           .onSnapshot(snap3 => {
-            safeLog(`Snapshot from "${collName}" (no orderBy, exception path). docs:`, snap3.size);
-
             transactionsCache = snap3.docs.map(doc => ({
               id: doc.id,
               ...doc.data(),
             }));
-
             renderTransactions(transactionsCache);
-          }, err3 => {
-            console.error(`[TX-HISTORY] onSnapshot error (no orderBy) for ${collName}:`, err3.message || err3);
-          });
+            updateTxRedDot(); // ✅ ensure red dot updates
+          }, err3 => console.error(`[TX-HISTORY] no orderBy error:`, err3));
         resolve(unsub3);
-      } catch (e2) {
-        console.error(`[TX-HISTORY] Failed to attach listener to ${collName}:`, e2);
-        resolve(null);
-      }
+      } catch (e2) { resolve(null); }
     }
   });
 }
+
 /* ----------------------
    Start transactions listener, tries multiple collection names
    ---------------------- */
@@ -546,11 +543,9 @@ async function startTransactionsListenerForUser(uid) {
   stopTransactionsListener();
   activeCollectionName = null;
 
-  // try preferred names in order
   const candidates = ["Transaction", "transaction", "transactions", "Transactions"];
 
   for (const collName of candidates) {
-    // small delay to avoid race on error handling
     try {
       const unsub = await tryListenToCollection(collName, uid);
       if (typeof unsub === "function") {
@@ -558,56 +553,20 @@ async function startTransactionsListenerForUser(uid) {
         activeCollectionName = collName;
         safeLog(`✅ Listening to transactions collection: "${collName}"`);
         return;
-      } else {
-        safeLog(`No listener attached for "${collName}", trying next...`);
-      }
-    } catch (e) {
-      console.error("Error trying collection", collName, e);
-    }
+      } else safeLog(`No listener attached for "${collName}"`);
+    } catch (e) { console.error("Error trying collection", collName, e); }
   }
 
-  // if we get here, none worked
-  console.error("[TX-HISTORY] Could not attach transactions listener to any collection (tried multiple names).");
+  console.error("[TX-HISTORY] Could not attach transactions listener to any collection.");
   if (txListEl) txListEl.innerHTML = `<p class="text-center p-6 text-red-500">Could not load transactions. Check console for errors.</p>`;
 }
-
-
-// Check for unread/new transactions (timestamp > lastTxReadAt)
-firebase.auth().onAuthStateChanged(user => {
-  if (user) {
-    // Get lastTxReadAt safely from Firestore
-    firebase.firestore().collection("users").doc(user.uid).get()
-      .then(doc => {
-        const data = doc.data();
-        const lastRead = data?.lastTxReadAt ? data.lastTxReadAt.toDate() : new Date(0);
-
-        // Determine if any transactions are newer than lastRead
-        let showDot = false;
-        transactionsCache.forEach(tx => {
-          const txTime = parseTimestamp(tx.timestamp || tx.createdAt || tx.time || tx.created_at);
-          if (txTime && txTime > lastRead) showDot = true;
-        });
-
-        // toggle red dot
-        const txDot = document.getElementById('txDot');
-        if (txDot) txDot.classList.toggle('hidden', !showDot);
-      })
-      .catch(err => console.error("Error fetching user data for txDot:", err));
-  }
-});
-
-
-
 
 /* ----------------------
    Public init: call this when user is available (after auth)
    ---------------------- */
 function initTransactionsForCurrentUser() {
   const user = firebase.auth().currentUser;
-  if (!user) {
-    safeLog("initTransactionsForCurrentUser: no user currently signed in. Waiting for auth.");
-    return;
-  }
+  if (!user) return safeLog("initTransactionsForCurrentUser: no user signed in.");
   safeLog("initTransactionsForCurrentUser -> uid:", user.uid);
   startTransactionsListenerForUser(user.uid);
 }
@@ -620,103 +579,48 @@ firebase.auth().onAuthStateChanged(user => {
     safeLog("Auth state changed: user signed in:", user.uid);
     initTransactionsForCurrentUser();
   } else {
-    safeLog("Auth state changed: no user.");
     stopTransactionsListener();
     transactionsCache = [];
-    renderTransactions([]); // show empty state
+    renderTransactions([]);
   }
 });
 
 /* ----------------------
    Wire filter selects to client-side filter
    ---------------------- */
-if (categoryEl) {
-  categoryEl.addEventListener("change", (e) => {
-    applyFiltersClient(e.target.value, statusEl?.value || "All");
-  });
-}
-if (statusEl) {
-  statusEl.addEventListener("change", (e) => {
-    applyFiltersClient(categoryEl?.value || "All", e.target.value);
-  });
-}
+if (categoryEl) categoryEl.addEventListener("change", (e) => applyFiltersClient(e.target.value, statusEl?.value || "All"));
+if (statusEl) statusEl.addEventListener("change", (e) => applyFiltersClient(categoryEl?.value || "All", e.target.value));
 
 /* ----------------------
-   Debug helpers you can run in browser console:
-   - window.tx_debug_listAllUserDocs()
-   - window.tx_debug_showUID()
+   Debug helpers
    ---------------------- */
 window.tx_debug_showUID = function() {
   const u = firebase.auth().currentUser;
   console.log("[TX-HISTORY DEBUG] currentUser:", u ? u.uid : null, u || "(no user)");
 };
-
 window.tx_debug_listAllUserDocs = async function(collName) {
   collName = collName || activeCollectionName || "Transaction";
   try {
     const snap = await firebase.firestore().collection(collName).get();
     console.log(`[TX-HISTORY DEBUG] All docs in ${collName}: count=${snap.size}`);
     snap.forEach(d => console.log(d.id, d.data()));
-  } catch (err) {
-    console.error(`[TX-HISTORY DEBUG] Error listing docs in ${collName}:`, err);
-  }
+  } catch (err) { console.error(`[TX-HISTORY DEBUG] Error listing docs:`, err); }
 };
-
 safeLog("Transactions module loaded. Waiting for auth to start listener.");
-	
 
-
-
-// ----------------------
-// Live transaction helper
-// ----------------------
+/* ----------------------
+   Live transaction helper
+   ---------------------- */
 function addTransactionLive(tx) {
-  // Add new transaction at the top of the cache
   transactionsCache.unshift(tx);
-
-  // Re-render immediately
   renderTransactions(transactionsCache);
-
-  // Show red dot if transaction is newer than last read
-  const txDot = document.getElementById('txDot');
-  if (!txDot) return;
-
-  const user = firebase.auth().currentUser;
-  if (!user) return;
-
-  firebase.firestore().collection('users').doc(user.uid).get()
-    .then(doc => {
-      const lastRead = doc.data()?.lastTxReadAt?.toDate() || new Date(0);
-      const txTime = parseTimestamp(tx.timestamp || tx.createdAt || tx.time || tx.created_at);
-      txDot.classList.toggle('hidden', !(txTime && txTime > lastRead));
-    })
-    .catch(console.error);
+  updateTxRedDot(); // ✅ check red dot
 }
 
-
-
-
-
-// ----------------------
-// Transaction nav click to hide red dot
-// ----------------------
+/* ----------------------
+   Transaction nav click to hide red dot
+   ---------------------- */
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("nav-transaction")?.addEventListener("click", () => {
-    // hide red dot immediately
-    const txDot = document.getElementById("txDot");
-    if (txDot) txDot.classList.add("hidden");
-
-    // mark lastTxReadAt in Firestore
-    const user = firebase.auth().currentUser;
-    if (user) {
-      firebase.firestore().collection('users').doc(user.uid)
-        .update({ lastTxReadAt: firebase.firestore.FieldValue.serverTimestamp() })
-        .catch(console.error);
-    }
-  });
-});
-
-
 
 
 
@@ -6573,6 +6477,7 @@ try {
   }
 
 })();
+
 
 
 
