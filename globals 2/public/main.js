@@ -6504,6 +6504,349 @@ try {
 
 
 
+/* ====== HELPERS ====== */
+function todayDateString() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function tomorrowDateStringFrom(dateStr) {
+  const dt = new Date(dateStr + 'T00:00:00');
+  dt.setDate(dt.getDate() + 1);
+  return toDateStr(dt);
+}
+function toDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function daysBetween(startDateStr, endDateStr) {
+  const s = new Date(startDateStr + 'T00:00:00');
+  const e = new Date(endDateStr + 'T00:00:00');
+  const diff = Math.floor((e - s) / (24 * 60 * 60 * 1000));
+  return diff; // could be negative
+}
+function showToast(msg, type='info') {
+  // replace this with your nicer toast if you have one
+  const el = document.getElementById('checkin-msg');
+  el.textContent = msg;
+  el.classList.remove('text-green-600','text-red-600','text-gray-600');
+  if (type === 'success') el.classList.add('text-green-600');
+  else if (type === 'error') el.classList.add('text-red-600');
+  else el.classList.add('text-gray-600');
+}
+
+/* ====== UI RENDER ====== */
+const checkinCardsEl = document.getElementById('checkin-cards');
+const checkinBtn = document.getElementById('checkin-btn');
+
+function renderCheckin(cycleDoc) {
+  // cycleDoc may be null (no cycle)
+  checkinCardsEl.innerHTML = '';
+  const today = todayDateString();
+  if (!cycleDoc) {
+    // show an empty 7 boxes message
+    for (let i=0;i<7;i++) {
+      const card = makeCard({status: 'empty', day: i+1, amountLabel: (i===6 ? '₦300' : '₦4')});
+      checkinCardsEl.appendChild(card);
+    }
+    checkinBtn.disabled = true;
+    checkinBtn.classList.add('opacity-50','cursor-not-allowed');
+    checkinBtn.textContent = 'No Cycle';
+    return;
+  }
+
+  const { cycleStartDate, days, status, rewardAmount } = cycleDoc;
+  const dayIndex = daysBetween(cycleStartDate, today);
+
+  for (let i=0;i<7;i++) {
+    let cardStatus = 'future'; // default
+    if (i < dayIndex) {
+      // past days
+      cardStatus = days[i] ? 'checked' : 'missed';
+    } else if (i === dayIndex) {
+      cardStatus = days[i] ? 'checked' : 'today';
+    } else { // i > dayIndex
+      cardStatus = 'future';
+    }
+    const amountLabel = (i === 6) ? `₦${rewardAmount || 300}` : '₦4'; // example amounts
+    checkinCardsEl.appendChild(makeCard({status: cardStatus, day: i+1, amountLabel}));
+  }
+
+  // Decide button state:
+  const alreadyCheckedToday = (dayIndex >=0 && dayIndex <=6 && days[dayIndex] === true);
+  const isWithinCycle = (dayIndex >= 0 && dayIndex <= 6 && status === 'processing');
+
+  if (!isWithinCycle) {
+    // If cycle isn't in-processing (maybe it's finalizing or new cycle starts tomorrow), disable
+    checkinBtn.disabled = true;
+    checkinBtn.classList.add('opacity-50','cursor-not-allowed');
+    checkinBtn.textContent = status === 'received' ? 'Completed' : 'No check-in available';
+  } else if (alreadyCheckedToday) {
+    checkinBtn.disabled = true;
+    checkinBtn.classList.add('opacity-50','cursor-not-allowed');
+    checkinBtn.textContent = 'Checked today';
+  } else {
+    checkinBtn.disabled = false;
+    checkinBtn.classList.remove('opacity-50','cursor-not-allowed');
+    checkinBtn.textContent = 'Check in';
+  }
+}
+
+function makeCard({status='future', day=1, amountLabel=''}) {
+  // small Tailwind-like card - change markup to suit your design
+  const card = document.createElement('div');
+  card.className = 'w-1/7 p-2 text-center rounded-lg border bg-white shadow-sm';
+  card.style.flex = '1';
+  const amt = document.createElement('div');
+  amt.className = 'text-xs font-semibold';
+  amt.textContent = amountLabel;
+  const icon = document.createElement('div');
+  icon.className = 'mt-2';
+  if (status === 'checked') icon.innerHTML = '✅';
+  else if (status === 'missed') icon.innerHTML = '✖️';
+  else if (status === 'today') icon.innerHTML = '⬤'; // highlight
+  else icon.innerHTML = '';
+  const dayLabel = document.createElement('div');
+  dayLabel.className = 'text-xs mt-1 text-gray-500';
+  dayLabel.textContent = ['1st','2nd','3rd','4th','5th','6th','7th'][day-1] || `${day}th`;
+  card.appendChild(amt);
+  card.appendChild(icon);
+  card.appendChild(dayLabel);
+  return card;
+}
+
+/* ====== FIRESTORE LOGIC ====== */
+function userCyclesRef(uid) {
+  return db.collection('users').doc(uid).collection('checkinCycles');
+}
+function userTransactionsRef(uid) {
+  return db.collection('users').doc(uid).collection('transactions');
+}
+
+async function createNewCycle(uid, startDateStr = todayDateString()) {
+  const doc = {
+    cycleStartDate: startDateStr,
+    days: [false,false,false,false,false,false,false],
+    status: 'processing',
+    rewardAmount: 300,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  const snap = await userCyclesRef(uid).add(doc);
+  return { id: snap.id, ...doc };
+}
+
+async function ensureCycleExists(uid) {
+  const q = await userCyclesRef(uid).orderBy('createdAt','desc').limit(1).get();
+  if (q.empty) {
+    const newCycle = await createNewCycle(uid, todayDateString());
+    return { id: newCycle.id, ...newCycle };
+  } else {
+    const d = q.docs[0];
+    return { id: d.id, ...d.data() };
+  }
+}
+
+/* Finalize a cycle (either received or failed). This function uses a transaction to safely update user balance on success. */
+async function finalizeCycle(uid, cycleDocRef, cycleData) {
+  // cycleDocRef: DocumentReference to cycle
+  // cycleData: object with cycleStartDate, days, rewardAmount, txId
+  const txId = cycleData.txId;
+  const rewardAmount = cycleData.rewardAmount || 300;
+  const daysAllChecked = Array.isArray(cycleData.days) && cycleData.days.every(Boolean);
+
+  if (daysAllChecked) {
+    // award
+    const userRef = db.collection('users').doc(uid);
+    const txRef = txId ? userTransactionsRef(uid).doc(txId) : null;
+
+    try {
+      await db.runTransaction(async (t) => {
+        const userSnap = await t.get(userRef);
+        const userBalance = (userSnap.exists && userSnap.data().walletBalance) ? userSnap.data().walletBalance : 0;
+        const newBalance = userBalance + rewardAmount;
+        // update user balance
+        t.update(userRef, {
+          walletBalance: newBalance,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // update cycle
+        t.update(cycleDocRef, {
+          status: 'received',
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // update transaction doc to received (create if missing)
+        if (txRef) {
+          t.update(txRef, { status: 'received', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        } else {
+          const newTxRef = userTransactionsRef(uid).doc();
+          t.set(newTxRef, {
+            type: 'Check-in Reward',
+            amount: rewardAmount,
+            status: 'received',
+            cycleId: cycleDocRef.id,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          t.update(cycleDocRef, { txId: newTxRef.id });
+        }
+      });
+      showToast('🎉 Reward received and credited!', 'success');
+    } catch (err) {
+      console.error('finalize award tx failed', err);
+      showToast('Error awarding reward. Try again later.', 'error');
+    }
+  } else {
+    // failed -> mark cycle and tx as failed
+    const updates = {
+      status: 'failed',
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    await cycleDocRef.update(updates);
+    if (cycleData.txId) {
+      await userTransactionsRef(uid).doc(cycleData.txId).update({ status: 'failed', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    }
+    showToast('Cycle ended — no reward (missed days).', 'info');
+  }
+
+  // create next cycle that starts tomorrow (so UI won't flip immediately)
+  const nextStart = tomorrowDateStringFrom(todayDateString());
+  await createNewCycle(uid, nextStart);
+}
+
+/* Called when user presses the Check-in button */
+async function handleCheckInPress(uid) {
+  const cyclesQ = await userCyclesRef(uid).orderBy('createdAt','desc').limit(1).get();
+  let cycleDocSnap = cyclesQ.empty ? null : cyclesQ.docs[0];
+  if (!cycleDocSnap) {
+    // create a cycle starting today
+    const newCycleRef = await userCyclesRef(uid).add({
+      cycleStartDate: todayDateString(),
+      days: [false,false,false,false,false,false,false],
+      status: 'processing',
+      rewardAmount: 300,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    cycleDocSnap = await newCycleRef.get();
+  }
+
+  const cycleRef = cycleDocSnap.ref;
+  const cycleData = cycleDocSnap.data();
+  const cycleStart = cycleData.cycleStartDate;
+  const today = todayDateString();
+  let dayIndex = daysBetween(cycleStart, today);
+
+  // If today is after cycle end (>6) -> finalize previous cycle (if processing), then create a new cycle for today and set dayIndex = 0
+  if (dayIndex > 6) {
+    if (cycleData.status === 'processing') {
+      // finalize as failed or received depending
+      await finalizeCycle(uid, cycleRef, cycleData);
+    }
+    // ensure we have a fresh cycle that starts today
+    const newC = await createNewCycle(uid, today);
+    dayIndex = 0;
+    // update cycleRef and cycleData for the new cycle
+    const q = await userCyclesRef(uid).orderBy('createdAt','desc').limit(1).get();
+    cycleDocSnap = q.docs[0];
+  }
+
+  // refresh values
+  const latest = await cycleDocSnap.ref.get();
+  const latestData = latest.data();
+  const start = latestData.cycleStartDate;
+  const todayIndex = daysBetween(start, today);
+  if (todayIndex < 0 || todayIndex > 6) {
+    showToast('Check-in not available.', 'error');
+    return;
+  }
+  if (latestData.days[todayIndex]) {
+    showToast('You already checked in today.', 'info');
+    return;
+  }
+
+  // Mark today's check-in and on first check-in create transaction doc (processing)
+  const updates = {};
+  const daysArr = [...latestData.days];
+  daysArr[todayIndex] = true;
+  updates.days = daysArr;
+  updates.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+
+  // if txId not present and this is first check-in (i.e., dayIndex === 0 or txId missing), create tx
+  if (!latestData.txId) {
+    // create processing transaction
+    const newTxRef = await userTransactionsRef(uid).add({
+      type: 'Check-in Reward',
+      amount: latestData.rewardAmount || 300,
+      status: 'processing',
+      cycleId: latest.id,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    updates.txId = newTxRef.id;
+  }
+
+  // update the cycle doc with updated days
+  await latest.ref.update(updates);
+
+  // Optimistic UI + toast
+  showToast('Check-in successful ✅', 'success');
+
+  // If today is the 7th day (index===6) then finalize the cycle (award or fail)
+  if (todayIndex === 6) {
+    // get freshest snapshot
+    const freshSnap = await latest.ref.get();
+    const freshData = freshSnap.data();
+    await finalizeCycle(uid, latest.ref, freshData);
+  }
+}
+
+/* Start a listener to update UI in realtime */
+function startCheckinListener() {
+  firebase.auth().onAuthStateChanged(async (user) => {
+    if (!user) return;
+    const uid = user.uid;
+
+    // Listen for the latest cycle doc for this user
+    userCyclesRef(uid).orderBy('createdAt','desc').limit(1)
+      .onSnapshot(async (snap) => {
+        if (snap.empty) {
+          // create one if missing
+          const newCycle = await createNewCycle(uid, todayDateString());
+          renderCheckin({ cycleStartDate: newCycle.cycleStartDate, days: newCycle.days, status: newCycle.status, rewardAmount: newCycle.rewardAmount });
+          return;
+        }
+        const doc = snap.docs[0];
+        let data = doc.data();
+        // If cycle expired (today beyond 0..6) but still processing, finalize it (user might not have opened on day 7)
+        const today = todayDateString();
+        const dIndex = daysBetween(data.cycleStartDate, today);
+        if (dIndex > 6 && data.status === 'processing') {
+          // finalize in background: important to avoid loops - finalizeCycle creates new cycle (tomorrow) and snapshot will fire again
+          await finalizeCycle(uid, doc.ref, data);
+          return;
+        }
+        // Render
+        renderCheckin({ cycleStartDate: data.cycleStartDate, days: data.days, status: data.status, rewardAmount: data.rewardAmount });
+      });
+
+    // wire button
+    checkinBtn.onclick = () => handleCheckInPress(uid);
+  });
+}
+
+/* initialize */
+startCheckinListener();
+</script>
+
+
+
+
+
+
 
 
 
