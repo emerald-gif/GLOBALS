@@ -3815,8 +3815,10 @@
 
 
 
+/* ====== FIRESTORE REF ====== */
 
-<!-- ✅ Daily Check-In Screen -->
+<!-- ===== Updated Daily Check-In Screen (paste entire block) ===== -->
+<!-- Daily Check-In Screen -->
 <div id="checkin-screen" class="tab-section hidden min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 p-6">
   <div class="flex items-center justify-between mb-6">
     <h2 class="text-2xl font-extrabold text-blue-900">Daily Check-In</h2>
@@ -3826,7 +3828,6 @@
 
   <!-- Check-in Container -->
   <div id="checkin-container" class="max-w-xl mx-auto space-y-6">
-    
     <!-- Cards -->
     <div id="checkin-cards" class="grid grid-cols-7 gap-3"></div>
 
@@ -3849,19 +3850,24 @@
 </div>
 
 <style>
-/* Custom fintech-style icons */
+/* Fintech style tweaks */
 .check-icon {
   width: 22px; height: 22px; border-radius: 50%;
   display:flex; align-items:center; justify-content:center;
-  font-size: 14px; font-weight:bold;
+  font-size: 13px; font-weight:600;
 }
-.check-green { background:#16a34a; color:white; }
-.check-red { background:#dc2626; color:white; }
+.check-green { background:#10b981; color:white; }
+.check-red { background:#ef4444; color:white; }
 .check-blue { background:#2563eb; color:white; }
+.card-day {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  border-radius:12px; padding:10px; box-shadow:0 8px 18px rgba(2,6,23,0.06);
+  transition: transform .14s ease, box-shadow .14s ease;
+  width:72px; height:92px;
+}
+.card-day:hover { transform: translateY(-4px); box-shadow:0 14px 30px rgba(2,6,23,0.12); }
+.status-pill { padding:6px 10px; border-radius:20px; font-weight:600; font-size:12px; }
 </style>
-                                                        
-
-
 
 
 
@@ -4011,6 +4017,7 @@
 </body>
 
 </html>
+
 
 
 
