@@ -573,19 +573,28 @@ async function startTransactionsListenerForUser(uid) {
 
 
 // Check for unread/new transactions (timestamp > lastTxReadAt)
-let showDot = false;
-const lastRead = userData?.lastTxReadAt ? userData.lastTxReadAt.toDate() : new Date(0);
+firebase.auth().onAuthStateChanged(user => {
+  if (user) {
+    // Get lastTxReadAt safely from Firestore
+    firebase.firestore().collection("users").doc(user.uid).get()
+      .then(doc => {
+        const data = doc.data();
+        const lastRead = data?.lastTxReadAt ? data.lastTxReadAt.toDate() : new Date(0);
 
-transactionsCache.forEach(tx => {
-  const txTime = parseTimestamp(tx.timestamp || tx.createdAt || tx.time || tx.created_at);
-  if (txTime && txTime > lastRead) showDot = true;
+        // Determine if any transactions are newer than lastRead
+        let showDot = false;
+        transactionsCache.forEach(tx => {
+          const txTime = parseTimestamp(tx.timestamp || tx.createdAt || tx.time || tx.created_at);
+          if (txTime && txTime > lastRead) showDot = true;
+        });
+
+        // toggle red dot
+        const txDot = document.getElementById('txDot');
+        if (txDot) txDot.classList.toggle('hidden', !showDot);
+      })
+      .catch(err => console.error("Error fetching user data for txDot:", err));
+  }
 });
-
-// toggle red dot
-const txDot = document.getElementById('txDot');
-if (txDot) txDot.classList.toggle('hidden', !showDot);
-
-
 
 
 
@@ -6533,6 +6542,7 @@ try {
   }
 
 })();
+
 
 
 
