@@ -621,7 +621,18 @@ function addTransactionLive(tx) {
    Transaction nav click to hide red dot
    ---------------------- */
 document.addEventListener("DOMContentLoaded", () => {
+document.getElementById("nav-transaction")?.addEventListener("click", () => {
+    const txDot = document.getElementById("txDot");
+    if (txDot) txDot.classList.add("hidden");
 
+    const user = firebase.auth().currentUser;
+    if (user) {
+      firebase.firestore().collection('users').doc(user.uid)
+        .update({ lastTxReadAt: firebase.firestore.FieldValue.serverTimestamp() })
+        .catch(console.error);
+    }
+  });
+});
 
 
 
@@ -6477,6 +6488,7 @@ try {
   }
 
 })();
+
 
 
 
