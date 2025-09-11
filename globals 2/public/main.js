@@ -666,6 +666,13 @@ safeLog("Transactions module loaded. Waiting for auth to start listener.");
 	
 
 
+
+cc
+
+
+
+
+
 // ----------------------
 // Transaction nav click to hide red dot
 // ----------------------
@@ -6542,6 +6549,7 @@ try {
   }
 
 })();
+
 
 
 
