@@ -6523,30 +6523,31 @@ function ordinal(n) {
 }
 
 /* ====== CARD BUILDER ====== */
+/* ====== CARD BUILDER ====== */
 function makeCard({status='future', day=1, amountLabel=''}) {
   const card = document.createElement('div');
   card.className = `
-    flex flex-col items-center justify-center rounded-2xl p-3 shadow-md
-    transition transform hover:scale-105 
-    ${status === 'checked' ? 'bg-green-100 text-green-700' : ''}
-    ${status === 'missed' ? 'bg-red-100 text-red-700' : ''}
+    flex flex-col items-center justify-center rounded-xl p-3 shadow-md
+    transition transform hover:scale-105 w-14 h-20
+    ${status === 'checked' ? 'bg-green-50 border-2 border-green-400' : ''}
+    ${status === 'missed' ? 'bg-red-50 border-2 border-red-400' : ''}
     ${status === 'today' ? 'bg-blue-600 text-white ring-2 ring-blue-400' : ''}
-    ${status === 'future' ? 'bg-white text-gray-500 border' : ''}
+    ${status === 'future' ? 'bg-white border border-gray-200 text-gray-500' : ''}
   `;
 
   const amt = document.createElement('div');
-  amt.className = 'text-sm font-bold';
+  amt.className = 'text-xs font-semibold';
   amt.textContent = amountLabel;
 
   const icon = document.createElement('div');
-  icon.className = 'mt-1 text-lg';
-  if (status === 'checked') icon.innerHTML = '✅';
-  else if (status === 'missed') icon.innerHTML = '✖️';
-  else if (status === 'today') icon.innerHTML = '⬤';
-  else icon.innerHTML = '';
+  icon.className = 'mt-1 check-icon';
+  if (status === 'checked') { icon.classList.add('check-green'); icon.innerHTML = '✔'; }
+  else if (status === 'missed') { icon.classList.add('check-red'); icon.innerHTML = '✖'; }
+  else if (status === 'today') { icon.classList.add('check-blue'); icon.innerHTML = '●'; }
+  else { icon.innerHTML = ''; }
 
   const dayLabel = document.createElement('div');
-  dayLabel.className = 'text-xs mt-1';
+  dayLabel.className = 'text-[11px] mt-1';
   dayLabel.textContent = ordinal(day);
 
   card.appendChild(amt);
@@ -6554,42 +6555,6 @@ function makeCard({status='future', day=1, amountLabel=''}) {
   card.appendChild(dayLabel);
 
   return card;
-}
-
-/* ====== RENDER CHECK-IN ====== */
-function renderCheckin(cycleDoc) {
-  const cardsDiv = document.getElementById('checkin-cards');
-  const btn = document.getElementById('checkin-btn');
-  cardsDiv.innerHTML = '';
-
-  if (!cycleDoc) {
-    btn.disabled = true;
-    btn.textContent = 'Loading...';
-    return;
-  }
-
-  const d = cycleDoc.data();
-  const start = d.cycleStartDate;
-  const daysArr = d.days;
-  const diff = dayDiff(start, todayStr());
-
-  for (let i=0; i<7; i++) {
-    let status = 'future';
-    if (i < diff) status = daysArr[i] ? 'checked' : 'missed';
-    else if (i === diff) status = daysArr[i] ? 'checked' : 'today';
-    cardsDiv.appendChild(makeCard({
-      status, 
-      day: i+1,
-      amountLabel: (i===6 ? '₦300' : '₦4')
-    }));
-  }
-
-  btn.disabled = (diff<0 || diff>6 || daysArr[diff]);
-  btn.classList.toggle('opacity-50', btn.disabled);
-  btn.classList.toggle('cursor-not-allowed', btn.disabled);
-
-  // render history
-  renderHistory(d);
 }
 
 /* ====== RENDER HISTORY ====== */
@@ -6602,38 +6567,20 @@ function renderHistory(cycleData) {
   }
 
   const div = document.createElement('div');
-  div.className = `p-3 rounded-xl shadow flex items-center justify-between ${
-    cycleData.status==='received' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-  }`;
+  div.className = `p-4 rounded-2xl shadow flex items-center justify-between`;
   div.innerHTML = `
-    <span>₦${cycleData.rewardAmount} Check-in Reward</span>
-    <span class="text-xs">${cycleData.status}</span>
+    <div>
+      <p class="font-semibold text-gray-800">₦${cycleData.rewardAmount} Check-in Bonus</p>
+      <p class="text-xs text-gray-500">${new Date().toLocaleDateString()}</p>
+    </div>
+    <span class="px-3 py-1 rounded-full text-xs font-bold ${
+      cycleData.status==='received' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+    }">${cycleData.status}</span>
   `;
   hist.appendChild(div);
 }
 
-/* ====== CHECK-IN BUTTON ====== */
-async function handleCheckInPress(cycleDoc) {
-  const uid = firebase.auth().currentUser.uid;
-  const d = cycleDoc.data();
-  const diff = dayDiff(d.cycleStartDate, todayStr());
-
-  if (diff < 0 || diff > 6 || d.days[diff]) return;
-
-  const arr = d.days;
-  arr[diff] = true;
-
-  await cyclesRef(uid).doc(cycleDoc.id).update({
-    days: arr,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
-
-  alert('✅ Check-in Successful');
-
-  if (diff === 6) finalizeCycle(uid, cycleDoc.id);
-}
-
-/* ====== FINALIZE CYCLE ====== */
+/* ====== FINALIZE CYCLE (with instant balance update) ====== */
 async function finalizeCycle(uid, cycleId) {
   const ref = cyclesRef(uid).doc(cycleId);
   await db.runTransaction(async t=>{
@@ -6647,8 +6594,13 @@ async function finalizeCycle(uid, cycleId) {
       const userSnap = await t.get(userRef);
       const balance = (userSnap.exists && userSnap.data().balance) ? userSnap.data().balance : 0;
       const newBalance = balance + d.rewardAmount;
+
       t.update(userRef,{ balance: newBalance, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
       t.update(ref,{ status:'received' });
+
+      // 🔥 Update UI immediately
+      const balanceEl = document.getElementById('balance-amount'); 
+      if (balanceEl) balanceEl.textContent = `₦${newBalance}`;
     } else {
       t.update(ref,{ status:'failed' });
     }
@@ -6667,40 +6619,6 @@ async function finalizeCycle(uid, cycleId) {
     });
   });
 }
-
-/* ====== ENSURE CYCLE ====== */
-async function ensureCycleExists(uid) {
-  const snap = await cyclesRef(uid).orderBy('createdAt','desc').limit(1).get();
-  if (snap.empty) {
-    await cyclesRef(uid).add({
-      cycleStartDate: todayStr(),
-      days: Array(7).fill(false),
-      status:'processing',
-      rewardAmount:300,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-  }
-}
-
-/* ====== START LISTENER ====== */
-function startCheckinListener() {
-  firebase.auth().onAuthStateChanged(async user=>{
-    if (!user) return;
-    await ensureCycleExists(user.uid);
-
-    cyclesRef(user.uid).orderBy('createdAt','desc').limit(1)
-      .onSnapshot(qs=>{
-        if (!qs.empty) {
-          const doc = qs.docs[0];
-          renderCheckin(doc);
-          document.getElementById('checkin-btn').onclick=()=>handleCheckInPress(doc);
-        }
-      });
-  });
-}
-startCheckinListener();
-
-
 
 
 
