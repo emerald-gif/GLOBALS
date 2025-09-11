@@ -667,7 +667,31 @@ safeLog("Transactions module loaded. Waiting for auth to start listener.");
 
 
 
-cc
+// ----------------------
+// Live transaction helper
+// ----------------------
+function addTransactionLive(tx) {
+  // Add new transaction at the top of the cache
+  transactionsCache.unshift(tx);
+
+  // Re-render immediately
+  renderTransactions(transactionsCache);
+
+  // Show red dot if transaction is newer than last read
+  const txDot = document.getElementById('txDot');
+  if (!txDot) return;
+
+  const user = firebase.auth().currentUser;
+  if (!user) return;
+
+  firebase.firestore().collection('users').doc(user.uid).get()
+    .then(doc => {
+      const lastRead = doc.data()?.lastTxReadAt?.toDate() || new Date(0);
+      const txTime = parseTimestamp(tx.timestamp || tx.createdAt || tx.time || tx.created_at);
+      txDot.classList.toggle('hidden', !(txTime && txTime > lastRead));
+    })
+    .catch(console.error);
+}
 
 
 
@@ -6549,6 +6573,7 @@ try {
   }
 
 })();
+
 
 
 
