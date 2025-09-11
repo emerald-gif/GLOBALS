@@ -571,6 +571,25 @@ async function startTransactionsListenerForUser(uid) {
   if (txListEl) txListEl.innerHTML = `<p class="text-center p-6 text-red-500">Could not load transactions. Check console for errors.</p>`;
 }
 
+
+// Check for unread/new transactions (timestamp > lastTxReadAt)
+let showDot = false;
+const lastRead = userData?.lastTxReadAt ? userData.lastTxReadAt.toDate() : new Date(0);
+
+transactionsCache.forEach(tx => {
+  const txTime = parseTimestamp(tx.timestamp || tx.createdAt || tx.time || tx.created_at);
+  if (txTime && txTime > lastRead) showDot = true;
+});
+
+// toggle red dot
+const txDot = document.getElementById('txDot');
+if (txDot) txDot.classList.toggle('hidden', !showDot);
+
+
+
+
+
+
 /* ----------------------
    Public init: call this when user is available (after auth)
    ---------------------- */
@@ -636,6 +655,29 @@ window.tx_debug_listAllUserDocs = async function(collName) {
 
 safeLog("Transactions module loaded. Waiting for auth to start listener.");
 	
+
+
+// ----------------------
+// Transaction nav click to hide red dot
+// ----------------------
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("nav-transaction")?.addEventListener("click", () => {
+    // hide red dot immediately
+    const txDot = document.getElementById("txDot");
+    if (txDot) txDot.classList.add("hidden");
+
+    // mark lastTxReadAt in Firestore
+    const user = firebase.auth().currentUser;
+    if (user) {
+      firebase.firestore().collection('users').doc(user.uid)
+        .update({ lastTxReadAt: firebase.firestore.FieldValue.serverTimestamp() })
+        .catch(console.error);
+    }
+  });
+});
+
+
+
 
 
 
@@ -6491,6 +6533,7 @@ try {
   }
 
 })();
+
 
 
 
