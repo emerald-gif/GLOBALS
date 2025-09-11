@@ -6840,7 +6840,8 @@ function startCheckinListener() {
 
 /* initialize */
 startCheckinListener();
-</script>
+
+
 
 
 
