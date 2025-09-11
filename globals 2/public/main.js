@@ -115,7 +115,7 @@ window.saveProfile = async function () {
 
 
 
-// ✅ TOP NAV FUNCTION USERNAMES
+// ✅ TOP NAV FUNCTION USERNAMES (reactive)
 firebase.auth().onAuthStateChanged(function (user) {
   const navbarGreeting = document.getElementById("navbarGreeting");
 
@@ -127,15 +127,19 @@ firebase.auth().onAuthStateChanged(function (user) {
   }
 
   const uid = user.uid;
-  firebase.firestore().collection("users").doc(uid).get()
-    .then((doc) => {
+
+  // Listen for real-time changes in the user's document
+  firebase.firestore().collection("users").doc(uid)
+    .onSnapshot((doc) => {
       if (!doc.exists) {
         navbarGreeting.textContent = "Hello Guest 👋";
         return;
       }
 
       const userData = doc.data();
-      const username = userData.username || "Guest";
+      const username = (typeof userData.username === "string" && userData.username.trim().length > 0)
+        ? userData.username.trim()
+        : "Guest";
 
       // Clear old content
       navbarGreeting.textContent = "";
@@ -161,14 +165,11 @@ firebase.auth().onAuthStateChanged(function (user) {
         navbarGreeting.appendChild(document.createTextNode(" 👋"));
       }
 
-    })
-    .catch((err) => {
-      console.error("Error fetching user data:", err);
+    }, (err) => {
+      console.error("Error listening to user doc:", err);
       navbarGreeting.textContent = "Hello Guest 👋";
     });
 });
-
-
 
 
 
@@ -6490,6 +6491,7 @@ try {
   }
 
 })();
+
 
 
 
