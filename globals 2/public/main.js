@@ -323,10 +323,10 @@ function formatDatePretty(d) {
   return d.toLocaleString();
 }
 
+// Format Amount (clean, no plus/minus sign)
 function formatAmount(amount) {
   const n = Number(amount || 0);
-  const abs = Math.abs(n).toFixed(2);
-  return `${sign}₦${abs}`;
+  return `₦${n.toFixed(2)}`;
 }
 
 /* ----------------------
@@ -6487,6 +6487,7 @@ try {
   }
 
 })();
+
 
 
 
