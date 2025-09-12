@@ -6514,317 +6514,220 @@ try {
 
 
 
-
-
-
-
-
-
-
-
-
-
 /* ====== FIRESTORE REF ====== */
 function cyclesRef(uid) {
   return db.collection('checkins').doc(uid).collection('cycles');
 }
 
-/* ====== LOCAL DATE HELPERS ====== */
-// use local date (so midnight activation is local)
-function todayStrLocal() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+/* ====== UTILITIES ====== */
+function dayDiff(startDate, today) {
+  const s = new Date(startDate); s.setHours(0,0,0,0);
+  const t = new Date(today); t.setHours(0,0,0,0);
+  return Math.floor((t - s)/(1000*60*60*24));
 }
-// difference in days between two YYYY-MM-DD local dates
-function dayDiff(startDateStr, dateStr) {
-  const [sy, sm, sd] = startDateStr.split('-').map(Number);
-  const [ty, tm, td] = dateStr.split('-').map(Number);
-  const s = new Date(sy, sm-1, sd);
-  const t = new Date(ty, tm-1, td);
-  // floor difference
-  return Math.floor((t - s) / (1000*60*60*24));
+function todayStr() {
+  const now = new Date();
+  return now.toISOString().split("T")[0];
 }
 function ordinal(n) {
   return ['1st','2nd','3rd','4th','5th','6th','7th'][n-1] || `${n}th`;
 }
 
-/* ====== ICONS (fintech small SVGs) ====== */
-function svgCheck() {
-  return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M20 6L9 17L4 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
-}
-function svgCross() {
-  return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M18 6L6 18M6 6L18 18" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
-}
-function svgDot() {
-  return `<svg width="8" height="8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="6" fill="white"/></svg>`;
-}
-
-/* ====== CARD BUILDER (updated appearance) ====== */
-function makeCard({status='future', day=1, amountLabel=''}) {
+/* ====== CARD BUILDER ====== */
+function makeCard({status='future', day=1, amountLabel='', isLast=false}) {
   const card = document.createElement('div');
-  card.className = 'card-day';
-  // background variants
-  if (status === 'checked') {
-    card.style.background = '#f0fdf4'; card.style.border = '1px solid #bbf7d0';
-  } else if (status === 'missed') {
-    card.style.background = '#fff1f2'; card.style.border = '1px solid #fecaca';
-  } else if (status === 'today') {
-    card.style.background = 'linear-gradient(180deg,#2563eb,#3b82f6)'; card.style.color = 'white';
-  } else {
-    card.style.background = 'white'; card.style.border = '1px solid rgba(15,23,42,0.06)';
-  }
+  card.className = `
+    flex flex-col items-center justify-center rounded-2xl p-2 shadow-md
+    transition transform hover:scale-105
+    ${status === 'checked' ? 'bg-green-100 text-green-700' : ''}
+    ${status === 'missed' ? 'bg-red-100 text-red-700' : ''}
+    ${status === 'today' ? 'bg-blue-600 text-white ring-2 ring-blue-400' : ''}
+    ${status === 'future' ? 'bg-white text-gray-500 border' : ''}
+    ${isLast ? 'scale-110 animate-pulse font-bold' : ''}
+  `;
 
   const amt = document.createElement('div');
   amt.className = 'text-sm font-semibold';
-  amt.style.marginBottom = '8px';
   amt.textContent = amountLabel;
 
-  const iconWrap = document.createElement('div');
-  iconWrap.style.width = '34px'; iconWrap.style.height = '34px'; iconWrap.style.borderRadius = '999px';
-  iconWrap.style.display = 'flex'; iconWrap.style.alignItems = 'center'; iconWrap.style.justifyContent = 'center';
-  if (status === 'checked') { iconWrap.className = 'check-icon check-green'; iconWrap.innerHTML = svgCheck(); }
-  else if (status === 'missed') { iconWrap.className = 'check-icon check-red'; iconWrap.innerHTML = svgCross(); }
-  else if (status === 'today') { iconWrap.className = 'check-icon check-blue'; iconWrap.innerHTML = svgDot(); }
-  else { iconWrap.style.background = 'transparent'; iconWrap.innerHTML = ''; }
+  const circle = document.createElement('div');
+  circle.className = 'mt-1 w-5 h-5 flex items-center justify-center rounded-full';
+  if (status === 'checked') circle.innerHTML = `<div class="w-4 h-4 rounded-full bg-green-500"></div>`;
+  else if (status === 'missed') circle.innerHTML = `<div class="w-4 h-4 rounded-full bg-red-400"></div>`;
+  else if (status === 'today') circle.innerHTML = `<div class="w-4 h-4 rounded-full bg-yellow-300"></div>`;
+  else circle.innerHTML = `<div class="w-4 h-4 rounded-full border border-gray-300"></div>`;
 
   const dayLabel = document.createElement('div');
-  dayLabel.className = 'text-xs mt-2';
+  dayLabel.className = 'text-xs mt-1';
   dayLabel.textContent = ordinal(day);
 
   card.appendChild(amt);
-  card.appendChild(iconWrap);
+  card.appendChild(circle);
   card.appendChild(dayLabel);
+
   return card;
 }
 
-/* ====== RENDER CHECK-IN (keeps behaviour neat) ====== */
-let lastCycleDocSnap = null; // store last Firestore snapshot
-let currentUid = null;
-let lastRenderedLocalDate = todayStrLocal();
-
-function renderCheckin(cycleDocSnap) {
-  // cycleDocSnap = Firestore DocumentSnapshot (or null)
+/* ====== RENDER CHECK-IN ====== */
+function renderCheckin(cycleDoc) {
   const cardsDiv = document.getElementById('checkin-cards');
   const btn = document.getElementById('checkin-btn');
   cardsDiv.innerHTML = '';
 
-  if (!cycleDocSnap) {
+  if (!cycleDoc) {
     btn.disabled = true;
     btn.textContent = 'Loading...';
     return;
   }
 
-  const d = cycleDocSnap.data();
+  const d = cycleDoc.data();
   const start = d.cycleStartDate;
-  const daysArr = d.days || Array(7).fill(false);
-  const status = d.status || 'processing';
-  const todayLocal = todayStrLocal();
-  const diff = dayDiff(start, todayLocal);
+  const daysArr = d.days;
+  const diff = dayDiff(start, todayStr());
 
-  // show 7 boxes
-  for (let i=0;i<7;i++) {
-    let s = 'future';
-    if (i < diff) s = daysArr[i] ? 'checked' : 'missed';
-    else if (i === diff) s = daysArr[i] ? 'checked' : 'today';
+  for (let i=0; i<7; i++) {
+    let status = 'future';
+    if (i < diff) status = daysArr[i] ? 'checked' : 'missed';
+    else if (i === diff) status = daysArr[i] ? 'checked' : 'today';
     cardsDiv.appendChild(makeCard({
-      status: s,
+      status, 
       day: i+1,
-      amountLabel: (i===6 ? '₦' + (d.rewardAmount || 300) : '₦4')
+      amountLabel: (i===6 ? '₦300' : '₦50'),
+      isLast: i===6
     }));
   }
 
-  // button enabled only when: within 0..6, cycle processing, and not already checked today
-  const isWithinCycle = (diff >= 0 && diff <= 6 && status === 'processing');
-  const alreadyCheckedToday = (diff >=0 && diff <=6 && daysArr[diff] === true);
-  btn.disabled = !(isWithinCycle && !alreadyCheckedToday);
+  // Disable if already checked in today OR cycle finished
+  btn.disabled = (diff<0 || diff>6 || daysArr[diff] || d.status!=='processing');
   btn.classList.toggle('opacity-50', btn.disabled);
   btn.classList.toggle('cursor-not-allowed', btn.disabled);
 
-  // history render
+  // render history
   renderHistory(d);
 }
 
-/* ====== RENDER HISTORY (fintech card) ====== */
+/* ====== RENDER HISTORY ====== */
 function renderHistory(cycleData) {
   const hist = document.getElementById('history-list');
   hist.innerHTML = '';
-
-  // if no finished cycle yet
-  if (!cycleData || !cycleData.status || cycleData.status === 'processing') {
+  if (!cycleData || cycleData.status !== 'received') {
     hist.innerHTML = '<p>No history yet</p>';
     return;
   }
 
   const div = document.createElement('div');
-  div.className = 'p-4 rounded-2xl shadow flex items-center justify-between';
-  const date = cycleData.updatedAt && cycleData.updatedAt.toDate ? cycleData.updatedAt.toDate().toLocaleDateString() : new Date().toLocaleDateString();
+  div.className = `p-3 rounded-xl shadow bg-green-100 text-green-700 flex items-center justify-between`;
   div.innerHTML = `
-    <div>
-      <p style="font-weight:700;color:#0f172a">₦${cycleData.rewardAmount} Check-in Bonus</p>
-      <p style="font-size:12px;color:#6b7280">${date}</p>
-    </div>
-    <span class="status-pill" style="background:${cycleData.status==='received' ? '#ecfdf5' : '#fff1f2'}; color:${cycleData.status==='received' ? '#065f46' : '#b91c1c'}">
-      ${cycleData.status}
-    </span>
+    <span>₦${cycleData.rewardAmount} Check-in Reward</span>
+    <span class="text-xs">Received</span>
   `;
   hist.appendChild(div);
 }
 
-/* ====== CHECK-IN PRESS (keeps structure) ====== */
-async function handleCheckInPress(cycleDocSnap) {
-  if (!cycleDocSnap) return;
-  const uid = firebase.auth().currentUser && firebase.auth().currentUser.uid;
-  if (!uid) return;
-  const d = cycleDocSnap.data();
-  const diff = dayDiff(d.cycleStartDate, todayStrLocal());
-  if (diff < 0 || diff > 6) return;
-  if (d.days && d.days[diff]) return;
+/* ====== CHECK-IN BUTTON ====== */
+async function handleCheckInPress(cycleDoc) {
+  const uid = firebase.auth().currentUser.uid;
+  const d = cycleDoc.data();
+  const diff = dayDiff(d.cycleStartDate, todayStr());
 
-  const arr = d.days ? [...d.days] : Array(7).fill(false);
+  if (diff < 0 || diff > 6 || d.days[diff]) return;
+
+  const arr = d.days;
   arr[diff] = true;
 
-  await cyclesRef(uid).doc(cycleDocSnap.id).update({
+  await cyclesRef(uid).doc(cycleDoc.id).update({
     days: arr,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   });
 
-  // simple alert as you wanted (no below-button message)
   alert('✅ Check-in Successful');
 
-  // if final day, finalize. finalizeCycle updates balance and UI instantly.
-  if (diff === 6) {
-    finalizeCycle(uid, cycleDocSnap.id);
-  }
+  if (diff === 6) finalizeCycle(uid, cycleDoc.id);
 }
 
-/* ====== FINALIZE CYCLE (transactional + instant UI update) ====== */
+/* ====== FINALIZE CYCLE ====== */
 async function finalizeCycle(uid, cycleId) {
   const ref = cyclesRef(uid).doc(cycleId);
-  await db.runTransaction(async t => {
+  await db.runTransaction(async t=>{
     const snap = await t.get(ref);
     if (!snap.exists) return;
     const d = snap.data();
-    const success = Array.isArray(d.days) && d.days.every(x => x === true);
+    const success = d.days.every(x=>x);
 
     if (success) {
       const userRef = db.collection('users').doc(uid);
       const userSnap = await t.get(userRef);
-      const oldBal = (userSnap.exists && userSnap.data().balance) ? userSnap.data().balance : 0;
-      const newBal = oldBal + (d.rewardAmount || 300);
-      t.update(userRef, { balance: newBal, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-      t.update(ref, { status: 'received', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-
-      // update balance in UI right away (if element exists)
-      const balEl = document.getElementById('balance-amount');
-      if (balEl) balEl.textContent = `₦${newBal}`;
+      const balance = (userSnap.exists && userSnap.data().balance) ? userSnap.data().balance : 0;
+      const newBalance = balance + d.rewardAmount;
+      t.update(userRef,{ balance: newBalance, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      t.update(ref,{ status:'received' });
     } else {
-      t.update(ref, { status: 'failed', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      t.update(ref,{ status:'failed' });
     }
 
-    // create next cycle that starts tomorrow
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const y = tomorrow.getFullYear();
-    const m = String(tomorrow.getMonth() + 1).padStart(2, '0');
-    const dd = String(tomorrow.getDate()).padStart(2, '0');
-    const startStr = `${y}-${m}-${dd}`;
-    const newRef = cyclesRef(uid).doc();
-    t.set(newRef, {
-      cycleStartDate: startStr,
-      days: Array(7).fill(false),
-      status: 'processing',
-      rewardAmount: 300,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    // ⏳ New cycle will start at 12:00 a.m. next day
   });
 }
 
-/* ====== ENSURE CYCLE EXISTS for user ====== */
+/* ====== ENSURE CYCLE ====== */
 async function ensureCycleExists(uid) {
-  const q = await cyclesRef(uid).orderBy('createdAt','desc').limit(1).get();
-  if (q.empty) {
+  const snap = await cyclesRef(uid).orderBy('createdAt','desc').limit(1).get();
+  if (snap.empty) {
     await cyclesRef(uid).add({
-      cycleStartDate: todayStrLocal(),
+      cycleStartDate: todayStr(),
       days: Array(7).fill(false),
-      status: 'processing',
-      rewardAmount: 300,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      status:'processing',
+      rewardAmount:300,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+  } else {
+    const d = snap.docs[0].data();
+    // If cycle is finished and new day started → create fresh cycle
+    if (d.status!=='processing' && dayDiff(d.cycleStartDate, todayStr()) > 6) {
+      await cyclesRef(uid).add({
+        cycleStartDate: todayStr(),
+        days: Array(7).fill(false),
+        status:'processing',
+        rewardAmount:300,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
   }
 }
 
-/* ====== START LISTENER + midnight re-rendering ====== */
+/* ====== START LISTENER ====== */
 function startCheckinListener() {
-  // state
-  lastCycleDocSnap = null;
-  currentUid = null;
-  lastRenderedLocalDate = todayStrLocal();
+  firebase.auth().onAuthStateChanged(async user=>{
+    if (!user) return;
+    await ensureCycleExists(user.uid);
 
-  firebase.auth().onAuthStateChanged(async user => {
-    if (!user) {
-      currentUid = null;
-      return;
-    }
-    currentUid = user.uid;
-    await ensureCycleExists(currentUid);
+    cyclesRef(user.uid).orderBy('createdAt','desc').limit(1)
+      .onSnapshot(qs=>{
+        if (!qs.empty) {
+          const doc = qs.docs[0];
+          renderCheckin(doc);
 
-    // subscribe to latest cycle
-    cyclesRef(currentUid).orderBy('createdAt','desc').limit(1)
-      .onSnapshot(async qs => {
-        if (qs.empty) return;
-        const doc = qs.docs[0];
-        lastCycleDocSnap = doc;
-
-        // if cycle expired (past day 7) and still processing -> finalize immediately
-        const d = doc.data();
-        const diff = dayDiff(d.cycleStartDate, todayStrLocal());
-        if (diff > 6 && d.status === 'processing') {
-          // finalize - this will create new cycle starting tomorrow
-          await finalizeCycle(currentUid, doc.id);
-          // after finalize the snapshot will change and rerender; return for safety
-          return;
-        }
-
-        // normal render
-        renderCheckin(doc);
-
-        // wire up button (pass snapshot)
-        document.getElementById('checkin-btn').onclick = () => handleCheckInPress(doc);
-      });
-
-    // small timer: check local date change (every 30s) so UI flips on local midnight
-    setInterval(() => {
-      const todayNow = todayStrLocal();
-      if (todayNow !== lastRenderedLocalDate) {
-        lastRenderedLocalDate = todayNow;
-        // if we have a last cycle doc, re-render (will show missed days, activate button if within cycle)
-        if (lastCycleDocSnap) {
-          // if cycle now expired, finalize (no await so it doesn't block)
-          const d = lastCycleDocSnap.data();
-          const diffNow = dayDiff(d.cycleStartDate, todayNow);
-          if (diffNow > 6 && d.status === 'processing') {
-            // finalize in background
-            finalizeCycle(currentUid, lastCycleDocSnap.id);
-            return;
+          // live balance sync if reward is received
+          if (doc.data().status === 'received') {
+            db.collection('users').doc(user.uid).get().then(u=>{
+              const balance = u.data().balance;
+              document.getElementById('balance-display').textContent = `₦${balance}`;
+            });
           }
-          // else re-render UI (no DB write) so missed signs and button activation show immediately
-          renderCheckin(lastCycleDocSnap);
+
+          document.getElementById('checkin-btn').onclick=()=>handleCheckInPress(doc);
         }
-      }
-    }, 30 * 1000); // every 30s
+      });
   });
 }
-
 startCheckinListener();
+
+
+
+
+
+
+
 
 
 
