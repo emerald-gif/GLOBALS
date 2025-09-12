@@ -3099,44 +3099,20 @@ async function showSubmissionDetails(submissionId) {
 
 
 // -------------------------
-// AFFILIATE TASKS NAVIGATION
+// AFFILIATE-ONLY NAVIGATION
 // -------------------------
+function activateAffiliateTab(tabId) {
+  // Hide both affiliate screens
+  document.getElementById("mainAffiliateScreen").style.display = "none";
+  document.getElementById("finishedTasksScreen").style.display = "none";
 
-function activateTab(tabId) {
-  // Hide all tab sections first
-  document.querySelectorAll(".tab-section").forEach(sec => {
-    sec.classList.add("hidden");
-  });
-
-  // Now show the one the user clicked
+  // Show the one clicked
   if (tabId === "affiliate-tasks") {
-    document.getElementById("mainAffiliateScreen").classList.remove("hidden");
+    document.getElementById("mainAffiliateScreen").style.display = "block";
   } else if (tabId === "finished-tasks") {
-    document.getElementById("finishedTasksScreen").classList.remove("hidden");
-  } else {
-    // fallback for other tabs
-    const target = document.getElementById(tabId);
-    if (target) {
-      target.classList.remove("hidden");
-    }
+    document.getElementById("finishedTasksScreen").style.display = "block";
   }
 }
-
-// Attach button events after DOM load
-document.addEventListener("DOMContentLoaded", () => {
-  const finishedBtn = document.getElementById("finishedTasksBtn");
-  const backBtn = document.getElementById("backToMainBtn");
-
-  if (finishedBtn) {
-    finishedBtn.addEventListener("click", () => activateTab("finished-tasks"));
-  }
-  if (backBtn) {
-    backBtn.addEventListener("click", () => activateTab("affiliate-tasks"));
-  }
-});
-
-
-
 
 
 
@@ -6849,6 +6825,7 @@ function startCheckinListener() {
 }
 
 startCheckinListener();
+
 
 
 
