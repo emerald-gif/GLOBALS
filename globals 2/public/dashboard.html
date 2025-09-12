@@ -1498,57 +1498,53 @@
 
 
 <!-- ================== AFFILIATE TASKS SCREEN ================== -->
-<div id="mainAffiliateScreen" class="tab-section px-4 pt-6 hidden">
+<!-- ========================= -->
+<!-- AFFILIATE MAIN SCREEN     -->
+<!-- ========================= -->
+<div id="mainAffiliateScreen" class="tab-section hidden px-4 pt-6">
   <!-- Header -->
   <div class="flex items-center gap-2 mb-4">
     <div class="w-1 h-5 bg-blue-600 rounded"></div>
     <h2 class="text-base font-semibold text-neutral-900">Affiliate Tasks</h2>
   </div>
 
-  <!-- Swiper (Full width top carousel) -->
+  <!-- Swiper (Top carousel) -->
   <div class="swiper myAffiliateTasksSwiper mb-6">
     <div class="swiper-wrapper" id="affiliateTasksSwiperContainer"></div>
     <div class="swiper-pagination mt-2"></div>
   </div>
 
-  <!-- New Header Row -->
+  <!-- Title + Finished Tasks Btn + Search -->
   <div class="flex items-center justify-between mb-4">
-    <!-- Left: Title + Finished Tasks Btn -->
     <div class="flex items-center gap-4">
       <h3 class="text-lg font-bold text-gray-900">All Tasks</h3>
-      <button
-        id="finishedTasksBtn"
+      <button id="finishedTasksBtn"
         class="px-3 py-1.5 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium">
         Finished Tasks
       </button>
     </div>
-
-    <!-- Right: Search -->
+    <!-- Search -->
     <div class="relative w-48">
-      <input
-        id="taskSearchInput"
-        type="text"
-        placeholder="Search job..."
-        class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
+      <input id="taskSearchInput" type="text" placeholder="Search job..."
+        class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" />
       <svg class="w-4 h-4 absolute right-3 top-2.5 text-gray-400"
-           xmlns="http://www.w3.org/2000/svg"
-           fill="none"
-           viewBox="0 0 24 24"
-           stroke="currentColor">
+        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+        stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+          d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
       </svg>
     </div>
   </div>
 
-  <!-- Grid (2 per row affiliate jobs) -->
-  <div id="affiliate-tasks" class="grid grid-cols-2 gap-4">
-    <!-- Jobs will be injected here via JS -->
+  <!-- Grid -->
+  <div id="affiliate-tasks" class="tab-section grid grid-cols-2 gap-4">
+    <!-- Jobs will be injected via JS -->
   </div>
 </div>
 
-<!-- ================== FINISHED TASKS SECTION ================== -->
+<!-- ========================= -->
+<!-- FINISHED TASKS SCREEN     -->
+<!-- ========================= -->
 <div id="finishedTasksScreen" class="tab-section hidden px-4 pt-6">
   <!-- Top Bar -->
   <div class="flex items-center justify-between mb-6">
@@ -1568,10 +1564,9 @@
     </div>
   </div>
 
-  <!-- Finished Jobs List -->
+  <!-- Finished List -->
   <div id="finishedTasksList" class="space-y-4"></div>
 </div>
-
 <style>
 /* ---------------- SWIPER TOP CARD (2025 UI/UX upgrade) ---------------- */
 .myAffiliateTasksSwiper .job-card {
@@ -4014,6 +4009,7 @@
 </body>
 
 </html>
+
 
 
 
