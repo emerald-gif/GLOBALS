@@ -3096,6 +3096,39 @@ async function showSubmissionDetails(submissionId) {
 }
 
 
+
+
+
+// -------------------------
+// AFFILIATE TASKS NAVIGATION
+// -------------------------
+
+function activateTab(tabId) {
+  // Hide all tab sections first
+  document.querySelectorAll(".tab-section").forEach(sec => {
+    sec.classList.add("hidden");
+  });
+
+  // Now show the one the user clicked
+  if (tabId === "affiliate-tasks") {
+    document.getElementById("mainAffiliateScreen").classList.remove("hidden");
+  } else if (tabId === "finished-tasks") {
+    document.getElementById("finishedTasksScreen").classList.remove("hidden");
+  } else {
+    // fallback for other tabs
+    const target = document.getElementById(tabId);
+    if (target) {
+      target.classList.remove("hidden");
+    }
+  }
+}
+
+
+
+
+
+
+
                                                  //SOCIAL TASK FUNCTION
 
 
@@ -6805,6 +6838,7 @@ function startCheckinListener() {
 }
 
 startCheckinListener();
+
 
 
 
