@@ -6663,24 +6663,46 @@ function makeCard({status='future', day=1, amountLabel='', isLast=false}) {
 }
 
 /* ====== FUTURISTIC HISTORY ====== */
-function renderHistory(cycleData) {
+// ====== HISTORY LISTENER (for all past rewards) ======
+function startHistoryListener(uid) {
+  cyclesRef(uid).orderBy('createdAt','desc')
+    .onSnapshot(qs=>{
+      const historyItems = [];
+      qs.forEach(doc=>{
+        const d = doc.data();
+        if (d.status === 'received') {
+          historyItems.push({
+            rewardAmount: d.rewardAmount,
+            date: d.cycleStartDate,
+            status: d.status
+          });
+        }
+      });
+      renderHistoryList(historyItems);
+    });
+}
+
+function renderHistoryList(items) {
   const hist = document.getElementById('history-list');
   hist.innerHTML = '';
-  if (!cycleData || cycleData.status !== 'received') {
+
+  if (!items.length) {
     hist.innerHTML = '<p class="text-gray-400 italic">No history yet</p>';
     return;
   }
 
-  const div = document.createElement('div');
-  div.className = `
-    p-4 rounded-2xl shadow-xl backdrop-blur-lg bg-white/10 border border-green-400/40
-    flex items-center justify-between animate-slide-in
-  `;
-  div.innerHTML = `
-    <span class="font-semibold text-green-300">+ ₦${cycleData.rewardAmount} Bonus</span>
-    <span class="text-xs text-green-200">✔ Received</span>
-  `;
-  hist.appendChild(div);
+  items.forEach(item=>{
+    const div = document.createElement('div');
+    div.className = `
+      p-4 rounded-2xl shadow-xl backdrop-blur-lg bg-white/10 border border-green-400/40
+      flex items-center justify-between animate-slide-in
+    `;
+    div.innerHTML = `
+      <span class="font-semibold text-green-300">+ ₦${item.rewardAmount} Bonus</span>
+      <span class="text-xs text-green-200">${item.date}</span>
+    `;
+    hist.appendChild(div);
+  });
 }
 
 /* ====== CHECK-IN BUTTON ====== */
@@ -6760,13 +6782,14 @@ function startCheckinListener() {
     if (!user) return;
     await ensureCycleExists(user.uid);
 
+    // 🔥 Listen for the latest active cycle
     cyclesRef(user.uid).orderBy('createdAt','desc').limit(1)
       .onSnapshot(qs=>{
         if (!qs.empty) {
           const doc = qs.docs[0];
           renderCheckin(doc);
 
-          // live balance sync if reward is received
+          // live balance sync
           if (doc.data().status === 'received') {
             db.collection('users').doc(user.uid).get().then(u=>{
               const balance = u.data().balance;
@@ -6777,11 +6800,11 @@ function startCheckinListener() {
           document.getElementById('checkin-btn').onclick=()=>handleCheckInPress(doc);
         }
       });
+
+    // 🔥 Listen for all past cycles for history
+    startHistoryListener(user.uid);
   });
 }
-startCheckinListener();
-
-
 
 
 
