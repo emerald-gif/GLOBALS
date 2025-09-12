@@ -697,15 +697,16 @@
   <div class="grid grid-cols-2 gap-4 sm:gap-6">
     
     <!-- 🔥 High-Paying Affiliate Tasks -->
-    <a href="#affiliate-tasks" onclick="activateTab('affiliate-tasks')" class="task-box bg-gradient-to-br from-yellow-50 via-white to-yellow-100 hover:from-yellow-100 hover:to-yellow-200 shadow-md rounded-2xl p-5 transition-all duration-300 transform hover:scale-105 relative">
-      <div class="flex items-center space-x-3 mb-2">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m4 0V9a4 4 0 10-8 0v3a4 4 0 008 0z" />
-        </svg>
-        <h3 class="text-base font-bold text-yellow-800">Affiliate Tasks</h3>
-      </div>
-      <div class="absolute top-0 left-0 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-br-xl shadow-sm z-10">HOT</div>
-    </a>
+    <a href="#affiliate-tasks" onclick="activateAffiliateTab('affiliate-tasks')" class="task-box bg-gradient-to-br from-yellow-50 via-white to-yellow-100 hover:from-yellow-100 hover:to-yellow-200 shadow-md rounded-2xl p-5 transition-all duration-300 transform hover:scale-105 relative">
+  <div class="flex items-center space-x-3 mb-2">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m4 0V9a4 4 0 10-8 0v3a4 4 0 008 0z" />
+    </svg>
+    <h3 class="text-base font-bold text-yellow-800">Affiliate Tasks</h3>
+  </div>
+  <div class="absolute top-0 left-0 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-br-xl shadow-sm z-10">HOT</div>
+</a>
+
 
     <!-- 📲 Install & Earn Bonus -->
     <a href="#app-install-tasks" onclick="activateTab('taskSection')" class="task-box bg-gradient-to-br from-blue-50 via-white to-blue-100 hover:from-blue-100 hover:to-blue-200 shadow-md rounded-2xl p-5 transition-all duration-300 transform hover:scale-105 relative">
@@ -1495,60 +1496,59 @@
 
                         
 <!-- ================== AFFILIATE TASKS SECTION ================== -->
-
-
-<!-- ================== AFFILIATE TASKS SCREEN ================== -->
-<!-- ========================= -->
-<!-- AFFILIATE MAIN SCREEN     -->
-<!-- ========================= -->
-<div id="mainAffiliateScreen" class="tab-section hidden px-4 pt-6">
+<!-- ================= MAIN AFFILIATE SCREEN ================= -->
+<div id="mainAffiliateScreen" class="px-4 pt-6" style="display: none;">
   <!-- Header -->
   <div class="flex items-center gap-2 mb-4">
     <div class="w-1 h-5 bg-blue-600 rounded"></div>
     <h2 class="text-base font-semibold text-neutral-900">Affiliate Tasks</h2>
   </div>
 
-  <!-- Swiper (Top carousel) -->
+  <!-- Swiper (Full width top carousel) -->
   <div class="swiper myAffiliateTasksSwiper mb-6">
     <div class="swiper-wrapper" id="affiliateTasksSwiperContainer"></div>
     <div class="swiper-pagination mt-2"></div>
   </div>
 
-  <!-- Title + Finished Tasks Btn + Search -->
+  <!-- New Header Row -->
   <div class="flex items-center justify-between mb-4">
+    <!-- Left: Title + Finished Tasks Btn -->
     <div class="flex items-center gap-4">
       <h3 class="text-lg font-bold text-gray-900">All Tasks</h3>
-      <button id="finishedTasksBtn"
-        class="px-3 py-1.5 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium">
+      <button
+        id="finishedTasksBtn"
+        class="px-3 py-1.5 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium"
+        onclick="activateAffiliateTab('finished-tasks')"
+      >
         Finished Tasks
       </button>
     </div>
-    <!-- Search -->
+
+    <!-- Right: Search -->
     <div class="relative w-48">
-      <input id="taskSearchInput" type="text" placeholder="Search job..."
-        class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      <svg class="w-4 h-4 absolute right-3 top-2.5 text-gray-400"
-        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-        stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+      <input
+        id="taskSearchInput"
+        type="text"
+        placeholder="Search job..."
+        class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      <svg class="w-4 h-4 absolute right-3 top-2.5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
       </svg>
     </div>
   </div>
 
-  <!-- Grid -->
+  <!-- Grid (2 per row affiliate jobs) -->
   <div id="affiliate-tasks" class="tab-section grid grid-cols-2 gap-4">
-    <!-- Jobs will be injected via JS -->
+    <!-- Jobs will be injected here via JS -->
   </div>
 </div>
 
-<!-- ========================= -->
-<!-- FINISHED TASKS SCREEN     -->
-<!-- ========================= -->
-<div id="finishedTasksScreen" class="tab-section hidden px-4 pt-6">
+<!-- ================= FINISHED TASKS SCREEN ================= -->
+<div id="finishedTasksScreen" class="px-4 pt-6" style="display: none;">
   <!-- Top Bar -->
   <div class="flex items-center justify-between mb-6">
-    <button id="backToMainBtn" class="text-blue-600 font-semibold">&larr; Back</button>
+    <button id="backToMainBtn" class="text-blue-600 font-semibold" onclick="activateAffiliateTab('affiliate-tasks')">← Back</button>
     <h2 class="text-lg font-bold text-neutral-900">Finished Tasks</h2>
   </div>
 
@@ -1564,9 +1564,16 @@
     </div>
   </div>
 
-  <!-- Finished List -->
+  <!-- Finished Jobs List -->
   <div id="finishedTasksList" class="space-y-4"></div>
 </div>
+
+
+
+
+
+
+	
 <style>
 /* ---------------- SWIPER TOP CARD (2025 UI/UX upgrade) ---------------- */
 .myAffiliateTasksSwiper .job-card {
@@ -4009,6 +4016,7 @@
 </body>
 
 </html>
+
 
 
 
