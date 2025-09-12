@@ -3793,61 +3793,50 @@
 
 
 
-<!-- ===== Updated Daily Check-In Screen (paste entire block) ===== -->
-<!-- Daily Check-In Screen -->
-<div id="checkin-screen" class="tab-section hidden min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 p-6">
-  <div class="flex items-center justify-between mb-6">
-    <h2 class="text-2xl font-extrabold text-blue-900">Daily Check-In</h2>
+<!-- ✅ Daily Check-In Screen -->
+<div id="checkin-screen" class="tab-section hidden min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] p-6 text-white">
+  <div class="flex items-center justify-between mb-8">
+    <h2 class="text-3xl font-extrabold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text drop-shadow-lg">Daily Check-In</h2>
     <button onclick="activateTab('dashboard')" 
-      class="px-4 py-2 rounded-lg bg-blue-600 text-white shadow hover:scale-105 transition">← Back</button>
+      class="px-4 py-2 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-700 text-white shadow-xl hover:scale-105 transition">
+      ← Back
+    </button>
   </div>
 
   <!-- Check-in Container -->
-  <div id="checkin-container" class="max-w-xl mx-auto space-y-6">
+  <div id="checkin-container" class="max-w-3xl mx-auto space-y-10">
+    
     <!-- Cards -->
-    <div id="checkin-cards" class="grid grid-cols-7 gap-3"></div>
+    <div id="checkin-cards" class="grid grid-cols-7 gap-4"></div>
 
     <!-- Check-in Button -->
     <div class="text-center">
       <button id="checkin-btn" 
-        class="px-8 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition">
-        Check in
+        class="px-10 py-4 rounded-2xl relative overflow-hidden font-semibold shadow-2xl
+        bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-600
+        hover:scale-105 transition transform
+        before:absolute before:inset-0 before:bg-white/20 before:rounded-2xl before:animate-pulse">
+        <span class="relative z-10">🚀 Check In</span>
       </button>
     </div>
   </div>
 
   <!-- History Section -->
-  <div id="checkin-history" class="mt-10 max-w-xl mx-auto">
-    <h3 class="text-lg font-bold text-gray-800 mb-3">History</h3>
-    <div id="history-list" class="space-y-3 text-gray-500 text-sm">
-      <p>No history yet</p>
-    </div>
+  <div id="checkin-history" class="mt-12 max-w-2xl mx-auto">
+    <h3 class="text-xl font-bold text-blue-400 mb-4">Reward History</h3>
+    <div id="history-list" class="space-y-4 text-sm"></div>
   </div>
 </div>
 
+
 <style>
-/* Fintech style tweaks */
-.check-icon {
-  width: 22px; height: 22px; border-radius: 50%;
-  display:flex; align-items:center; justify-content:center;
-  font-size: 13px; font-weight:600;
+/* Futuristic animations */
+@keyframes slide-in {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
-.check-green { background:#10b981; color:white; }
-.check-red { background:#ef4444; color:white; }
-.check-blue { background:#2563eb; color:white; }
-.card-day {
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  border-radius:12px; padding:10px; box-shadow:0 8px 18px rgba(2,6,23,0.06);
-  transition: transform .14s ease, box-shadow .14s ease;
-  width:72px; height:92px;
-}
-.card-day:hover { transform: translateY(-4px); box-shadow:0 14px 30px rgba(2,6,23,0.12); }
-.status-pill { padding:6px 10px; border-radius:20px; font-weight:600; font-size:12px; }
+.animate-slide-in { animation: slide-in 0.6s ease-out forwards; }
 </style>
-
-
-
-
 
 
 
@@ -3993,106 +3982,6 @@
 </body>
 
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
