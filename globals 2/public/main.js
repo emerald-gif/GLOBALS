@@ -6515,6 +6515,99 @@ try {
 
 
 /* ====== FIRESTORE REF ====== */
+
+// ---------- ADD THIS NEAR TOP OF main.js (before listeners) ----------
+window.renderCheckin = function(cycleDocSnap) {
+  // Basic safety checks
+  const cardsDiv = document.getElementById('checkin-cards');
+  const btn = document.getElementById('checkin-btn');
+  if (!cardsDiv || !btn) return;
+
+  // Local helper fallbacks (only if you don't already have them globally)
+  const todayStrLocal = window.todayStrLocal || function() {
+    const d = new Date();
+    return d.toISOString().split('T')[0];
+  };
+  const dayDiff = window.dayDiff || function(startDateStr, dateStr) {
+    const s = new Date(startDateStr); s.setHours(0,0,0,0);
+    const t = new Date(dateStr); t.setHours(0,0,0,0);
+    return Math.floor((t - s)/(1000*60*60*24));
+  };
+
+  // Simple card builder (keeps your UI classes intact)
+  function makeCard({ status='future', day=1, amountLabel='', isLast=false }) {
+    const card = document.createElement('div');
+    card.className = 'card-day'; // keep your CSS class or replace with desired classes
+    // Add minimal inline styles so it shows even if your CSS isn't loaded yet
+    card.style.width = isLast ? '86px' : '72px';
+    card.style.height = isLast ? '110px' : '92px';
+    card.style.display = 'flex';
+    card.style.flexDirection = 'column';
+    card.style.alignItems = 'center';
+    card.style.justifyContent = 'center';
+    card.style.borderRadius = '12px';
+    card.style.padding = '8px';
+    card.style.boxShadow = '0 8px 18px rgba(2,6,23,0.06)';
+    if (status === 'checked') { card.style.background = '#ecfdf5'; }
+    else if (status === 'missed') { card.style.background = '#fff1f2'; }
+    else if (status === 'today') { card.style.background = '#2563eb'; card.style.color = 'white'; }
+    else { card.style.background = 'white'; }
+
+    const amt = document.createElement('div');
+    amt.className = 'text-sm font-semibold';
+    amt.textContent = amountLabel;
+    const dot = document.createElement('div');
+    dot.style.width = '20px';
+    dot.style.height = '20px';
+    dot.style.borderRadius = '50%';
+    dot.style.marginTop = '8px';
+    if (status === 'checked') dot.style.background = '#10b981';
+    else if (status === 'missed') dot.style.background = '#ef4444';
+    else if (status === 'today') dot.style.background = '#fbbf24';
+    else dot.style.border = '1px solid #e5e7eb';
+    const dayLabel = document.createElement('div');
+    dayLabel.className = 'text-xs';
+    dayLabel.style.marginTop = '8px';
+    dayLabel.textContent = ['1st','2nd','3rd','4th','5th','6th','7th'][day-1] || `${day}th`;
+
+    card.appendChild(amt);
+    card.appendChild(dot);
+    card.appendChild(dayLabel);
+    return card;
+  }
+
+  // If we got a Firestore snapshot, extract data, else treat param as raw object
+  const docData = (cycleDocSnap && cycleDocSnap.data) ? cycleDocSnap.data() : cycleDocSnap || {};
+  const start = docData.cycleStartDate || todayStrLocal();
+  const daysArr = Array.isArray(docData.days) ? docData.days : Array(7).fill(false);
+  const status = docData.status || 'processing';
+  const today = todayStrLocal();
+  const diff = dayDiff(start, today);
+
+  cardsDiv.innerHTML = '';
+  for (let i = 0; i < 7; i++) {
+    let s = 'future';
+    if (i < diff) s = daysArr[i] ? 'checked' : 'missed';
+    else if (i === diff) s = daysArr[i] ? 'checked' : 'today';
+    cardsDiv.appendChild(makeCard({
+      status: s,
+      day: i+1,
+      amountLabel: (i===6 ? '₦300' : '₦50'),
+      isLast: i===6
+    }));
+  }
+
+  const isWithinCycle = (diff >= 0 && diff <= 6 && status === 'processing');
+  const alreadyCheckedToday = (diff >= 0 && diff <= 6 && daysArr[diff] === true);
+  btn.disabled = !(isWithinCycle && !alreadyCheckedToday);
+  btn.classList.toggle('opacity-50', btn.disabled);
+  btn.classList.toggle('cursor-not-allowed', btn.disabled);
+
+  // Call your renderHistory if it's defined
+  if (typeof window.renderHistory === 'function') window.renderHistory(docData);
+};
+
+
 function cyclesRef(uid) {
   return db.collection('checkins').doc(uid).collection('cycles');
 }
@@ -6687,6 +6780,7 @@ function startCheckinListener() {
   });
 }
 startCheckinListener();
+
 
 
 
