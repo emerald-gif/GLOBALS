@@ -6533,33 +6533,34 @@ function ordinal(n) {
   return ['1st','2nd','3rd','4th','5th','6th','7th'][n-1] || `${n}th`;
 }
 
-/* ====== CARD BUILDER ====== */
+/* ====== FUTURISTIC CARD BUILDER ====== */
 function makeCard({status='future', day=1, amountLabel='', isLast=false}) {
   const card = document.createElement('div');
   card.className = `
-    flex flex-col items-center justify-center rounded-2xl p-2 shadow-md
-    transition transform hover:scale-105
-    ${status === 'checked' ? 'bg-green-100 text-green-700' : ''}
-    ${status === 'missed' ? 'bg-red-100 text-red-700' : ''}
-    ${status === 'today' ? 'bg-blue-600 text-white ring-2 ring-blue-400' : ''}
-    ${status === 'future' ? 'bg-white text-gray-500 border' : ''}
-    ${isLast ? 'scale-110 animate-pulse font-bold' : ''}
+    flex flex-col items-center justify-center rounded-2xl p-3 
+    backdrop-blur-lg bg-white/10 border border-white/20
+    shadow-xl transition transform hover:scale-110
+    ${status === 'checked' ? 'text-green-400 border-green-400/40 shadow-green-400/40' : ''}
+    ${status === 'missed' ? 'text-red-400 border-red-400/40 shadow-red-400/40' : ''}
+    ${status === 'today' ? 'text-yellow-300 border-yellow-300/40 shadow-yellow-300/40 animate-pulse' : ''}
+    ${status === 'future' ? 'text-gray-400' : ''}
+    ${isLast ? 'scale-125 shadow-lg shadow-purple-500/50 animate-pulse bg-gradient-to-br from-purple-800/40 to-blue-800/40' : ''}
   `;
 
   const amt = document.createElement('div');
-  amt.className = 'text-sm font-semibold';
+  amt.className = 'text-sm font-bold tracking-wide';
   amt.textContent = amountLabel;
 
   const circle = document.createElement('div');
-  circle.className = 'mt-1 w-5 h-5 flex items-center justify-center rounded-full';
-  if (status === 'checked') circle.innerHTML = `<div class="w-4 h-4 rounded-full bg-green-500"></div>`;
-  else if (status === 'missed') circle.innerHTML = `<div class="w-4 h-4 rounded-full bg-red-400"></div>`;
-  else if (status === 'today') circle.innerHTML = `<div class="w-4 h-4 rounded-full bg-yellow-300"></div>`;
-  else circle.innerHTML = `<div class="w-4 h-4 rounded-full border border-gray-300"></div>`;
+  circle.className = 'mt-2 w-6 h-6 flex items-center justify-center rounded-full border-2 border-current';
+  if (status === 'checked') circle.innerHTML = `<div class="w-3 h-3 rounded-full bg-green-400"></div>`;
+  else if (status === 'missed') circle.innerHTML = `<div class="w-3 h-3 rounded-full bg-red-400"></div>`;
+  else if (status === 'today') circle.innerHTML = `<div class="w-3 h-3 rounded-full bg-yellow-300"></div>`;
+  else circle.innerHTML = `<div class="w-3 h-3 rounded-full border border-gray-400"></div>`;
 
   const dayLabel = document.createElement('div');
-  dayLabel.className = 'text-xs mt-1';
-  dayLabel.textContent = ordinal(day);
+  dayLabel.className = 'text-xs mt-2 opacity-80';
+  dayLabel.textContent = `Day ${day}`;
 
   card.appendChild(amt);
   card.appendChild(circle);
@@ -6568,58 +6569,23 @@ function makeCard({status='future', day=1, amountLabel='', isLast=false}) {
   return card;
 }
 
-/* ====== RENDER CHECK-IN ====== */
-function renderCheckin(cycleDoc) {
-  const cardsDiv = document.getElementById('checkin-cards');
-  const btn = document.getElementById('checkin-btn');
-  cardsDiv.innerHTML = '';
-
-  if (!cycleDoc) {
-    btn.disabled = true;
-    btn.textContent = 'Loading...';
-    return;
-  }
-
-  const d = cycleDoc.data();
-  const start = d.cycleStartDate;
-  const daysArr = d.days;
-  const diff = dayDiff(start, todayStr());
-
-  for (let i=0; i<7; i++) {
-    let status = 'future';
-    if (i < diff) status = daysArr[i] ? 'checked' : 'missed';
-    else if (i === diff) status = daysArr[i] ? 'checked' : 'today';
-    cardsDiv.appendChild(makeCard({
-      status, 
-      day: i+1,
-      amountLabel: (i===6 ? '₦300' : '₦50'),
-      isLast: i===6
-    }));
-  }
-
-  // Disable if already checked in today OR cycle finished
-  btn.disabled = (diff<0 || diff>6 || daysArr[diff] || d.status!=='processing');
-  btn.classList.toggle('opacity-50', btn.disabled);
-  btn.classList.toggle('cursor-not-allowed', btn.disabled);
-
-  // render history
-  renderHistory(d);
-}
-
-/* ====== RENDER HISTORY ====== */
+/* ====== FUTURISTIC HISTORY ====== */
 function renderHistory(cycleData) {
   const hist = document.getElementById('history-list');
   hist.innerHTML = '';
   if (!cycleData || cycleData.status !== 'received') {
-    hist.innerHTML = '<p>No history yet</p>';
+    hist.innerHTML = '<p class="text-gray-400 italic">No history yet</p>';
     return;
   }
 
   const div = document.createElement('div');
-  div.className = `p-3 rounded-xl shadow bg-green-100 text-green-700 flex items-center justify-between`;
+  div.className = `
+    p-4 rounded-2xl shadow-xl backdrop-blur-lg bg-white/10 border border-green-400/40
+    flex items-center justify-between animate-slide-in
+  `;
   div.innerHTML = `
-    <span>₦${cycleData.rewardAmount} Check-in Reward</span>
-    <span class="text-xs">Received</span>
+    <span class="font-semibold text-green-300">+ ₦${cycleData.rewardAmount} Bonus</span>
+    <span class="text-xs text-green-200">✔ Received</span>
   `;
   hist.appendChild(div);
 }
@@ -6721,6 +6687,7 @@ function startCheckinListener() {
   });
 }
 startCheckinListener();
+
 
 
 
