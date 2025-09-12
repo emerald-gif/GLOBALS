@@ -3098,7 +3098,6 @@ async function showSubmissionDetails(submissionId) {
 
 
 
-
 // -------------------------
 // AFFILIATE TASKS NAVIGATION
 // -------------------------
@@ -3123,6 +3122,18 @@ function activateTab(tabId) {
   }
 }
 
+// Attach button events after DOM load
+document.addEventListener("DOMContentLoaded", () => {
+  const finishedBtn = document.getElementById("finishedTasksBtn");
+  const backBtn = document.getElementById("backToMainBtn");
+
+  if (finishedBtn) {
+    finishedBtn.addEventListener("click", () => activateTab("finished-tasks"));
+  }
+  if (backBtn) {
+    backBtn.addEventListener("click", () => activateTab("affiliate-tasks"));
+  }
+});
 
 
 
@@ -6838,6 +6849,7 @@ function startCheckinListener() {
 }
 
 startCheckinListener();
+
 
 
 
