@@ -3150,101 +3150,108 @@
 
 
 <!-- 🌙 REFERRALS SECTION -->
+
+
+
+
+	
+
+<!-- 🌙 REFERRALS SECTION -->
 <div id="team" class="tab-section hidden">
 
-  <button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Back</button>
+  <!-- Back button -->
+  <button onclick="activateTab('dashboard')" 
+    class="mb-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white shadow-sm border border-gray-200 text-blue-600 text-sm font-medium hover:bg-blue-50 transition">
+    ← Back
+  </button>
 
- <div class="max-w-3xl mx-auto px-4 pt-6 pb-16">
+  <div class="max-w-3xl mx-auto px-4 pt-4 pb-16">
 
-    <!-- 🖼️ Banner removed -->
+    <!-- 📢 Info box -->
+    <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-3xl p-6 shadow-xl mb-6 relative overflow-hidden">
+      <div class="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+      <div class="relative">
+        <h2 class="text-xl font-extrabold">Invite friends & earn ₦500</h2>
+        <p class="text-sm opacity-90 mt-2">
+          Invite friends who upgrade their account to Premium with ₦1000 and get ₦500 instantly.
+        </p>
 
-    <!-- 📢 Notice / Info box -->
-    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl p-5 shadow-md mb-5">
-      <h2 class="text-lg font-bold">Invite friends & earn ₦500</h2>
-      <p class="text-sm opacity-95 mt-1">
-        Invite friends who upgrade their account to Premium with ₦1000 and get ₦500.
-      </p>
-
-      <!-- 📊 Two stats -->
-      <div class="mt-4 grid grid-cols-2 gap-4">
-        <div class="bg-white/15 rounded-xl p-3 text-center">
-          <div class="flex items-center justify-center gap-2 text-sm">
-            <!-- invited icon -->
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M16 14a4 4 0 10-8 0v2a2 2 0 01-2 2h12a2 2 0 01-2-2v-2zM12 12a4 4 0 100-8 4 4 0 000 8z"/>
-            </svg>
-            <span>Invited</span>
+        <!-- 📊 Stats -->
+        <div class="mt-6 grid grid-cols-2 gap-4">
+          <div class="bg-white/20 backdrop-blur-md rounded-2xl py-5 px-3 text-center shadow-md hover:scale-105 transition-transform">
+            <div class="flex items-center justify-center gap-2 text-sm mb-1">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M16 14a4 4 0 10-8 0v2a2 2 0 01-2 2h12a2 2 0 01-2-2v-2zM12 12a4 4 0 100-8 4 4 0 000 8z"/>
+              </svg>
+              <span>Invited</span>
+            </div>
+            <div id="invitedCount" class="text-3xl font-extrabold">0</div>
           </div>
-          <div id="invitedCount" class="text-2xl font-extrabold mt-1">0</div>
-        </div>
-        <div class="bg-white/15 rounded-xl p-3 text-center">
-          <div class="flex items-center justify-center gap-2 text-sm">
-            <!-- rewarded icon -->
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 8l1.902 3.854 4.252.618-3.077 2.999.726 4.243L12 17.77 8.197 19.714l.726-4.243L5.846 12.47l4.252-.618L12 8z"/>
-            </svg>
-            <span>Rewarded</span>
+          <div class="bg-white/20 backdrop-blur-md rounded-2xl py-5 px-3 text-center shadow-md hover:scale-105 transition-transform">
+            <div class="flex items-center justify-center gap-2 text-sm mb-1">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 8l1.902 3.854 4.252.618-3.077 2.999.726 4.243L12 17.77 8.197 19.714l.726-4.243L5.846 12.47l4.252-.618L12 8z"/>
+              </svg>
+              <span>Rewarded</span>
+            </div>
+            <div id="rewardedCount" class="text-3xl font-extrabold">0</div>
           </div>
-          <div id="rewardedCount" class="text-2xl font-extrabold mt-1">0</div>
         </div>
       </div>
-	</div>
+    </div>
 
+    <!-- 🔗 Referral link -->
+    <div class="relative mb-6">
+      <input id="teamRefLinkVisible" type="text" 
+        class="w-full border border-gray-200 rounded-full px-5 py-3 text-sm shadow-sm pr-12 focus:ring-2 focus:ring-blue-500 focus:outline-none" readonly />
+      <input id="teamRefLink" type="text" class="sr-only" readonly />
+      <button onclick="copyTeamRefLink()" 
+        class="absolute right-3 top-1/2 -translate-y-1/2 text-blue-600 hover:text-blue-800 transition">
+        📋
+      </button>
+    </div>
 
-
-	 <!-- Visible referral link -->
-    <input id="teamRefLinkVisible" type="text" class="w-full border rounded-lg px-3 py-2 text-sm mt-4" readonly />
-
-    <!-- Hidden input for fallback -->
-    <input id="teamRefLink" type="text" class="sr-only" readonly />
-
-
-
-	 
-    <!-- 🔗 Top actions: Share | Copy | T&C (icons) -->
-    <div class="bg-white rounded-2xl shadow-md flex items-stretch divide-x divide-gray-200 mb-6">
-      <!-- Share -->
-      <button onclick="shareReferral()" class="flex-1 flex items-center justify-center gap-2 py-3 hover:bg-gray-50">
-        <!-- share icon -->
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <!-- Top actions -->
+    <div class="bg-white rounded-2xl shadow-md flex items-stretch divide-x divide-gray-100 mb-8 overflow-hidden">
+      <button onclick="shareReferral()" class="flex-1 flex items-center justify-center gap-2 py-4 hover:bg-gray-50 transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.684 13.342a2.5 2.5 0 010-2.684l6.55-3.928A2.5 2.5 0 1117.5 9.5l-6.55 3.928a2.5 2.5 0 010 2.684l6.55 3.928A2.5 2.5 0 1115 22.5l-6.316-3.787" />
         </svg>
-        <span class="text-sm font-medium text-blue-600">Share</span>
+        <span class="text-sm font-semibold">Share</span>
       </button>
-      <!-- Copy -->
-      <button onclick="copyTeamRefLink()" class="flex-1 flex items-center justify-center gap-2 py-3 hover:bg-gray-50">
-        <!-- copy icon -->
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <button onclick="copyTeamRefLink()" class="flex-1 flex items-center justify-center gap-2 py-4 hover:bg-gray-50 transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <rect x="9" y="9" width="10" height="10" rx="2" stroke-width="1.8"></rect>
           <rect x="5" y="5" width="10" height="10" rx="2" stroke-width="1.8"></rect>
         </svg>
-        <span class="text-sm font-medium text-blue-600">Copy</span>
+        <span class="text-sm font-semibold">Copy</span>
       </button>
-      <!-- T & C -->
-      <button onclick="openTerms()" class="flex-1 flex items-center justify-center gap-2 py-3 hover:bg-gray-50">
-        <!-- doc icon -->
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <button onclick="openTerms()" class="flex-1 flex items-center justify-center gap-2 py-4 hover:bg-gray-50 transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M9 12h6M9 16h6M8 2h5l5 5v13a2 2 0 01-2 2H8a2 2 0 01-2-2V4a2 2 0 012-2z"/>
         </svg>
-        <span class="text-sm font-medium text-blue-600">T & C</span>
+        <span class="text-sm font-semibold">T & C</span>
       </button>
     </div>
 
-
     <!-- 👥 Referral history -->
-    <div class="flex items-center justify-between mb-2">
-      <h3 class="text-base font-semibold">Referral history</h3>
-      <button id="seeAllInvitesBtn" class="text-blue-600 text-sm underline">See all invites</button>
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-bold">Referral history</h3>
+      <button id="seeAllInvitesBtn" class="text-blue-600 text-sm hover:underline">See all invites</button>
     </div>
 
-    <div id="referralList" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div id="referralList" class="grid grid-cols-1 sm:grid-cols-2 gap-5">
       <!-- Cards injected by JS -->
     </div>
 
-    
   </div>
 </div>
-                                              
+
+
+
+
+
+	
 
 
 
@@ -4067,6 +4074,7 @@
 </body>
 
 </html>
+
 
 
 
