@@ -5342,111 +5342,7 @@ auth.onAuthStateChanged(async user => {
 
 
 
-
-
-  // PAYMENT FUNCTION 
-
-// --------------------
-// PAYMENT BALANCE LISTENER
-// --------------------
-(function (w, d) {
-  function fmtNaira(n) {
-    var v = Number(n) || 0;
-    return "₦" + v.toLocaleString();
-  }
-  function coerceNumber(val) {
-    if (val == null) return 0;
-    if (typeof val === "number") return isFinite(val) ? val : 0;
-    var s = String(val).replace(/[₦,\s]/g, "");
-    var n = Number(s);
-    return isFinite(n) ? n : 0;
-  }
-  function animateNumber(el, from, to) {
-    if (!el) return;
-    if (el.__rafId) cancelAnimationFrame(el.__rafId);
-    var start = performance.now();
-    var diff = to - from;
-    function step(t) {
-      var p = Math.min((t - start) / 800, 1);
-      var eased = 1 - Math.pow(1 - p, 3);
-      var val = Math.round(from + diff * eased);
-      el.textContent = fmtNaira(val);
-      if (p < 1) el.__rafId = requestAnimationFrame(step);
-    }
-    el.__rafId = requestAnimationFrame(step);
-  }
-
-  function startPaymentBalance() {
-    var el = d.getElementById("paymentBalance");
-    if (!el) return;
-
-    firebase.auth().onAuthStateChanged(user => {
-      if (!user) return;
-      firebase.firestore().collection("users").doc(user.uid)
-        .onSnapshot(snap => {
-          if (!snap.exists) return;
-          var next = coerceNumber(snap.data().balance);
-          var prev = coerceNumber(el.dataset.value);
-          if (next === prev) return;
-          el.dataset.value = String(next);
-          animateNumber(el, prev, next);
-        });
-    });
-  }
-
-  if (d.readyState === "loading") {
-    d.addEventListener("DOMContentLoaded", startPaymentBalance);
-  } else {
-    startPaymentBalance();
-  }
-})(window, document);
-
-
-// --------------------
-// PAYMENT TRANSACTION HISTORY
-// --------------------
-let paymentTxUnsub = null;
-function startPaymentTransactions(uid) {
-  if (paymentTxUnsub) { paymentTxUnsub(); paymentTxUnsub = null; }
-  const txListEl = document.getElementById("paymentTxList");
-  const txEmptyEl = document.getElementById("paymentTxEmpty");
-
-  paymentTxUnsub = firebase.firestore()
-    .collection("Transaction")
-    .where("userId", "==", uid)
-    .where("type", "in", ["deposit", "withdraw"])
-    .orderBy("timestamp", "desc")
-    .limit(10)
-    .onSnapshot(snap => {
-      if (snap.empty) {
-        txListEl.innerHTML = "";
-        txEmptyEl.classList.remove("hidden");
-        return;
-      }
-      txEmptyEl.classList.add("hidden");
-      txListEl.innerHTML = snap.docs.map(doc => {
-        const tx = doc.data();
-        const date = tx.timestamp?.toDate?.() || new Date();
-        const amountClass = tx.type === "deposit" ? "text-green-600" : "text-red-600";
-        return `
-          <div class="bg-gray-50 rounded-xl p-3 flex items-center justify-between">
-            <div>
-              <p class="text-sm font-semibold text-gray-900 capitalize">${tx.type}</p>
-              <p class="text-xs text-gray-400">${date.toLocaleString()}</p>
-            </div>
-            <p class="text-sm font-bold ${amountClass}">₦${Number(tx.amount || 0).toLocaleString()}</p>
-          </div>
-        `;
-      }).join("");
-    }, err => console.error("Payment tx error:", err));
-}
-
-firebase.auth().onAuthStateChanged(user => {
-  if (user) startPaymentTransactions(user.uid);
-  else if (paymentTxUnsub) { paymentTxUnsub(); paymentTxUnsub = null; }
-});
-
-
+//PAYMENT
 
 
 
@@ -6918,4 +6814,5 @@ startCheckinListener();
 
 
 	
+
 
