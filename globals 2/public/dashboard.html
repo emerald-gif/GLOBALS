@@ -2373,6 +2373,9 @@
 
 
 <!-- 🔵 PAYMENT SECTION -->
+
+
+<!-- 🔵 PAYMENT SECTION -->
 <div id="payment" class="tab-section hidden max-w-md mx-auto px-4 py-6 space-y-6">
 
   <!-- Back -->
@@ -2380,90 +2383,43 @@
     ← Payment
   </button>
 
-  <!-- Greeting -->
-  <div class="flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <div class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white grid place-items-center shadow">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zM21 21a8.5 8.5 0 10-17 0h17z"/></svg>
-      </div>
-      <div>
-        <p class="text-xs text-gray-500">Good {day},</p>
-        <p id="paymentUserName" class="text-sm font-semibold text-gray-900">User</p>
-      </div>
-    </div>
-    <button class="w-9 h-9 rounded-full bg-white shadow ring-1 ring-gray-200 grid place-items-center">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-700" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22a2 2 0 002-2h-4a2 2 0 002 2zM18 16V11a6 6 0 10-12 0v5l-2 2v1h16v-1l-2-2z"/></svg>
-    </button>
-  </div>
-
   <!-- 💳 Wallet Card -->
-  <div class="relative p-5 rounded-3xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 text-white shadow-2xl overflow-hidden">
-    <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
-    <div class="absolute -left-10 -bottom-14 w-44 h-44 bg-white/10 rounded-full blur-2xl"></div>
-
+  <div class="relative p-6 rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 text-white shadow-xl">
     <div class="flex items-start justify-between">
       <div>
-        <p class="text-xs/4 opacity-80">Balance</p>
-        <p id="balance" data-value="0" class="mt-1 text-3xl font-bold tracking-tight">₦0</p>
+        <p class="text-sm opacity-80">Available Balance</p>
+        <p id="balance" data-value="0" class="mt-1 text-4xl font-extrabold tracking-tight">₦0</p>
       </div>
-      <!-- chip -->
-      <div class="w-12 h-8 rounded-lg bg-white/25 backdrop-blur-sm shadow-inner grid place-items-center">
-        <div class="w-8 h-5 rounded bg-white/60"></div>
-      </div>
-    </div>
-
-    <div class="mt-5 flex items-center justify-between">
-      <div class="flex items-center gap-2 text-sm opacity-90">
-        <span>•••• ••••</span><span id="acctSuffix">856 279</span>
-      </div>
-      <!-- Mastercard dots -->
-      <div class="relative w-9 h-5">
-        <span class="absolute left-0 top-0 w-5 h-5 rounded-full bg-orange-400/90"></span>
-        <span class="absolute right-0 top-0 w-5 h-5 rounded-full bg-red-500/90 opacity-80"></span>
+      <!-- sleek chip -->
+      <div class="w-14 h-9 rounded-lg bg-white/30 backdrop-blur-md grid place-items-center">
+        <div class="w-9 h-6 rounded bg-white/70"></div>
       </div>
     </div>
   </div>
 
-  <!-- ⚡ Quick Actions -->
-  <div class="space-y-3">
-    <div class="grid grid-cols-2 gap-3">
-      <button onclick="activateTab('depositSection')" class="action-pill">
-        <span class="pill-icon bg-indigo-100 text-indigo-600">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 5v14m-7-7h14"/></svg>
-        </span>
-        <span>Add money</span>
-      </button>
-      <button onclick="activateTab('sendSection')" class="action-pill">
-        <span class="pill-icon bg-violet-100 text-violet-600">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M4 12h16M14 5l7 7-7 7"/></svg>
-        </span>
-        <span>Send</span>
-      </button>
-    </div>
-    <div class="grid grid-cols-2 gap-3">
-      <button onclick="activateTab('depositSection')" class="action-pill">
-        <span class="pill-icon bg-emerald-100 text-emerald-600">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 6-9 6-9-6 9-6z"/><path d="M3 13l9 6 9-6"/></svg>
-        </span>
-        <span>Deposit</span>
-      </button>
-      <button onclick="activateTab('withdrawFundsSection')" class="action-pill">
-        <span class="pill-icon bg-rose-100 text-rose-600">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M20 12H4m6 7l-7-7 7-7"/></svg>
-        </span>
-        <span>Withdraw</span>
-      </button>
-    </div>
+  <!-- 🖼 Banner Section -->
+  <div class="rounded-2xl overflow-hidden shadow-lg">
+    <img src="MOON1.jpeg" alt="Promo Banner" class="w-full h-40 object-cover">
   </div>
 
-  <!-- 🚀 Swiper -->
-  <div class="swiper paymentSwiper rounded-2xl overflow-hidden shadow-lg">
-    <div class="swiper-wrapper">
-      <div class="swiper-slide p-4 bg-gradient-to-br from-blue-200 to-blue-300 font-medium text-gray-800">Refer & Earn</div>
-      <div class="swiper-slide p-4 bg-gradient-to-br from-green-200 to-green-300 font-medium text-gray-800">Learn More</div>
-      <div class="swiper-slide p-4 bg-gradient-to-br from-purple-200 to-purple-300 font-medium text-gray-800">Post a Task</div>
-    </div>
-    <div class="swiper-pagination"></div>
+  <!-- ⚡ Quick Actions (only Deposit + Withdraw) -->
+  <div class="grid grid-cols-2 gap-3">
+    <button onclick="activateTab('depositSection')" class="action-pill">
+      <span class="pill-icon bg-emerald-100 text-emerald-600">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 3l9 6-9 6-9-6 9-6z"/><path d="M3 13l9 6 9-6"/>
+        </svg>
+      </span>
+      <span>Deposit</span>
+    </button>
+    <button onclick="activateTab('withdrawFundsSection')" class="action-pill">
+      <span class="pill-icon bg-rose-100 text-rose-600">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20 12H4m6 7l-7-7 7-7"/>
+        </svg>
+      </span>
+      <span>Withdraw</span>
+    </button>
   </div>
 
   <!-- 📄 Transaction History -->
@@ -2492,7 +2448,6 @@
 </div>
 
 
-
 <style>
 .action-pill {
   @apply flex items-center justify-center gap-2 bg-white rounded-xl shadow-sm border border-gray-200 px-3 py-2 text-sm font-medium hover:bg-gray-50 transition;
@@ -2504,9 +2459,6 @@
   @apply animate-pulse bg-gray-100 h-14 rounded-xl;
 }
 </style>
-
-
-
 	
 
 	
@@ -4018,6 +3970,7 @@
 </body>
 
 </html>
+
 
 
 
