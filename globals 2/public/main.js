@@ -5344,90 +5344,146 @@ auth.onAuthStateChanged(async user => {
 
 //PAYMENT
 
-// --------------------
-// PAYMENT FUNCTIONS
-// --------------------
 
-async function loadBalance(userId) {
-  try {
-    const userRef = doc(db, "users", userId);
-    const userSnap = await getDoc(userRef);
+// -----------------------------
+// PAYMENT SECTION LOGIC
+// -----------------------------
 
-    if (userSnap.exists()) {
-      const data = userSnap.data();
-      const balanceEl = document.getElementById("balance");
-      balanceEl.textContent = `₦${(data.balance || 0).toLocaleString()}`;
-    } else {
-      console.warn("User not found in users collection");
-    }
-  } catch (err) {
-    console.error("Error fetching balance:", err);
-  }
+const paymentBalanceEl = document.getElementById("balance");
+const paymentTxListEl = document.getElementById("transactionList");
+const paymentTxFilterEl = document.getElementById("transactionFilter");
+
+let paymentTransactions = [];
+let paymentRenderedCount = 0;
+const PAYMENT_PAGE_SIZE = 10;
+
+// ----------------------
+// Format helpers
+// ----------------------
+function fmtNaira(n) { return "₦" + Number(n||0).toLocaleString(); }
+function parseTimestamp(val){
+  if(!val) return null;
+  if(typeof val.toDate==="function") return val.toDate();
+  if(val instanceof Date) return val;
+  if(typeof val==="number") return new Date(val);
+  if(typeof val==="string"){const d=new Date(val);return isNaN(d.getTime())?null:d;}
+  return null;
+}
+function formatAmount(amount){ return fmtNaira(amount); }
+function formatDatePretty(d){ return d?d.toLocaleString():"—"; }
+
+// ----------------------
+// Render single transaction card
+// ----------------------
+function paymentCardHtml(tx){
+  const date=parseTimestamp(tx.timestamp||tx.createdAt||tx.time||tx.created_at);
+  const amountClass = tx.status==="successful"?"text-green-600":tx.status==="failed"?"text-red-600":"text-yellow-600";
+  return `<div class="cursor-pointer bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm font-semibold text-gray-900">${tx.type||"Unknown"}</p>
+        <p class="text-xs text-gray-400 mt-1">${formatDatePretty(date)}</p>
+      </div>
+      <div class="text-right">
+        <p class="text-base font-bold ${amountClass}">${formatAmount(tx.amount)}</p>
+        <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${amountClass} bg-opacity-10">
+          ${tx.status||"—"}
+        </span>
+      </div>
+    </div>
+  </div>`;
 }
 
-async function loadTransactions(userId) {
-  try {
-    const q = query(
-      collection(db, "transactions"),
-      where("userId", "==", userId),
-      where("status", "==", "successful"),
-      orderBy("createdAt", "desc"),
-      limit(10)
-    );
+// ----------------------
+// Render transactions in Payment section
+// ----------------------
+function renderPaymentTransactions(reset=true){
+  if(!paymentTxListEl) return;
+  if(reset){ paymentTxListEl.innerHTML=""; paymentRenderedCount=0; }
 
-    const querySnap = await getDocs(q);
-    const listEl = document.getElementById("transactionList");
-    listEl.innerHTML = "";
-
-    if (querySnap.empty) {
-      listEl.innerHTML = `<p class="text-sm text-gray-500 text-center">No successful transactions yet.</p>`;
-      return;
-    }
-
-    querySnap.forEach(docSnap => {
-      const tx = docSnap.data();
-      if (tx.type !== "deposit" && tx.type !== "withdraw") return;
-
-      const color = tx.type === "deposit" ? "text-green-600" : "text-red-600";
-      const sign = tx.type === "deposit" ? "+" : "-";
-
-      const item = `
-        <div class="flex justify-between items-center p-3 rounded-xl bg-gray-50 shadow-sm border">
-          <div>
-            <p class="text-sm font-semibold text-gray-800 capitalize">${tx.type}</p>
-            <p class="text-xs text-gray-500">${tx.createdAt?.toDate ? tx.createdAt.toDate().toLocaleDateString() : ""}</p>
-          </div>
-          <p class="text-sm font-bold ${color}">${sign}₦${tx.amount.toLocaleString()}</p>
-        </div>
-      `;
-      listEl.insertAdjacentHTML("beforeend", item);
-    });
-  } catch (err) {
-    console.error("Error loading transactions:", err);
-  }
+  const filtered = paymentTransactions.slice(paymentRenderedCount, paymentRenderedCount+PAYMENT_PAGE_SIZE);
+  filtered.forEach(tx=>{
+    paymentTxListEl.insertAdjacentHTML("beforeend", paymentCardHtml(tx));
+  });
+  paymentRenderedCount += filtered.length;
 }
 
-// --------------------
-// INIT WHEN TAB OPENS
-// --------------------
-function initPaymentSection() {
-  const user = auth.currentUser;
-  if (!user) return;
+// ----------------------
+// Filter by status dropdown
+// ----------------------
+function applyPaymentFilter(){
+  const status = paymentTxFilterEl?.value || "all";
+  const filtered = paymentTransactions.filter(tx=>{
+    const okType = ["deposit","withdraw"].includes((tx.type||"").toLowerCase());
+    const okStatus = status==="all" || (tx.status||"").toLowerCase()===status.toLowerCase();
+    return okType && okStatus;
+  }).sort((a,b)=>{
+    const ta=parseTimestamp(a.timestamp||a.createdAt||a.time||a.created_at)||0;
+    const tb=parseTimestamp(b.timestamp||b.createdAt||b.time||b.created_at)||0;
+    return tb-ta;
+  });
 
-  loadBalance(user.uid);
-  loadTransactions(user.uid);
+  paymentRenderedCount=0;
+  paymentTxListEl.innerHTML="";
+  paymentTransactions=filtered;
+  renderPaymentTransactions();
 }
 
-// Plug into your tab switching
-function activateTab(tabId) {
-  document.querySelectorAll(".tab-section").forEach(sec => sec.classList.add("hidden"));
-  document.getElementById(tabId).classList.remove("hidden");
+// ----------------------
+// Listen to Payment transaction collection
+// ----------------------
+function startPaymentListener(){
+  const user = firebase.auth().currentUser;
+  if(!user) return;
 
-  if (tabId === "payment") {
-    initPaymentSection();
-  }
+  const collNames=["Transaction","transaction","transactions","Transactions"];
+  let attached=false;
+
+  collNames.forEach(collName=>{
+    if(attached) return;
+    try{
+      const ref=firebase.firestore().collection(collName).where("userId","==",user.uid).orderBy("timestamp","desc");
+      ref.onSnapshot(snap=>{
+        paymentTransactions = snap.docs.map(doc=>({id:doc.id,...doc.data()}))
+          .filter(tx=>["deposit","withdraw"].includes((tx.type||"").toLowerCase()));
+        applyPaymentFilter();
+      });
+      attached=true;
+    }catch(e){console.error("Payment listener error:",e);}
+  });
 }
 
+// ----------------------
+// Balance listener for Payment screen
+// ----------------------
+function startPaymentBalanceListener(){
+  const user=firebase.auth().currentUser;
+  if(!user || !paymentBalanceEl) return;
+
+  const ref=firebase.firestore().collection("users").doc(user.uid);
+  ref.onSnapshot(snap=>{
+    if(!snap.exists) return;
+    const val = Number(snap.data()?.balance)||0;
+    paymentBalanceEl.textContent = fmtNaira(val);
+    paymentBalanceEl.dataset.value=val;
+  });
+}
+
+// ----------------------
+// Init Payment section
+// ----------------------
+function initPaymentSection(){
+  startPaymentListener();
+  startPaymentBalanceListener();
+  paymentTxFilterEl?.addEventListener("change",applyPaymentFilter);
+}
+
+// ----------------------
+// Start after auth ready
+// ----------------------
+firebase.auth().onAuthStateChanged(user=>{
+  if(user) initPaymentSection();
+});
 
 
 
@@ -6897,6 +6953,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
