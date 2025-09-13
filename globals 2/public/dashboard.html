@@ -2379,28 +2379,24 @@
 
 
 
-	<!-- 🔵 PAYMENT SECTION -->
-
-
 <!-- 🔵 PAYMENT SECTION -->
-<div id="payment" class="tab-section hidden max-w-md mx-auto px-4 py-6 space-y-8">
+<div id="payment" class="tab-section hidden max-w-md mx-auto px-4 py-6 space-y-6">
 
-  <!-- Back -->
-  <button onclick="activateTab('dashboard')" 
-    class="flex items-center gap-2 text-blue-600 font-semibold hover:underline">
+  <!-- Back Button -->
+  <button onclick="activateTab('dashboard')" class="flex items-center gap-2 text-blue-600 font-semibold hover:underline">
     ← Back to Dashboard
   </button>
 
   <!-- 💳 Wallet Card -->
-  <div class="relative p-6 rounded-3xl bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white shadow-xl overflow-hidden">
+  <div class="relative p-6 rounded-3xl bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white shadow-2xl overflow-hidden">
     <div class="absolute -right-12 -top-12 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
     <div class="absolute -left-14 -bottom-16 w-56 h-56 bg-white/10 rounded-full blur-3xl"></div>
-
     <div class="flex items-start justify-between">
       <div>
-        <p class="text-xs opacity-80">Available Balance</p>
-        <p id="balance" class="mt-1 text-3xl font-bold tracking-tight">₦0</p>
+        <p class="text-xs/4 opacity-80">Available Balance</p>
+        <p id="balance" data-value="0" class="mt-1 text-3xl font-bold tracking-tight">₦0</p>
       </div>
+      <!-- Chip -->
       <div class="w-12 h-8 rounded-lg bg-white/30 backdrop-blur-md shadow-inner grid place-items-center">
         <div class="w-8 h-5 rounded bg-white/70"></div>
       </div>
@@ -2408,32 +2404,24 @@
   </div>
 
   <!-- ⚡ Quick Actions -->
-  <div class="grid grid-cols-2 gap-5">
-    <!-- Deposit -->
-    <button onclick="activateTab('depositSection')" 
-      class="group flex flex-col items-center justify-center p-5 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 shadow-md hover:shadow-xl transition">
-      <div class="w-12 h-12 rounded-full bg-blue-200 text-blue-700 grid place-items-center mb-2 group-hover:scale-110 transition">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 4v12m0 0l-5-5m5 5l5-5"/>
-        </svg>
+  <div class="grid grid-cols-2 gap-4">
+    <button onclick="activateTab('depositSection')" class="flex flex-col items-center justify-center p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 shadow-md hover:shadow-lg transition">
+      <div class="w-10 h-10 rounded-full bg-blue-200 text-blue-700 grid place-items-center mb-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 6-9 6-9-6 9-6z"/><path d="M3 13l9 6 9-6"/></svg>
       </div>
       <span class="text-sm font-semibold text-blue-800">Deposit</span>
     </button>
 
-    <!-- Withdraw -->
-    <button onclick="activateTab('withdrawFundsSection')" 
-      class="group flex flex-col items-center justify-center p-5 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 shadow-md hover:shadow-xl transition">
-      <div class="w-12 h-12 rounded-full bg-blue-200 text-blue-700 grid place-items-center mb-2 group-hover:scale-110 transition">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 20V8m0 0l-5 5m5-5l5 5"/>
-        </svg>
+    <button onclick="activateTab('withdrawFundsSection')" class="flex flex-col items-center justify-center p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 shadow-md hover:shadow-lg transition">
+      <div class="w-10 h-10 rounded-full bg-blue-200 text-blue-700 grid place-items-center mb-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M20 12H4m6 7l-7-7 7-7"/></svg>
       </div>
       <span class="text-sm font-semibold text-blue-800">Withdraw</span>
     </button>
   </div>
 
-  <!-- 🌌 Promo Banner -->
-  <div class="relative rounded-3xl overflow-hidden shadow-xl border border-blue-100">
+  <!-- 🌌 Banner -->
+  <div class="relative rounded-3xl overflow-hidden shadow-2xl border border-blue-100">
     <img src="MOON1.jpeg" alt="Promo Banner" class="w-full h-44 object-cover">
     <div class="absolute inset-0 bg-gradient-to-t from-blue-900/70 via-blue-700/20 to-transparent"></div>
     <div class="absolute bottom-4 left-4 text-white">
@@ -2443,19 +2431,36 @@
   </div>
 
   <!-- 📄 Transaction History -->
-  <div class="bg-white/90 backdrop-blur-lg rounded-2xl shadow-lg p-5 space-y-4 border border-gray-200">
+  <div class="bg-white/90 backdrop-blur-lg rounded-2xl shadow-xl p-5 space-y-4 border border-gray-200">
     <div class="flex items-center justify-between">
       <h2 class="text-base font-semibold text-gray-800">Transaction History</h2>
+      <div class="flex items-center gap-2">
+        <select id="transactionFilter" class="bg-gray-100 text-xs rounded-md px-2 py-1 border border-gray-300">
+          <option value="all">All</option>
+          <option value="successful">✅ Successful</option>
+          <option value="pending">⏳ Pending</option>
+          <option value="failed">❌ Failed</option>
+        </select>
+      </div>
     </div>
 
     <div id="transactionList" class="space-y-3">
-      <p class="text-sm text-gray-400 text-center">Loading transactions...</p>
+      <!-- skeleton loaders -->
+      <div class="tx-skel"></div>
+      <div class="tx-skel"></div>
+      <div class="tx-skel"></div>
     </div>
+
+    <button id="loadMoreTx" class="w-full hidden text-xs font-medium text-blue-600 hover:underline">Load more</button>
   </div>
+
 </div>
 
-
-
+<style>
+.tx-skel {
+  @apply animate-pulse bg-gray-100 h-14 rounded-xl;
+}
+</style>
 
 	
 
@@ -3964,6 +3969,7 @@
 </body>
 
 </html>
+
 
 
 
