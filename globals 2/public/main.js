@@ -5344,7 +5344,87 @@ auth.onAuthStateChanged(async user => {
 
 //PAYMENT
 
+// ✅ Firebase Auth & Firestore
+const auth = firebase.auth();
+const db = firebase.firestore();
 
+// --------------------
+// 🔹 Load Balance
+// --------------------
+function loadBalance() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  db.collection("users").doc(user.uid).onSnapshot(doc => {
+    if (doc.exists) {
+      const data = doc.data();
+      const balanceEl = document.getElementById("balance");
+      if (balanceEl) {
+        const balanceValue = Number(data.balance || 0);
+        balanceEl.textContent = "₦" + balanceValue.toLocaleString();
+        balanceEl.setAttribute("data-value", balanceValue);
+      }
+    }
+  });
+}
+
+// --------------------
+// 🔹 Load Transactions
+// --------------------
+function loadTransactions() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  db.collection("transactions")
+    .where("userId", "==", user.uid)
+    .where("status", "==", "successful")
+    .orderBy("createdAt", "desc")
+    .onSnapshot(snapshot => {
+      const list = document.getElementById("transactionList");
+      if (!list) return;
+      list.innerHTML = "";
+
+      if (snapshot.empty) {
+        list.innerHTML = `<p class="text-sm text-gray-500 text-center">No successful transactions yet.</p>`;
+        return;
+      }
+
+      snapshot.forEach(doc => {
+        const tx = doc.data();
+        if (tx.type !== "deposit" && tx.type !== "withdraw") return;
+
+        const color = tx.type === "deposit" ? "text-green-600" : "text-red-600";
+        const sign = tx.type === "deposit" ? "+" : "-";
+
+        const div = document.createElement("div");
+        div.className = "p-4 rounded-xl bg-gray-50 border flex justify-between items-center shadow-sm";
+
+        div.innerHTML = `
+          <div>
+            <p class="text-sm font-semibold text-gray-800 capitalize">${tx.type}</p>
+            <p class="text-xs text-gray-500">
+              ${tx.createdAt?.toDate ? tx.createdAt.toDate().toLocaleString() : ""}
+            </p>
+          </div>
+          <p class="text-sm font-bold ${color}">
+            ${sign}₦${Number(tx.amount).toLocaleString()}
+          </p>
+        `;
+
+        list.appendChild(div);
+      });
+    });
+}
+
+// --------------------
+// 🔹 Auth Listener
+// --------------------
+auth.onAuthStateChanged(user => {
+  if (user) {
+    loadBalance();
+    loadTransactions();
+  }
+});
 
 
 
@@ -6814,5 +6894,6 @@ startCheckinListener();
 
 
 	
+
 
 
