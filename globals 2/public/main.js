@@ -5344,9 +5344,7 @@ auth.onAuthStateChanged(async user => {
 
 //PAYMENT
 
-// ✅ Firebase Auth & Firestore
-const auth = firebase.auth();
-const db = firebase.firestore();
+
 
 // --------------------
 // 🔹 Load Balance
@@ -6894,6 +6892,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
