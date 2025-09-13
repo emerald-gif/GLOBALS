@@ -2372,90 +2372,313 @@
                                                     <!-- PAYMENT HISTORY-->
 
 
-<!-- 🔵 PAYMENT SECTION -->
+<!-- -----------------------------
+     PAYMENT SECTION — 2090 FINTECH
+     - NO JS FUNCTIONS / no onclicks
+     - IDs preserved: payment, balance,
+       transactionFilter, transactionList, loadMoreTx
+     - Deposit / Withdraw buttons before banner
+     - Banner uses MOON1.jpeg
+---------------------------------->
+<div id="payment" class="tab-section payment-2090">
 
-
-<!-- 🔵 PAYMENT SECTION -->
-<div id="payment" class="tab-section hidden max-w-md mx-auto px-4 py-6 space-y-6">
-
-  <!-- Back -->
-  <button onclick="activateTab('dashboard')" class="flex items-center gap-2 text-blue-500 font-semibold hover:text-blue-700 transition">
-    ← Payment
-  </button>
-
-  <!-- 💳 Futuristic Wallet Card -->
-  <div class="relative p-6 rounded-3xl bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#0f172a] text-white shadow-2xl border border-white/10 backdrop-blur-lg overflow-hidden">
-    <!-- glowing circles -->
-    <div class="absolute -top-16 -right-16 w-48 h-48 bg-indigo-500/30 rounded-full blur-3xl"></div>
-    <div class="absolute -bottom-16 -left-16 w-48 h-48 bg-fuchsia-500/30 rounded-full blur-3xl"></div>
-
-    <div class="flex items-start justify-between relative z-10">
-      <div>
-        <p class="text-sm text-gray-300">Available Balance</p>
-        <p id="balance" data-value="0" class="mt-1 text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-fuchsia-400 drop-shadow-lg">
-          ₦0
-        </p>
-      </div>
-      <!-- sleek chip -->
-      <div class="w-14 h-9 rounded-lg bg-white/20 backdrop-blur-md grid place-items-center shadow-inner">
-        <div class="w-9 h-6 rounded bg-white/70"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ⚡ Futuristic Quick Actions -->
-  <div class="grid grid-cols-2 gap-4">
-    <button onclick="activateTab('depositSection')" class="action-pill-2090 bg-gradient-to-br from-emerald-500/20 to-emerald-700/40 text-emerald-300 border-emerald-500/30">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 3l9 6-9 6-9-6 9-6z"/><path d="M3 13l9 6 9-6"/>
-      </svg>
-      <span>Deposit</span>
-    </button>
-    <button onclick="activateTab('withdrawFundsSection')" class="action-pill-2090 bg-gradient-to-br from-rose-500/20 to-rose-700/40 text-rose-300 border-rose-500/30">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M20 12H4m6 7l-7-7 7-7"/>
-      </svg>
-      <span>Withdraw</span>
+  <!-- top row: back (visual only) -->
+  <div class="p-head">
+    <button id="paymentBack" type="button" class="back-btn" aria-label="Back to dashboard">
+      ← Payment
     </button>
   </div>
 
-  <!-- 🖼 Futuristic Banner -->
-  <div class="rounded-3xl overflow-hidden shadow-2xl border border-white/10">
-    <img src="MOON1.jpeg" alt="Promo Banner" class="w-full h-44 object-cover hover:scale-105 transition-transform duration-500">
-  </div>
+  <!-- wallet card -->
+  <section class="wallet-card" aria-labelledby="walletTitle">
+    <div class="card-inner">
+      <div class="card-left">
+        <p id="walletTitle" class="card-label">Available Balance</p>
+        <p id="balance" data-value="0" class="card-balance">₦0</p>
+      </div>
 
-  <!-- 📄 Transaction History -->
-  <div class="bg-[#0f172a] rounded-3xl shadow-xl p-4 space-y-4 border border-white/10 text-white">
-    <div class="flex items-center justify-between">
-      <h2 class="text-base font-semibold text-indigo-300">Transaction History</h2>
-      <div class="flex items-center gap-2">
-        <select id="transactionFilter" class="bg-[#1e1b4b] text-xs rounded-lg px-2 py-1 border border-indigo-500/30 text-indigo-200">
-          <option value="all">All</option>
-          <option value="successful">✅ Successful</option>
-          <option value="pending">⏳ Pending</option>
-          <option value="failed">❌ Failed</option>
-        </select>
+      <div class="card-right" aria-hidden="true">
+        <!-- decorative "chip" -->
+        <div class="chip">
+          <div class="chip-slot"></div>
+        </div>
       </div>
     </div>
+  </section>
 
-    <div id="transactionList" class="space-y-3">
-      <div class="tx-skel-2090"></div>
-      <div class="tx-skel-2090"></div>
-      <div class="tx-skel-2090"></div>
+  <!-- quick actions (Deposit & Withdraw) -->
+  <div class="quick-actions" role="group" aria-label="Quick actions">
+    <button id="depositBtn" type="button" class="action action-deposit" data-target="depositSection">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v14M5 10h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="action-label">Deposit</span>
+    </button>
+
+    <button id="withdrawBtn" type="button" class="action action-withdraw" data-target="withdrawFundsSection">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 12H4M14 5l7 7-7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="action-label">Withdraw</span>
+    </button>
+  </div>
+
+  <!-- sleek banner (after actions as requested) -->
+  <div class="banner-wrap" role="img" aria-label="Promo banner">
+    <img src="MOON1.jpeg" alt="MOON promo banner" class="banner-img">
+    <div class="banner-shine" aria-hidden="true"></div>
+  </div>
+
+  <!-- transaction history -->
+  <section class="tx-card" aria-labelledby="txTitle">
+    <div class="tx-head">
+      <h3 id="txTitle" class="tx-title">Transaction History</h3>
+      <select id="transactionFilter" class="tx-filter" aria-label="Filter transactions">
+        <option value="all">All</option>
+        <option value="successful">✅ Successful</option>
+        <option value="pending">⏳ Pending</option>
+        <option value="failed">❌ Failed</option>
+      </select>
     </div>
 
-    <button id="loadMoreTx" class="w-full hidden text-xs font-medium text-indigo-400 hover:underline">Load more</button>
-  </div>
+    <div id="transactionList" class="tx-list" aria-live="polite">
+      <!-- lightweight skeletons / placeholders -->
+      <div class="tx-row-skel"></div>
+      <div class="tx-row-skel"></div>
+      <div class="tx-row-skel"></div>
+    </div>
+
+    <button id="loadMoreTx" type="button" class="tx-load" aria-label="Load more transactions">Load more</button>
+  </section>
 </div>
 
-
+<!-- -----------------------------
+     Scoped CSS (paste into page or external file)
+---------------------------------->
 <style>
-.action-pill-2090 {
-  @apply flex flex-col items-center justify-center gap-2 rounded-2xl px-4 py-3 font-semibold text-sm border shadow-md backdrop-blur-lg transition transform hover:scale-105;
-}
-.tx-skel-2090 {
-  @apply animate-pulse bg-gradient-to-r from-[#1e1b4b] to-[#312e81] h-14 rounded-xl;
-}
+  :root{
+    --bg-900:#05060b;
+    --panel-800:#0e1220;
+    --neon-1: 154, 120, 255;   /* indigo neon */
+    --neon-2: 255, 90, 190;    /* magenta neon */
+    --accent-1: rgba(var(--neon-1),0.12);
+    --accent-2: rgba(var(--neon-2),0.10);
+    --glass-border: rgba(255,255,255,0.06);
+    --muted: #9aa3c7;
+    --txt: #e7eefc;
+    --max-w: 420px;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+
+  /* container */
+  .payment-2090{
+    max-width: var(--max-w);
+    margin: 0 auto;
+    padding: 18px;
+    box-sizing: border-box;
+    color: var(--txt);
+  }
+
+  .p-head{ display:flex; align-items:center; gap:12px; margin-bottom:6px; }
+  .back-btn{
+    background:transparent;
+    color: #89a0ff;
+    border: none;
+    font-weight:600;
+    padding:6px 8px;
+    border-radius:10px;
+    cursor:pointer;
+    transition: transform .18s ease, box-shadow .18s;
+  }
+  .back-btn:hover{ transform: translateX(-4px); text-decoration:underline; }
+
+  /* WALLET CARD */
+  .wallet-card{
+    background: linear-gradient(180deg, rgba(var(--neon-1),0.06), rgba(var(--neon-2),0.03) 60%);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow:
+      0 10px 30px rgba(3,6,23,0.6),
+      0 0 30px rgba(var(--neon-1),0.04) inset;
+    position: relative;
+    overflow: visible;
+  }
+
+  .wallet-card::before{
+    content:"";
+    position:absolute;
+    right:-36px; top:-36px;
+    width:120px; height:120px;
+    border-radius:50%;
+    background: radial-gradient(closest-side, rgba(var(--neon-1),0.12), transparent 40%);
+    filter: blur(22px);
+    pointer-events:none;
+    transform: rotate(12deg);
+  }
+  .wallet-card::after{
+    content:"";
+    position:absolute;
+    left:-36px; bottom:-24px;
+    width:96px; height:96px;
+    border-radius:50%;
+    background: radial-gradient(closest-side, rgba(var(--neon-2),0.08), transparent 40%);
+    filter: blur(22px);
+    pointer-events:none;
+  }
+
+  .card-inner{ display:flex; align-items:center; justify-content:space-between; gap:12px; position:relative; z-index:1; }
+  .card-label{ margin:0; color:var(--muted); font-size:13px; }
+  .card-balance{
+    margin:4px 0 0 0;
+    font-size:34px;
+    font-weight:800;
+    letter-spacing:-0.5px;
+    color: transparent;
+    background: linear-gradient(90deg, rgba(var(--neon-1),1) 0%, rgba(var(--neon-2),1) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    text-shadow: 0 6px 28px rgba(22,14,60,0.45);
+  }
+
+  .card-right .chip{
+    width:58px; height:34px;
+    border-radius:10px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06));
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 4px 14px rgba(3,6,23,0.45);
+  }
+  .chip-slot{ width:34px; height:18px; border-radius:4px; background:rgba(255,255,255,0.75); }
+
+  /* QUICK ACTIONS — neon pills */
+  .quick-actions{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:12px;
+    margin-top:12px;
+  }
+  .action{
+    border-radius:14px;
+    padding:12px;
+    display:flex; align-items:center; gap:10px;
+    justify-content:center;
+    font-weight:700;
+    font-size:13px;
+    border:1px solid rgba(255,255,255,0.04);
+    cursor:pointer;
+    transition: transform .18s ease, box-shadow .18s ease;
+    position:relative;
+    overflow:visible;
+    backdrop-filter: none; /* no blur */
+  }
+  .action .icon{ width:18px; height:18px; color:currentColor; opacity:.95; }
+  .action-deposit{
+    color: #bff7dc;
+    background: linear-gradient(180deg, rgba(12,36,18,0.6), rgba(3,18,16,0.28));
+    box-shadow: 0 6px 30px rgba(18,255,170,0.03), 0 8px 18px rgba(0,0,0,0.45);
+    border: 1px solid rgba(44, 220, 150, 0.12);
+  }
+  .action-withdraw{
+    color: #ffd6ff;
+    background: linear-gradient(180deg, rgba(44,4,20,0.6), rgba(36,8,36,0.3));
+    box-shadow: 0 6px 30px rgba(255,112,180,0.03), 0 8px 18px rgba(0,0,0,0.45);
+    border: 1px solid rgba(255, 80, 160, 0.10);
+  }
+  .action:hover{ transform: translateY(-6px) scale(1.01); }
+  .action:active{ transform: translateY(-2px) scale(.997); }
+  .action::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:14px;
+    box-shadow: 0 0 40px rgba(var(--neon-1),0.06);
+    z-index:-1;
+    transition: opacity .25s;
+    opacity:0;
+  }
+  .action-deposit::after{ box-shadow: 0 0 32px rgba(var(--neon-1),0.12); }
+  .action-withdraw::after{ box-shadow: 0 0 32px rgba(var(--neon-2),0.12); }
+  .action:hover::after{ opacity:1; }
+
+  /* BANNER */
+  .banner-wrap{
+    margin-top:14px;
+    border-radius:18px;
+    overflow:hidden;
+    position:relative;
+    box-shadow: 0 18px 40px rgba(2,6,30,0.6);
+    border:1px solid var(--glass-border);
+  }
+  .banner-img{
+    width:100%;
+    height:160px;
+    object-fit:cover;
+    display:block;
+    transform-origin:center;
+    transition: transform .6s cubic-bezier(.2,.9,.3,1);
+  }
+  .banner-wrap:hover .banner-img{ transform: scale(1.03); }
+
+  .banner-shine{
+    position:absolute; inset:0;
+    pointer-events:none;
+    background: linear-gradient(90deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.01) 30%, rgba(255,255,255,0.04) 60%, rgba(255,255,255,0.00) 100%);
+    mix-blend-mode: overlay;
+  }
+
+  /* TRANSACTION CARD */
+  .tx-card{
+    margin-top:14px;
+    background: linear-gradient(180deg, rgba(8,10,20,0.9), rgba(11,13,28,0.95));
+    border:1px solid rgba(255,255,255,0.03);
+    padding:12px;
+    border-radius:14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  }
+  .tx-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+  .tx-title{ margin:0; font-size:15px; color:#bfc9ff; }
+  .tx-filter{
+    background:transparent;
+    color:var(--txt);
+    border:1px solid rgba(255,255,255,0.03);
+    padding:6px 8px; border-radius:8px;
+    font-size:12px;
+  }
+
+  .tx-list{ display:flex; flex-direction:column; gap:10px; }
+  .tx-row-skel{
+    height:56px;
+    border-radius:10px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    box-shadow: inset 0 -4px 10px rgba(0,0,0,0.35);
+    position:relative;
+    overflow:hidden;
+  }
+  .tx-row-skel::after{
+    content:"";
+    position:absolute; left:-120px; top:0; height:100%; width:120px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+    animation: shimmer 1.6s infinite;
+  }
+
+  @keyframes shimmer{ 0%{ left:-120px } 100%{ left:100% } }
+
+  .tx-load{
+    margin-top:12px;
+    width:100%;
+    padding:10px 12px;
+    border-radius:10px;
+    background:linear-gradient(90deg, rgba(var(--neon-1),0.08), rgba(var(--neon-2),0.06));
+    color: #dfe8ff;
+    border:1px solid rgba(255,255,255,0.03);
+    font-weight:700;
+    cursor:pointer;
+    transition: transform .18s;
+  }
+  .tx-load:hover{ transform: translateY(-4px); box-shadow: 0 12px 30px rgba(6,8,40,0.6); }
+
+  /* small screens adjustments */
+  @media (max-width:420px){
+    .banner-img{ height:140px; }
+    .card-balance{ font-size:28px; }
+    .action{ padding:10px; font-size:13px; border-radius:12px; }
+  }
 </style>
 
 	
@@ -3967,6 +4190,7 @@
 </body>
 
 </html>
+
 
 
 
