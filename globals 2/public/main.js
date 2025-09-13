@@ -5346,113 +5346,105 @@ auth.onAuthStateChanged(async user => {
 
   // PAYMENT FUNCTION 
 
-(function(w, d) {
-  const PAGE_SIZE = 5;
-  let lastDoc = null, unsub = null;
-
-  function formatAmount(n, type) {
-    let v = Number(n) || 0;
-    let f = "₦" + v.toLocaleString();
-    return type === "debit" ? "−" + f : "+" + f;
+// --------------------
+// PAYMENT BALANCE LISTENER
+// --------------------
+(function (w, d) {
+  function fmtNaira(n) {
+    var v = Number(n) || 0;
+    return "₦" + v.toLocaleString();
   }
-
-  function renderTx(doc) {
-    const data = doc.data();
-    const type = data.type || "credit";
-    const amount = formatAmount(data.amount, type);
-    const status = data.status || "pending";
-    const date = data.date ? new Date(data.date.seconds*1000).toLocaleDateString() : "";
-
-    const statusMap = {
-      successful: "text-green-500",
-      pending: "text-yellow-500",
-      failed: "text-red-500"
-    };
-
-    const amountColor = type === "debit" ? "text-red-500" : "text-green-600";
-
-    return `
-      <div class="flex items-center justify-between bg-gray-50 px-4 py-3 rounded-xl shadow-sm tx-card" data-status="${status}">
-        <div>
-          <h3 class="font-medium text-sm text-gray-700">${data.title || "Transaction"}</h3>
-          <p class="text-xs text-gray-400">${date}</p>
-        </div>
-        <div class="text-right">
-          <p class="font-bold ${amountColor} text-sm">${amount}</p>
-          <span class="text-xs ${statusMap[status] || 'text-gray-400'} font-medium">
-            ${status === "successful" ? "✅ Successful" : status === "failed" ? "❌ Failed" : "⏳ Pending"}
-          </span>
-        </div>
-      </div>`;
+  function coerceNumber(val) {
+    if (val == null) return 0;
+    if (typeof val === "number") return isFinite(val) ? val : 0;
+    var s = String(val).replace(/[₦,\s]/g, "");
+    var n = Number(s);
+    return isFinite(n) ? n : 0;
   }
-
-  function startTransactions() {
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-    const listEl = d.getElementById("transactionList");
-    const filterEl = d.getElementById("transactionFilter");
-    const loadBtn = d.getElementById("loadMoreTx");
-
-    function load(user) {
-      if (unsub) { unsub(); unsub = null; }
-      if (!user) { listEl.innerHTML = "<p class='text-sm text-gray-500'>No user signed in.</p>"; return; }
-
-      const q = db.collection("Transaction")
-        .where("uid", "==", user.uid)
-        .orderBy("date", "desc")
-        .limit(PAGE_SIZE);
-
-      unsub = q.onSnapshot(snap => {
-        listEl.innerHTML = "";
-        if (snap.empty) {
-          listEl.innerHTML = "<p class='text-sm text-gray-500'>No transactions found.</p>";
-          return;
-        }
-        lastDoc = snap.docs[snap.docs.length-1];
-        snap.forEach(doc => listEl.insertAdjacentHTML("beforeend", renderTx(doc)));
-        loadBtn.classList.toggle("hidden", snap.size < PAGE_SIZE);
-      });
+  function animateNumber(el, from, to) {
+    if (!el) return;
+    if (el.__rafId) cancelAnimationFrame(el.__rafId);
+    var start = performance.now();
+    var diff = to - from;
+    function step(t) {
+      var p = Math.min((t - start) / 800, 1);
+      var eased = 1 - Math.pow(1 - p, 3);
+      var val = Math.round(from + diff * eased);
+      el.textContent = fmtNaira(val);
+      if (p < 1) el.__rafId = requestAnimationFrame(step);
     }
+    el.__rafId = requestAnimationFrame(step);
+  }
 
-    // filter
-    filterEl.addEventListener("change", () => {
-      const val = filterEl.value;
-      listEl.querySelectorAll(".tx-card").forEach(c => {
-        if (val === "all" || c.dataset.status === val) c.classList.remove("hidden");
-        else c.classList.add("hidden");
-      });
-    });
+  function startPaymentBalance() {
+    var el = d.getElementById("paymentBalance");
+    if (!el) return;
 
-    // load more
-    loadBtn.addEventListener("click", () => {
-      if (!lastDoc) return;
-      db.collection("Transaction")
-        .where("uid", "==", auth.currentUser.uid)
-        .orderBy("date", "desc")
-        .startAfter(lastDoc)
-        .limit(PAGE_SIZE)
-        .get()
-        .then(snap => {
-          if (!snap.empty) {
-            lastDoc = snap.docs[snap.docs.length-1];
-            snap.forEach(doc => listEl.insertAdjacentHTML("beforeend", renderTx(doc)));
-            if (snap.size < PAGE_SIZE) loadBtn.classList.add("hidden");
-          } else {
-            loadBtn.classList.add("hidden");
-          }
+    firebase.auth().onAuthStateChanged(user => {
+      if (!user) return;
+      firebase.firestore().collection("users").doc(user.uid)
+        .onSnapshot(snap => {
+          if (!snap.exists) return;
+          var next = coerceNumber(snap.data().balance);
+          var prev = coerceNumber(el.dataset.value);
+          if (next === prev) return;
+          el.dataset.value = String(next);
+          animateNumber(el, prev, next);
         });
     });
-
-    auth.onAuthStateChanged(load);
   }
 
   if (d.readyState === "loading") {
-    d.addEventListener("DOMContentLoaded", startTransactions, { once: true });
+    d.addEventListener("DOMContentLoaded", startPaymentBalance);
   } else {
-    startTransactions();
+    startPaymentBalance();
   }
 })(window, document);
 
+
+// --------------------
+// PAYMENT TRANSACTION HISTORY
+// --------------------
+let paymentTxUnsub = null;
+function startPaymentTransactions(uid) {
+  if (paymentTxUnsub) { paymentTxUnsub(); paymentTxUnsub = null; }
+  const txListEl = document.getElementById("paymentTxList");
+  const txEmptyEl = document.getElementById("paymentTxEmpty");
+
+  paymentTxUnsub = firebase.firestore()
+    .collection("Transaction")
+    .where("userId", "==", uid)
+    .where("type", "in", ["deposit", "withdraw"])
+    .orderBy("timestamp", "desc")
+    .limit(10)
+    .onSnapshot(snap => {
+      if (snap.empty) {
+        txListEl.innerHTML = "";
+        txEmptyEl.classList.remove("hidden");
+        return;
+      }
+      txEmptyEl.classList.add("hidden");
+      txListEl.innerHTML = snap.docs.map(doc => {
+        const tx = doc.data();
+        const date = tx.timestamp?.toDate?.() || new Date();
+        const amountClass = tx.type === "deposit" ? "text-green-600" : "text-red-600";
+        return `
+          <div class="bg-gray-50 rounded-xl p-3 flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold text-gray-900 capitalize">${tx.type}</p>
+              <p class="text-xs text-gray-400">${date.toLocaleString()}</p>
+            </div>
+            <p class="text-sm font-bold ${amountClass}">₦${Number(tx.amount || 0).toLocaleString()}</p>
+          </div>
+        `;
+      }).join("");
+    }, err => console.error("Payment tx error:", err));
+}
+
+firebase.auth().onAuthStateChanged(user => {
+  if (user) startPaymentTransactions(user.uid);
+  else if (paymentTxUnsub) { paymentTxUnsub(); paymentTxUnsub = null; }
+});
 
 
 
@@ -6926,3 +6918,4 @@ startCheckinListener();
 
 
 	
+
