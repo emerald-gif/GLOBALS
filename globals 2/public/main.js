@@ -5344,85 +5344,90 @@ auth.onAuthStateChanged(async user => {
 
 //PAYMENT
 
-
-
 // --------------------
-// 🔹 Load Balance
+// PAYMENT FUNCTIONS
 // --------------------
-function loadBalance() {
-  const user = auth.currentUser;
-  if (!user) return;
 
-  db.collection("users").doc(user.uid).onSnapshot(doc => {
-    if (doc.exists) {
-      const data = doc.data();
+async function loadBalance(userId) {
+  try {
+    const userRef = doc(db, "users", userId);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+      const data = userSnap.data();
       const balanceEl = document.getElementById("balance");
-      if (balanceEl) {
-        const balanceValue = Number(data.balance || 0);
-        balanceEl.textContent = "₦" + balanceValue.toLocaleString();
-        balanceEl.setAttribute("data-value", balanceValue);
-      }
+      balanceEl.textContent = `₦${(data.balance || 0).toLocaleString()}`;
+    } else {
+      console.warn("User not found in users collection");
     }
-  });
+  } catch (err) {
+    console.error("Error fetching balance:", err);
+  }
 }
 
-// --------------------
-// 🔹 Load Transactions
-// --------------------
-function loadTransactions() {
-  const user = auth.currentUser;
-  if (!user) return;
+async function loadTransactions(userId) {
+  try {
+    const q = query(
+      collection(db, "transactions"),
+      where("userId", "==", userId),
+      where("status", "==", "successful"),
+      orderBy("createdAt", "desc"),
+      limit(10)
+    );
 
-  db.collection("transactions")
-    .where("userId", "==", user.uid)
-    .where("status", "==", "successful")
-    .orderBy("createdAt", "desc")
-    .onSnapshot(snapshot => {
-      const list = document.getElementById("transactionList");
-      if (!list) return;
-      list.innerHTML = "";
+    const querySnap = await getDocs(q);
+    const listEl = document.getElementById("transactionList");
+    listEl.innerHTML = "";
 
-      if (snapshot.empty) {
-        list.innerHTML = `<p class="text-sm text-gray-500 text-center">No successful transactions yet.</p>`;
-        return;
-      }
+    if (querySnap.empty) {
+      listEl.innerHTML = `<p class="text-sm text-gray-500 text-center">No successful transactions yet.</p>`;
+      return;
+    }
 
-      snapshot.forEach(doc => {
-        const tx = doc.data();
-        if (tx.type !== "deposit" && tx.type !== "withdraw") return;
+    querySnap.forEach(docSnap => {
+      const tx = docSnap.data();
+      if (tx.type !== "deposit" && tx.type !== "withdraw") return;
 
-        const color = tx.type === "deposit" ? "text-green-600" : "text-red-600";
-        const sign = tx.type === "deposit" ? "+" : "-";
+      const color = tx.type === "deposit" ? "text-green-600" : "text-red-600";
+      const sign = tx.type === "deposit" ? "+" : "-";
 
-        const div = document.createElement("div");
-        div.className = "p-4 rounded-xl bg-gray-50 border flex justify-between items-center shadow-sm";
-
-        div.innerHTML = `
+      const item = `
+        <div class="flex justify-between items-center p-3 rounded-xl bg-gray-50 shadow-sm border">
           <div>
             <p class="text-sm font-semibold text-gray-800 capitalize">${tx.type}</p>
-            <p class="text-xs text-gray-500">
-              ${tx.createdAt?.toDate ? tx.createdAt.toDate().toLocaleString() : ""}
-            </p>
+            <p class="text-xs text-gray-500">${tx.createdAt?.toDate ? tx.createdAt.toDate().toLocaleDateString() : ""}</p>
           </div>
-          <p class="text-sm font-bold ${color}">
-            ${sign}₦${Number(tx.amount).toLocaleString()}
-          </p>
-        `;
-
-        list.appendChild(div);
-      });
+          <p class="text-sm font-bold ${color}">${sign}₦${tx.amount.toLocaleString()}</p>
+        </div>
+      `;
+      listEl.insertAdjacentHTML("beforeend", item);
     });
+  } catch (err) {
+    console.error("Error loading transactions:", err);
+  }
 }
 
 // --------------------
-// 🔹 Auth Listener
+// INIT WHEN TAB OPENS
 // --------------------
-auth.onAuthStateChanged(user => {
-  if (user) {
-    loadBalance();
-    loadTransactions();
+function initPaymentSection() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  loadBalance(user.uid);
+  loadTransactions(user.uid);
+}
+
+// Plug into your tab switching
+function activateTab(tabId) {
+  document.querySelectorAll(".tab-section").forEach(sec => sec.classList.add("hidden"));
+  document.getElementById(tabId).classList.remove("hidden");
+
+  if (tabId === "payment") {
+    initPaymentSection();
   }
-});
+}
+
 
 
 
@@ -6892,6 +6897,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
