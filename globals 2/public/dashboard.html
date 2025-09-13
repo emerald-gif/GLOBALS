@@ -1788,84 +1788,89 @@
 	
 	
 <!-- ================= INSTALL AND EARN ================= -->
-<!-- ================= INSTALL AND EARN ================= -->
-<div id="taskSection" class="tab-section hidden">
+<!-- ================= INSTALL AND EARN ================= -->  
+<div id="taskSection" class="tab-section hidden">  
 
-  <!-- Controls for searching and filtering -->
-  <div class="w-full px-4 py-4 bg-white rounded-2xl shadow-sm mb-4">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+  <!-- Controls for searching and filtering -->  
+  <div class="w-full px-4 py-5 bg-white rounded-2xl shadow-lg mb-6 border border-gray-100">  
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">  
 
-      <!-- Search Input -->
-      <input
-        type="text"
-        id="taskSearch"
-        placeholder="Search tasks..."
-        class="w-full sm:w-1/2 px-4 py-2 border border-gray-300 rounded-full shadow focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200"
-      />
+      <!-- Search Input -->  
+      <div class="relative w-full sm:w-1/2">  
+        <input  
+          type="text"  
+          id="taskSearch"  
+          placeholder="🔍 Search tasks by name or category..."  
+          class="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-full bg-gray-50 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 placeholder-gray-400 text-sm"  
+        />  
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">  
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">  
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1110.5 3a7.5 7.5 0 016.15 13.65z" />  
+          </svg>  
+        </span>  
+      </div>  
 
-      <!-- Category & Finished Button -->
-      <div class="flex items-center gap-3 sm:gap-4">
-        <select
-          id="taskCategoryFilter"
-          class="px-4 py-2 border border-gray-300 rounded-xl text-sm shadow-sm"
-        >
-          <option value="">All Categories</option>
-          <option>WhatsApp/Telegram</option>
-          <option>Instagram/TikTok</option>
-          <option>App</option>
-          <option>YouTube</option>
-          <option>Facebook</option>
-          <option>Twitter</option>
-          <option>Website</option>
-          <option>Vote</option>
-          <option>Music Player</option>
-        </select>
+      <!-- Category & Finished Button -->  
+      <div class="flex items-center gap-3 sm:gap-4">  
+        <select  
+          id="taskCategoryFilter"  
+          class="px-4 py-2 border border-gray-200 rounded-xl text-sm shadow-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 transition"  
+        >  
+          <option value="">All Categories</option>  
+          <option>WhatsApp/Telegram</option>  
+          <option>Instagram/TikTok</option>  
+          <option>App</option>  
+          <option>YouTube</option>  
+          <option>Facebook</option>  
+          <option>Twitter</option>  
+          <option>Website</option>  
+          <option>Vote</option>  
+          <option>Music Player</option>  
+        </select>  
 
-        <button
-          id="finishedTaskBtnUser"
-          class="bg-blue-600 hover:bg-gray-200 text-blue-500 px-4 py-2 rounded-xl text-sm transition"
-        >
-          Finished Tasks
-        </button>
-      </div>
-    </div>
-  </div>
+        <button  
+          id="finishedTaskBtnUser"  
+          class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white px-5 py-2 rounded-xl text-sm font-medium shadow-md transition-all duration-300"  
+        >  
+          ✅ Finished Tasks  
+        </button>  
+      </div>  
+    </div>  
+  </div>  
 
-  <!-- Tasks container -->
-  <div id="task-jobs" class="grid gap-4 px-4 pb-10"></div>
+  <!-- Tasks container -->  
+  <div id="task-jobs" class="grid gap-5 px-4 pb-12"></div>  
+</div>  
+
+<!-- ================= FINISHED TASKS SCREEN ================= -->  
+<div id="finishedTasksScreenUser" class="hidden px-4 py-8">  
+
+  <!-- Header -->  
+  <div class="flex items-center justify-between mb-8">  
+    <button  
+      id="backToMainBtnUser"  
+      class="text-blue-600 font-medium flex items-center gap-1 hover:underline"  
+    >  
+      ← Back  
+    </button>  
+    <h2 class="text-xl font-bold tracking-tight">Finished Tasks</h2>  
+  </div>  
+
+  <!-- Stats -->  
+  <div class="grid grid-cols-2 gap-4 mb-8">  
+    <div class="text-center bg-yellow-50 border border-yellow-200 rounded-2xl py-4 shadow-sm">  
+      <p id="pendingCountUser" class="text-3xl font-extrabold text-yellow-600">0</p>  
+      <p class="text-sm text-gray-600">Pending Tasks</p>  
+    </div>  
+    <div class="text-center bg-green-50 border border-green-200 rounded-2xl py-4 shadow-sm">  
+      <p id="approvedCountUser" class="text-3xl font-extrabold text-green-600">0</p>  
+      <p class="text-sm text-gray-600">Approved Tasks</p>  
+    </div>  
+  </div>  
+
+  <!-- Finished tasks list -->  
+  <div id="finishedTasksListUser" class="grid gap-5"></div>  
 </div>
-
-<!-- ================= FINISHED TASKS SCREEN ================= -->
-<div id="finishedTasksScreenUser" class="hidden px-4 py-6">
-
-  <!-- Header -->
-  <div class="flex items-center justify-between mb-6">
-    <button
-      id="backToMainBtnUser"
-      class="text-blue-600 font-medium flex items-center gap-1"
-    >
-      ← Back
-    </button>
-    <h2 class="text-lg font-bold">Finished Tasks</h2>
-  </div>
-
-  <!-- Stats -->
-  <div class="flex gap-4 mb-6">
-    <div class="flex-1 text-center bg-yellow-50 border border-yellow-200 rounded-xl py-3">
-      <p id="pendingCountUser" class="text-2xl font-bold text-yellow-600">0</p>
-      <p class="text-sm text-gray-600">Pending Tasks</p>
-    </div>
-    <div class="flex-1 text-center bg-green-50 border border-green-200 rounded-xl py-3">
-      <p id="approvedCountUser" class="text-2xl font-bold text-green-600">0</p>
-      <p class="text-sm text-gray-600">Approved Tasks</p>
-    </div>
-  </div>
-
-  <!-- Finished tasks list -->
-  <div id="finishedTasksListUser" class="grid gap-4"></div>
-</div>
-
-
                                                       <!-- 🌍 Social Tasks Main Screen -->
 
 
@@ -4062,6 +4067,7 @@
 </body>
 
 </html>
+
 
 
 
