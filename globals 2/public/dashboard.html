@@ -3834,6 +3834,9 @@
 ‎
 
 <!-- GLOBALS AI Help Center Section -->
+
+
+<!-- GLOBALS AI Help Center Section -->
 <div id="aiHelpCenter" class="tab-section hidden bg-gray-50 min-h-screen flex flex-col">
 
   <!-- Back Button -->
@@ -3853,7 +3856,8 @@
   <div class="grid grid-cols-2 gap-3 p-3">
     
     <!-- AI Content -->
-    <button onclick="openAiTopic('aiContent')" class="bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-100 transition text-sm">
+    <button onclick="openAiTopic('aiContent')" class="bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-50 transition text-sm relative">
+      <span class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-l-md"></span>
       <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
       </svg>
@@ -3861,7 +3865,8 @@
     </button>
 
     <!-- Payment Steps -->
-    <button onclick="openAiTopic('paymentHelp')" class="bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-100 transition text-sm">
+    <button onclick="openAiTopic('paymentHelp')" class="bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-50 transition text-sm relative">
+      <span class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-l-md"></span>
       <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-4.418 0-8 1.79-8 4v4h16v-4c0-2.21-3.582-4-8-4z"/>
       </svg>
@@ -3869,7 +3874,8 @@
     </button>
 
     <!-- Withdrawal Steps -->
-    <button onclick="openAiTopic('withdrawalHelp')" class="bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-100 transition text-sm">
+    <button onclick="openAiTopic('withdrawalHelp')" class="bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-50 transition text-sm relative">
+      <span class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-l-md"></span>
       <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a5 5 0 00-10 0v2m-2 4h14v4H5v-4z"/>
       </svg>
@@ -3877,7 +3883,8 @@
     </button>
 
     <!-- Task Guide -->
-    <button onclick="openAiTopic('taskHelp')" class="bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-100 transition text-sm">
+    <button onclick="openAiTopic('taskHelp')" class="bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-50 transition text-sm relative">
+      <span class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-l-md"></span>
       <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7 12l5 5 7-7"/>
       </svg>
@@ -3885,7 +3892,8 @@
     </button>
 
     <!-- Buy eBook Steps -->
-    <button onclick="openAiTopic('ebookHelp')" class="bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-100 transition text-sm">
+    <button onclick="openAiTopic('ebookHelp')" class="bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-50 transition text-sm relative">
+      <span class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-l-md"></span>
       <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 20l9-5-9-5-9 5 9 5z"/>
       </svg>
@@ -3893,7 +3901,8 @@
     </button>
 
     <!-- Start Conversation -->
-    <button onclick="openAiTopic('chat')" class="bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-100 transition text-sm">
+    <button onclick="openAiTopic('chat')" class="bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-50 transition text-sm relative">
+      <span class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-l-md"></span>
       <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 5.523-4.477 10-10 10S1 17.523 1 12 5.477 2 11 2c5.523 0 10 4.477 10 10z"/>
       </svg>
@@ -3912,9 +3921,9 @@
     <div class="flex items-center gap-2 p-3 bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
       <button onclick="openAiTopic('')" class="text-blue-600 text-sm font-medium">←</button>
       <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold text-sm">G</div>
+        <div class="w-8 h-8 rounded-full bg-blue-400 text-white flex items-center justify-center font-medium text-sm">G</div>
         <div>
-          <div class="font-medium text-sm text-blue-600">Globals</div>
+          <div class="font-medium text-gray-800">Globals Support</div>
           <div class="text-xs text-gray-400">Online</div>
         </div>
       </div>
@@ -3931,11 +3940,6 @@
 
   </div>
 </div>
-
-
-
-
-
 
 
 
@@ -4006,6 +4010,7 @@
 </body>
 
 </html>
+
 
 
 
