@@ -2414,73 +2414,95 @@ async function showTaskSubmissionDetailsUser(submissionId) {
 
     // ---------- LISTENERS & RENDERING ----------
     // start Firestore listener for affiliateJobs (grid) — single submissions listener approach (robust)
-    function startAffiliateJobsListener() {
-      if (!affiliateTasksContainer) {
-        console.warn("#affiliate-tasks container not found. Affiliate tasks will not render.");
-        return;
-      }
-      ensureDetailStyles();
+   
+function startAffiliateJobsListener() {
+  if (!affiliateTasksContainer) {
+    console.warn("#affiliate-tasks container not found. Affiliate tasks will not render.");
+    return;
+  }
+  ensureDetailStyles();
 
-      db.collection("affiliateJobs")
+  db.collection("affiliateJobs")
+    .where("status", "==", "approved")
+    .onSnapshot(async (snap) => {
+      // prepare job list
+      const jobs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // clear grid & cache then render cards (counts will update immediately when submissions snapshot arrives)
+      affiliateTasksContainer.innerHTML = '';
+      jobCache.clear();
+
+      jobs.forEach(j => {
+        jobCache.set(j.id, j);
+        const card = renderAffiliateCard({ id: j.id, job: j, approvedCount: 0 });
+        // renderAffiliateCard may return null when job is already "full" — only append if card exists
+        if (card) affiliateTasksContainer.appendChild(card);
+      });
+
+      // unsubscribe previous global submissions listener if any
+      try { if (submissionCountsUnsub) submissionCountsUnsub(); } catch (e) { /* ignore */ }
+      submissionCountsUnsub = null;
+
+      // attach one realtime listener to approved submissions
+      submissionCountsUnsub = db.collection("affiliate_submissions")
         .where("status", "==", "approved")
-        .onSnapshot(async (snap) => {
-          // prepare job list
-          const jobs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-          // clear grid & cache then render cards (counts will update immediately when submissions snapshot arrives)
-          affiliateTasksContainer.innerHTML = '';
-          jobCache.clear();
-          jobs.forEach(j => {
-            jobCache.set(j.id, j);
-            affiliateTasksContainer.appendChild(renderAffiliateCard({ id: j.id, job: j, approvedCount: 0 }));
+        .onSnapshot(subSnap => {
+          // build counts map
+          const counts = Object.create(null);
+          subSnap.forEach(doc => {
+            const d = doc.data();
+            if (!d || !d.jobId) return;
+            counts[d.jobId] = (counts[d.jobId] || 0) + 1;
           });
 
-          // unsubscribe previous global submissions listener if any
-          try { if (submissionCountsUnsub) submissionCountsUnsub(); } catch (e) { /* ignore */ }
-          submissionCountsUnsub = null;
+          // update each rendered job card
+          jobs.forEach(job => {
+            const approvedCount = counts[job.id] || 0;
+            const total = job.numWorkers || 0;
+            const percent = total ? Math.min(100, Math.round((approvedCount / total) * 100)) : 0;
 
-          // attach one realtime listener to approved submissions
-          submissionCountsUnsub = db.collection("affiliate_submissions")
-            .where("status", "==", "approved")
-            .onSnapshot(subSnap => {
-              // build counts map
-              const counts = Object.create(null);
-              subSnap.forEach(doc => {
-                const d = doc.data();
-                if (!d || !d.jobId) return;
-                counts[d.jobId] = (counts[d.jobId] || 0) + 1;
-              });
+            // update DOM if present
+            const btn = affiliateTasksContainer.querySelector(`.view-btn[data-id="${job.id}"]`);
+            const jobCardEl = btn ? btn.closest('.job-card') : null;
+            if (jobCardEl) {
+              const progText = jobCardEl.querySelector(".job-progress");
+              const progBar = jobCardEl.querySelector(".job-progress-bar > i");
+              if (progText) progText.textContent = `${approvedCount}/${total} workers • ${percent}%`;
+              if (progBar) progBar.style.width = percent + "%";
+            }
 
-              // update each rendered job card
-              jobs.forEach(job => {
-                const approvedCount = counts[job.id] || 0;
-                const total = job.numWorkers || 0;
-                const percent = total ? Math.min(100, Math.round((approvedCount / total) * 100)) : 0;
+            // update cache
+            const cached = jobCache.get(job.id) || {};
+            cached.approvedCount = approvedCount;
+            jobCache.set(job.id, cached);
 
-                // find the card via view button dataset
-                const btn = affiliateTasksContainer.querySelector(`.view-btn[data-id="${job.id}"]`);
-                const jobCardEl = btn ? btn.closest('.job-card') : null;
-                if (jobCardEl) {
-                  const progText = jobCardEl.querySelector(".job-progress");
-                  const progBar = jobCardEl.querySelector(".job-progress-bar > i");
-                  if (progText) progText.textContent = `${approvedCount}/${total} workers • ${percent}%`;
-                  if (progBar) progBar.style.width = percent + "%";
+            // If full, remove card immediately and attempt to update Firestore status to "finished"
+            if (total && approvedCount >= total) {
+              if (jobCardEl) jobCardEl.remove(); // immediate UX removal
+              // only try to update server-side if the job doc still claims 'approved'
+              try {
+                if (job.status === "approved") {
+                  db.collection("affiliateJobs").doc(job.id).update({ status: "finished" })
+                    .catch(err => console.warn("Failed to mark job finished:", job.id, err));
                 }
-
-                // update cache
-                const cached = jobCache.get(job.id) || {};
-                cached.approvedCount = approvedCount;
-                jobCache.set(job.id, cached);
-              });
-            }, err => {
-              console.error("affiliate_submissions listener error:", err);
-            });
-
+              } catch (err) {
+                console.warn("Could not auto-finish job:", job.id, err);
+              }
+            }
+          });
         }, err => {
-          console.error("affiliateJobs listener error:", err);
+          console.error("affiliate_submissions listener error:", err);
         });
-    }
 
+    }, err => {
+      console.error("affiliateJobs listener error:", err);
+    });
+}
+
+
+
+
+	  
     // delegate clicks on the grid to open modal
     function attachGridClickHandler() {
       if (!affiliateTasksContainer) return;
@@ -2493,297 +2515,325 @@ async function showTaskSubmissionDetailsUser(submissionId) {
       });
     }
 
-    // show job details in modal overlay (only when view clicked)
-    async function showAffiliateJobDetails(jobId, jobData) {
-      ensureDetailStyles();
-      const detailsSection = ensureDetailScreen();
+    // show job details 
+  
 
-      // hide grid and show modal
-      if (affiliateTasksContainer) affiliateTasksContainer.style.display = 'none';
-      detailsSection.style.display = 'flex';
+async function showAffiliateJobDetails(jobId, jobData) {
+  ensureDetailStyles();
+  const detailsContainer = _drawerContent; // writes to drawer content
 
-      // try to detect existing submission by current user
-      const currentUser = firebase.auth().currentUser;
-      let existingSubmission = null;
-      const proofFileCount = jobData.proofFileCount || 1;
+  // try to detect existing submission by current user
+  const currentUser = firebase.auth().currentUser;
+  let existingSubmission = null;
+  const proofFileCount = jobData.proofFileCount || 1;
 
-      if (currentUser) {
+  if (currentUser) {
+    try {
+      const subSnap = await db.collection('affiliate_submissions')
+        .where('jobId', '==', jobId)
+        .where('userId', '==', currentUser.uid)
+        .limit(1)
+        .get();
+      if (!subSnap.empty) {
+        existingSubmission = { id: subSnap.docs[0].id, ...subSnap.docs[0].data() };
+      }
+    } catch (err) {
+      console.warn('Error checking existing submission', err);
+    }
+  }
+
+  function safeHtmlText(s) {
+    return escapeHtml(s || '').replace(/\n/g, '<br>');
+  }
+
+  const targetLinkHtml = jobData.targetLink
+    ? `<a href="${escapeHtml(jobData.targetLink)}" target="_blank" rel="noopener noreferrer" class="text-blue-600 break-words">${escapeHtml(jobData.targetLink)}</a>`
+    : `<span class="text-gray-500">No link provided</span>`;
+
+  const proofHtml = safeHtmlText(jobData.proofRequired || 'Proof details not provided');
+  const instructionsHtml = safeHtmlText(jobData.instructions || 'No instructions provided');
+
+  // Build drawer content (keeps structure similar to your previous modal)
+  const html = `
+    <div style="padding:0 0 18px 0">
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+        <div style="width:56px;height:56px;border-radius:12px;overflow:hidden;background:#fff44c">
+          <img src="${escapeHtml(jobData.campaignLogoURL || jobData.screenshotURL || 'https://via.placeholder.com/96')}" style="width:100%;height:100%;object-fit:cover" alt="">
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:1rem">${escapeHtml(jobData.title || 'Affiliate Job')}</div>
+          <div style="font-size:12px;opacity:.95">${escapeHtml(jobData.category || 'Affiliate Campaign')}</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9">
+          <div style="font-size:11px;color:#64748b">Worker Pay</div>
+          <div style="font-weight:800;font-size:20px">₦${escapeHtml(String(jobData.workerPay || 0))}</div>
+        </div>
+        <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9">
+          <div style="font-size:11px;color:#64748b">Total Workers</div>
+          <div style="font-weight:800;font-size:20px">${escapeHtml(String(jobData.numWorkers || 0))}</div>
+        </div>
+
+        <div style="grid-column:1 / -1; margin-top:8px">
+          <div id="drawerProgressText" style="font-size:13px;color:#64748b;margin-bottom:6px">0/0 workers • 0%</div>
+          <div class="job-progress-bar" id="drawerProgressBar"><i style="width:0%"></i></div>
+        </div>
+      </div>
+
+      <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:600">Instructions</div>
+          <button id="drawerToggleInstr" style="background:none;border:0;color:#1e40af;font-weight:600;cursor:pointer">
+            <span>Show more</span>
+            <svg style="width:14px;height:14px;transform:rotate(0deg);transition:transform .2s" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+        </div>
+        <div id="drawerInstructionsPanel" class="collapsible is-collapsed" style="margin-top:10px;color:#334155">
+          ${instructionsHtml}
+          <div class="fade-edge"></div>
+        </div>
+      </div>
+
+      <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">
+        <div style="font-weight:600;margin-bottom:6px">Target Link</div>
+        ${targetLinkHtml}
+      </div>
+
+      <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">
+        <div style="font-weight:600;margin-bottom:6px">Proof Required</div>
+        <div style="color:#374151">${proofHtml}</div>
+      </div>
+
+      <div id="drawerProofContainer">
+        ${ existingSubmission ? (
+          `<div id="submissionProofSection" style="padding:12px;border-radius:12px;border:1px solid #bbf7d0;background:#ecfdf5;margin-bottom:16px;">
+             <div style="font-weight:700;margin-bottom:10px;color:#065f46">Your Submission</div>
+             ${ (existingSubmission.files && existingSubmission.files.length > 0) ? (`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">` + existingSubmission.files.map(u=>`<img src="${escapeHtml(u)}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;border:1px solid #e6fffa;" />`).join('') + `</div>`) : `<p class="text-sm text-gray-500">No proof images uploaded.</p>` }
+             <p style="margin-top:8px;font-size:13px"><strong>Extra Proof:</strong> ${escapeHtml(existingSubmission.extraProof || existingSubmission.proofText || '—')}</p>
+             <p style="margin-top:8px;color:#065f46;font-weight:700">✅ Submitted</p>
+           </div>`
+        ) : (
+          `<div style="padding:12px;border-radius:12px;border:1px solid #dbeafe;background:#f8fafc;margin-bottom:16px">
+             <div style="font-weight:700;margin-bottom:10px;color:#1e3a8a">Submit Proof</div>
+             <form id="drawerProofForm" style="display:flex;flex-direction:column;gap:10px">
+               ${Array.from({ length: proofFileCount }).map((_, i) => `
+                 <div>
+                   <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">Upload File ${i+1}</label>
+                   <input type="file" name="proofFile${i+1}" accept="image/*" style="border:1px solid #cbd5e1;border-radius:8px;padding:6px;width:100%">
+                 </div>
+               `).join('')}
+               <div>
+                 <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">Extra Proof (e.g email/phone)</label>
+                 <textarea name="extraProof" rows="3" placeholder="Enter additional proof..." style="border:1px solid #cbd5e1;border-radius:8px;padding:8px;width:100%"></textarea>
+               </div>
+               <button id="drawerSubmitTaskBtn" class="btn-primary" style="width:100%;padding:10px;border-radius:10px;font-weight:600">Submit Task</button>
+             </form>
+             <div id="drawerSubmitStatus" style="margin-top:8px;color:#334155;font-size:13px"></div>
+           </div>`
+        ) }
+      </div>
+    </div>
+  `;
+
+  // open drawer with the content
+  openTaskDrawer(html);
+
+  // populate modal progress from cache (if available)
+  (function updateDrawerProgress() {
+    const cached = jobCache.get(jobId) || {};
+    const approvedCount = cached.approvedCount || 0;
+    const total = jobData.numWorkers || 0;
+    const percent = total ? Math.min(100, Math.round((approvedCount / total) * 100)) : 0;
+    const txt = detailsContainer.querySelector('#drawerProgressText');
+    const bar = detailsContainer.querySelector('#drawerProgressBar > i');
+    if (txt) txt.textContent = `${approvedCount}/${total} workers • ${percent}%`;
+    if (bar) bar.style.width = percent + '%';
+  })();
+
+  // collapsible toggle
+  const panel = detailsContainer.querySelector('#drawerInstructionsPanel');
+  const toggle = detailsContainer.querySelector('#drawerToggleInstr');
+  if (toggle && panel) {
+    const label = toggle.querySelector('span');
+    const icon = toggle.querySelector('svg');
+    toggle.addEventListener('click', () => {
+      const collapsed = panel.classList.contains('is-collapsed');
+      if (collapsed) {
+        panel.style.maxHeight = panel.scrollHeight + 'px';
+        panel.classList.remove('is-collapsed');
+        if (label) label.textContent = 'Show less';
+        if (icon) icon.style.transform = 'rotate(180deg)';
+        setTimeout(() => { panel.style.maxHeight = ''; }, 320);
+      } else {
+        panel.style.maxHeight = panel.scrollHeight + 'px';
+        requestAnimationFrame(() => {
+          panel.classList.add('is-collapsed');
+          requestAnimationFrame(() => { panel.style.maxHeight = ''; });
+        });
+        if (label) label.textContent = 'Show more';
+        if (icon) icon.style.transform = 'rotate(0deg)';
+      }
+    });
+  }
+
+  // proof form handler (only if no existingSubmission)
+  const proofContainer = detailsContainer.querySelector('#drawerProofContainer');
+  if (proofContainer && !existingSubmission) {
+    const form = proofContainer.querySelector('#drawerProofForm');
+    const submitStatus = proofContainer.querySelector('#drawerSubmitStatus');
+    const submitBtn = proofContainer.querySelector('#drawerSubmitTaskBtn');
+
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const user = firebase.auth().currentUser;
+        if (!user) return alert("You must be logged in.");
+
+        // disable and show submitting
+        submitBtn.disabled = true;
+        const prevText = submitBtn.textContent;
+        submitBtn.textContent = 'Submitting...';
+        submitStatus.textContent = 'Uploading files...';
+
+        const proofData = {
+          jobId,
+          userId: user.uid,
+          submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          extraProof: form.extraProof.value || "",
+          files: [],
+          status: "on review",
+          workerEarn: jobData.workerPay || 0
+        };
+
+        // upload files to Cloudinary (uploadToCloudinary is defined earlier in your script)
         try {
-          const subSnap = await db.collection('affiliate_submissions')
-            .where('jobId', '==', jobId)
-            .where('userId', '==', currentUser.uid)
-            .limit(1)
-            .get();
-          if (!subSnap.empty) {
-            existingSubmission = { id: subSnap.docs[0].id, ...subSnap.docs[0].data() };
+          for (let i = 0; i < proofFileCount; i++) {
+            const fileInput = form[`proofFile${i+1}`];
+            if (fileInput && fileInput.files.length > 0) {
+              const url = await uploadToCloudinary(fileInput.files[0]);
+              proofData.files.push(url);
+            }
           }
         } catch (err) {
-          console.warn('Error checking existing submission', err);
+          console.error("Cloudinary upload failed", err);
+          alert("File upload failed. Please try again.");
+          submitBtn.disabled = false;
+          submitBtn.textContent = prevText;
+          submitStatus.textContent = '';
+          return;
         }
-      }
 
-      function safeHtmlText(s) {
-        return escapeHtml(s || '').replace(/\n/g, '<br>');
-      }
+        // duplicate check
+        try {
+          const existing = await db.collection('affiliate_submissions')
+            .where('jobId', '==', jobId)
+            .where('userId', '==', user.uid)
+            .limit(1)
+            .get();
 
-      const targetLinkHtml = jobData.targetLink
-        ? `<a href="${escapeHtml(jobData.targetLink)}" target="_blank" rel="noopener noreferrer" class="text-blue-600 break-words">${escapeHtml(jobData.targetLink)}</a>`
-        : `<span class="text-gray-500">No link provided</span>`;
-
-      const proofHtml = safeHtmlText(jobData.proofRequired || 'Proof details not provided');
-      const instructionsHtml = safeHtmlText(jobData.instructions || 'No instructions provided');
-
-      // Build modal, with a single #proofContainer we can replace after submit
-      detailsSection.innerHTML = `
-        <div class="aff-sheet">
-          <button class="aff-close" title="Back">←</button>
-          <div class="aff-head">
-            <div style="display:flex;align-items:center;gap:12px">
-              <div style="width:48px;height:48px;border-radius:12px;overflow:hidden;background:#fff44c">
-                <img src="${escapeHtml(jobData.campaignLogoURL || jobData.screenshotURL || 'https://via.placeholder.com/96')}" class="w-full h-full" style="width:100%;height:100%;object-fit:cover" alt="">
-              </div>
-              <div>
-                <div style="font-weight:700;font-size:1rem">${escapeHtml(jobData.title || 'Affiliate Job')}</div>
-                <div style="font-size:12px;opacity:.95">${escapeHtml(jobData.category || 'Affiliate Campaign')}</div>
-              </div>
-            </div>
-          </div>
-
-          <div style="padding:18px;display:block;gap:16px">
-            <!-- Worker Pay & Total Workers -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-              <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9">
-                <div style="font-size:11px;color:#64748b">Worker Pay</div>
-                <div style="font-weight:800;font-size:20px">₦${escapeHtml(String(jobData.workerPay || 0))}</div>
-              </div>
-              <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9">
-                <div style="font-size:11px;color:#64748b">Total Workers</div>
-                <div style="font-weight:800;font-size:20px">${escapeHtml(String(jobData.numWorkers || 0))}</div>
-              </div>
-
-              <!-- modal progress (spans full width) -->
-              <div style="grid-column:1 / -1; margin-top:8px">
-                <div id="modalProgressText" style="font-size:13px;color:#64748b;margin-bottom:6px">0/0 workers • 0%</div>
-                <div class="job-progress-bar" id="modalProgressBar"><i style="width:0%"></i></div>
-              </div>
-            </div>
-
-            <!-- Instructions -->
-            <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">
-              <div style="display:flex;justify-content:space-between;align-items:center">
-                <div style="font-weight:600">Instructions</div>
-                <button id="toggleInstr" style="background:none;border:0;color:#1e40af;font-weight:600;cursor:pointer">
-                  <span>Show more</span>
-                  <svg style="width:14px;height:14px;transform:rotate(0deg);transition:transform .2s" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                  </svg>
-                </button>
-              </div>
-              <div id="instructionsPanel" class="collapsible is-collapsed" style="margin-top:10px;color:#334155">
-                ${instructionsHtml}
-                <div class="fade-edge"></div>
-              </div>
-            </div>
-
-            <!-- Target Link -->
-            <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">
-              <div style="font-weight:600;margin-bottom:6px">Target Link</div>
-              ${targetLinkHtml}
-            </div>
-
-            <!-- Proof Required -->
-            <div style="padding:12px;border-radius:12px;border:1px solid #f1f5f9;margin-bottom:12px">
-              <div style="font-weight:600;margin-bottom:6px">Proof Required</div>
-              <div style="color:#374151">${proofHtml}</div>
-            </div>
-
-            <!-- PROOF CONTAINER (will show form OR submitted info) -->
-            <div id="proofContainer">
-              ${ existingSubmission ? (
-                `
-                <div id="submissionProofSection" style="padding:12px;border-radius:12px;border:1px solid #bbf7d0;background:#ecfdf5;margin-bottom:16px;">
-                  <div style="font-weight:700;margin-bottom:10px;color:#065f46">Your Submission</div>
-                  ${ (existingSubmission.files && existingSubmission.files.length > 0) ? (`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">` + existingSubmission.files.map(u=>`<img src="${escapeHtml(u)}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;border:1px solid #e6fffa;" />`).join('') + `</div>`) : `<p class="text-sm text-gray-500">No proof images uploaded.</p>` }
-                  <p style="margin-top:8px;font-size:13px"><strong>Extra Proof:</strong> ${escapeHtml(existingSubmission.extraProof || existingSubmission.proofText || '—')}</p>
-                  <p style="margin-top:8px;color:#065f46;font-weight:700">✅ Submitted</p>
-                </div>
-                `
-              ) : (
-                `
-                <div style="padding:12px;border-radius:12px;border:1px solid #dbeafe;background:#f8fafc;margin-bottom:16px">
-                  <div style="font-weight:700;margin-bottom:10px;color:#1e3a8a">Submit Proof</div>
-                  <form id="proofForm" style="display:flex;flex-direction:column;gap:10px">
-                    ${Array.from({ length: proofFileCount }).map((_, i) => `
-                      <div>
-                        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">Upload File ${i+1}</label>
-                        <input type="file" name="proofFile${i+1}" accept="image/*" style="border:1px solid #cbd5e1;border-radius:8px;padding:6px;width:100%">
-                      </div>
-                    `).join('')}
-                    <div>
-                      <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">Extra Proof (e.g email/phone)</label>
-                      <textarea name="extraProof" rows="3" placeholder="Enter additional proof..." style="border:1px solid #cbd5e1;border-radius:8px;padding:8px;width:100%"></textarea>
-                    </div>
-                    <button id="submitTaskBtn" class="btn-primary" style="width:100%;padding:10px;border-radius:10px;font-weight:600">Submit Task</button>
-                  </form>
-                  <div id="submitStatus" style="margin-top:8px;color:#334155;font-size:13px"></div>
-                </div>
-                `
-              ) }
-            </div>
-
-          </div>
-        </div>
-      `;
-
-      // populate modal progress from cache (if available)
-      (function updateModalProgress() {
-        const cached = jobCache.get(jobId) || {};
-        const approvedCount = cached.approvedCount || 0;
-        const total = jobData.numWorkers || 0;
-        const percent = total ? Math.min(100, Math.round((approvedCount / total) * 100)) : 0;
-        const txt = detailsSection.querySelector('#modalProgressText');
-        const bar = detailsSection.querySelector('#modalProgressBar > i');
-        if (txt) txt.textContent = `${approvedCount}/${total} workers • ${percent}%`;
-        if (bar) bar.style.width = percent + '%';
-      })();
-
-      // back/close logic
-      const backBtn = detailsSection.querySelector('.aff-close');
-      if (backBtn) {
-        backBtn.addEventListener('click', () => {
-          detailsSection.style.display = 'none';
-          detailsSection.innerHTML = '';
-          if (affiliateTasksContainer) {
-            affiliateTasksContainer.style.display = '';
-            try { affiliateTasksContainer.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
-          }
-        });
-      }
-
-      // collapsible toggle
-      const panel = detailsSection.querySelector('#instructionsPanel');
-      const toggle = detailsSection.querySelector('#toggleInstr');
-      if (toggle && panel) {
-        const label = toggle.querySelector('span');
-        const icon = toggle.querySelector('svg');
-        toggle.addEventListener('click', () => {
-          const collapsed = panel.classList.contains('is-collapsed');
-          if (collapsed) {
-            panel.style.maxHeight = panel.scrollHeight + 'px';
-            panel.classList.remove('is-collapsed');
-            if (label) label.textContent = 'Show less';
-            if (icon) icon.style.transform = 'rotate(180deg)';
-            setTimeout(() => { panel.style.maxHeight = ''; }, 320);
-          } else {
-            panel.style.maxHeight = panel.scrollHeight + 'px';
-            requestAnimationFrame(() => {
-              panel.classList.add('is-collapsed');
-              requestAnimationFrame(() => { panel.style.maxHeight = ''; });
-            });
-            if (label) label.textContent = 'Show more';
-            if (icon) icon.style.transform = 'rotate(0deg)';
-          }
-        });
-      }
-
-      // If the proof form exists (user hasn't submitted) attach handler
-      const proofContainer = detailsSection.querySelector('#proofContainer');
-      if (proofContainer && !existingSubmission) {
-        const form = proofContainer.querySelector('#proofForm');
-        const submitStatus = proofContainer.querySelector('#submitStatus');
-        const submitBtn = proofContainer.querySelector('#submitTaskBtn');
-
-        if (form) {
-          form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const user = firebase.auth().currentUser;
-            if (!user) return alert("You must be logged in.");
-
-            // disable and show submitting
-            submitBtn.disabled = true;
-            const prevText = submitBtn.textContent;
-            submitBtn.textContent = 'Submitting...';
-            submitStatus.textContent = 'Uploading files...';
-
-            const proofData = {
-              jobId,
-              userId: user.uid,
-              submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
-              extraProof: form.extraProof.value || "",
-              files: [],
-              status: "on review",
-              workerEarn: jobData.workerPay || 0
-            };
-
-            // upload files to Cloudinary
-            try {
-              for (let i = 0; i < proofFileCount; i++) {
-                const fileInput = form[`proofFile${i+1}`];
-                if (fileInput && fileInput.files.length > 0) {
-                  const url = await uploadToCloudinary(fileInput.files[0]);
-                  proofData.files.push(url);
-                }
-              }
-            } catch (err) {
-              console.error("Cloudinary upload failed", err);
-              alert("File upload failed. Please try again.");
-              submitBtn.disabled = false;
-              submitBtn.textContent = prevText;
-              submitStatus.textContent = '';
-              return;
-            }
-
-            // check duplicate submission again
-            try {
-              const existing = await db.collection('affiliate_submissions')
-                .where('jobId', '==', jobId)
-                .where('userId', '==', user.uid)
-                .limit(1)
-                .get();
-
-              if (!existing.empty) {
-                alert('You have already submitted this task.');
-                // replace form with the existing submission data
-                const doc = existing.docs[0];
-                const d = doc.data();
-                proofContainer.innerHTML = `\n                  <div id="submissionProofSection" style="padding:12px;border-radius:12px;border:1px solid #bbf7d0;background:#ecfdf5;margin-bottom:16px;">\n                    <div style="font-weight:700;margin-bottom:10px;color:#065f46">Your Submission</div>\n                    ${ (d.files && d.files.length > 0) ? (`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">` + d.files.map(u=>`<img src="${escapeHtml(u)}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;border:1px solid #e6fffa;" />`).join('') + `</div>`) : `<p class="text-sm text-gray-500">No proof images uploaded.</p>` }\n                    <p style="margin-top:8px;font-size:13px"><strong>Extra Proof:</strong> ${escapeHtml(d.extraProof || d.proofText || '—')}</p>\n                    <p style="margin-top:8px;color:#065f46;font-weight:700">✅ Submitted</p>\n                  </div>\n                `;
-                return;
-              }
-            } catch (err) {
-              console.warn('Duplicate check failed', err);
-            }
-
-            // save submission
-            try {
-              await db.collection('affiliate_submissions').add(proofData);
-            } catch (err) {
-              console.error('Saving submission failed', err);
-              alert('Failed to save submission. Try again.');
-              submitBtn.disabled = false;
-              submitBtn.textContent = prevText;
-              submitStatus.textContent = '';
-              return;
-            }
-
-            // success — replace UI with submitted view
+          if (!existing.empty) {
+            alert('You have already submitted this task.');
+            const doc = existing.docs[0];
+            const d = doc.data();
             proofContainer.innerHTML = `
               <div id="submissionProofSection" style="padding:12px;border-radius:12px;border:1px solid #bbf7d0;background:#ecfdf5;margin-bottom:16px;">
                 <div style="font-weight:700;margin-bottom:10px;color:#065f46">Your Submission</div>
-                ${ proofData.files && proofData.files.length > 0 ? (`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">` + proofData.files.map(u=>`<img src="${escapeHtml(u)}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;border:1px solid #e6fffa;" />`).join('') + `</div>`) : `<p class="text-sm text-gray-500">No proof images uploaded.</p>` }
-                <p style="margin-top:8px;font-size:13px"><strong>Extra Proof:</strong> ${escapeHtml(proofData.extraProof || '—')}</p>
+                ${ (d.files && d.files.length > 0) ? (`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">` + d.files.map(u=>`<img src="${escapeHtml(u)}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;border:1px solid #e6fffa;" />`).join('') + `</div>`) : `<p class="text-sm text-gray-500">No proof images uploaded.</p>` }
+                <p style="margin-top:8px;font-size:13px"><strong>Extra Proof:</strong> ${escapeHtml(d.extraProof || d.proofText || '—')}</p>
                 <p style="margin-top:8px;color:#065f46;font-weight:700">✅ Submitted</p>
               </div>
             `;
-
-            submitStatus.textContent = '✅ You have submitted your proof. Awaiting review.';
-          });
+            return;
+          }
+        } catch (err) {
+          console.warn('Duplicate check failed', err);
         }
-      }
+
+        // save submission
+        try {
+          await db.collection('affiliate_submissions').add(proofData);
+        } catch (err) {
+          console.error('Saving submission failed', err);
+          alert('Failed to save submission. Try again.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = prevText;
+          submitStatus.textContent = '';
+          return;
+        }
+
+        // success — replace UI with submitted view
+        proofContainer.innerHTML = `
+          <div id="submissionProofSection" style="padding:12px;border-radius:12px;border:1px solid #bbf7d0;background:#ecfdf5;margin-bottom:16px;">
+            <div style="font-weight:700;margin-bottom:10px;color:#065f46">Your Submission</div>
+            ${ proofData.files && proofData.files.length > 0 ? (`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">` + proofData.files.map(u=>`<img src="${escapeHtml(u)}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;border:1px solid #e6fffa;" />`).join('') + `</div>`) : `<p class="text-sm text-gray-500">No proof images uploaded.</p>` }
+            <p style="margin-top:8px;font-size:13px"><strong>Extra Proof:</strong> ${escapeHtml(proofData.extraProof || '—')}</p>
+            <p style="margin-top:8px;color:#065f46;font-weight:700">✅ Submitted</p>
+          </div>
+        `;
+        submitStatus.textContent = '✅ You have submitted your proof. Awaiting review.';
+      });
     }
+  }
+}
+
+
+
+// ---------- DRAWER: ensure + open/close ----------
+function ensureTaskDrawer() {
+  let drawer = document.getElementById('taskDrawer');
+  if (!drawer) {
+    // If you already add the HTML in your page, this will just return it.
+    drawer = document.createElement('div');
+    drawer.id = 'taskDrawer';
+    // tailwind classes (you use tailwind in markup) — if not, keep these or swap for CSS
+    drawer.className = 'fixed top-0 left-0 w-full h-full bg-white z-[9999] transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col';
+    drawer.innerHTML = `
+      <div class="flex items-center justify-between px-4 py-3 border-b">
+        <button id="closeTaskDrawer" class="text-blue-600 font-semibold">&larr; Back</button>
+        <h2 class="text-lg font-bold text-neutral-900">Task Details</h2>
+        <div></div>
+      </div>
+      <div id="taskDrawerContent" class="flex-1 overflow-y-auto p-4"></div>
+    `;
+    document.body.appendChild(drawer);
+  }
+  return drawer;
+}
+
+const _drawerEl = ensureTaskDrawer();
+const _drawerContent = _drawerEl.querySelector('#taskDrawerContent');
+const _closeDrawerBtn = _drawerEl.querySelector('#closeTaskDrawer');
+
+function openTaskDrawer(html) {
+  // set HTML (if provided)
+  if (typeof html === 'string') _drawerContent.innerHTML = html;
+  // lock body scroll
+  try { document.body.style.overflow = 'hidden'; } catch (e) {}
+  _drawerEl.classList.remove('translate-x-full');
+  _drawerEl.classList.add('translate-x-0');
+}
+
+function closeTaskDrawer() {
+  _drawerEl.classList.add('translate-x-full');
+  _drawerEl.classList.remove('translate-x-0');
+  // restore scroll after animation
+  setTimeout(() => {
+    try { document.body.style.overflow = ''; } catch (e) {}
+    _drawerContent.innerHTML = '';
+  }, 260);
+}
+_closeDrawerBtn.addEventListener('click', closeTaskDrawer);
+
 
 
 
 	  
+
+
 
     // --- ADMIN SWIPER (kept guarded) ---
     function initAdminSwiper() {
@@ -3147,6 +3197,14 @@ function activateAffiliateTab(tabId) {
     document.getElementById("finishedTasksScreen").style.display = "block";
   }
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -6987,6 +7045,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
