@@ -2829,17 +2829,6 @@ function closeTaskDrawer() {
 _closeDrawerBtn.addEventListener('click', closeTaskDrawer);
 
 
-function closeAffiliateJobDetails() {
-  const detailsSection = document.getElementById("affiliate-job-details");
-  const affiliateTasksContainer = document.getElementById("affiliate-tasks-container");
-
-  // hide details screen
-  if (detailsSection) detailsSection.style.display = "none";
-
-  // show the affiliate list again
-  if (affiliateTasksContainer) affiliateTasksContainer.style.display = "grid"; 
-  // or "block", depending on your layout
-}
 
 	  
 
@@ -7055,6 +7044,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
