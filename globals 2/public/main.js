@@ -1376,7 +1376,14 @@ function openAiTopic(topic) {
   if (chatMessages) chatMessages.innerHTML = "";
 
   if (topic === "chat") {
-    showElement("chatContainer");
+    const chat = document.getElementById("chatContainer");
+    if (chat) {
+      // make it visible first
+      chat.classList.remove("hidden");
+      // let CSS handle the slide-up animation
+      setTimeout(() => chat.classList.remove("translate-y-full"), 10);
+    }
+
     const defaultHTML = `
       <div>
         <div class="font-medium mb-2">Hi — I'm the Globals assistant. I can help with Payments, Withdrawals, Tasks, eBooks and Referrals.</div>
@@ -1400,6 +1407,15 @@ function openAiTopic(topic) {
     showElement("guideContainer");
   }
 }
+
+function closeChat() {
+  const chat = document.getElementById("chatContainer");
+  if (chat) {
+    chat.classList.add("translate-y-full");
+    setTimeout(() => chat.classList.add("hidden"), 300);
+  }
+}
+
 
 /* ---------- Suggestion click ---------- */
 function suggestionClick(topic) {
@@ -1472,8 +1488,26 @@ async function sendMessage() {
 }
 
 /* ---------- Local assistant (fallback rules) ---------- */
+/* ---------- Local assistant (fallback rules with greetings) ---------- */
 function localAssistantResponse(userText) {
-  const t = (userText || '').toLowerCase();
+  const t = (userText || '').toLowerCase().trim();
+
+  // greetings detection
+  const greetings = ["hi", "hey", "hello", "good morning", "good afternoon", "good evening"];
+  if (greetings.some(g => t.startsWith(g))) {
+    return `
+      <div class="text-sm">
+        👋 Hi there! How can I help you today?  
+        <div class="mt-2 flex gap-2 flex-wrap">
+          <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('paymentHelp')">Payment Steps</button>
+          <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('withdrawalHelp')">Withdrawal Steps</button>
+          <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('taskHelp')">Task Guide</button>
+          <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('ebookHelp')">Buy eBook</button>
+        </div>
+      </div>`;
+  }
+
+  // same keyword checks you already have …
   const payKeywords = ["pay", "payment", "deposit", "card", "transfer", "ussd"];
   const withKeywords = ["withdraw", "withdrawal", "cash out", "payout", "bank"];
   const taskKeywords = ["task", "tasks", "earn", "complete", "job", "install"];
@@ -1486,17 +1520,17 @@ function localAssistantResponse(userText) {
   if (ebookKeywords.some(k => t.includes(k))) return GUIDES.ebookHelp;
   if (referralKeywords.some(k => t.includes(k))) return GUIDES.referralHelp;
 
-  const suggestHtml = `
+  // fallback
+  return `
     <div class="text-sm">
       I couldn't find an exact match for that. Did you mean one of these?
       <div class="mt-2 flex gap-2 flex-wrap">
         <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('paymentHelp')">Payment Steps</button>
         <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('withdrawalHelp')">Withdrawal Steps</button>
         <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('taskHelp')">Task Guide</button>
-        <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('ebookHelp')">Buy eBook Steps</button>
+        <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('ebookHelp')">Buy eBook</button>
       </div>
     </div>`;
-  return suggestHtml;
 }
 
 /* ---------- extra UX: Enter to send ---------- */
@@ -6953,6 +6987,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
