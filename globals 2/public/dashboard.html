@@ -3917,16 +3917,16 @@
   <!-- Conversation Area -->
   <div id="chatContainer" class="fixed inset-0 bg-white flex flex-col hidden transform translate-y-full transition-transform duration-300 z-50">
     <!-- Chat Header -->
-    <div class="flex items-center gap-2 p-3 bg-blue-600 text-white sticky top-0 z-10">
-      <button onclick="openAiTopic('')" class="text-blue-600 text-sm font-medium">←</button>
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-full bg-white/20 text-white flex items-center justify-center font-medium text-sm">G</div>
-        <div>
-          <div class="font-medium text-gray-800">Globals Support</div>
-          <div class="text-xs text-gray-400">Online</div>
-        </div>
-      </div>
+    <div class="flex items-center gap-3 p-3 bg-blue-600 text-white sticky top-0 z-10 shadow">
+  <button onclick="closeChat()" class="p-1 rounded-full bg-white/20 hover:bg-white/30">←</button>
+  <div class="flex items-center gap-2">
+    <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center font-semibold text-sm">G</div>
+    <div>
+      <div class="font-semibold text-sm">Globals Support</div>
+      <div class="text-xs text-green-300">● Online</div>
     </div>
+  </div>
+</div>
 
     <!-- Messages -->
     <div id="chatMessages" class="flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50"></div>
@@ -4014,6 +4014,7 @@
 </body>
 
 </html>
+
 
 
 
