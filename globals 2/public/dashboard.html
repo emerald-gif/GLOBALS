@@ -648,7 +648,7 @@
   <div class="grid grid-cols-2 gap-4 sm:gap-6">
     
     <!-- 🔥 High-Paying Affiliate Tasks -->
-    <a href="#affiliate-tasks" 
+   <a href="#affiliateSection" 
    onclick="switchTab('affiliateSection')" 
    class="task-box bg-gradient-to-br from-yellow-50 via-white to-yellow-100 hover:from-yellow-100 hover:to-yellow-200 shadow-md rounded-2xl p-5 transition-all duration-300 transform hover:scale-105 relative">
   
@@ -1466,74 +1466,92 @@
 
 ‎
 <!-- ================== AFFILIATE TASKS SECTION ================== -->
+<div id="mainAffiliateScreen" class="px-4 pt-6">
 
-
-
-<!-- ================= AFFILIATE TASKS (section) ================= -->
-<div id="affiliateSection" class="tab-section hidden px-4 pt-6">
   <!-- Header -->
   <div class="flex items-center gap-2 mb-4">
-    <div class="w-1 h-5 bg-yellow-600 rounded"></div>
+    <div class="w-1 h-5 bg-blue-600 rounded"></div>
     <h2 class="text-base font-semibold text-neutral-900">Affiliate Tasks</h2>
   </div>
 
-  <!-- Swiper (top carousel) -->
-  <div class="swiper myAffiliateTasksSwiper mb-6">
-    <div class="swiper-wrapper" id="affiliateTasksSwiperContainer"></div>
+  <!-- Swiper (Full width top carousel) -->
+  <div class="swiper myAffiliateSectionSwiper mb-6">
+    <div class="swiper-wrapper" id="affiliateSectionSwiperContainer"></div>
     <div class="swiper-pagination mt-2"></div>
   </div>
 
-  <!-- Controls row -->
+  <!-- New Header Row -->
   <div class="flex items-center justify-between mb-4">
-    <div class="flex items-center gap-3">
-      <h3 class="text-lg font-bold text-gray-900">All Affiliate Tasks</h3>
-      <button id="finishedAffiliateBtnUser"
-              class="px-3 py-1.5 text-sm rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-700 font-medium">
+    <!-- Left: Title + Finished Tasks Btn -->
+    <div class="flex items-center gap-4">
+      <h3 class="text-lg font-bold text-gray-900">All Tasks</h3>
+      <button
+        id="finishedTasksBtn"
+        class="px-3 py-1.5 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium"
+      >
         Finished Tasks
       </button>
     </div>
 
-    <div class="relative w-48 flex-shrink-0">
-      <input id="affiliateSearch" type="text" placeholder="Search affiliate tasks..."
-             class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-500" />
-      <svg class="w-4 h-4 absolute right-3 top-2.5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none"
-           viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
+    <!-- Right: Search -->
+    <div class="relative w-48">
+      <input
+        id="taskSearchInput"
+        type="text"
+        placeholder="Search job..."
+        class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      <svg class="w-4 h-4 absolute right-3 top-2.5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
       </svg>
     </div>
   </div>
 
-  <!-- Grid (2 per row) -->
-  <div id="affiliate-jobs" class="tab-section grid grid-cols-2 gap-4"></div>
+  <!-- Grid (2 per row affiliate jobs) -->
+  <div id="affiliateSection" class="tab-section grid grid-cols-2 gap-4">
+    <!-- Jobs will be injected here via JS -->
+  </div>
 </div>
 
-<!-- ================= FINISHED AFFILIATE TASKS (section) ================= -->
-<div id="finishedAffiliateScreenUser" class="hidden px-4 pt-6">
+<!-- ================== FINISHED TASKS SECTION ================== -->
+<div id="finishedTasksScreen" style="display:none" class="px-4 pt-6">
+  <!-- Top Bar -->
   <div class="flex items-center justify-between mb-6">
-    <button id="backToAffiliateBtnUser" class="text-yellow-600 font-semibold">&larr; Back</button>
-    <h2 class="text-lg font-bold text-neutral-900">Finished Affiliate Tasks</h2>
+    <button id="backToMainBtn" class="text-blue-600 font-semibold">&larr; Back</button>
+    <h2 class="text-lg font-bold text-neutral-900">Finished Tasks</h2>
   </div>
 
+  <!-- Counters -->
   <div class="grid grid-cols-2 gap-4 mb-6">
     <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-center">
-      <p id="affiliatePendingCountUser" class="text-2xl font-bold text-yellow-600">0</p>
-      <p class="text-sm font-medium text-yellow-700">Pending</p>
+      <p class="text-2xl font-bold text-yellow-600" id="pendingCount">0</p>
+      <p class="text-sm font-medium text-yellow-700">Pending Tasks</p>
     </div>
     <div class="p-4 bg-green-50 border border-green-200 rounded-xl text-center">
-      <p id="affiliateApprovedCountUser" class="text-2xl font-bold text-green-600">0</p>
-      <p class="text-sm font-medium text-green-700">Approved</p>
+      <p class="text-2xl font-bold text-green-600" id="approvedCount">0</p>
+      <p class="text-sm font-medium text-green-700">Approved Tasks</p>
     </div>
   </div>
 
-  <div id="finishedAffiliateListUser" class="space-y-4"></div>
+  <!-- Finished Jobs List -->
+  <div id="finishedTasksList" class="space-y-4"></div>
 </div>
 
-	
-	
+<!-- ================== AFFILIATE TASK DETAIL SCREEN ================== -->
+<div id="affiliateSectionDetailScreen" style="display:none" class="px-4 pt-6">
+  <!-- Top Bar -->
+  <div class="flex items-center gap-2 mb-6">
+    <button id="backToAffiliateMainBtn" class="text-blue-600 font-semibold">&larr; Back</button>
+    <h2 class="text-lg font-bold text-neutral-900">Task Details</h2>
+  </div>
+
+  <!-- Dynamic Task Detail Content -->
+  <div id="affiliateSectionDetailContent" class="space-y-4"></div>
+</div>
+
 <style>
-/* ---------------- SWIPER TOP CARD (2025 UI/UX upgrade) ---------------- */
-.myAffiliateTasksSwiper .job-card {
+/* ---------------- SWIPER TOP CARD ---------------- */
+.myAffiliateSectionSwiper .job-card {
   width: 90vw;
   max-width: 420px;
   border-radius: 20px;
@@ -1544,39 +1562,32 @@
   flex-direction: column;
   transition: transform .25s ease, box-shadow .25s ease;
 }
-.myAffiliateTasksSwiper .job-card:hover {
+.myAffiliateSectionSwiper .job-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 16px 40px rgba(15,23,42,0.12);
 }
-
-/* image (fixed height) */
-.myAffiliateTasksSwiper .job-image,
-.myAffiliateTasksSwiper .job-thumb {
+.myAffiliateSectionSwiper .job-image,
+.myAffiliateSectionSwiper .job-thumb {
   width: 100%;
-  height: 180px;                 /* a touch taller like the screenshot */
+  height: 180px;
   object-fit: cover;
   display: block;
-  border-bottom: 1px solid rgba(15,23,42,0.06);⁰⁰
+  border-bottom: 1px solid rgba(15,23,42,0.06);
 }
-
-/* admin-swiper: compact info row & small View button (no pulse) */
-.myAffiliateTasksSwiper .job-info {
+.myAffiliateSectionSwiper .job-info {
   display: grid;
-  grid-template-columns: 1fr auto;   /* left content, right button */
+  grid-template-columns: 1fr auto;
   align-items: center;
-  padding: 12px 14px;                /* moderate white space to fit the swiper */
+  padding: 12px 14px;
   gap: 12px;
 }
-
-/* left: logo + text */
-.myAffiliateTasksSwiper .job-leading {
+.myAffiliateSectionSwiper .job-leading {
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
 }
-
-.myAffiliateTasksSwiper .job-brand {
+.myAffiliateSectionSwiper .job-brand {
   width: 38px;
   height: 38px;
   border-radius: 999px;
@@ -1586,8 +1597,7 @@
   box-shadow: 0 1px 4px rgba(2,6,23,0.06);
   flex-shrink: 0;
 }
-
-.myAffiliateTasksSwiper .job-text .title {
+.myAffiliateSectionSwiper .job-text .title {
   font-weight: 700;
   font-size: 15px;
   color: #0f172a;
@@ -1595,21 +1605,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-.myAffiliateTasksSwiper .job-text .meta {
+.myAffiliateSectionSwiper .job-text .meta {
   font-size: 13px;
   color: #6b7280;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-/* small neat View button (right side) - no animation/pulse */
-.myAffiliateTasksSwiper .view-job-btn,
-.myAffiliateTasksSwiper .view-btn {
-  background: #2563eb;               /* solid blue */
+.myAffiliateSectionSwiper .view-job-btn,
+.myAffiliateSectionSwiper .view-btn {
+  background: #2563eb;
   color: #fff;
-  padding: 8px 12px;                 /* compact */
+  padding: 8px 12px;
   border-radius: 10px;
   font-size: 0.9rem;
   font-weight: 600;
@@ -1618,37 +1625,26 @@
   cursor: pointer;
   user-select: none;
   transition: transform .15s ease, box-shadow .15s ease;
-  animation: none;                   /* remove pulse/wave */
 }
-
-.myAffiliateTasksSwiper .view-job-btn:hover,
-.myAffiliateTasksSwiper .view-btn:hover {
+.myAffiliateSectionSwiper .view-job-btn:hover,
+.myAffiliateSectionSwiper .view-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 5px 14px rgba(37,99,235,0.30);
 }
-/* pagination dots like screenshot */
-.myAffiliateTasksSwiper .swiper-pagination-bullet {
+.myAffiliateSectionSwiper .swiper-pagination-bullet {
   width: 8px; height: 8px; opacity: 1; background: #cbd5e1;
 }
-.myAffiliateTasksSwiper .swiper-pagination-bullet-active {
+.myAffiliateSectionSwiper .swiper-pagination-bullet-active {
   background: #475569;
 }
-
-/* responsive tweak */
 @media (max-width: 400px) {
-  .myAffiliateTasksSwiper .job-info {
-    grid-template-columns: 1fr;  /* stack on small screens */
-    gap: 10px;
-  }
-  .myAffiliateTasksSwiper .view-job-btn,
-  .myAffiliateTasksSwiper .view-btn {
-    width: 100%;
-    text-align: center;
-  }
+  .myAffiliateSectionSwiper .job-info { grid-template-columns: 1fr; gap: 10px; }
+  .myAffiliateSectionSwiper .view-job-btn,
+  .myAffiliateSectionSwiper .view-btn { width: 100%; text-align: center; }
 }
 
-/* ---------------- GRID CARDS (2 per row) ---------------- */
-#affiliate-tasks .job-card {
+/* ---------------- GRID CARDS ---------------- */
+#affiliateSection .job-card {
   background: #fff;
   border-radius: 14px;
   box-shadow: 0 6px 18px rgba(2,6,23,0.06);
@@ -1657,43 +1653,39 @@
   flex-direction: column;
   transition: transform .22s ease, box-shadow .22s ease;
 }
-#affiliate-tasks .job-card:hover {
+#affiliateSection .job-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 14px 36px rgba(2,6,23,0.08);
 }
-
-#affiliate-tasks .job-image {
+#affiliateSection .job-image {
   width: 100%;
   height: 120px;
   object-fit: cover;
   display: block;
   border-bottom: 1px solid rgba(15,23,42,0.03);
 }
-
-#affiliate-tasks .job-body {
+#affiliateSection .job-body {
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-#affiliate-tasks .job-title {
+#affiliateSection .job-title {
   font-size: 0.95rem;
   font-weight: 700;
   color: #0f172a;
   line-height: 1.15;
 }
-#affiliate-tasks .job-price {
+#affiliateSection .job-price {
   font-size: 0.9rem;
   font-weight: 700;
   color: #0b6f44;
 }
-#affiliate-tasks .job-progress {
+#affiliateSection .job-progress {
   font-size: 0.8rem;
   color: #64748b;
 }
-
-/* progress bar */
-#affiliate-tasks .job-progress-bar {
+#affiliateSection .job-progress-bar {
   width: 100%;
   height: 8px;
   border-radius: 999px;
@@ -1701,7 +1693,7 @@
   overflow: hidden;
   margin-top: 6px;
 }
-#affiliate-tasks .job-progress-bar > i {
+#affiliateSection .job-progress-bar > i {
   display: block;
   height: 100%;
   border-radius: 999px;
@@ -1709,14 +1701,12 @@
   width: 0%;
   transition: width .45s ease;
 }
-
-/* NEW: optional mini brand row in grid (if you want it) */
-#affiliate-tasks .brand-row {
+#affiliateSection .brand-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-#affiliate-tasks .job-brand {
+#affiliateSection .job-brand {
   width: 28px;
   height: 28px;
   border-radius: 999px;
@@ -1726,10 +1716,8 @@
   border: 1px solid #fff;
   box-shadow: 0 1px 4px rgba(15,23,42,0.08);
 }
-
-/* grid button */
-#affiliate-tasks .view-btn,
-#affiliate-tasks .view-job-btn {
+#affiliateSection .view-btn,
+#affiliateSection .view-job-btn {
   margin-top: 8px;
   padding: 0.6rem;
   background: linear-gradient(135deg,#2563eb,#1d4ed8);
@@ -1743,23 +1731,14 @@
   box-shadow: 0 6px 18px rgba(37,99,235,0.18);
   transition: transform .16s ease, box-shadow .16s ease;
 }
-#affiliate-tasks .view-btn:hover,
-#affiliate-tasks .view-job-btn:hover {
+#affiliateSection .view-btn:hover,
+#affiliateSection .view-job-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 28px rgba(37,99,235,0.22);
 }
-
-/* tiny screens */
 @media (max-width: 360px) {
-  #affiliate-tasks { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .myAffiliateTasksSwiper .job-card { max-width: 92vw; }
-}
-
-/* pulse micro-animation (already present) */
-@keyframes btnPulse {
-  0% { box-shadow: 0 0 0 0 rgba(37,99,235,0.35); }
-  70% { box-shadow: 0 0 0 10px rgba(37,99,235,0); }
-  100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); }
+  #affiliateSection { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .myAffiliateSectionSwiper .job-card { max-width: 92vw; }
 }
 </style>
 
@@ -4044,6 +4023,7 @@
 </body>
 
 </html>
+
 
 
 
