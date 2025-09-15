@@ -3915,13 +3915,12 @@
   <div id="guideContainer" class="p-3 hidden bg-white rounded-lg shadow-sm border border-gray-200"></div>
 
   <!-- Conversation Area -->
-  <div id="chatContainer" class="flex-1 flex flex-col hidden">
-
+  <div id="chatContainer" class="fixed inset-0 bg-white flex flex-col hidden transform translate-y-full transition-transform duration-300 z-50">
     <!-- Chat Header -->
-    <div class="flex items-center gap-2 p-3 bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
+    <div class="flex items-center gap-2 p-3 bg-blue-600 text-white sticky top-0 z-10">
       <button onclick="openAiTopic('')" class="text-blue-600 text-sm font-medium">←</button>
       <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-full bg-blue-400 text-white flex items-center justify-center font-medium text-sm">G</div>
+        <div class="w-8 h-8 rounded-full bg-white/20 text-white flex items-center justify-center font-medium text-sm">G</div>
         <div>
           <div class="font-medium text-gray-800">Globals Support</div>
           <div class="text-xs text-gray-400">Online</div>
@@ -3941,6 +3940,11 @@
   </div>
 </div>
 
+
+
+
+
+	
 
 
 <footer class="text-center text-sm text-gray-400 py-6">
@@ -4010,6 +4014,7 @@
 </body>
 
 </html>
+
 
 
 
