@@ -581,7 +581,7 @@
   <!-- Header -->
   <div class="flex items-center justify-between mb-4">
     <h2 class="text-base font-semibold text-neutral-900">Services</h2>
-    <button onclick="openAllCategories()" 
+    <button onclick="openServicesDrawer()" 
       class="text-sm font-medium text-blue-700 hover:underline hover:text-blue-900 transition duration-200">
       View All <span class="text-blue-800 text-xl">›</span>
     </button>
@@ -604,15 +604,15 @@
 
     <!-- Data -->
     <div onclick="dataOpen()" 
-     class="flex flex-col items-center cursor-pointer group">
-  <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
-              bg-white border border-gray-100
-              shadow-md group-hover:shadow-lg 
-              group-hover:scale-110 transition-all duration-300">
-    <img src="DATA1.jpg" class="w-6 h-6 object-contain" alt="Data">
-  </div>
-  <p class="mt-2 text-sm font-semibold text-blue-900">Data</p>
-</div>
+         class="flex flex-col items-center cursor-pointer group">
+      <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
+                  bg-white border border-gray-100
+                  shadow-md group-hover:shadow-lg 
+                  group-hover:scale-110 transition-all duration-300">
+        <img src="DATA1.jpg" class="w-6 h-6 object-contain" alt="Data">
+      </div>
+      <p class="mt-2 text-sm font-semibold text-blue-900">Data</p>
+    </div>
 
     <!-- Electricity -->
     <div onclick="activateTab('electricity-screen')" 
@@ -640,6 +640,99 @@
 
   </div>
 </div>
+
+
+<!-- Drawer -->
+<div id="servicesDrawer" 
+     class="fixed inset-0 bg-black/40 hidden z-50">
+  <div onclick="closeServicesDrawer()" class="absolute inset-0"></div>
+  
+  <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-xl animate-slideUp">
+    <!-- Top Close Line -->
+    <div class="w-full flex justify-center py-3 cursor-pointer" onclick="closeServicesDrawer()">
+      <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+    </div>
+
+    <!-- Services Grid inside Drawer -->
+    <div class="grid grid-cols-4 gap-6 px-6 pb-8">
+
+      <!-- Airtime -->
+      <div onclick="airtimeOpen()" 
+           class="flex flex-col items-center cursor-pointer group">
+        <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
+                    bg-white border border-gray-100
+                    shadow-md group-hover:shadow-lg 
+                    group-hover:scale-110 transition-all duration-300">
+          <img src="AIRTIME1.jpg" class="w-6 h-6 object-contain" alt="Airtime">
+        </div>
+        <p class="mt-2 text-sm font-semibold text-blue-900">Airtime</p>
+      </div>
+
+      <!-- Data -->
+      <div onclick="dataOpen()" 
+           class="flex flex-col items-center cursor-pointer group">
+        <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
+                    bg-white border border-gray-100
+                    shadow-md group-hover:shadow-lg 
+                    group-hover:scale-110 transition-all duration-300">
+          <img src="DATA1.jpg" class="w-6 h-6 object-contain" alt="Data">
+        </div>
+        <p class="mt-2 text-sm font-semibold text-blue-900">Data</p>
+      </div>
+
+      <!-- Electricity -->
+      <div onclick="activateTab('electricity-screen')" 
+           class="flex flex-col items-center cursor-pointer group">
+        <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
+                    bg-white border border-gray-100
+                    shadow-md group-hover:shadow-lg 
+                    group-hover:scale-110 transition-all duration-300">
+          <img src="ELECTRICITY1.jpg" class="w-6 h-6 object-contain" alt="Electricity">
+        </div>
+        <p class="mt-2 text-sm font-semibold text-blue-900">Electricity</p>
+      </div>
+
+      <!-- Betting -->
+      <div onclick="activateTab('betting-screen')" 
+           class="flex flex-col items-center cursor-pointer group">
+        <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
+                    bg-white border border-gray-100
+                    shadow-md group-hover:shadow-lg 
+                    group-hover:scale-110 transition-all duration-300">
+          <img src="BETTING1.jpg" class="w-6 h-6 object-contain" alt="Betting">
+        </div>
+        <p class="mt-2 text-sm font-semibold text-blue-900">Betting</p>
+      </div>
+
+      <!-- TV -->
+      <div onclick="activateTab('tv-screen')" 
+           class="flex flex-col items-center cursor-pointer group">
+        <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
+                    bg-white border border-gray-100
+                    shadow-md group-hover:shadow-lg 
+                    group-hover:scale-110 transition-all duration-300">
+          <img src="TV1.jpg" class="w-6 h-6 object-contain" alt="TV">
+        </div>
+        <p class="mt-2 text-sm font-semibold text-blue-900">TV</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- Drawer Animations -->
+<style>
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.animate-slideUp {
+  animation: slideUp 0.3s ease-out;
+}
+</style>
+
+
 
 
 
@@ -758,59 +851,7 @@
 
 
 
-                                               <!-- VIEW ALL SERVICE PAGE TEMPLATE -->
-									  
-									  
-<div id="all-categories-screen" class="tab-section hidden fixed inset-0 z-50 bg-white p-4 overflow-y-auto">
-  <div class="flex justify-between items-center mb-4">
-    <h2 class="text-xl font-bold">All Categories</h2>
-    <button onclick="activateTab('dashboard')" class="text-red-600 text-sm">Close</button>
-	
-  </div>
-  
-  
-  
-  <div class="grid grid-cols-3 gap-4">
-  
-    <!-- Duplicate category blocks as needed -->
-    
-<!-- Airtime Swiper Card -->
-<div onclick="activateTab('airtime-screen')" class="flex-shrink-0 w-24 h-24 bg-blue-100 rounded-xl flex flex-col items-center justify-center text-blue-700 shadow-sm hover:bg-blue-200 cursor-pointer">
-  <img src="airtime-icon.png" class="w-10 h-10 mx-auto mb-2" />
-  <p class="text-sm font-medium text-blue-900">Airtime</p>
-</div>
 
-
-	<div onclick="activateTab('data-screen')" class="flex-shrink-0 w-24 h-24 bg-green-100 rounded-xl flex flex-col items-center justify-center text-green-700 shadow-sm hover:bg-green-200 cursor-pointer">
-  <img src="data-icon.png" class="w-10 h-10 mx-auto mb-2" />
-  <p class="text-sm font-medium text-blue-900">Data</p>
-</div>
-
-    <div onclick="openService('electricity-screen')" class="flex-shrink-0 w-24 h-24 bg-yellow-100 rounded-xl flex flex-col items-center justify-center text-yellow-700 shadow-sm hover:bg-yellow-200 cursor-pointer">
-      <img src="icons/electricity.png" class="w-8 h-8 mb-1" />
-      <span class="text-sm font-medium">Electricity</span>
-    </div>
-	
-	
-	<div onclick="openService('betting-screen')" class="flex-shrink-0 w-24 h-24 bg-pink-100 rounded-xl flex flex-col items-center justify-center text-pink-700 shadow-sm hover:bg-pink-200 cursor-pointer">
-      <img src="icons/bet.png" class="w-8 h-8 mb-1" />
-      <span class="text-sm font-medium">Betting</span>
-    </div>
-	
-
-    <div onclick="activateTab('tv-screen')" 
-       class="flex flex-col items-center cursor-pointer group">
-    <div class="w-16 h-16 flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 shadow-lg group-hover:scale-110 transition-all duration-300">
-      <img src="https://cdn-icons-png.flaticon.com/512/3107/3107670.png" class="w-8 h-8" alt="TV">
-    </div>
-    <p class="mt-2 text-sm font-semibold text-blue-900">TV</p>
-  </div>
-
-   
-	
-    
-  </div>
-</div>
 
 
 
