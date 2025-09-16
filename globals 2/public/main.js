@@ -3933,6 +3933,7 @@ window.activateTab = function(tabId) {
                                                                                  //SIDEBAR FUNCTION
 																				 
 
+
 const hamburgerBtn = document.getElementById("hamburgerBtn");
 const sidebar = document.getElementById("sidebar");
 const hamburgerIcon = document.getElementById("hamburgerIcon");
@@ -3944,6 +3945,25 @@ let blurOverlay = document.createElement("div");
 blurOverlay.id = "blurOverlay";
 blurOverlay.className = "fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-40 hidden";
 document.body.appendChild(blurOverlay);
+
+// 🔴 Flag to track sidebar clicks
+let sidebarClicked = false;
+
+// ✅ Unified closeSidebar function
+function closeSidebar(fromLink = false) {
+  sidebar.classList.add("-translate-x-full");
+  hamburgerIcon.classList.remove("rotate-90");
+  blurOverlay.classList.add("hidden");
+
+  topNavbar?.classList.remove("z-10");
+  bottomNavbar?.classList.remove("z-10");
+
+  if (fromLink) {
+    // Hide topNavbar permanently if clicked from sidebar
+    topNavbar?.classList.add("hidden");
+    topNavbar?.classList.remove("z-10");
+  }
+}
 
 // Toggle sidebar on hamburger click
 hamburgerBtn.addEventListener("click", () => {
@@ -3981,26 +4001,10 @@ document.addEventListener("click", (event) => {
 const sidebarLinks = sidebar.querySelectorAll("a");
 sidebarLinks.forEach((link) => {
   link.addEventListener("click", () => {
-    closeSidebar(true); // true = coming from sidebar content
+    sidebarClicked = true; // 🚀 Mark that sidebar was used
+    closeSidebar(true);
   });
 });
-
-function closeSidebar(fromLink = false) {
-  sidebar.classList.add("-translate-x-full");
-  hamburgerIcon.classList.remove("rotate-90");
-  blurOverlay.classList.add("hidden");
-
-  topNavbar?.classList.remove("z-10");
-  bottomNavbar?.classList.remove("z-10");
-
-  if (fromLink) {
-    // Hide topNavbar permanently
-    topNavbar?.classList.add("hidden");
-    topNavbar?.classList.remove("z-10");
-  }
-}
-
-
 
 // ✅ Auto-fetch profile data on login
 firebase.auth().onAuthStateChanged(async (user) => {
@@ -4038,36 +4042,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
     document.getElementById("userEmail").innerText = "";
   }
 });
-
-
-let sidebarClicked = false; // 🔴 Flag to track sidebar clicks
-
-// Close sidebar & hide top navbar permanently on link click
-const sidebarLinks = sidebar.querySelectorAll("a");
-sidebarLinks.forEach((link) => {
-  link.addEventListener("click", () => {
-    sidebarClicked = true; // 🚀 Mark that sidebar was used
-    closeSidebar(true);
-  });
-});
-
-function closeSidebar(fromLink = false) {
-  sidebar.classList.add("-translate-x-full");
-  hamburgerIcon.classList.remove("rotate-90");
-  blurOverlay.classList.add("hidden");
-
-  topNavbar?.classList.remove("z-10");
-  bottomNavbar?.classList.remove("z-10");
-
-  if (fromLink) {
-    // Hide topNavbar permanently
-    topNavbar?.classList.add("hidden");
-    topNavbar?.classList.remove("z-10");
-  }
-}
-
-
-
 
 
 
@@ -6858,6 +6832,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
