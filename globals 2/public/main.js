@@ -3874,56 +3874,69 @@ if (logoutBtn) {
                                                                                     // Active Tab
 															  
 
-// Screens where we NEVER want the general back
-const hideGeneralBackFor = ["tiktok-task", "profileSettings", "paymentDetails"];
-
-// Screens where bottom navbar should always show
-const showBottomNavFor = ["dashboard", "games", "transactions"];
-
-// 🚀 Unified activateTab function
-window.activateTab = function(tabId) {
-  // 1. Switch content
-  const sections = document.querySelectorAll('.tab-section');
-  sections.forEach(section => section.classList.add('hidden'));
-
-  const activeSection = document.getElementById(tabId);
-  if (activeSection) {
-    activeSection.classList.remove('hidden');
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  // 2. Navbar states
-  const allNavBtns = document.querySelectorAll('.nav-btn');
-  allNavBtns.forEach(btn => btn.classList.remove('active-nav'));
-
-  const activeBtn = document.getElementById(`nav-${tabId}`);
-  if (activeBtn) activeBtn.classList.add('active-nav');
-
-  // 3. Top Navbar
-  const topNavbar = document.getElementById("topNavbar");
-  if (tabId === "dashboard" && !sidebarClicked) {
-    // Show top navbar ONLY if dashboard AND not coming from sidebar
-    topNavbar.style.display = "flex";
-  } else {
-    topNavbar.style.display = "none";
-  }
-
-  // 4. Bottom Navbar
-  const bottomNav = document.getElementById("bottomNavbar");
-  if (showBottomNavFor.includes(tabId)) {
-    bottomNav.classList.remove("hidden");
-  } else {
-    bottomNav.classList.add("hidden");
-  }
-
-  // 5. General Back Arrow
-  const backArrowBar = document.getElementById("backArrowBar");
-  if (hideGeneralBackFor.includes(tabId) || tabId === "dashboard") {
-    backArrowBar.classList.add("hidden");
-  } else {
-    backArrowBar.classList.remove("hidden");
-  }
-};
+‎‎‎window.activateTab = function(tabId) {
+‎  switchTab(tabId); // Show the right screen content
+‎
+‎  // 🔵 Update navbar active states visually
+‎  const allNavBtns = document.querySelectorAll('.nav-btn');
+‎  allNavBtns.forEach(btn => btn.classList.remove('active-nav'));
+‎
+‎  const activeBtn = document.getElementById(nav-${tabId});
+‎  if (activeBtn) activeBtn.classList.add('active-nav');
+‎
+‎  // 🧭 Show/hide top/bottom navbars and back arrow
+‎  const topNavbar = document.getElementById("topNavbar");
+‎  const bottomNav = document.getElementById("bottomNav");
+‎  const backArrowBar = document.getElementById("backArrowBar");
+‎
+‎  const showFullNav = tabId === "dashboard";
+‎
+‎  if (showFullNav) {
+‎    topNavbar.style.display = "flex";
+‎    bottomNav.style.display = "flex";
+‎    backArrowBar.classList.add("hidden");
+‎  } else {
+‎    topNavbar.style.display = "none";
+‎    bottomNav.style.display = "flex"; // keep bottom nav visible for all tabs
+‎    backArrowBar.classList.remove("hidden");
+‎  }
+‎};
+‎
+‎
+‎
+‎
+‎
+‎
+‎
+‎
+‎
+‎                                                                         // 📺 Tab Switching Function (General)
+‎
+‎window.switchTab = function(tabId) {
+‎  const sections = document.querySelectorAll('.tab-section');
+‎  sections.forEach(section => section.classList.add('hidden'));
+‎
+‎  const activeSection = document.getElementById(tabId);
+‎  if (activeSection) {
+‎    activeSection.classList.remove('hidden');
+‎    window.scrollTo({ top: 0, behavior: "smooth" });
+‎  }
+‎
+‎  // Handle bottom nav and back arrow
+‎  const bottomNav = document.getElementById('bottomNavbar');
+‎  const backArrow = document.getElementById('backArrowBar');
+‎
+‎  const showNavTabs = ['dashboard','games',  'transactions' ];
+‎
+‎  if (showNavTabs.includes(tabId)) {
+‎    bottomNav.classList.remove('hidden');
+‎    backArrow.classList.add('hidden');
+‎  } else {
+‎    bottomNav.classList.add('hidden');
+‎    backArrow.classList.remove('hidden');
+‎  }
+‎};
+‎
 
 
 
@@ -6830,6 +6843,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
