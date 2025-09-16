@@ -2026,7 +2026,7 @@
   <!-- 💰 Reward Banner -->
   <div class="mb-6 p-3 rounded-xl bg-gradient-to-r from-pink-600 via-red-500 to-purple-600 text-white font-semibold shadow-md flex items-center justify-between animate-pulse">
     <span>Reward for Completion:</span>
-    <span class="text-lg">₦1,000</span>
+    <span class="text-lg">₦2,000</span>
   </div>
 
   <!-- Notice -->
@@ -2361,7 +2361,20 @@
 															 
 <!-- DASHBOARD: Blue Banner + Bell Icon -->
 <div id="notifications" class="tab-section hidden px-4 pt-6 pb-24 max-w-2xl mx-auto">
-  <button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Back</button>
+
+
+	
+   <button onclick="activateTab('dashboard')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
+
+
+
+	
   <h1 class="text-1xl font-bold text-blue-700 mb-6 flex items-center gap-2">
     <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -2387,8 +2400,12 @@
 <div id="payment" class="tab-section hidden max-w-md mx-auto px-4 py-6 space-y-6">
 
   <!-- Back Button -->
-  <button onclick="activateTab('dashboard')" class="flex items-center gap-2 text-blue-600 font-semibold hover:underline">
-    ← Back to Dashboard
+   <button onclick="activateTab('dashboard')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
   </button>
 
   <!-- 💳 Wallet Card -->
@@ -2471,7 +2488,20 @@
 <!-- Withdrawal Section -->
 
 <div id="withdrawFundsSection" class="tab-section hidden p-6 max-w-md mx-auto rounded-xl shadow-lg bg-white mt-8 space-y-6">
-<button onclick="activateTab('payment')" class="text-blue-500 text-lg">← Withdraw</button>
+
+
+
+	
+ <button onclick="activateTab('payment')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
+
+
+	
   <h2 class="text-2xl font-bold text-center text-gray-800">Withdraw Funds</h2>
 
   <input id="withdrawAccountNumber" type="number" placeholder="Account Number"
@@ -2505,7 +2535,14 @@
 <!-- Deposit Section -->
 <!-- Deposit Section (drop-in) -->
 <div id="depositSection" class="tab-section hidden p-6 max-w-md mx-auto rounded-xl shadow-lg bg-white mt-8 space-y-6">
+
+
+	
   <button onclick="activateTab('payment')" class="text-blue-500 text-lg">← Deposit</button>
+
+
+
+	
   <h2 class="text-2xl font-bold text-center text-gray-800">Deposit Funds</h2>
 
   <div>
@@ -4018,6 +4055,7 @@
 </body>
 
 </html>
+
 
 
 
