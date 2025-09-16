@@ -487,14 +487,47 @@
 
 ‎<!-- ✅ Back Arrow Bar (Only visible on inner screens) -->
 
-‎‎<div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
-‎  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
-‎    ← Back
-‎  </button>
-‎</div>
-‎
+‎‎<!-- ✅ General Back (controlled by JS) -->
+<div id="generalBackBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
+    ← Back
+  </button>
+</div>
 
 
+<script>	
+‎// List of screens where GENERAL BACK should be visible
+const generalBackScreens = ["affiliateSection", "premium-section"];
+
+// Function to handle General Back visibility
+function handleGeneralBack(currentScreenId) {
+  const generalBackBar = document.getElementById("generalBackBar");
+
+  if (generalBackScreens.includes(currentScreenId)) {
+    // Show General Back ONLY on top-level sections
+    generalBackBar.classList.remove("hidden");
+  } else {
+    // Hide General Back whenever we go inside
+    generalBackBar.classList.add("hidden");
+  }
+}
+
+// Modify your activateTab function
+function activateTab(tabId) {
+  // Hide all tabs first
+  document.querySelectorAll(".tab-section").forEach(tab => tab.classList.add("hidden"));
+
+  // Show the selected tab
+  const targetTab = document.getElementById(tabId);
+  if (targetTab) targetTab.classList.remove("hidden");
+
+  // Handle General Back visibility
+  handleGeneralBack(tabId);
+}
+
+
+</script>
+	
 
                                                                <!-- ✅ All Screens -->
 															   
@@ -4024,6 +4057,7 @@
 </body>
 
 </html>
+
 
 
 
