@@ -3946,102 +3946,100 @@ blurOverlay.id = "blurOverlay";
 blurOverlay.className = "fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-40 hidden";
 document.body.appendChild(blurOverlay);
 
-// 🔴 Flag to track sidebar clicks
-let sidebarClicked = false;
-
-// ✅ Unified closeSidebar function
-function closeSidebar(fromLink = false) {
-  sidebar.classList.add("-translate-x-full");
-  hamburgerIcon.classList.remove("rotate-90");
-  blurOverlay.classList.add("hidden");
-
-  topNavbar?.classList.remove("z-10");
-  bottomNavbar?.classList.remove("z-10");
-
-  if (fromLink) {
-    // Hide topNavbar permanently if clicked from sidebar
-    topNavbar?.classList.add("hidden");
-    topNavbar?.classList.remove("z-10");
-  }
-}
-
 // Toggle sidebar on hamburger click
 hamburgerBtn.addEventListener("click", () => {
-  const isOpening = sidebar.classList.contains("-translate-x-full");
+const isOpening = sidebar.classList.contains("-translate-x-full");
 
-  sidebar.classList.toggle("-translate-x-full");
-  hamburgerIcon.classList.toggle("rotate-90");
-  blurOverlay.classList.toggle("hidden");
+sidebar.classList.toggle("-translate-x-full");
+hamburgerIcon.classList.toggle("rotate-90");
+blurOverlay.classList.toggle("hidden");
 
-  if (isOpening) {
-    // Sidebar is opening, push navbars behind
-    topNavbar?.classList.add("z-10");
-    bottomNavbar?.classList.add("z-10");
-  } else {
-    // Sidebar is closing, restore navbars if needed
-    if (!topNavbar.classList.contains("hidden")) {
-      topNavbar?.classList.remove("z-10");
-    }
-    bottomNavbar?.classList.remove("z-10");
-  }
+if (isOpening) {
+// Sidebar is opening, push navbars behind
+topNavbar?.classList.add("z-10");
+bottomNavbar?.classList.add("z-10");
+} else {
+// Sidebar is closing, restore navbars if needed
+if (!topNavbar.classList.contains("hidden")) {
+topNavbar?.classList.remove("z-10");
+}
+bottomNavbar?.classList.remove("z-10");
+}
 });
 
 // Close sidebar when clicking outside
 document.addEventListener("click", (event) => {
-  const isClickInsideSidebar = sidebar.contains(event.target);
-  const isClickOnHamburger = hamburgerBtn.contains(event.target);
-  const isClickOnOverlay = blurOverlay.contains(event.target);
+const isClickInsideSidebar = sidebar.contains(event.target);
+const isClickOnHamburger = hamburgerBtn.contains(event.target);
+const isClickOnOverlay = blurOverlay.contains(event.target);
 
-  if (!isClickInsideSidebar && !isClickOnHamburger && isClickOnOverlay) {
-    closeSidebar();
-  }
+if (!isClickInsideSidebar && !isClickOnHamburger && isClickOnOverlay) {
+closeSidebar();
+}
 });
 
 // Close sidebar & hide top navbar permanently on link click
 const sidebarLinks = sidebar.querySelectorAll("a");
 sidebarLinks.forEach((link) => {
-  link.addEventListener("click", () => {
-    sidebarClicked = true; // 🚀 Mark that sidebar was used
-    closeSidebar(true);
-  });
+link.addEventListener("click", () => {
+closeSidebar(true); // true = coming from sidebar content
 });
+});
+
+function closeSidebar(fromLink = false) {
+sidebar.classList.add("-translate-x-full");
+hamburgerIcon.classList.remove("rotate-90");
+blurOverlay.classList.add("hidden");
+
+topNavbar?.classList.remove("z-10");
+bottomNavbar?.classList.remove("z-10");
+
+if (fromLink) {
+// Hide topNavbar permanently
+topNavbar?.classList.add("hidden");
+topNavbar?.classList.remove("z-10");
+}
+}
 
 // ✅ Auto-fetch profile data on login
 firebase.auth().onAuthStateChanged(async (user) => {
-  if (user) {
-    try {
-      const doc = await firebase.firestore().collection("users").doc(user.uid).get();
+if (user) {
+try {
+const doc = await firebase.firestore().collection("users").doc(user.uid).get();
 
-      // Profile Pic
-      if (doc.exists && doc.data().profilePic) {
-        updateAllProfilePreviews(doc.data().profilePic);
-      } else {
-        updateAllProfilePreviews(placeholderPic);
-      }
+// Profile Pic  
+  if (doc.exists && doc.data().profilePic) {  
+    updateAllProfilePreviews(doc.data().profilePic);  
+  } else {  
+    updateAllProfilePreviews(placeholderPic);  
+  }  
 
-      // Full Name
-      if (doc.exists && doc.data().fullName) {
-        document.getElementById("userFullName").innerText = doc.data().fullName;
-      } else {
-        document.getElementById("userFullName").innerText = user.displayName || "No Name";
-      }
+  // Full Name  
+  if (doc.exists && doc.data().fullName) {  
+    document.getElementById("userFullName").innerText = doc.data().fullName;  
+  } else {  
+    document.getElementById("userFullName").innerText = user.displayName || "No Name";  
+  }  
 
-      // Email
-      document.getElementById("userEmail").innerText = user.email || "No Email";
+  // Email  
+  document.getElementById("userEmail").innerText = user.email || "No Email";  
 
-    } catch (err) {
-      console.error("❌ Error fetching user data:", err);
-      updateAllProfilePreviews(placeholderPic);
-      document.getElementById("userFullName").innerText = "Guest";
-      document.getElementById("userEmail").innerText = "";
-    }
-  } else {
-    // Logged out
-    updateAllProfilePreviews(placeholderPic);
-    document.getElementById("userFullName").innerText = "Guest";
-    document.getElementById("userEmail").innerText = "";
-  }
+} catch (err) {  
+  console.error("❌ Error fetching user data:", err);  
+  updateAllProfilePreviews(placeholderPic);  
+  document.getElementById("userFullName").innerText = "Guest";  
+  document.getElementById("userEmail").innerText = "";  
+}
+
+} else {
+// Logged out
+updateAllProfilePreviews(placeholderPic);
+document.getElementById("userFullName").innerText = "Guest";
+document.getElementById("userEmail").innerText = "";
+}
 });
+
+
 
 
 
@@ -6832,6 +6830,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
