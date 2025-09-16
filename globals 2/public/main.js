@@ -174,17 +174,6 @@ firebase.auth().onAuthStateChanged(function (user) {
 
 
 
-
-
-
-													
-	
-‎
-		
-
-
-
-
 		
 
 
@@ -3911,13 +3900,13 @@ window.activateTab = function(tabId) {
   if (activeBtn) activeBtn.classList.add('active-nav');
 
   // 3. Top Navbar
-const topNavbar = document.getElementById("topNavbar");
-if (tabId === "dashboard" && !sidebarClicked) {
-  // Show top navbar ONLY if dashboard AND not coming from sidebar
-  topNavbar.style.display = "flex";
-} else {
-  topNavbar.style.display = "none";
-}
+  const topNavbar = document.getElementById("topNavbar");
+  if (tabId === "dashboard" && !sidebarClicked) {
+    // Show top navbar ONLY if dashboard AND not coming from sidebar
+    topNavbar.style.display = "flex";
+  } else {
+    topNavbar.style.display = "none";
+  }
 
   // 4. Bottom Navbar
   const bottomNav = document.getElementById("bottomNavbar");
@@ -3935,8 +3924,6 @@ if (tabId === "dashboard" && !sidebarClicked) {
     backArrowBar.classList.remove("hidden");
   }
 };
-
-
 
 
 
@@ -6871,6 +6858,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
