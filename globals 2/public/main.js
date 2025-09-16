@@ -179,41 +179,7 @@ firebase.auth().onAuthStateChanged(function (user) {
 
 													
 	
-‎// List of screens where GENERAL BACK should be visible
-// List of screens where GENERAL BACK should be visible
-// IDs where GENERAL BACK should NOT appear
-const hideGeneralBackFor = ["finishedTasksScreen", "tiktok-task", "paymentDetails"];
-
-function handleGeneralBack(currentScreenId) {
-  const backArrowBar = document.getElementById("backArrowBar");
-
-  if (hideGeneralBackFor.includes(currentScreenId)) {
-    // Hide general back for these inner screens
-    backArrowBar.classList.add("hidden");
-  } else {
-    // Show general back for all other screens
-    backArrowBar.classList.remove("hidden");
-  }
-}
-
-function activateTab(tabId) {
-  // Hide all tabs first
-  document.querySelectorAll(".tab-section").forEach(tab => tab.classList.add("hidden"));
-
-  // Show the selected tab
-  const targetTab = document.getElementById(tabId);
-  if (targetTab) targetTab.classList.remove("hidden");
-
-  // Handle General Back visibility
-  handleGeneralBack(tabId);
-}
-
-// Default: load dashboard
-document.addEventListener("DOMContentLoaded", () => {
-  activateTab("dashboard");
-});
-
-
+‎
 		
 
 
@@ -3918,82 +3884,16 @@ if (logoutBtn) {
 
                                                                                     // Active Tab
 															  
+
+// Screens where we NEVER want the general back
+const hideGeneralBackFor = ["tiktok-task", "profileSettings", "paymentDetails"];
+
+// Screens where bottom navbar should always show
+const showBottomNavFor = ["dashboard", "games", "transactions"];
+
+// 🚀 Unified activateTab function
 window.activateTab = function(tabId) {
-  switchTab(tabId); // Show the right screen content
-
-  // 🔵 Update navbar active states visually
-  const allNavBtns = document.querySelectorAll('.nav-btn');
-  allNavBtns.forEach(btn => btn.classList.remove('active-nav'));
-
-  const activeBtn = document.getElementById(`nav-${tabId}`);
-  if (activeBtn) activeBtn.classList.add('active-nav');
-
-  // 🧭 Show/hide top/bottom navbars and back arrow
-  const topNavbar = document.getElementById("topNavbar");
-  const bottomNav = document.getElementById("bottomNav");
-  const backArrowBar = document.getElementById("backArrowBar");
-
-  const showFullNav = tabId === "dashboard";
-
-  if (showFullNav) {
-    topNavbar.style.display = "flex";
-    bottomNav.style.display = "flex";
-    backArrowBar.classList.add("hidden");
-  } else {
-    topNavbar.style.display = "none";
-    bottomNav.style.display = "flex"; // keep bottom nav visible for all tabs
-    backArrowBar.classList.remove("hidden");
-  }
-};
-
-
-
-
-
-
-// 💸 Switch between Withdraw Tabs
-function switchWithdrawTab(tab) {
-  const tabs = document.querySelectorAll('.withdraw-tab');
-  const buttons = document.querySelectorAll('.withdraw-tab-btn');
-  tabs.forEach(t => t.classList.add('hidden'));
-  document.getElementById(`withdraw-${tab}`).classList.remove('hidden');
-  buttons.forEach(btn => btn.classList.remove('active'));
-  document.querySelector(`.withdraw-tab-btn[onclick*="${tab}"]`).classList.add('active');
-}
-
-// 🚀 Swiper Init
-document.addEventListener("DOMContentLoaded", function () {
-  // Withdraw swiper
-  new Swiper('.tab-swiper', {
-    slidesPerView: 3,
-    spaceBetween: 10,
-    freeMode: true,
-    grabCursor: true,
-  });
-
-  // Settings swiper
-  new Swiper('.settings-swiper', {
-    loop: true,
-    pagination: {
-      el: '.swiper-pagination',
-      clickable: true,
-    },
-    autoplay: {
-      delay: 5000,
-      disableOnInteraction: false,
-    },
-  });
-});
-
-
-
-
-
-
-
-                                                                         // 📺 Tab Switching Function (General)
-
-window.switchTab = function(tabId) {
+  // 1. Switch content
   const sections = document.querySelectorAll('.tab-section');
   sections.forEach(section => section.classList.add('hidden'));
 
@@ -4003,22 +3903,43 @@ window.switchTab = function(tabId) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // Handle bottom nav and back arrow
-  const bottomNav = document.getElementById('bottomNavbar');
-  const backArrow = document.getElementById('backArrowBar');
+  // 2. Navbar states
+  const allNavBtns = document.querySelectorAll('.nav-btn');
+  allNavBtns.forEach(btn => btn.classList.remove('active-nav'));
 
-  const showNavTabs = ['dashboard','games',  'transaction' ];
+  const activeBtn = document.getElementById(`nav-${tabId}`);
+  if (activeBtn) activeBtn.classList.add('active-nav');
 
-  if (showNavTabs.includes(tabId)) {
-    bottomNav.classList.remove('hidden');
-    backArrow.classList.add('hidden');
+  // 3. Top Navbar
+const topNavbar = document.getElementById("topNavbar");
+if (tabId === "dashboard" && !sidebarClicked) {
+  // Show top navbar ONLY if dashboard AND not coming from sidebar
+  topNavbar.style.display = "flex";
+} else {
+  topNavbar.style.display = "none";
+}
+
+  // 4. Bottom Navbar
+  const bottomNav = document.getElementById("bottomNavbar");
+  if (showBottomNavFor.includes(tabId)) {
+    bottomNav.classList.remove("hidden");
   } else {
-    bottomNav.classList.add('hidden');
-    backArrow.classList.remove('hidden');
+    bottomNav.classList.add("hidden");
+  }
+
+  // 5. General Back Arrow
+  const backArrowBar = document.getElementById("backArrowBar");
+  if (hideGeneralBackFor.includes(tabId) || tabId === "dashboard") {
+    backArrowBar.classList.add("hidden");
+  } else {
+    backArrowBar.classList.remove("hidden");
   }
 };
 
-   
+
+
+
+
 
 
 
@@ -4130,6 +4051,38 @@ firebase.auth().onAuthStateChanged(async (user) => {
     document.getElementById("userEmail").innerText = "";
   }
 });
+
+
+let sidebarClicked = false; // 🔴 Flag to track sidebar clicks
+
+// Close sidebar & hide top navbar permanently on link click
+const sidebarLinks = sidebar.querySelectorAll("a");
+sidebarLinks.forEach((link) => {
+  link.addEventListener("click", () => {
+    sidebarClicked = true; // 🚀 Mark that sidebar was used
+    closeSidebar(true);
+  });
+});
+
+function closeSidebar(fromLink = false) {
+  sidebar.classList.add("-translate-x-full");
+  hamburgerIcon.classList.remove("rotate-90");
+  blurOverlay.classList.add("hidden");
+
+  topNavbar?.classList.remove("z-10");
+  bottomNavbar?.classList.remove("z-10");
+
+  if (fromLink) {
+    // Hide topNavbar permanently
+    topNavbar?.classList.add("hidden");
+    topNavbar?.classList.remove("z-10");
+  }
+}
+
+
+
+
+
 
 
 
@@ -6918,6 +6871,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
