@@ -488,8 +488,9 @@
 ‎<!-- ✅ Back Arrow Bar (Only visible on inner screens) -->
 
 <!-- ✅ General Back (controlled by JS) -->
-<div id="generalBackBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
-  <button id="generalBackBtn" class="text-blue-600 font-bold text-lg">
+<!-- ✅ General Back (Only visible on allowed screens) -->
+<div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
     ← Back
   </button>
 </div>
@@ -498,27 +499,21 @@
 <script>	
 ‎// List of screens where GENERAL BACK should be visible
 // List of screens where GENERAL BACK should be visible
-const generalBackScreens = ["affiliateSection", "taskSection"];
+// IDs where GENERAL BACK should NOT appear
+const hideGeneralBackFor = ["finishedTasksScreen", "profileSettings", "paymentDetails"];
 
-// Track screen history for phone back button
-let tabHistory = [];
-
-// Function to handle General Back visibility
 function handleGeneralBack(currentScreenId) {
-  const generalBackBar = document.getElementById("generalBackBar");
-  const backBtn = document.getElementById("generalBackBtn");
+  const backArrowBar = document.getElementById("backArrowBar");
 
-  if (generalBackScreens.includes(currentScreenId)) {
-    generalBackBar.classList.remove("hidden");
-
-    // General Back always goes to dashboard (change if you want)
-    backBtn.onclick = () => activateTab("dashboard");
+  if (hideGeneralBackFor.includes(currentScreenId)) {
+    // Hide general back for these inner screens
+    backArrowBar.classList.add("hidden");
   } else {
-    generalBackBar.classList.add("hidden");
+    // Show general back for all other screens
+    backArrowBar.classList.remove("hidden");
   }
 }
 
-// Activate tab + push to history
 function activateTab(tabId) {
   // Hide all tabs first
   document.querySelectorAll(".tab-section").forEach(tab => tab.classList.add("hidden"));
@@ -529,28 +524,11 @@ function activateTab(tabId) {
 
   // Handle General Back visibility
   handleGeneralBack(tabId);
-
-  // Add to history (avoid duplicates if same tab)
-  if (tabHistory[tabHistory.length - 1] !== tabId) {
-    tabHistory.push(tabId);
-  }
 }
 
-// Handle phone back button (browser back)
-window.addEventListener("popstate", () => {
-  if (tabHistory.length > 1) {
-    tabHistory.pop(); // remove current
-    const prevTab = tabHistory[tabHistory.length - 1];
-    activateTab(prevTab);
-  } else {
-    // If nothing left, default to dashboard
-    activateTab("dashboard");
-  }
-});
-
-// On first load, set dashboard visible
+// Default: load dashboard
 document.addEventListener("DOMContentLoaded", () => {
-  activateTab("dashboard"); // default start screen
+  activateTab("dashboard");
 });
 
 </script>
@@ -4084,6 +4062,7 @@ document.addEventListener("DOMContentLoaded", () => {
 </body>
 
 </html>
+
 
 
 
