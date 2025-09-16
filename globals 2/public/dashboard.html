@@ -487,9 +487,9 @@
 
 ‎<!-- ✅ Back Arrow Bar (Only visible on inner screens) -->
 
-‎‎<!-- ✅ General Back (controlled by JS) -->
+<!-- ✅ General Back (controlled by JS) -->
 <div id="generalBackBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
-  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
+  <button id="generalBackBtn" class="text-blue-600 font-bold text-lg">
     ← Back
   </button>
 </div>
@@ -497,22 +497,28 @@
 
 <script>	
 ‎// List of screens where GENERAL BACK should be visible
-const generalBackScreens = ["affiliateSection", "premium-section"];
+// List of screens where GENERAL BACK should be visible
+const generalBackScreens = ["affiliateSection", "taskSection"];
+
+// Track screen history for phone back button
+let tabHistory = [];
 
 // Function to handle General Back visibility
 function handleGeneralBack(currentScreenId) {
   const generalBackBar = document.getElementById("generalBackBar");
+  const backBtn = document.getElementById("generalBackBtn");
 
   if (generalBackScreens.includes(currentScreenId)) {
-    // Show General Back ONLY on top-level sections
     generalBackBar.classList.remove("hidden");
+
+    // General Back always goes to dashboard (change if you want)
+    backBtn.onclick = () => activateTab("dashboard");
   } else {
-    // Hide General Back whenever we go inside
     generalBackBar.classList.add("hidden");
   }
 }
 
-// Modify your activateTab function
+// Activate tab + push to history
 function activateTab(tabId) {
   // Hide all tabs first
   document.querySelectorAll(".tab-section").forEach(tab => tab.classList.add("hidden"));
@@ -523,8 +529,29 @@ function activateTab(tabId) {
 
   // Handle General Back visibility
   handleGeneralBack(tabId);
+
+  // Add to history (avoid duplicates if same tab)
+  if (tabHistory[tabHistory.length - 1] !== tabId) {
+    tabHistory.push(tabId);
+  }
 }
 
+// Handle phone back button (browser back)
+window.addEventListener("popstate", () => {
+  if (tabHistory.length > 1) {
+    tabHistory.pop(); // remove current
+    const prevTab = tabHistory[tabHistory.length - 1];
+    activateTab(prevTab);
+  } else {
+    // If nothing left, default to dashboard
+    activateTab("dashboard");
+  }
+});
+
+// On first load, set dashboard visible
+document.addEventListener("DOMContentLoaded", () => {
+  activateTab("dashboard"); // default start screen
+});
 
 </script>
 	
@@ -4057,6 +4084,7 @@ function activateTab(tabId) {
 </body>
 
 </html>
+
 
 
 
