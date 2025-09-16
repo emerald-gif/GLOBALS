@@ -3872,80 +3872,120 @@ if (logoutBtn) {
 
 
                                                                                     // Active Tab
+
+
+
+
+
+
+                                                                                    // Active Tab
 															  
+window.activateTab = function(tabId) {
+  switchTab(tabId); // Show the right screen content
 
-‎‎‎window.activateTab = function(tabId) {
-‎  switchTab(tabId); // Show the right screen content
-‎
-‎  // 🔵 Update navbar active states visually
-‎  const allNavBtns = document.querySelectorAll('.nav-btn');
-‎  allNavBtns.forEach(btn => btn.classList.remove('active-nav'));
-‎
-‎  const activeBtn = document.getElementById(nav-${tabId});
-‎  if (activeBtn) activeBtn.classList.add('active-nav');
-‎
-‎  // 🧭 Show/hide top/bottom navbars and back arrow
-‎  const topNavbar = document.getElementById("topNavbar");
-‎  const bottomNav = document.getElementById("bottomNav");
-‎  const backArrowBar = document.getElementById("backArrowBar");
-‎
-‎  const showFullNav = tabId === "dashboard";
-‎
-‎  if (showFullNav) {
-‎    topNavbar.style.display = "flex";
-‎    bottomNav.style.display = "flex";
-‎    backArrowBar.classList.add("hidden");
-‎  } else {
-‎    topNavbar.style.display = "none";
-‎    bottomNav.style.display = "flex"; // keep bottom nav visible for all tabs
-‎    backArrowBar.classList.remove("hidden");
-‎  }
-‎};
-‎
-‎
-‎
-‎
-‎
-‎
-‎
-‎
-‎
-‎                                                                         // 📺 Tab Switching Function (General)
-‎
-‎window.switchTab = function(tabId) {
-‎  const sections = document.querySelectorAll('.tab-section');
-‎  sections.forEach(section => section.classList.add('hidden'));
-‎
-‎  const activeSection = document.getElementById(tabId);
-‎  if (activeSection) {
-‎    activeSection.classList.remove('hidden');
-‎    window.scrollTo({ top: 0, behavior: "smooth" });
-‎  }
-‎
-‎  // Handle bottom nav and back arrow
-‎  const bottomNav = document.getElementById('bottomNavbar');
-‎  const backArrow = document.getElementById('backArrowBar');
-‎
-‎  const showNavTabs = ['dashboard','games',  'transactions' ];
-‎
-‎  if (showNavTabs.includes(tabId)) {
-‎    bottomNav.classList.remove('hidden');
-‎    backArrow.classList.add('hidden');
-‎  } else {
-‎    bottomNav.classList.add('hidden');
-‎    backArrow.classList.remove('hidden');
-‎  }
-‎};
-‎
+  // 🔵 Update navbar active states visually
+  const allNavBtns = document.querySelectorAll('.nav-btn');
+  allNavBtns.forEach(btn => btn.classList.remove('active-nav'));
+
+  const activeBtn = document.getElementById(`nav-${tabId}`);
+  if (activeBtn) activeBtn.classList.add('active-nav');
+
+  // 🧭 Show/hide top/bottom navbars and back arrow
+  const topNavbar = document.getElementById("topNavbar");
+  const bottomNav = document.getElementById("bottomNav");
+  const backArrowBar = document.getElementById("backArrowBar");
+
+  const showFullNav = tabId === "dashboard";
+
+  if (showFullNav) {
+    topNavbar.style.display = "flex";
+    bottomNav.style.display = "flex";
+    backArrowBar.classList.add("hidden");
+  } else {
+    topNavbar.style.display = "none";
+    bottomNav.style.display = "flex"; // keep bottom nav visible for all tabs
+    backArrowBar.classList.remove("hidden");
+  }
+};
 
 
 
+
+
+
+// 💸 Switch between Withdraw Tabs
+function switchWithdrawTab(tab) {
+  const tabs = document.querySelectorAll('.withdraw-tab');
+  const buttons = document.querySelectorAll('.withdraw-tab-btn');
+  tabs.forEach(t => t.classList.add('hidden'));
+  document.getElementById(`withdraw-${tab}`).classList.remove('hidden');
+  buttons.forEach(btn => btn.classList.remove('active'));
+  document.querySelector(`.withdraw-tab-btn[onclick*="${tab}"]`).classList.add('active');
+}
+
+// 🚀 Swiper Init
+document.addEventListener("DOMContentLoaded", function () {
+  // Withdraw swiper
+  new Swiper('.tab-swiper', {
+    slidesPerView: 3,
+    spaceBetween: 10,
+    freeMode: true,
+    grabCursor: true,
+  });
+
+  // Settings swiper
+  new Swiper('.settings-swiper', {
+    loop: true,
+    pagination: {
+      el: '.swiper-pagination',
+      clickable: true,
+    },
+    autoplay: {
+      delay: 5000,
+      disableOnInteraction: false,
+    },
+  });
+});
+
+
+
+
+
+
+
+                                                                         // 📺 Tab Switching Function (General)
+
+window.switchTab = function(tabId) {
+  const sections = document.querySelectorAll('.tab-section');
+  sections.forEach(section => section.classList.add('hidden'));
+
+  const activeSection = document.getElementById(tabId);
+  if (activeSection) {
+    activeSection.classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // Handle bottom nav and back arrow
+  const bottomNav = document.getElementById('bottomNavbar');
+  const backArrow = document.getElementById('backArrowBar');
+
+  const showNavTabs = ['dashboard','games',  'transaction' ];
+
+  if (showNavTabs.includes(tabId)) {
+    bottomNav.classList.remove('hidden');
+    backArrow.classList.add('hidden');
+  } else {
+    bottomNav.classList.add('hidden');
+    backArrow.classList.remove('hidden');
+  }
+};
+
+   
 
 
 
                                                                                  //SIDEBAR FUNCTION
 																				 
-
 
 const hamburgerBtn = document.getElementById("hamburgerBtn");
 const sidebar = document.getElementById("sidebar");
@@ -3961,99 +4001,97 @@ document.body.appendChild(blurOverlay);
 
 // Toggle sidebar on hamburger click
 hamburgerBtn.addEventListener("click", () => {
-const isOpening = sidebar.classList.contains("-translate-x-full");
+  const isOpening = sidebar.classList.contains("-translate-x-full");
 
-sidebar.classList.toggle("-translate-x-full");
-hamburgerIcon.classList.toggle("rotate-90");
-blurOverlay.classList.toggle("hidden");
+  sidebar.classList.toggle("-translate-x-full");
+  hamburgerIcon.classList.toggle("rotate-90");
+  blurOverlay.classList.toggle("hidden");
 
-if (isOpening) {
-// Sidebar is opening, push navbars behind
-topNavbar?.classList.add("z-10");
-bottomNavbar?.classList.add("z-10");
-} else {
-// Sidebar is closing, restore navbars if needed
-if (!topNavbar.classList.contains("hidden")) {
-topNavbar?.classList.remove("z-10");
-}
-bottomNavbar?.classList.remove("z-10");
-}
+  if (isOpening) {
+    // Sidebar is opening, push navbars behind
+    topNavbar?.classList.add("z-10");
+    bottomNavbar?.classList.add("z-10");
+  } else {
+    // Sidebar is closing, restore navbars if needed
+    if (!topNavbar.classList.contains("hidden")) {
+      topNavbar?.classList.remove("z-10");
+    }
+    bottomNavbar?.classList.remove("z-10");
+  }
 });
 
 // Close sidebar when clicking outside
 document.addEventListener("click", (event) => {
-const isClickInsideSidebar = sidebar.contains(event.target);
-const isClickOnHamburger = hamburgerBtn.contains(event.target);
-const isClickOnOverlay = blurOverlay.contains(event.target);
+  const isClickInsideSidebar = sidebar.contains(event.target);
+  const isClickOnHamburger = hamburgerBtn.contains(event.target);
+  const isClickOnOverlay = blurOverlay.contains(event.target);
 
-if (!isClickInsideSidebar && !isClickOnHamburger && isClickOnOverlay) {
-closeSidebar();
-}
+  if (!isClickInsideSidebar && !isClickOnHamburger && isClickOnOverlay) {
+    closeSidebar();
+  }
 });
 
 // Close sidebar & hide top navbar permanently on link click
 const sidebarLinks = sidebar.querySelectorAll("a");
 sidebarLinks.forEach((link) => {
-link.addEventListener("click", () => {
-closeSidebar(true); // true = coming from sidebar content
-});
+  link.addEventListener("click", () => {
+    closeSidebar(true); // true = coming from sidebar content
+  });
 });
 
 function closeSidebar(fromLink = false) {
-sidebar.classList.add("-translate-x-full");
-hamburgerIcon.classList.remove("rotate-90");
-blurOverlay.classList.add("hidden");
+  sidebar.classList.add("-translate-x-full");
+  hamburgerIcon.classList.remove("rotate-90");
+  blurOverlay.classList.add("hidden");
 
-topNavbar?.classList.remove("z-10");
-bottomNavbar?.classList.remove("z-10");
+  topNavbar?.classList.remove("z-10");
+  bottomNavbar?.classList.remove("z-10");
 
-if (fromLink) {
-// Hide topNavbar permanently
-topNavbar?.classList.add("hidden");
-topNavbar?.classList.remove("z-10");
+  if (fromLink) {
+    // Hide topNavbar permanently
+    topNavbar?.classList.add("hidden");
+    topNavbar?.classList.remove("z-10");
+  }
 }
-}
+
+
 
 // ✅ Auto-fetch profile data on login
 firebase.auth().onAuthStateChanged(async (user) => {
-if (user) {
-try {
-const doc = await firebase.firestore().collection("users").doc(user.uid).get();
+  if (user) {
+    try {
+      const doc = await firebase.firestore().collection("users").doc(user.uid).get();
 
-// Profile Pic  
-  if (doc.exists && doc.data().profilePic) {  
-    updateAllProfilePreviews(doc.data().profilePic);  
-  } else {  
-    updateAllProfilePreviews(placeholderPic);  
-  }  
+      // Profile Pic
+      if (doc.exists && doc.data().profilePic) {
+        updateAllProfilePreviews(doc.data().profilePic);
+      } else {
+        updateAllProfilePreviews(placeholderPic);
+      }
 
-  // Full Name  
-  if (doc.exists && doc.data().fullName) {  
-    document.getElementById("userFullName").innerText = doc.data().fullName;  
-  } else {  
-    document.getElementById("userFullName").innerText = user.displayName || "No Name";  
-  }  
+      // Full Name
+      if (doc.exists && doc.data().fullName) {
+        document.getElementById("userFullName").innerText = doc.data().fullName;
+      } else {
+        document.getElementById("userFullName").innerText = user.displayName || "No Name";
+      }
 
-  // Email  
-  document.getElementById("userEmail").innerText = user.email || "No Email";  
+      // Email
+      document.getElementById("userEmail").innerText = user.email || "No Email";
 
-} catch (err) {  
-  console.error("❌ Error fetching user data:", err);  
-  updateAllProfilePreviews(placeholderPic);  
-  document.getElementById("userFullName").innerText = "Guest";  
-  document.getElementById("userEmail").innerText = "";  
-}
-
-} else {
-// Logged out
-updateAllProfilePreviews(placeholderPic);
-document.getElementById("userFullName").innerText = "Guest";
-document.getElementById("userEmail").innerText = "";
-}
+    } catch (err) {
+      console.error("❌ Error fetching user data:", err);
+      updateAllProfilePreviews(placeholderPic);
+      document.getElementById("userFullName").innerText = "Guest";
+      document.getElementById("userEmail").innerText = "";
+    }
+  } else {
+    // Logged out
+    updateAllProfilePreviews(placeholderPic);
+    document.getElementById("userFullName").innerText = "Guest";
+    document.getElementById("userEmail").innerText = "";
+  }
 });
-
-
-
 
 
 
@@ -6843,6 +6881,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
