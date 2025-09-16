@@ -5973,16 +5973,15 @@ function handleDeposit() {
 
                                                                  // SERVICE FUNCTION  
 
-function openService(serviceName) {
-    alert("Open " + serviceName + " screen");
-    // Here, you’ll route to the corresponding screen
-  }
 
-   function openAllCategories() {
-    document.getElementById("all-categories-screen").classList.remove("hidden");
-  }
+function openServicesDrawer() {
+  document.getElementById("servicesDrawer").classList.remove("hidden");
+}
+function closeServicesDrawer() {
+  document.getElementById("servicesDrawer").classList.add("hidden");
+}
 
- 
+
 
 
 
@@ -6881,6 +6880,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
