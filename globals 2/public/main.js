@@ -174,6 +174,54 @@ firebase.auth().onAuthStateChanged(function (user) {
 
 
 
+
+
+
+													
+	
+‎// List of screens where GENERAL BACK should be visible
+// List of screens where GENERAL BACK should be visible
+// IDs where GENERAL BACK should NOT appear
+const hideGeneralBackFor = ["finishedTasksScreen", "tiktok-task", "paymentDetails"];
+
+function handleGeneralBack(currentScreenId) {
+  const backArrowBar = document.getElementById("backArrowBar");
+
+  if (hideGeneralBackFor.includes(currentScreenId)) {
+    // Hide general back for these inner screens
+    backArrowBar.classList.add("hidden");
+  } else {
+    // Show general back for all other screens
+    backArrowBar.classList.remove("hidden");
+  }
+}
+
+function activateTab(tabId) {
+  // Hide all tabs first
+  document.querySelectorAll(".tab-section").forEach(tab => tab.classList.add("hidden"));
+
+  // Show the selected tab
+  const targetTab = document.getElementById(tabId);
+  if (targetTab) targetTab.classList.remove("hidden");
+
+  // Handle General Back visibility
+  handleGeneralBack(tabId);
+}
+
+// Default: load dashboard
+document.addEventListener("DOMContentLoaded", () => {
+  activateTab("dashboard");
+});
+
+
+		
+
+
+
+
+		
+
+
      // ✅ GLOBALS GENERAL ALERT
 
 
@@ -6870,6 +6918,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
