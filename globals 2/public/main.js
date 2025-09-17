@@ -4351,16 +4351,31 @@ async function processReferralCreditTx(referredUserDocId, referrerUid) {
 // ---- Keep your subcategoryOptions as-is ----
 const subcategoryOptions = {
   whatsapp: {
-    "WhatsApp/telegram group join": 15,
-    "Whatsapp status post": 50,
-    "Whatsapp contact add": 15,
+    "WhatsApp group join": 15,
+    "WhatsApp status post": 50,
+    "WhatsApp contact add": 15,
     "Share to 3 WhatsApp group": 50,
-    "Whatsapp/telegram channel follow": 20,
+    "WhatsApp channel follow": 20,
     "Community join": 30,
-    "Whatsapp linking": 500,
-    "Telegram bot": 30
+    "WhatsApp linking": 500
+  },
+  telegram: {
+    "Telegram group join": 15,
+    "Share to 3 Telegram group": 50,
+    "Telegram bot": 30,
+    "Telegram story post": 50
   },
   instagram: {
+    "Follow": 8,
+    "Like": 8,
+    "Comment": 8,
+    "Follow+like": 15,
+    "Like + comment": 15,
+    "Follow+ like + comment": 25,
+    "Use sound": 20,
+    "Share post": 25
+  },
+  tiktok: { // ✅ copy of Instagram
     "Follow": 8,
     "Like": 8,
     "Comment": 8,
@@ -7084,6 +7099,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
