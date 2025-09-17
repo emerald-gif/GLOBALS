@@ -3832,45 +3832,61 @@
 
 
 <!-- ✅ Daily Check-In Screen -->
+<!-- ✅ Daily Check-In Screen -->
 <div id="checkin-screen" class="tab-section hidden min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] p-6 text-white">
-  <div class="flex items-center justify-between mb-8">
-    <h2 class="text-3xl font-extrabold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text drop-shadow-lg">Daily Check-In</h2>
+  
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-10">
+    <h2 class="text-3xl font-extrabold tracking-wide bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text drop-shadow-xl">
+      🌟 Daily Check-In
+    </h2>
     <button onclick="activateTab('dashboard')" 
-      class="px-4 py-2 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-700 text-white shadow-xl hover:scale-105 transition">
+      class="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-700 text-white shadow-lg hover:scale-105 transition font-medium">
       ← Back
     </button>
   </div>
 
-  <!-- Check-in Container -->
-  <div id="checkin-container" class="max-w-3xl mx-auto space-y-10">
+  <!-- Check-in Section -->
+  <div id="checkin-container" class="max-w-4xl mx-auto space-y-12">
     
-    <!-- Cards -->
-    <div id="checkin-cards" class="grid grid-cols-7 gap-4"></div>
+    <!-- Progress + Cards -->
+    <div class="bg-white/5 backdrop-blur-lg rounded-3xl shadow-2xl p-6 space-y-8">
+      <h3 class="text-lg font-semibold text-gray-200 tracking-wide">Your 7-Day Streak</h3>
+      
+      <!-- Progress Indicator -->
+      <div class="relative w-full h-3 bg-white/10 rounded-full overflow-hidden">
+        <div id="checkin-progress" class="absolute h-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-full transition-all duration-500" style="width:0%"></div>
+      </div>
+
+      <!-- Check-in Cards -->
+      <div id="checkin-cards" class="grid grid-cols-7 gap-3"></div>
+    </div>
 
     <!-- Check-in Button -->
     <div class="text-center">
       <button id="checkin-btn" 
-        class="px-10 py-4 rounded-2xl relative overflow-hidden font-semibold shadow-2xl
+        class="px-12 py-5 rounded-3xl relative overflow-hidden font-bold text-lg shadow-2xl
         bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-600
-        hover:scale-105 transition transform
-        before:absolute before:inset-0 before:bg-white/20 before:rounded-2xl before:animate-pulse">
-        <span class="relative z-10">🚀 Check In</span>
+        hover:scale-105 hover:shadow-purple-500/30 transition transform
+        before:absolute before:inset-0 before:bg-white/20 before:rounded-3xl before:animate-pulse">
+        <span class="relative z-10">🚀 Claim Today’s Reward</span>
       </button>
     </div>
   </div>
 
-  <!-- History Section -->
-  <div id="checkin-history" class="mt-12 max-w-2xl mx-auto">
-    <h3 class="text-xl font-bold text-blue-400 mb-4">Reward History</h3>
-    <div id="history-list" class="space-y-4 text-sm"></div>
+  <!-- Reward History -->
+  <div id="checkin-history" class="mt-16 max-w-3xl mx-auto">
+    <h3 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-6 drop-shadow-md">
+      🎁 Reward History
+    </h3>
+    <div id="history-list" class="space-y-4 text-sm bg-white/5 p-6 rounded-2xl shadow-xl"></div>
   </div>
 </div>
 
-
 <style>
-/* Futuristic animations */
+/* Futuristic Animations */
 @keyframes slide-in {
-  from { transform: translateY(20px); opacity: 0; }
+  from { transform: translateY(30px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 .animate-slide-in { animation: slide-in 0.6s ease-out forwards; }
