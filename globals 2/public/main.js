@@ -5539,27 +5539,17 @@ firebase.auth().onAuthStateChanged(user=>{
 
 
 
-/*
-  deposit_withdraw_client.js
-  Merged, cleaned client-side deposit + withdrawal functions for Globals platform.
-  Paste this file into your front-end (e.g., main.js) or include it as a script after
-  Firebase SDK and your DOM markup.
 
-  Key behaviors:
-  - Robust Paystack inline checkout with idToken saved to sessionStorage before opening
-  - Verifies payment via /api/verify-payment and reloads on success
-  - Auto-fills deposit email when Firebase auth becomes available
-  - Loads banks (multiple fallback endpoints) and populates withdrawBankSelect
-  - Verifies account name on account input or bank change (debounced)
-  - submitWithdrawal sends { accNum, bankCode, account_name, amount, pin } to /api/request-withdrawal
-  - Clear UI loading states and helpful console logs
-*/
+
+// deposit_withdraw_client.js
+// Client script for deposit + withdrawal flows.
+// Ensure this script runs after Firebase SDK is loaded in the page.
 
 /* ---------- CONFIG ---------- */
-const PAYSTACK_PUBLIC_KEY = "pk_live_8490c2179be3d6cb47b027152bdc2e04b774d22d"; // keep public key client-side
+const PAYSTACK_PUBLIC_KEY = "pk_live_8490c2179be3d6cb47b027152bdc2e04b774d22d";
 
 /* ---------- UTIL ---------- */
-function debugLog(...args) { try { console.log('[CLIENT]', ...args); } catch(e){} }
+function debugLog(...args) { try { console.log('[CLIENT]', ...args); } catch (e) {} }
 
 /* ---------- Load Paystack inline script ---------- */
 function loadPaystackScript(timeoutMs = 7000) {
@@ -5605,11 +5595,11 @@ function ensureFirebaseUser(timeoutMs = 5000) {
     if (cur) return resolve(cur);
     if (!window.firebase || !firebase.auth) return resolve(null);
     const unsub = firebase.auth().onAuthStateChanged(user => {
-      try { unsub(); } catch(e){}
+      try { unsub(); } catch (e) {}
       resolve(user);
     });
     setTimeout(() => {
-      try { unsub(); } catch(e){}
+      try { unsub(); } catch (e) {}
       resolve(firebase.auth().currentUser || null);
     }, timeoutMs);
   });
@@ -5663,7 +5653,7 @@ async function payWithPaystack(amount) {
   let idToken = null;
   try {
     idToken = await user.getIdToken(true);
-    try { sessionStorage.setItem('globals_id_token', idToken); } catch(e){}
+    try { sessionStorage.setItem('globals_id_token', idToken); } catch (e) {}
   } catch (err) {
     console.warn('Could not get idToken before checkout', err);
   }
@@ -5686,30 +5676,33 @@ async function payWithPaystack(amount) {
       currency: 'NGN',
       label: 'Globals Deposit',
       metadata: { uid: user.uid },
-      callback: function(response) {
+      callback: function (response) {
         (async () => {
           debugLog('Paystack callback', response);
           setDepositLoading(true, 'Verifying payment...');
           try {
             let usedToken = null;
-            try { usedToken = await user.getIdToken(true); } catch(e){}
+            try { usedToken = await user.getIdToken(true); } catch (e) { /* ignore */ }
             if (!usedToken) usedToken = sessionStorage.getItem('globals_id_token') || null;
 
+            // send verification request with Authorization header
             const verifyRes = await fetch('/api/verify-payment', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
                 ...(usedToken ? { 'Authorization': 'Bearer ' + usedToken } : {})
               },
-              body: JSON.stringify({ reference: response.reference, amount: amtNum, idToken: usedToken || null })
+              body: JSON.stringify({ reference: response.reference, amount: amtNum })
             });
 
-            let data = null; try { data = await verifyRes.json(); } catch(e){}
+            let data = null;
+            try { data = await verifyRes.json(); } catch (e) {}
+
             debugLog('verify-payment response', verifyRes.status, data);
             if (verifyRes.ok && data && data.status === 'success') {
               setDepositLoading(false);
               alert('Deposit successful!');
-              try { sessionStorage.removeItem('globals_id_token'); } catch(e){}
+              try { sessionStorage.removeItem('globals_id_token'); } catch (e) {}
               window.location.reload();
             } else {
               setDepositLoading(false);
@@ -5724,7 +5717,7 @@ async function payWithPaystack(amount) {
           }
         })();
       },
-      onClose: function() { setDepositLoading(false); debugLog('Paystack checkout closed by user'); }
+      onClose: function () { setDepositLoading(false); debugLog('Paystack checkout closed by user'); }
     });
 
     handler.openIframe();
@@ -5757,13 +5750,13 @@ async function loadBanks() {
   bankSelect.disabled = true;
   bankSelect.innerHTML = `<option>Loading Banks...</option>`;
 
-  const urls = [ '/api/get-banks', location.origin + '/api/get-banks', 'https://globals-myzv.onrender.com/api/get-banks' ];
+  const urls = ['/api/get-banks', location.origin + '/api/get-banks', 'https://globals-myzv.onrender.com/api/get-banks'];
   let banks = null;
   for (const url of urls) {
     try {
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) { debugLog('banks fetch non-ok', url, res.status); continue; }
-      const json = await res.json().catch(()=>null);
+      const json = await res.json().catch(() => null);
       if (Array.isArray(json)) banks = json;
       else if (json && Array.isArray(json.data)) banks = json.data;
       if (banks && banks.length) { debugLog('banks loaded from', url, banks.length); break; }
@@ -5786,8 +5779,8 @@ async function loadBanks() {
   });
   bankSelect.disabled = false;
 }
-
 let _verifyAccountTimer = null;
+
 async function verifyAccount() {
   const accEl = document.getElementById('withdrawAccountNumber');
   const bankEl = document.getElementById('withdrawBankSelect');
@@ -5802,13 +5795,13 @@ async function verifyAccount() {
   nameStatus.classList.remove('hidden');
   nameDisplay.classList.add('hidden');
 
-  const candidates = [ '/api/verify-account', location.origin + '/api/verify-account', 'https://globals-myzv.onrender.com/api/verify-account' ];
+  const candidates = ['/api/verify-account', location.origin + '/api/verify-account', 'https://globals-myzv.onrender.com/api/verify-account'];
   let ok = false;
   for (const url of candidates) {
     try {
-      const res = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ accNum, bankCode }) });
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accNum, bankCode }) });
       if (!res.ok) { debugLog('verify-account non-ok', url, res.status); continue; }
-      const data = await res.json().catch(()=>null);
+      const data = await res.json().catch(() => null);
       if (!data) { debugLog('verify-account empty json', url); continue; }
       if (data.status === 'success' && data.account_name) {
         nameDisplay.innerText = `✅ ${data.account_name}`;
@@ -5852,13 +5845,13 @@ async function submitWithdrawal() {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
       body: JSON.stringify({ accNum, bankCode, account_name: accountName, amount, pin })
     });
-    const data = await resp.json().catch(()=>null);
+    const data = await resp.json().catch(() => null);
     debugLog('request-withdrawal response', resp.status, data);
     if (resp.ok && data && data.status === 'success') {
       alert('✅ Withdrawal successful! The transfer was initiated.');
       window.location.reload();
     } else {
-      const msg = (data && data.message) ? data.message : `Withdrawal failed (HTTP ${resp.status})`;
+      const msg = (data && (data.message || data.error)) ? (data.message || data.error) : `Withdrawal failed (HTTP ${resp.status})`;
       alert('❌ Withdrawal failed: ' + msg);
     }
   } catch (err) {
@@ -5872,7 +5865,7 @@ async function submitWithdrawal() {
 /* ---------- DOM: attach listeners ---------- */
 document.addEventListener('DOMContentLoaded', async () => {
   // load banks
-  try { await loadBanks(); } catch(e) { debugLog('loadBanks threw', e); }
+  try { await loadBanks(); } catch (e) { debugLog('loadBanks threw', e); }
 
   // auto-fill deposit email when auth ready
   const auth = await waitForFirebaseAuth(7000);
@@ -5881,12 +5874,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       auth.onAuthStateChanged(user => { const el = depositEl(); if (el) el.value = user ? (user.email || '') : ''; });
       const cur = auth.currentUser; if (cur && depositEl()) depositEl().value = cur.email || '';
-    } catch(e) { debugLog('auth attach error', e); }
+    } catch (e) { debugLog('auth attach error', e); }
   } else {
     // attempt a delayed attach if auth appears later
     setTimeout(async () => {
       const a = await waitForFirebaseAuth(7000);
-      if (a) { a.onAuthStateChanged(user => { const el = depositEl(); if (el) el.value = user ? (user.email || '') : ''; }); try { const cur = a.currentUser; if (cur && depositEl()) depositEl().value = cur.email || ''; } catch(e){} }
+      if (a) {
+        a.onAuthStateChanged(user => { const el = depositEl(); if (el) el.value = user ? (user.email || '') : ''; });
+        try { const cur = a.currentUser; if (cur && depositEl()) depositEl().value = cur.email || ''; } catch (e) {}
+      }
     }, 1000);
   }
 
@@ -5898,7 +5894,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     accEl.addEventListener('input', () => { if (_verifyAccountTimer) clearTimeout(_verifyAccountTimer); _verifyAccountTimer = setTimeout(verifyAccount, 700); });
   }
   if (bankEl) bankEl.addEventListener('change', verifyAccount);
-
 });
 
 /* ---------- Expose functions to global if inline HTML uses onclick attributes ---------- */
@@ -5906,10 +5901,6 @@ window.handleDeposit = handleDeposit;
 window.submitWithdrawal = submitWithdrawal;
 window.verifyAccount = verifyAccount;
 window.loadBanks = loadBanks;
-
-/* EOF */
-
-
 
 
 
@@ -6930,6 +6921,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
