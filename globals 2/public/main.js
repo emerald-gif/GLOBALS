@@ -6403,19 +6403,19 @@ try {
   { id:'g1', label:'1GB - ₦300', amount:300 },
  
   
-  { id:'g2', label:'1GB - ₦350', amount:350 }
+  { id:'g2', label:'1GB - ₦350', amount:350 },
 
 
   { id:'g3', label:'3GB - ₦900', amount:900 },
  
   
-  { id:'g4', label:'3GB - ₦1000', amount:1000 }
+  { id:'g4', label:'3GB - ₦1000', amount:1000 },
 
 
   { id:'g5', label:'5GB - ₦1500', amount:1500 },
   
  
-  { id:'g6', label:'5GB - ₦1700', amount:1700 }
+  { id:'g6', label:'5GB - ₦1700', amount:1700 },
 
 
   { id:'g7', label:'500MB - ₦250', amount:250 },
@@ -7071,6 +7071,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
