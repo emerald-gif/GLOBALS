@@ -1,4 +1,4 @@
-// server.js (updated with fixes)
+// server.js
 require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
@@ -20,6 +20,7 @@ app.use(express.json({
 // Serve static files
 app.use(express.static(path.join(__dirname, "public")));
 
+// PAYSTACK secret must be in env
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET;
 if (!PAYSTACK_SECRET) {
   console.warn('⚠ PAYSTACK_SECRET not set in environment!');
@@ -36,6 +37,30 @@ if (!admin.apps.length) {
   }
 }
 const dbAdmin = admin.firestore();
+
+/* -------------------------------------------------
+   Helper: extract & verify Firebase ID token
+   Returns decoded token object or throws
+   ------------------------------------------------- */
+async function verifyIdTokenFromHeader(req) {
+  const authHeader = req.headers.authorization || "";
+  const idToken = authHeader.startsWith("Bearer ")
+    ? authHeader.split("Bearer ")[1]
+    : null;
+  if (!idToken) {
+    const e = new Error('Missing ID token');
+    e.code = 'NO_TOKEN';
+    throw e;
+  }
+  try {
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    return decoded;
+  } catch (err) {
+    const e = new Error('Invalid ID token');
+    e.code = 'INVALID_TOKEN';
+    throw e;
+  }
+}
 
 /* =======================
    BANKS / ACCOUNT VERIFY
@@ -54,13 +79,16 @@ app.get("/api/get-banks", async (req, res) => {
 
 app.post("/api/verify-account", async (req, res) => {
   const { accNum, bankCode } = req.body;
+  if (!accNum || !bankCode) {
+    return res.status(400).json({ status: "fail", error: "Missing account number or bank code" });
+  }
   try {
     const verify = await axios.get("https://api.paystack.co/bank/resolve", {
       headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` },
       params: { account_number: accNum, bank_code: bankCode }
     });
 
-    if (verify.data.status) {
+    if (verify.data && verify.data.status) {
       res.json({ status: "success", account_name: verify.data.data.account_name });
     } else {
       res.json({ status: "fail" });
@@ -71,43 +99,44 @@ app.post("/api/verify-account", async (req, res) => {
   }
 });
 
-
-
 /* =======================
    WITHDRAWAL (with PIN + auth)
    ======================= */
 app.post("/api/request-withdrawal", async (req, res) => {
   try {
-    // 🔑 Get Firebase idToken from headers
-    const authHeader = req.headers.authorization || "";
-    const idToken = authHeader.startsWith("Bearer ")
-      ? authHeader.split("Bearer ")[1]
-      : null;
-
-    if (!idToken) {
-      return res.status(401).json({ status: "fail", message: "Missing ID token" });
-    }
-
+    // 1) Verify token -> get uid
     let decoded;
     try {
-      decoded = await admin.auth().verifyIdToken(idToken);
-    } catch (err) {
-      return res.status(401).json({ status: "fail", message: "Invalid ID token" });
+      decoded = await verifyIdTokenFromHeader(req);
+    } catch (tokenErr) {
+      const code = tokenErr.code === 'NO_TOKEN' ? 401 : 401;
+      return res.status(code).json({ status: "fail", message: tokenErr.message });
     }
+    const uid = decoded.uid;
 
-    const uid = decoded.uid; // ✅ Always use decoded uid
+    // 2) read body
     const { accNum, bankCode, account_name, amount, pin } = req.body;
 
+    if (!accNum || !bankCode || !account_name || !amount || !pin) {
+      return res.status(400).json({ status: "fail", message: "Missing required withdrawal fields" });
+    }
+
+    const amtNum = Number(amount);
+    if (!isFinite(amtNum) || amtNum <= 0) {
+      return res.status(400).json({ status: "fail", message: "Invalid amount" });
+    }
+
+    // 3) fetch user document
     const userRef = dbAdmin.collection("users").doc(uid);
     const userSnap = await userRef.get();
 
     if (!userSnap.exists) {
-      return res.status(400).json({ status: "fail", message: "User not found" });
+      return res.status(404).json({ status: "fail", message: "User not found" });
     }
 
     const userData = userSnap.data();
 
-    // 🔑 PIN check
+    // 4) pin check
     if (!userData.pin) {
       return res.status(400).json({ status: "fail", message: "Set payment pin first" });
     }
@@ -115,12 +144,13 @@ app.post("/api/request-withdrawal", async (req, res) => {
       return res.status(400).json({ status: "fail", message: "Invalid PIN" });
     }
 
+    // 5) balance check
     const balance = Number(userData.balance) || 0;
-    if (amount > balance) {
+    if (amtNum > balance) {
       return res.status(400).json({ status: "fail", message: "Insufficient balance" });
     }
 
-    // 1️⃣ Create Paystack recipient
+    // 6) create recipient
     const recipient = await axios.post("https://api.paystack.co/transferrecipient", {
       type: "nuban",
       name: account_name,
@@ -131,58 +161,51 @@ app.post("/api/request-withdrawal", async (req, res) => {
       headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` }
     });
 
-    if (!recipient.data.status) {
-      return res.json({ status: "fail", message: "Recipient creation failed" });
+    if (!recipient.data || !recipient.data.status) {
+      console.error('recipient creation failed', recipient.data || {});
+      return res.status(400).json({ status: "fail", message: "Recipient creation failed", detail: recipient.data || null });
     }
 
     const recipient_code = recipient.data.data.recipient_code;
 
-    // 2️⃣ Initiate transfer
+    // 7) initiate transfer (kobo)
     const transfer = await axios.post("https://api.paystack.co/transfer", {
       source: "balance",
       reason: "User Withdrawal",
-      amount: Math.round(Number(amount) * 100),
+      amount: Math.round(amtNum * 100),
       recipient: recipient_code
     }, {
       headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` }
     });
 
-    if (transfer.data.status) {
-      // Deduct balance safely
+    if (transfer.data && transfer.data.status) {
+      // 8) deduct balance (safe update)
       await userRef.update({
-        balance: balance - amount
+        balance: balance - amtNum
       });
-      return res.json({ status: "success" });
+      return res.json({ status: "success", message: "Transfer initiated" });
     } else {
-      return res.json({ status: "fail", message: transfer.data.message });
+      console.error('transfer failed', transfer.data || {});
+      return res.status(400).json({ status: "fail", message: transfer.data?.message || "Transfer failed", detail: transfer.data || null });
     }
 
   } catch (err) {
-    console.error('initiate-transfer error', err.response?.data || err.message || err);
-    return res.status(500).json({ status: "fail", error: "Transfer failed" });
+    console.error('request-withdrawal error', err.response?.data || err.message || err);
+    return res.status(500).json({ status: "fail", message: "Server error during withdrawal", detail: err.response?.data || err.message || null });
   }
 });
-
-
 
 /* =======================
    DEPOSIT - verify payment
    ======================= */
 app.post("/api/verify-payment", async (req, res) => {
   try {
-    const authHeader = req.headers.authorization || "";
-    const idToken = authHeader.startsWith("Bearer ")
-      ? authHeader.split("Bearer ")[1]
-      : (req.body.idToken || null);
-
-    if (!idToken) return res.status(401).json({ status: "fail", message: "Missing ID token" });
-
+    // verify token from header first (deposit flow expects idToken in header)
     let decoded;
     try {
-      decoded = await admin.auth().verifyIdToken(idToken);
-    } catch (err) {
-      console.error('verify-idToken failed', err.message);
-      return res.status(401).json({ status: "fail", message: "Invalid ID token" });
+      decoded = await verifyIdTokenFromHeader(req);
+    } catch (tokenErr) {
+      return res.status(401).json({ status: "fail", message: tokenErr.message });
     }
     const uid = decoded.uid;
 
@@ -192,16 +215,19 @@ app.post("/api/verify-payment", async (req, res) => {
       return res.status(400).json({ status: "fail", message: "Invalid reference or amount" });
     }
 
+    // Check Paystack transaction
     const verifyResp = await axios.get(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
       headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` }
     });
 
     const paymentData = verifyResp.data?.data;
     if (!paymentData || paymentData.status !== "success") {
-      return res.status(400).json({ status: "fail", message: "Payment not successful" });
+      return res.status(400).json({ status: "fail", message: "Payment not successful", detail: paymentData || null });
     }
 
-    const paidNaira = paymentData.amount / 100;
+    // compute paid amount in naira
+    const paidNaira = Number(paymentData.amount) / 100;
+
     const paymentDocRef = dbAdmin.collection("payments").doc(reference);
 
     await dbAdmin.runTransaction(async (tx) => {
@@ -224,21 +250,23 @@ app.post("/api/verify-payment", async (req, res) => {
         uid,
         amount: paidNaira,
         status: "verified",
+        paystack: paymentData,
         createdAt: admin.firestore.FieldValue.serverTimestamp()
       });
 
-      tx.update(userRef, { balance: newBalance });
+      // create/merge user doc and set balance
+      tx.set(userRef, { balance: newBalance }, { merge: true });
     });
 
     return res.json({ status: "success" });
   } catch (err) {
     console.error("verify-payment error:", err.response?.data || err.message || err);
-    return res.status(500).json({ status: "fail", message: "Server error verifying payment" });
+    return res.status(500).json({ status: "fail", message: "Server error verifying payment", detail: err.response?.data || err.message || null });
   }
 });
 
 /* =======================
-   Webhook
+   Webhook (optional)
    ======================= */
 app.post('/webhook/paystack', async (req, res) => {
   try {
@@ -252,11 +280,8 @@ app.post('/webhook/paystack', async (req, res) => {
     }
 
     const event = req.body;
-    if (event && (event.event === 'charge.success' || event.event === 'transaction.success')) {
-      const incoming = event.data;
-      // same transaction verify & balance update logic as above...
-    }
-
+    // optionally handle charge.success / transaction.success for redundancy
+    // (you could reuse verify logic above)
     return res.status(200).send('ok');
   } catch (err) {
     console.error('webhook error:', err.response?.data || err.message || err);
@@ -272,5 +297,3 @@ app.get("*", (req, res) => {
 /* Start server */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
-
-
