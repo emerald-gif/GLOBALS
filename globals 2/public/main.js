@@ -6365,25 +6365,134 @@ try {
   };
 
   // Example Data Bundles (you can expand later or fetch from DB)
-  const DATA_PLANS = {
-    '01': [
-      { id:'m1', label:'500MB - ₦200', amount:200 },
-      { id:'m2', label:'1.5GB - ₦1000', amount:1000 },
-      { id:'m3', label:'3GB - ₦1500', amount:1500 }
-    ],
-    '02': [
-      { id:'g1', label:'1GB - ₦500', amount:500 },
-      { id:'g2', label:'2.9GB - ₦1000', amount:1000 }
-    ],
-    '04': [
-      { id:'a1', label:'1.5GB - ₦1000', amount:1000 },
-      { id:'a2', label:'3GB - ₦1500', amount:1500 }
-    ],
-    '03': [
-      { id:'9a', label:'1GB - ₦500', amount:500 },
-      { id:'9b', label:'2GB - ₦1000', amount:1000 }
-    ]
-  };
+ 
+ const DATA_PLANS = {
+
+
+   
+ '01': [
+ 
+   
+  { id:'m1', label:'110MB - ₦100', amount:100 }, 
+   
+  { id:'m2', label:'500MB - ₦350', amount:350 },
+	 
+  { id:'m3', label:'1GB - ₦500', amount:500 },
+
+  { id:'m4', label:'1.5GB - ₦600', amount:600 },
+ 
+   
+  { id:'m5', label:'2.5GB - ₦750', amount:750 },
+ 
+    
+  { id:'m6', label:'2GB - ₦750', amount:750 }, 
+
+  { id:'m7', label:'2.5GB - ₦900', amount:900 },
+
+  { id:'m8', label:'3.2GB - ₦1000', amount:600 }
+
+  
+  ],
+
+
+   
+
+ '02': [
+
+    
+  { id:'g1', label:'1GB - ₦300', amount:300 },
+ 
+  
+  { id:'g2', label:'1GB - ₦350', amount:350 }
+
+
+  { id:'g3', label:'3GB - ₦900', amount:900 },
+ 
+  
+  { id:'g4', label:'3GB - ₦1000', amount:1000 }
+
+
+  { id:'g5', label:'5GB - ₦1500', amount:1500 },
+  
+ 
+  { id:'g6', label:'5GB - ₦1700', amount:1700 }
+
+
+  { id:'g7', label:'500MB - ₦250', amount:250 },
+ 
+  
+  { id:'g8', label:'1GB - ₦500', amount:500 }
+
+  
+  ],
+
+
+   
+
+ '04': [
+ 
+   
+  { id:'a1', label:'75MB - ₦75', amount:75 },
+ 
+  
+  { id:'a2', label:'250MB - ₦50', amount:50 },
+
+  { id:'a3', label:'110MB - ₦100', amount:100 },
+
+   
+  { id:'a4', label:'230MB - ₦200', amount:200 },
+
+  { id:'a5', label:'300MB - ₦300', amount:300 },
+
+   
+  { id:'a6', label:'1.5GB - ₦500', amount:500 },
+
+  { id:'a7', label:'2GB - ₦600', amount:600 },
+ 
+  
+  { id:'a8', label:'3GB - ₦750', amount:750 },
+
+  { id:'a9', label:'3.2GB - ₦1000', amount:1000 },
+
+   
+  { id:'a10', label:'5GB - ₦1500', amount:1500 }
+
+   
+ ],
+ 
+
+   
+
+'03': [
+
+   
+   { id:'9a', label:'150MB - ₦150', amount:150 },
+   
+  
+   { id:'9b', label:'250MB - ₦200', amount:200 }
+,
+
+   { id:'9c', label:'650MB - ₦500', amount:500 },
+  
+   
+   { id:'9d', label:'83MB - ₦100', amount:100 },
+
+ 
+   { id:'9e', label:'40MB - ₦50', amount:50 },
+ 
+    
+   { id:'9f', label:'2GB - ₦1000', amount:1000 },
+
+ 
+   { id:'9g', label:'2.3GB - ₦1200', amount:1200 },
+
+     
+   { id:'9h', label:'3.4GB - ₦1500', amount:1500 },
+
+   { id:'9i', label:'4.5GB - ₦2000', amount:2000 }
+  
+ ]
+ };
 
   function fmt(n){ return Number(n).toLocaleString(); }
 
@@ -6962,6 +7071,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
