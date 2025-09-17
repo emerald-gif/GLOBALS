@@ -4785,8 +4785,7 @@ async function submitAffiliateJob() {
 
 
 
-
-// === Fetch and Display Jobs ===
+// === Fetch and Display Jobs (same as before) ===
 async function fetchAndDisplayUserJobs() {
   const jobList = document.getElementById("jobList");
   jobList.innerHTML = "<p class='text-center text-gray-500'>Loading your jobs...</p>";
@@ -4835,13 +4834,12 @@ async function fetchAndDisplayUserJobs() {
   });
 }
 
-// === Fetch Completed Submissions ===
 async function getCompletedCount(collection, jobId) {
   const snap = await firebase.firestore().collection(collection).where("jobId", "==", jobId).get();
   return snap.size;
 }
 
-// === Render Job Card ===
+// === Job Card ===
 function renderJobCard(job) {
   const status = job.status || "on review";
   const statusColor = status === "approved" ? "bg-green-100 text-green-700"
@@ -4884,7 +4882,7 @@ function renderJobCard(job) {
   `;
 }
 
-// === Open Job Details Modal ===
+// === Job Details Page ===
 async function checkJobDetails(jobId, jobType) {
   const collection = jobType === "task" ? "tasks" : "affiliateJobs";
   const doc = await firebase.firestore().collection(collection).doc(jobId).get();
@@ -4900,7 +4898,7 @@ async function checkJobDetails(jobId, jobType) {
 
   const progress = job.numWorkers ? Math.round((job.completed / job.numWorkers) * 100) : 0;
 
-  // Build modal content
+  // Build job details page
   let content = `
     ${job.campaignLogoURL || job.screenshotURL ? `<img src="${job.campaignLogoURL || job.screenshotURL}" class="w-full h-48 object-cover rounded-xl" />` : ""}
     <h4 class="text-lg font-bold text-blue-900 mt-3">${job.title || "Untitled Job"}</h4>
@@ -4921,34 +4919,35 @@ async function checkJobDetails(jobId, jobType) {
     </div>
   `;
 
-  // Conditional fields
   if (jobType === "affiliate") {
     content += `
-      <div class="mt-4">
+      <div class="mt-4 space-y-2">
         <p><span class="font-semibold">Target Link:</span> <a href="${job.targetLink || "#"}" class="text-blue-600 underline">${job.targetLink || "—"}</a></p>
         <p><span class="font-semibold">Proof Required:</span> ${job.proofRequired || "—"}</p>
       </div>
     `;
   } else {
     content += `
-      <div class="mt-4">
+      <div class="mt-4 space-y-2">
         <p><span class="font-semibold">Description:</span> ${job.description || "—"}</p>
         <p><span class="font-semibold">Proof:</span> ${job.proof || "—"}</p>
       </div>
     `;
   }
 
-  document.getElementById("modalTitle").textContent = jobType === "task" ? "Task Details" : "Affiliate Job Details";
-  document.getElementById("modalContent").innerHTML = content;
-  document.getElementById("jobDetailsModal").classList.remove("hidden");
+  document.getElementById("jobDetailsContent").innerHTML = content;
+
+  // Show details screen
+  activateTab("jobDetailsSection");
 }
 
-// === Close Modal ===
-function closeJobDetails() {
-  document.getElementById("jobDetailsModal").classList.add("hidden");
+// === Go Back to Jobs List ===
+function goBackToJobs() {
+  activateTab("myJobsSection");
 }
 
 document.addEventListener("DOMContentLoaded", fetchAndDisplayUserJobs);
+
 
 
 
@@ -6961,6 +6960,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
