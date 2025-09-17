@@ -2044,19 +2044,21 @@ firebase.firestore().collection("tasks")
     });
 
     function renderTasks() {
-      const keyword = (searchInput && searchInput.value) ? searchInput.value.toLowerCase() : "";
-      const selectedCategory = (filterSelect && filterSelect.value) ? filterSelect.value : "";
+  const keyword = (searchInput && searchInput.value) ? searchInput.value.toLowerCase() : "";
+  const selectedCategoryRaw = (filterSelect && filterSelect.value) ? filterSelect.value : "";
+  const selectedCategory = selectedCategoryRaw.toString().trim().toLowerCase();
 
-      taskContainer.innerHTML = "";
+  taskContainer.innerHTML = "";
 
-      tasks
-        .filter(task => {
-          const matchesCategory = selectedCategory === "" || (task.category === selectedCategory);
-          const matchesSearch = (task.title || "").toLowerCase().includes(keyword);
-          return matchesCategory && matchesSearch;
-        })
-        .forEach(task => createTaskCard(task.id, task));
-    }
+  tasks
+    .filter(task => {
+      const taskCategory = (task.category || "").toString().trim().toLowerCase();
+      const matchesCategory = selectedCategory === "" || taskCategory === selectedCategory;
+      const matchesSearch = (task.title || "").toLowerCase().includes(keyword);
+      return matchesCategory && matchesSearch;
+    })
+    .forEach(task => createTaskCard(task.id, task));
+}
 
     if (searchInput) searchInput.addEventListener("input", renderTasks);
     if (filterSelect) filterSelect.addEventListener("change", renderTasks);
@@ -7082,6 +7084,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
