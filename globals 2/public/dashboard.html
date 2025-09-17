@@ -1483,26 +1483,27 @@
 
 <!-- 📂 My Jobs Section (2025 UIUX Design) -->
 <!-- 🔹 My Jobs Section -->
+<!-- 🔹 My Jobs Section -->
 <section id="myJobsSection" class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6">
   <button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← My job tasks</button>
   <div class="max-w-5xl mx-auto space-y-6">
     <h2 class="text-2xl font-bold text-center text-gray-800">My Job Posts</h2>
-
-    <!-- 🔁 Firebase Loop -->
     <div id="jobList" class="space-y-4"></div>
   </div>
 </section>
 
-<!-- 🔹 Modal for Job Details -->
-<div id="jobDetailsModal" class="fixed inset-0 hidden bg-black/50 flex items-center justify-center z-50">
-  <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden">
-    <div class="flex justify-between items-center px-6 py-4 border-b">
-      <h3 id="modalTitle" class="text-xl font-bold text-gray-800">Job Details</h3>
-      <button onclick="closeJobDetails()" class="text-gray-500 hover:text-gray-700">✕</button>
+<!-- 🔹 Job Details Screen -->
+<section id="jobDetailsSection" class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6">
+  <div class="max-w-3xl mx-auto space-y-6">
+    <button onclick="goBackToJobs()" class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium">
+      ← Back to My Jobs
+    </button>
+
+    <div id="jobDetailsContent" class="bg-white rounded-2xl shadow-md p-6 space-y-4">
+      <!-- Dynamic job details go here -->
     </div>
-    <div id="modalContent" class="p-6 space-y-4"></div>
   </div>
-</div>
+</section>
 
 
 
