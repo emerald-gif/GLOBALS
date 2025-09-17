@@ -4778,137 +4778,184 @@ async function submitAffiliateJob() {
 
                                                                   // MY JOB POST FUNCTION
 
-// --- Start of Corrected MY JOB POST FUNCTION ---
 
-// This function will fetch and display the user's jobs.
-// It's wrapped in an async function to use await.
+
+
+
+
+
+
+
+// === Fetch and Display Jobs ===
 async function fetchAndDisplayUserJobs() {
   const jobList = document.getElementById("jobList");
-  if (!jobList) {
-    console.error("Error: 'jobList' element not found in the DOM. Please ensure your HTML has an element with id='jobList'.");
-    return;
-  }
-  jobList.innerHTML = "<p class='text-center text-gray-500'>Loading your jobs...</p>"; // Initial loading message
+  jobList.innerHTML = "<p class='text-center text-gray-500'>Loading your jobs...</p>";
 
-  // Use Firebase's onAuthStateChanged observer for reliable user detection
-  // This listener will fire immediately with the current user state,
-  // and again if the user logs in or out.
   firebase.auth().onAuthStateChanged(async (user) => {
-    if (user) {
-      // User is logged in, proceed to fetch their jobs
-      const uid = user.uid;
-      console.log(`User ${uid} is logged in. Fetching their posted jobs.`);
-
-      try {
-        const allJobs = [];
-
-        // 1. Fetch Tasks Posted by the User
-        const taskQuerySnapshot = await firebase.firestore()
-          .collection("tasks")
-          .where("postedBy.uid", "==", uid)
-          .orderBy("postedAt", "desc")
-          .get();
-
-        taskQuerySnapshot.forEach(doc => {
-          const job = doc.data();
-          job.id = doc.id; // Add document ID
-          job.type = "task"; // Identify job type
-          allJobs.push(job);
-        });
-        console.log(`Fetched ${taskQuerySnapshot.size} tasks.`);
-
-        // 2. Fetch Affiliate Jobs Posted by the User
-        // !!! CRITICAL FIX: Corrected collection name from "affiliateJobsaffiliateJobs"
-        const affiliateQuerySnapshot = await firebase.firestore()
-          .collection("affiliateJobs") // <--- THIS WAS THE TYPO! Corrected.
-          .where("postedBy.uid", "==", uid)
-          .orderBy("postedAt", "desc")
-          .get();
-
-        affiliateQuerySnapshot.forEach(doc => {
-          const job = doc.data();
-          job.id = doc.id; // Add document ID
-          job.type = "affiliate"; // Identify job type
-          allJobs.push(job);
-        });
-        console.log(`Fetched ${affiliateQuerySnapshot.size} affiliate jobs.`);
-
-        // If no jobs found after both queries
-        if (allJobs.length === 0) {
-          jobList.innerHTML = '<p class="text-center text-gray-500">You haven\'t posted any jobs yet.</p>';
-          return;
-        }
-
-        // Sort all jobs by 'postedAt' date (most recent first)
-        // Using optional chaining and toMillis() for robustness with Firebase Timestamps
-        allJobs.sort((a, b) => {
-          const aTime = a.postedAt?.toMillis() || 0;
-          const bTime = b.postedAt?.toMillis() || 0;
-          return bTime - aTime; // Descending order
-        });
-
-        // Clear loading message and render job cards
-        jobList.innerHTML = "";
-        allJobs.forEach(job => {
-          // Determine status color, defaulting to 'on review' if status is missing
-          const status = job.status || 'on review';
-          const statusColor = status === 'approved' ? 'bg-green-100 text-green-700' :
-                              status === 'rejected' ? 'bg-red-100 text-red-700' :
-                              'bg-yellow-100 text-yellow-700'; // Default for 'on review'
-
-          const jobCard = `
-            <div class="p-4 rounded-xl bg-white shadow-md border border-gray-200">
-              <div class="flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-blue-900">${job.title || 'Untitled Job'}</h3>
-                <span class="px-2 py-1 rounded-full text-xs font-bold ${statusColor}">
-                  ${status.charAt(0).toUpperCase() + status.slice(1)}
-                </span>
-              </div>
-
-              <div class="grid grid-cols-2 gap-4 text-sm text-gray-700 mt-4">
-                <div><span class="font-semibold">Cost:</span> ₦${job.total || 0}</div>
-                <div><span class="font-semibold">Worker Earn:</span> ₦${job.workerEarn || job.workerPay || 0}</div>
-                <div><span class="font-semibold">Completed:</span> ${job.completed || 0}/${job.numWorkers || 0}</div>
-                <div><span class="font-semibold">Date:</span> ${job.postedAt?.toDate().toLocaleDateString() || '—'}</div>
-              </div>
-
-              <div class="mt-4">
-                <!-- Pass both job ID and type to checkJobDetails for specific handling -->
-                <button onclick="checkJobDetails('${job.id}', '${job.type}')" class="w-full py-2 px-4 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700 transition">
-                  View Details
-                </button>
-              </div>
-            </div>
-          `;
-          jobList.innerHTML += jobCard;
-        });
-
-      } catch (err) {
-        console.error("🔥 Error loading jobs:", err);
-        jobList.innerHTML = '<p class="text-center text-red-500">Failed to load jobs. Please try again later.</p>';
-      }
-    } else {
-      // User is not logged in
-      console.log("No user logged in. Displaying login message.");
+    if (!user) {
       jobList.innerHTML = '<p class="text-center text-gray-500">Please log in to see your posted jobs.</p>';
+      return;
+    }
+
+    const uid = user.uid;
+    try {
+      const allJobs = [];
+
+      // Tasks
+      const tasksSnap = await firebase.firestore()
+        .collection("tasks").where("postedBy.uid", "==", uid).orderBy("postedAt", "desc").get();
+      for (const doc of tasksSnap.docs) {
+        const job = { ...doc.data(), id: doc.id, type: "task" };
+        job.completed = await getCompletedCount("task_submissions", doc.id);
+        allJobs.push(job);
+      }
+
+      // Affiliates
+      const affiliatesSnap = await firebase.firestore()
+        .collection("affiliateJobs").where("postedBy.uid", "==", uid).orderBy("postedAt", "desc").get();
+      for (const doc of affiliatesSnap.docs) {
+        const job = { ...doc.data(), id: doc.id, type: "affiliate" };
+        job.completed = await getCompletedCount("affiliate_submissions", doc.id);
+        allJobs.push(job);
+      }
+
+      if (!allJobs.length) {
+        jobList.innerHTML = '<p class="text-center text-gray-500">You haven\'t posted any jobs yet.</p>';
+        return;
+      }
+
+      allJobs.sort((a, b) => (b.postedAt?.toMillis?.() || 0) - (a.postedAt?.toMillis?.() || 0));
+
+      jobList.innerHTML = allJobs.map(job => renderJobCard(job)).join("");
+
+    } catch (err) {
+      console.error("🔥 Error loading jobs:", err);
+      jobList.innerHTML = '<p class="text-center text-red-500">Failed to load jobs. Please try again later.</p>';
     }
   });
 }
 
-// Call the main function to fetch and display jobs once the DOM is fully loaded
-document.addEventListener('DOMContentLoaded', fetchAndDisplayUserJobs);
-
-// Define your checkJobDetails function globally so it can be called from HTML
-// You'll want to implement the actual details display logic here.
-function checkJobDetails(jobId, jobType) {
-    console.log(`Clicked View Details for Job ID: ${jobId}, Type: ${jobType}`);
-    // Example: You might redirect to a job details page:
-    // window.location.href = `/job_details.html?id=${jobId}&type=${jobType}`;
-    // Or open a modal with more info.
-    alert(`Showing details for ${jobType === 'task' ? 'Task' : 'Affiliate Job'} ID: ${jobId}`);
+// === Fetch Completed Submissions ===
+async function getCompletedCount(collection, jobId) {
+  const snap = await firebase.firestore().collection(collection).where("jobId", "==", jobId).get();
+  return snap.size;
 }
 
-// --- End of Corrected MY JOB POST FUNCTION ---
+// === Render Job Card ===
+function renderJobCard(job) {
+  const status = job.status || "on review";
+  const statusColor = status === "approved" ? "bg-green-100 text-green-700"
+                   : status === "rejected" ? "bg-red-100 text-red-700"
+                   : "bg-yellow-100 text-yellow-700";
+
+  const jobTypeLabel = job.type === "task" ? "Task" : "Affiliate";
+  const logo = job.type === "affiliate" ? job.campaignLogoURL : job.screenshotURL;
+
+  return `
+    <div class="p-5 rounded-2xl bg-white shadow-md border border-gray-200 hover:shadow-lg transition">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-semibold text-blue-900">${job.title || "Untitled Job"}</h3>
+        <span class="px-3 py-1 rounded-full text-xs font-bold ${statusColor}">
+          ${status.charAt(0).toUpperCase() + status.slice(1)}
+        </span>
+      </div>
+
+      <div class="flex items-center gap-4 mt-3">
+        ${logo ? `<img src="${logo}" class="w-14 h-14 rounded-lg object-cover border" />` : ""}
+        <div>
+          <p class="text-sm text-gray-500">${jobTypeLabel} • ${job.category || "Uncategorized"}</p>
+          <p class="text-sm text-gray-700"><span class="font-semibold">Workers:</span> ${job.completed || 0}/${job.numWorkers || 0}</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 text-sm text-gray-700 mt-3">
+        <div><span class="font-semibold">Cost:</span> ₦${job.total || 0}</div>
+        <div><span class="font-semibold">Worker Pay:</span> ₦${job.workerEarn || job.workerPay || 0}</div>
+        <div><span class="font-semibold">Posted:</span> ${job.postedAt?.toDate().toLocaleDateString() || "—"}</div>
+      </div>
+
+      <div class="mt-4">
+        <button onclick="checkJobDetails('${job.id}', '${job.type}')" 
+          class="w-full py-2 px-4 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700 transition">
+          View Details
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+// === Open Job Details Modal ===
+async function checkJobDetails(jobId, jobType) {
+  const collection = jobType === "task" ? "tasks" : "affiliateJobs";
+  const doc = await firebase.firestore().collection(collection).doc(jobId).get();
+  if (!doc.exists) return;
+
+  const job = doc.data();
+  job.id = doc.id;
+  job.type = jobType;
+  job.completed = await getCompletedCount(
+    jobType === "task" ? "task_submissions" : "affiliate_submissions",
+    job.id
+  );
+
+  const progress = job.numWorkers ? Math.round((job.completed / job.numWorkers) * 100) : 0;
+
+  // Build modal content
+  let content = `
+    ${job.campaignLogoURL || job.screenshotURL ? `<img src="${job.campaignLogoURL || job.screenshotURL}" class="w-full h-48 object-cover rounded-xl" />` : ""}
+    <h4 class="text-lg font-bold text-blue-900 mt-3">${job.title || "Untitled Job"}</h4>
+    <p class="text-gray-600 text-sm">${job.category || "Uncategorized"}</p>
+
+    <div class="mt-3 grid grid-cols-2 gap-4 text-sm text-gray-700">
+      <div><span class="font-semibold">Cost:</span> ₦${job.total || 0}</div>
+      <div><span class="font-semibold">Worker Pay:</span> ₦${job.workerEarn || job.workerPay || 0}</div>
+      <div><span class="font-semibold">Completed:</span> ${job.completed}/${job.numWorkers || 0}</div>
+      <div><span class="font-semibold">Posted:</span> ${job.postedAt?.toDate().toLocaleString() || "—"}</div>
+    </div>
+
+    <div class="mt-3">
+      <div class="w-full bg-gray-200 rounded-full h-2">
+        <div class="bg-blue-600 h-2 rounded-full" style="width: ${progress}%"></div>
+      </div>
+      <p class="text-xs text-gray-500 mt-1">${progress}% completed</p>
+    </div>
+  `;
+
+  // Conditional fields
+  if (jobType === "affiliate") {
+    content += `
+      <div class="mt-4">
+        <p><span class="font-semibold">Target Link:</span> <a href="${job.targetLink || "#"}" class="text-blue-600 underline">${job.targetLink || "—"}</a></p>
+        <p><span class="font-semibold">Proof Required:</span> ${job.proofRequired || "—"}</p>
+      </div>
+    `;
+  } else {
+    content += `
+      <div class="mt-4">
+        <p><span class="font-semibold">Description:</span> ${job.description || "—"}</p>
+        <p><span class="font-semibold">Proof:</span> ${job.proof || "—"}</p>
+      </div>
+    `;
+  }
+
+  document.getElementById("modalTitle").textContent = jobType === "task" ? "Task Details" : "Affiliate Job Details";
+  document.getElementById("modalContent").innerHTML = content;
+  document.getElementById("jobDetailsModal").classList.remove("hidden");
+}
+
+// === Close Modal ===
+function closeJobDetails() {
+  document.getElementById("jobDetailsModal").classList.add("hidden");
+}
+
+document.addEventListener("DOMContentLoaded", fetchAndDisplayUserJobs);
+
+
+
+
+
+
+
 
 
 
@@ -6914,6 +6961,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
