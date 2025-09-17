@@ -3836,65 +3836,52 @@
 
 
 
-
-<!-- ✅ Daily Check-In Screen -->
-<div id="checkin-screen"   
-     class="tab-section hidden min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] p-6 text-white">
-
-  <!-- Header -->
-  <div class="flex items-center justify-between mb-8">
+<!-- ✅ Daily Check-In Screen -->  <div id="checkin-screen"   
+     class="tab-section hidden min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] p-6 text-white">    <!-- Header -->    <div class="flex items-center justify-between mb-8">  
     <h2 class="text-3xl font-extrabold bg-gradient-to-r from-blue-400 to-purple-500   
-               text-transparent bg-clip-text drop-shadow-lg tracking-tight">
-      Daily Check-In
-    </h2>
+               text-transparent bg-clip-text drop-shadow-lg tracking-tight">  
+      Daily Check-In  
+    </h2>  
     <button onclick="activateTab('dashboard')"  
       class="px-4 py-2 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-700   
              text-white shadow-lg hover:scale-105 hover:shadow-blue-500/30   
-             transition transform">
-      ← Back
-    </button>
-  </div>
+             transition transform">  
+      ← Back  
+    </button>  
+  </div>    <!-- Check-in Container -->    <div id="checkin-container" class="max-w-3xl mx-auto space-y-10">  <!-- Cards -->  
+<div id="checkin-cards"   
+     class="grid grid-cols-7 gap-4 sm:flex sm:space-x-4 sm:overflow-x-auto sm:pb-2">  
+  <!-- Cards will be injected by JS -->  
+</div>  
 
-  <!-- Check-in Container -->
-  <div id="checkin-container" class="max-w-3xl mx-auto space-y-10">
-
-    <!-- Cards -->
-    <div id="checkin-cards"   
-         class="grid grid-cols-7 gap-4 sm:flex sm:space-x-4 sm:overflow-x-auto sm:pb-2">
-      <!-- Cards will be injected by JS -->
-    </div>
-
-    <!-- Check-in Button -->
-    <div class="text-center">
-      <button id="checkin-btn"  
-        class="px-10 py-4 rounded-2xl relative overflow-hidden font-semibold shadow-xl  
-               bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-600  
-               hover:scale-105 hover:shadow-purple-500/30 transition transform  
-               before:absolute before:inset-0 before:bg-white/10   
-               before:rounded-2xl before:animate-pulse">
-        <span class="relative z-10">🚀 Check In</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- History Section -->
-  <div id="checkin-history" class="mt-12 max-w-2xl mx-auto">
-    <h3 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500   
-               text-transparent bg-clip-text mb-4">
-      Reward History
-    </h3>
-    <div id="history-list" class="space-y-4 text-sm"></div>
-  </div>
+<!-- Check-in Button -->  
+<div class="text-center">  
+  <button id="checkin-btn"  
+    class="px-10 py-4 rounded-2xl relative overflow-hidden font-semibold shadow-xl  
+           bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-600  
+           hover:scale-105 hover:shadow-purple-500/30 transition transform  
+           before:absolute before:inset-0 before:bg-white/10   
+           before:rounded-2xl before:animate-pulse">  
+    <span class="relative z-10">🚀 Check In</span>  
+  </button>  
 </div>
 
-<style>
-/* Futuristic entry animation */
-@keyframes slide-in {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-.animate-slide-in { animation: slide-in 0.6s ease-out forwards; }
+  </div>    <!-- History Section -->    <div id="checkin-history" class="mt-12 max-w-2xl mx-auto">  
+    <h3 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500   
+               text-transparent bg-clip-text mb-4">  
+      Reward History  
+    </h3>  
+    <div id="history-list" class="space-y-4 text-sm"></div>  
+  </div>  
+</div>  <style>  
+/* Futuristic entry animation */  
+@keyframes slide-in {  
+  from { transform: translateY(20px); opacity: 0; }  
+  to { transform: translateY(0); opacity: 1; }  
+}  
+.animate-slide-in { animation: slide-in 0.6s ease-out forwards; }  
 </style>
+
 
 
 
