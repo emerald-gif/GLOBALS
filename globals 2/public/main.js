@@ -6620,13 +6620,19 @@ try {
 
         const billsRef=db.collection('bill_submissions');
         const newBill=billsRef.doc();
-        tx.set(newBill,{  
+		  
+        const net = DATA_NETWORKS[network]; // ✅ get network info
+const planId = c?.dataset.planId || null;
+const planLabel = document.getElementById("confirm-data-plan")?.innerText || "";
+
+tx.set(newBill,{  
   userId: dataCurrentUser.uid,  
   type: 'data',  
-  networkCode: network,  
+  networkCode: network, // e.g. "01"
+  networkLabel: net?.label || "", // e.g. "MTN"
   phone,  
-  planId: c?.dataset.planId || null, // ✅ New: Plan ID
-  planLabel: document.getElementById("confirm-data-plan")?.innerText || "", // ✅ New: Plan Label
+  planId: planId, // e.g. "m3"
+  planLabel: planLabel, // e.g. "1GB - ₦500"
   amount,  
   status: 'submitted',  
   processed: false,  
@@ -7076,6 +7082,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
