@@ -6339,6 +6339,8 @@ try {
 
 
 
+// DATA FUNCTIONS
+
 
 (() => {
   // Expose globally
@@ -6618,15 +6620,18 @@ try {
 
         const billsRef=db.collection('bill_submissions');
         const newBill=billsRef.doc();
-        tx.set(newBill,{
-          userId:dataCurrentUser.uid,
-          type:'data',
-          networkCode:network,
-          phone, amount,
-          status:'submitted',
-          processed:false,
-          createdAt:firebase.firestore.FieldValue.serverTimestamp()
-        });
+        tx.set(newBill,{  
+  userId: dataCurrentUser.uid,  
+  type: 'data',  
+  networkCode: network,  
+  phone,  
+  planId: c?.dataset.planId || null, // ✅ New: Plan ID
+  planLabel: document.getElementById("confirm-data-plan")?.innerText || "", // ✅ New: Plan Label
+  amount,  
+  status: 'submitted',  
+  processed: false,  
+  createdAt: firebase.firestore.FieldValue.serverTimestamp()  
+});
       });
 
 
@@ -7071,6 +7076,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
