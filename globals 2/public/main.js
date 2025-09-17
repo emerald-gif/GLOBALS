@@ -5353,14 +5353,12 @@ auth.onAuthStateChanged(async user => {
 
 
 
-//PAYMENT
+
+                                                                       //PAYMENTfunction
 
 
-// -----------------------------
-// PAYMENT SECTION LOGIC
-// -----------------------------
 
-const paymentBalanceEl = document.getElementById("balance");
+
 const paymentTxListEl = document.getElementById("transactionList");
 const paymentTxFilterEl = document.getElementById("transactionFilter");
 
@@ -5402,7 +5400,7 @@ function paymentCardHtml(tx){
         </span>
       </div>
     </div>
-  </div>`;
+  </div>`;  
 }
 
 // ----------------------
@@ -5465,27 +5463,10 @@ function startPaymentListener(){
 }
 
 // ----------------------
-// Balance listener for Payment screen
-// ----------------------
-function startPaymentBalanceListener(){
-  const user=firebase.auth().currentUser;
-  if(!user || !paymentBalanceEl) return;
-
-  const ref=firebase.firestore().collection("users").doc(user.uid);
-  ref.onSnapshot(snap=>{
-    if(!snap.exists) return;
-    const val = Number(snap.data()?.balance)||0;
-    paymentBalanceEl.textContent = fmtNaira(val);
-    paymentBalanceEl.dataset.value=val;
-  });
-}
-
-// ----------------------
 // Init Payment section
 // ----------------------
 function initPaymentSection(){
   startPaymentListener();
-  startPaymentBalanceListener();
   paymentTxFilterEl?.addEventListener("change",applyPaymentFilter);
 }
 
@@ -6960,6 +6941,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
