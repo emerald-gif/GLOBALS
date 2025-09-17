@@ -71,21 +71,43 @@ app.post("/api/verify-account", async (req, res) => {
   }
 });
 
+
+
 /* =======================
-   WITHDRAWAL (with PIN)
+   WITHDRAWAL (with PIN + auth)
    ======================= */
 app.post("/api/request-withdrawal", async (req, res) => {
-  const { accNum, bankCode, account_name, amount, uid, pin } = req.body;
-
   try {
-    // 1. Check PIN
+    // 🔑 Get Firebase idToken from headers
+    const authHeader = req.headers.authorization || "";
+    const idToken = authHeader.startsWith("Bearer ")
+      ? authHeader.split("Bearer ")[1]
+      : null;
+
+    if (!idToken) {
+      return res.status(401).json({ status: "fail", message: "Missing ID token" });
+    }
+
+    let decoded;
+    try {
+      decoded = await admin.auth().verifyIdToken(idToken);
+    } catch (err) {
+      return res.status(401).json({ status: "fail", message: "Invalid ID token" });
+    }
+
+    const uid = decoded.uid; // ✅ Always use decoded uid
+    const { accNum, bankCode, account_name, amount, pin } = req.body;
+
     const userRef = dbAdmin.collection("users").doc(uid);
     const userSnap = await userRef.get();
+
     if (!userSnap.exists) {
       return res.status(400).json({ status: "fail", message: "User not found" });
     }
 
     const userData = userSnap.data();
+
+    // 🔑 PIN check
     if (!userData.pin) {
       return res.status(400).json({ status: "fail", message: "Set payment pin first" });
     }
@@ -98,7 +120,7 @@ app.post("/api/request-withdrawal", async (req, res) => {
       return res.status(400).json({ status: "fail", message: "Insufficient balance" });
     }
 
-    // 2. Create recipient
+    // 1️⃣ Create Paystack recipient
     const recipient = await axios.post("https://api.paystack.co/transferrecipient", {
       type: "nuban",
       name: account_name,
@@ -115,7 +137,7 @@ app.post("/api/request-withdrawal", async (req, res) => {
 
     const recipient_code = recipient.data.data.recipient_code;
 
-    // 3. Initiate transfer
+    // 2️⃣ Initiate transfer
     const transfer = await axios.post("https://api.paystack.co/transfer", {
       source: "balance",
       reason: "User Withdrawal",
@@ -126,20 +148,22 @@ app.post("/api/request-withdrawal", async (req, res) => {
     });
 
     if (transfer.data.status) {
-      // Deduct balance
+      // Deduct balance safely
       await userRef.update({
         balance: balance - amount
       });
-      res.json({ status: "success" });
+      return res.json({ status: "success" });
     } else {
-      res.json({ status: "fail", message: transfer.data.message });
+      return res.json({ status: "fail", message: transfer.data.message });
     }
 
   } catch (err) {
     console.error('initiate-transfer error', err.response?.data || err.message || err);
-    res.status(500).json({ status: "fail", error: "Transfer failed" });
+    return res.status(500).json({ status: "fail", error: "Transfer failed" });
   }
 });
+
+
 
 /* =======================
    DEPOSIT - verify payment
@@ -248,4 +272,5 @@ app.get("*", (req, res) => {
 /* Start server */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
 
