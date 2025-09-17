@@ -4342,6 +4342,11 @@ async function processReferralCreditTx(referredUserDocId, referrerUid) {
 
 
                                                 // POST A JOB FUNCTION Subcategory mapping
+
+
+
+
+// ---- Keep your subcategoryOptions as-is ----
 const subcategoryOptions = {
   whatsapp: {
     "WhatsApp/telegram group join": 15,
@@ -4363,15 +4368,13 @@ const subcategoryOptions = {
     "Use sound": 20,
     "Share post": 25
   },
-  
   app: {
-	 "Download Only": 50,
+    "Download Only": 50,
     "Download + Install": 80,
     "Download + Register": 100,
     "Download + Register + KYC": 150,
     "Download + Install + Word review": 150
   },
-	  
   youtube: {
     "Like": 6,
     "Comment": 8,
@@ -4421,15 +4424,17 @@ function populateSubcategories() {
   if (subcategoryOptions[category]) {
     for (const [key, value] of Object.entries(subcategoryOptions[category])) {
       const opt = document.createElement("option");
-      opt.value = value;
+      // store numeric price in value (base 10)
+      opt.value = String(value);
       opt.textContent = `${key} (₦${value})`;
       subcategory.appendChild(opt);
     }
   }
 }
 
+// when user chooses a subcategory we set the workerEarn and defaultEarn
 function updateWorkerEarn() {
-  const subVal = parseInt(document.getElementById("subcategory").value);
+  const subVal = parseInt(document.getElementById("subcategory").value, 10);
   if (!isNaN(subVal)) {
     document.getElementById("workerEarn").value = subVal;
     defaultEarn = subVal;
@@ -4438,9 +4443,9 @@ function updateWorkerEarn() {
 }
 
 function validateWorkerEarn() {
-  const inputVal = parseInt(document.getElementById("workerEarn").value);
+  const inputVal = parseInt(document.getElementById("workerEarn").value, 10);
   const warning = document.getElementById("earnWarning");
-  if (inputVal < defaultEarn) {
+  if (!isNaN(inputVal) && inputVal < defaultEarn) {
     warning.classList.remove("hidden");
   } else {
     warning.classList.add("hidden");
@@ -4448,65 +4453,95 @@ function validateWorkerEarn() {
   }
 }
 
-function limitProofFiles() {
+// fix: accept event param and use it
+function limitProofFiles(e) {
   const checkboxes = document.querySelectorAll("input[name='proofFile']");
   const checked = Array.from(checkboxes).filter(i => i.checked);
   if (checked.length > 3) {
     alert("You can only select up to 3 proof files");
-    event.target.checked = false;
+    if (e && e.target) e.target.checked = false;
   }
 }
 
 function updateTotal() {
-  const earn = parseInt(document.getElementById("workerEarn").value);
-  const count = parseInt(document.getElementById("workerCount").value);
+  const earn = Number(document.getElementById("workerEarn").value) || 0;
+  const count = Number(document.getElementById("workerCount").value) || 0;
   const premium = document.getElementById("makePremium").checked ? 100 : 0;
   const approvalFee = 200;
-  if (!isNaN(earn) && !isNaN(count)) {
-    const total = (earn * count) + premium + approvalFee;
-    document.getElementById("totalCost").textContent = `₦${total}`;
-  }
+  const total = (earn * count) + premium + approvalFee;
+  document.getElementById("totalCost").textContent = `₦${total}`;
 }
 
+// ----- Fix for missing functions that caused console errors -----
+function switchTab(sectionId) {
+  // if you already have activateTab elsewhere prefer that
+  if (typeof activateTab === "function") {
+    try { activateTab(sectionId); } catch (err) { console.warn('activateTab call failed, falling back', err); }
+    return;
+  }
+  // fallback simple tab switch
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
+  const target = document.getElementById(sectionId);
+  if (target) target.classList.remove('hidden');
+}
+
+function activeTab(el) {
+  if (!el) return;
+  // find a sensible container (closest ul) and only toggle within it
+  const container = el.closest('ul') || document;
+  container.querySelectorAll('a').forEach(a => {
+    a.classList.remove('bg-green-50', 'text-green-600');
+  });
+  el.classList.add('bg-green-50', 'text-green-600');
+}
+
+// ----- submitTask: safer + clearer validation -----
 async function submitTask() {
-  const category = document.getElementById("category").value;
-  const subCategory = document.getElementById("subcategory").value;
-  const taskTitle = document.getElementById("taskTitle").value.trim();
-  const description = document.querySelector("textarea[placeholder*='Describe']").value.trim();
-  const proof = document.querySelector("textarea[placeholder*='Write out']").value.trim();
-  const screenshotExample = document.querySelector("input[type='file']").files[0];
-  const numWorkers = parseInt(document.getElementById("workerCount").value);
-  const workerEarn = parseInt(document.getElementById("workerEarn").value);
-  const makePremium = document.getElementById("makePremium")?.checked || false;
-  const proofFileCount = parseInt(document.getElementById("affiliateProofFileCount").value || "1");
-  
-  
-
-  // Validation
-  if (!taskTitle || !category || !subCategory || !description || !proof || !screenshotExample || !numWorkers || !workerEarn) {
-    alert("⚠️ Please fill in all required fields.");
-    return;
-  }
-
-  const user = auth.currentUser;
-  if (!user) {
-    alert("⚠️ You must be logged in to post a job.");
-    return;
-  }
-
   try {
-    // Fetch user profile
+    const category = document.getElementById("category")?.value || "";
+    const subCategory = document.getElementById("subcategory")?.value || "";
+    const taskTitle = document.getElementById("taskTitle")?.value.trim() || "";
+    const description = document.getElementById("description")?.value.trim() || "";
+    const proof = document.getElementById("proof")?.value.trim() || "";
+    const screenshotInput = document.getElementById("screenshotInput");
+    const screenshotExample = screenshotInput && screenshotInput.files ? screenshotInput.files[0] : null;
+    const numWorkers = parseInt(document.getElementById("workerCount")?.value, 10) || 0;
+    const workerEarn = parseInt(document.getElementById("workerEarn")?.value, 10) || 0;
+    const makePremium = document.getElementById("makePremium")?.checked || false;
+    const proofFileCountEl = document.getElementById("proofFileCount");
+    const proofFileCount = proofFileCountEl ? parseInt(proofFileCountEl.value, 10) || 1 : 1;
+
+    const missing = [];
+    if (!taskTitle) missing.push("Task title");
+    if (!category) missing.push("Category");
+    if (!subCategory) missing.push("Subcategory");
+    if (!description) missing.push("Description");
+    if (!proof) missing.push("Proof instructions");
+    if (!screenshotExample) missing.push("Screenshot example (upload)");
+    if (!numWorkers || numWorkers < 1) missing.push("Number of workers");
+    if (!workerEarn || workerEarn < 1) missing.push("Worker earn");
+
+    if (missing.length) {
+      alert(`⚠️ Please fill required fields: ${missing.join(', ')}`);
+      return;
+    }
+
+    // firebase auth guard
+    if (typeof auth === 'undefined' || !auth.currentUser) {
+      alert("⚠️ You must be logged in to post a job.");
+      return;
+    }
+
+    // fetch user profile
+    const user = auth.currentUser;
     const userDocRef = db.collection("users").doc(user.uid);
     const userDoc = await userDocRef.get();
-
     if (!userDoc.exists) {
       alert("⚠️ User profile not found.");
       return;
     }
-
     const userProfile = userDoc.data();
 
-    // Calculate costs
     const reviewFee = 200;
     const premiumFee = makePremium ? 100 : 0;
     const total = (numWorkers * workerEarn) + reviewFee + premiumFee;
@@ -4517,19 +4552,22 @@ async function submitTask() {
       return;
     }
 
-    // 📤 Upload logo if provided (uses your uploadToCloudinary helper)
-        let screenshotURL = "";
-        if (screenshotExample) {
-            try {
-                screenshotURL = await uploadToCloudinary(screenshotExample);
-            } catch (err) {
-                console.error("Screenshot upload failed:", err);
-                alert("❌ Screenshot upload failed. Try again.");
-                return;
-            }
+    // Upload screenshot (if your uploadToCloudinary exists)
+    let screenshotURL = "";
+    if (screenshotExample) {
+      try {
+        if (typeof uploadToCloudinary !== "function") {
+          console.warn("uploadToCloudinary helper not found — skipping upload (add your uploader).");
+        } else {
+          screenshotURL = await uploadToCloudinary(screenshotExample);
         }
+      } catch (err) {
+        console.error("Screenshot upload failed:", err);
+        alert("❌ Screenshot upload failed. Try again.");
+        return;
+      }
+    }
 
-    // Prepare job data
     const jobData = {
       title: taskTitle,
       category,
@@ -4541,8 +4579,8 @@ async function submitTask() {
       workerEarn,
       makePremium,
       total,
-	  proofFileCount,
-	  status: "on review",
+      proofFileCount,
+      status: "on review",
       postedAt: firebase.firestore.FieldValue.serverTimestamp(),
       postedBy: {
         uid: user.uid,
@@ -4553,7 +4591,7 @@ async function submitTask() {
       }
     };
 
-    // Submit job & deduct balance
+    // Transaction: deduct balance + create task
     await db.runTransaction(async (transaction) => {
       transaction.update(userDocRef, { balance: currentBalance - total });
       const taskRef = db.collection("tasks").doc();
@@ -4561,15 +4599,14 @@ async function submitTask() {
     });
 
     alert("✅ Task successfully posted!");
+    // optionally reset form here
+    updateTotal();
+
   } catch (err) {
     console.error("🔥 Error posting task:", err);
     alert("❌ Something went wrong. Try again later.");
   }
 }
-
-
-
-
 
 
 
@@ -6877,6 +6914,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
