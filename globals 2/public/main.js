@@ -4786,60 +4786,93 @@ async function submitAffiliateJob() {
 
 
 // === Fetch and Display Jobs (same as before) ===
-async function fetchAndDisplayUserJobs() {
+
+
+
+
+// === Live Fetch and Display Jobs ===
+function fetchAndDisplayUserJobs() {
   const jobList = document.getElementById("jobList");
   jobList.innerHTML = "<p class='text-center text-gray-500'>Loading your jobs...</p>";
 
-  firebase.auth().onAuthStateChanged(async (user) => {
+  firebase.auth().onAuthStateChanged((user) => {
     if (!user) {
       jobList.innerHTML = '<p class="text-center text-gray-500">Please log in to see your posted jobs.</p>';
       return;
     }
 
     const uid = user.uid;
-    try {
-      const allJobs = [];
+    let allJobs = [];
 
-      // Tasks
-      const tasksSnap = await firebase.firestore()
-        .collection("tasks").where("postedBy.uid", "==", uid).orderBy("postedAt", "desc").get();
-      for (const doc of tasksSnap.docs) {
-        const job = { ...doc.data(), id: doc.id, type: "task" };
-        job.completed = await getCompletedCount("task_submissions", doc.id);
-        allJobs.push(job);
-      }
-
-      // Affiliates
-      const affiliatesSnap = await firebase.firestore()
-        .collection("affiliateJobs").where("postedBy.uid", "==", uid).orderBy("postedAt", "desc").get();
-      for (const doc of affiliatesSnap.docs) {
-        const job = { ...doc.data(), id: doc.id, type: "affiliate" };
-        job.completed = await getCompletedCount("affiliate_submissions", doc.id);
-        allJobs.push(job);
-      }
-
+    // Helper to render whenever jobs change
+    function renderJobs() {
       if (!allJobs.length) {
         jobList.innerHTML = '<p class="text-center text-gray-500">You haven\'t posted any jobs yet.</p>';
         return;
       }
 
       allJobs.sort((a, b) => (b.postedAt?.toMillis?.() || 0) - (a.postedAt?.toMillis?.() || 0));
-
       jobList.innerHTML = allJobs.map(job => renderJobCard(job)).join("");
+    }
 
-    } catch (err) {
-      console.error("🔥 Error loading jobs:", err);
-      jobList.innerHTML = '<p class="text-center text-red-500">Failed to load jobs. Please try again later.</p>';
+    // --- 🔹 Listen to Tasks ---
+    firebase.firestore().collection("tasks")
+      .where("postedBy.uid", "==", uid)
+      .orderBy("postedAt", "desc")
+      .onSnapshot(snapshot => {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === "added" || change.type === "modified") {
+            const job = { ...change.doc.data(), id: change.doc.id, type: "task" };
+            watchCompletedCount("task_submissions", job);
+            upsertJob(job);
+          } else if (change.type === "removed") {
+            allJobs = allJobs.filter(j => j.id !== change.doc.id);
+          }
+        });
+        renderJobs();
+      });
+
+    // --- 🔹 Listen to Affiliates ---
+    firebase.firestore().collection("affiliateJobs")
+      .where("postedBy.uid", "==", uid)
+      .orderBy("postedAt", "desc")
+      .onSnapshot(snapshot => {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === "added" || change.type === "modified") {
+            const job = { ...change.doc.data(), id: change.doc.id, type: "affiliate" };
+            watchCompletedCount("affiliate_submissions", job);
+            upsertJob(job);
+          } else if (change.type === "removed") {
+            allJobs = allJobs.filter(j => j.id !== change.doc.id);
+          }
+        });
+        renderJobs();
+      });
+
+    // --- 🔹 Keep array updated ---
+    function upsertJob(job) {
+      const index = allJobs.findIndex(j => j.id === job.id && j.type === job.type);
+      if (index > -1) {
+        allJobs[index] = job;
+      } else {
+        allJobs.push(job);
+      }
+    }
+
+    // --- 🔹 Watch Completed Submissions live ---
+    function watchCompletedCount(collection, job) {
+      firebase.firestore().collection(collection)
+        .where("jobId", "==", job.id)
+        .onSnapshot(subSnap => {
+          job.completed = subSnap.size;
+          upsertJob(job);
+          renderJobs();
+        });
     }
   });
 }
 
-async function getCompletedCount(collection, jobId) {
-  const snap = await firebase.firestore().collection(collection).where("jobId", "==", jobId).get();
-  return snap.size;
-}
-
-// === Job Card ===
+// === Job Card (same as before) ===
 function renderJobCard(job) {
   const status = job.status || "on review";
   const statusColor = status === "approved" ? "bg-green-100 text-green-700"
@@ -4882,75 +4915,10 @@ function renderJobCard(job) {
   `;
 }
 
-// === Job Details Page ===
-async function checkJobDetails(jobId, jobType) {
-  const collection = jobType === "task" ? "tasks" : "affiliateJobs";
-  const doc = await firebase.firestore().collection(collection).doc(jobId).get();
-  if (!doc.exists) return;
-
-  const job = doc.data();
-  job.id = doc.id;
-  job.type = jobType;
-  job.completed = await getCompletedCount(
-    jobType === "task" ? "task_submissions" : "affiliate_submissions",
-    job.id
-  );
-
-  const progress = job.numWorkers ? Math.round((job.completed / job.numWorkers) * 100) : 0;
-
-  // Build job details page
-  let content = `
-    ${job.campaignLogoURL || job.screenshotURL ? `<img src="${job.campaignLogoURL || job.screenshotURL}" class="w-full h-48 object-cover rounded-xl" />` : ""}
-    <h4 class="text-lg font-bold text-blue-900 mt-3">${job.title || "Untitled Job"}</h4>
-    <p class="text-gray-600 text-sm">${job.category || "Uncategorized"}</p>
-
-    <div class="mt-3 grid grid-cols-2 gap-4 text-sm text-gray-700">
-      <div><span class="font-semibold">Cost:</span> ₦${job.total || 0}</div>
-      <div><span class="font-semibold">Worker Pay:</span> ₦${job.workerEarn || job.workerPay || 0}</div>
-      <div><span class="font-semibold">Completed:</span> ${job.completed}/${job.numWorkers || 0}</div>
-      <div><span class="font-semibold">Posted:</span> ${job.postedAt?.toDate().toLocaleString() || "—"}</div>
-    </div>
-
-    <div class="mt-3">
-      <div class="w-full bg-gray-200 rounded-full h-2">
-        <div class="bg-blue-600 h-2 rounded-full" style="width: ${progress}%"></div>
-      </div>
-      <p class="text-xs text-gray-500 mt-1">${progress}% completed</p>
-    </div>
-  `;
-
-  if (jobType === "affiliate") {
-    content += `
-      <div class="mt-4 space-y-2">
-        <p><span class="font-semibold">Target Link:</span> <a href="${job.targetLink || "#"}" class="text-blue-600 underline">${job.targetLink || "—"}</a></p>
-        <p><span class="font-semibold">Proof Required:</span> ${job.proofRequired || "—"}</p>
-      </div>
-    `;
-  } else {
-    content += `
-      <div class="mt-4 space-y-2">
-        <p><span class="font-semibold">Description:</span> ${job.description || "—"}</p>
-        <p><span class="font-semibold">Proof:</span> ${job.proof || "—"}</p>
-      </div>
-    `;
-  }
-
-  document.getElementById("jobDetailsContent").innerHTML = content;
-
-  // Show details screen
-  activateTab("jobDetailsSection");
-}
-
-// === Go Back to Jobs List ===
-function goBackToJobs() {
-  activateTab("myJobsSection");
-}
+// === Job Details Page (reuse the one we built) ===
+// ... keep your checkJobDetails + goBackToJobs here ...
 
 document.addEventListener("DOMContentLoaded", fetchAndDisplayUserJobs);
-
-
-
-
 
 
 
@@ -6941,6 +6909,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
