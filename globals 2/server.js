@@ -74,7 +74,7 @@ app.post("/api/verify-account", async (req, res) => {
 /* =======================
    WITHDRAWAL (with PIN)
    ======================= */
-app.post("/api/initiate-transfer", async (req, res) => {
+app.post("/api/request-withdrawal", async (req, res) => {
   const { accNum, bankCode, account_name, amount, uid, pin } = req.body;
 
   try {
@@ -248,3 +248,4 @@ app.get("*", (req, res) => {
 /* Start server */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
