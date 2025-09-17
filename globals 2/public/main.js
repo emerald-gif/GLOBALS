@@ -4789,136 +4789,93 @@ async function submitAffiliateJob() {
 
 
 
+let activeJobUnsubscribe = null;
+let activeSubmissionsUnsubscribe = null;
 
-// === Live Fetch and Display Jobs ===
-function fetchAndDisplayUserJobs() {
-  const jobList = document.getElementById("jobList");
-  jobList.innerHTML = "<p class='text-center text-gray-500'>Loading your jobs...</p>";
+// === View Job Details ===
+function checkJobDetails(jobId, jobType) {
+  const jobDetails = document.getElementById("jobDetailsSection");
+  const jobList = document.getElementById("myJobsSection");
 
-  firebase.auth().onAuthStateChanged((user) => {
-    if (!user) {
-      jobList.innerHTML = '<p class="text-center text-gray-500">Please log in to see your posted jobs.</p>';
+  // switch views
+  jobList.classList.add("hidden");
+  jobDetails.classList.remove("hidden");
+
+  const jobDetailsContent = document.getElementById("jobDetailsContent");
+  jobDetailsContent.innerHTML = "<p class='text-center text-gray-500'>Loading details...</p>";
+
+  // cleanup old listeners
+  if (activeJobUnsubscribe) activeJobUnsubscribe();
+  if (activeSubmissionsUnsubscribe) activeSubmissionsUnsubscribe();
+
+  // reference
+  const jobRef = firebase.firestore()
+    .collection(jobType === "task" ? "tasks" : "affiliateJobs")
+    .doc(jobId);
+
+  // live job listener
+  activeJobUnsubscribe = jobRef.onSnapshot(doc => {
+    if (!doc.exists) {
+      jobDetailsContent.innerHTML = "<p class='text-center text-red-500'>Job not found.</p>";
       return;
     }
 
-    const uid = user.uid;
-    let allJobs = [];
+    const job = { ...doc.data(), id: doc.id, type: jobType };
 
-    // Helper to render whenever jobs change
-    function renderJobs() {
-      if (!allJobs.length) {
-        jobList.innerHTML = '<p class="text-center text-gray-500">You haven\'t posted any jobs yet.</p>';
-        return;
-      }
+    // live submissions listener
+    activeSubmissionsUnsubscribe = firebase.firestore()
+      .collection(jobType === "task" ? "task_submissions" : "affiliate_submissions")
+      .where("jobId", "==", job.id)
+      .onSnapshot(subSnap => {
+        job.completed = subSnap.size;
 
-      allJobs.sort((a, b) => (b.postedAt?.toMillis?.() || 0) - (a.postedAt?.toMillis?.() || 0));
-      jobList.innerHTML = allJobs.map(job => renderJobCard(job)).join("");
-    }
+        jobDetailsContent.innerHTML = `
+          <div class="p-6 bg-white rounded-2xl shadow-md border border-gray-200">
+            <h2 class="text-xl font-bold text-blue-900 mb-3">${job.title}</h2>
+            <p class="text-sm text-gray-500 mb-2">Type: <span class="font-semibold">${job.type === "task" ? "Task Job" : "Affiliate Job"}</span></p>
 
-    // --- 🔹 Listen to Tasks ---
-    firebase.firestore().collection("tasks")
-      .where("postedBy.uid", "==", uid)
-      .orderBy("postedAt", "desc")
-      .onSnapshot(snapshot => {
-        snapshot.docChanges().forEach(change => {
-          if (change.type === "added" || change.type === "modified") {
-            const job = { ...change.doc.data(), id: change.doc.id, type: "task" };
-            watchCompletedCount("task_submissions", job);
-            upsertJob(job);
-          } else if (change.type === "removed") {
-            allJobs = allJobs.filter(j => j.id !== change.doc.id);
-          }
-        });
-        renderJobs();
+            <div class="grid grid-cols-2 gap-4 text-sm text-gray-700 mb-4">
+              <div><span class="font-semibold">Status:</span> ${job.status || "on review"}</div>
+              <div><span class="font-semibold">Category:</span> ${job.category || "Uncategorized"}</div>
+              <div><span class="font-semibold">Workers:</span> ${job.completed}/${job.numWorkers || 0}</div>
+              <div><span class="font-semibold">Worker Pay:</span> ₦${job.workerEarn || job.workerPay || 0}</div>
+              <div><span class="font-semibold">Total Cost:</span> ₦${job.total || 0}</div>
+              <div><span class="font-semibold">Posted:</span> ${job.postedAt?.toDate().toLocaleDateString() || "—"}</div>
+            </div>
+
+            ${job.description ? `<p class="text-gray-700 mb-4">${job.description}</p>` : ""}
+
+            ${job.screenshotURL || job.campaignLogoURL ? `
+              <img src="${job.screenshotURL || job.campaignLogoURL}" 
+                alt="Preview" class="w-full h-56 object-cover rounded-xl border mb-4"/>` : ""}
+
+            ${job.type === "affiliate" && job.targetLink ? `
+              <p class="text-sm text-blue-600"><span class="font-semibold">Target Link:</span> <a href="${job.targetLink}" target="_blank" class="underline">${job.targetLink}</a></p>` : ""}
+
+            <div class="w-full bg-gray-200 rounded-full h-3 mb-4">
+              <div class="bg-green-500 h-3 rounded-full transition-all" 
+                style="width: ${(job.completed / (job.numWorkers || 1)) * 100}%"></div>
+            </div>
+
+            <button onclick="goBackToJobs()" 
+              class="w-full py-2 px-4 rounded-lg bg-gray-700 text-white font-bold hover:bg-gray-800 transition">
+              Back to Jobs
+            </button>
+          </div>
+        `;
       });
-
-    // --- 🔹 Listen to Affiliates ---
-    firebase.firestore().collection("affiliateJobs")
-      .where("postedBy.uid", "==", uid)
-      .orderBy("postedAt", "desc")
-      .onSnapshot(snapshot => {
-        snapshot.docChanges().forEach(change => {
-          if (change.type === "added" || change.type === "modified") {
-            const job = { ...change.doc.data(), id: change.doc.id, type: "affiliate" };
-            watchCompletedCount("affiliate_submissions", job);
-            upsertJob(job);
-          } else if (change.type === "removed") {
-            allJobs = allJobs.filter(j => j.id !== change.doc.id);
-          }
-        });
-        renderJobs();
-      });
-
-    // --- 🔹 Keep array updated ---
-    function upsertJob(job) {
-      const index = allJobs.findIndex(j => j.id === job.id && j.type === job.type);
-      if (index > -1) {
-        allJobs[index] = job;
-      } else {
-        allJobs.push(job);
-      }
-    }
-
-    // --- 🔹 Watch Completed Submissions live ---
-    function watchCompletedCount(collection, job) {
-      firebase.firestore().collection(collection)
-        .where("jobId", "==", job.id)
-        .onSnapshot(subSnap => {
-          job.completed = subSnap.size;
-          upsertJob(job);
-          renderJobs();
-        });
-    }
   });
 }
 
-// === Job Card (same as before) ===
-function renderJobCard(job) {
-  const status = job.status || "on review";
-  const statusColor = status === "approved" ? "bg-green-100 text-green-700"
-                   : status === "rejected" ? "bg-red-100 text-red-700"
-                   : "bg-yellow-100 text-yellow-700";
+// === Back Function ===
+function goBackToJobs() {
+  document.getElementById("jobDetailsSection").classList.add("hidden");
+  document.getElementById("myJobsSection").classList.remove("hidden");
 
-  const jobTypeLabel = job.type === "task" ? "Task" : "Affiliate";
-  const logo = job.type === "affiliate" ? job.campaignLogoURL : job.screenshotURL;
-
-  return `
-    <div class="p-5 rounded-2xl bg-white shadow-md border border-gray-200 hover:shadow-lg transition">
-      <div class="flex justify-between items-center">
-        <h3 class="text-lg font-semibold text-blue-900">${job.title || "Untitled Job"}</h3>
-        <span class="px-3 py-1 rounded-full text-xs font-bold ${statusColor}">
-          ${status.charAt(0).toUpperCase() + status.slice(1)}
-        </span>
-      </div>
-
-      <div class="flex items-center gap-4 mt-3">
-        ${logo ? `<img src="${logo}" class="w-14 h-14 rounded-lg object-cover border" />` : ""}
-        <div>
-          <p class="text-sm text-gray-500">${jobTypeLabel} • ${job.category || "Uncategorized"}</p>
-          <p class="text-sm text-gray-700"><span class="font-semibold">Workers:</span> ${job.completed || 0}/${job.numWorkers || 0}</p>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-4 text-sm text-gray-700 mt-3">
-        <div><span class="font-semibold">Cost:</span> ₦${job.total || 0}</div>
-        <div><span class="font-semibold">Worker Pay:</span> ₦${job.workerEarn || job.workerPay || 0}</div>
-        <div><span class="font-semibold">Posted:</span> ${job.postedAt?.toDate().toLocaleDateString() || "—"}</div>
-      </div>
-
-      <div class="mt-4">
-        <button onclick="checkJobDetails('${job.id}', '${job.type}')" 
-          class="w-full py-2 px-4 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700 transition">
-          View Details
-        </button>
-      </div>
-    </div>
-  `;
+  if (activeJobUnsubscribe) { activeJobUnsubscribe(); activeJobUnsubscribe = null; }
+  if (activeSubmissionsUnsubscribe) { activeSubmissionsUnsubscribe(); activeSubmissionsUnsubscribe = null; }
 }
 
-// === Job Details Page (reuse the one we built) ===
-// ... keep your checkJobDetails + goBackToJobs here ...
-
-document.addEventListener("DOMContentLoaded", fetchAndDisplayUserJobs);
 
 
 
@@ -6909,6 +6866,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
