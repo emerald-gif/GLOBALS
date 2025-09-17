@@ -4791,61 +4791,86 @@ async function submitAffiliateJob() {
 
 
 
-let activeJobUnsubscribe = null;
-let activeSubmissionsUnsubscribe = null;
 
-// === Fetch and Display Jobs (same as before) ===
-async function fetchAndDisplayUserJobs() {
+// === Fetch and Display Jobs (FAST + LIVE) ===
+function fetchAndDisplayUserJobs() {
   const jobList = document.getElementById("jobList");
   jobList.innerHTML = "<p class='text-center text-gray-500'>Loading your jobs...</p>";
 
-  firebase.auth().onAuthStateChanged(async (user) => {
+  firebase.auth().onAuthStateChanged((user) => {
     if (!user) {
       jobList.innerHTML = '<p class="text-center text-gray-500">Please log in to see your posted jobs.</p>';
       return;
     }
 
     const uid = user.uid;
-    try {
-      const allJobs = [];
+    let allJobs = [];
 
-      // Tasks
-      const tasksSnap = await firebase.firestore()
-        .collection("tasks").where("postedBy.uid", "==", uid).orderBy("postedAt", "desc").get();
-      for (const doc of tasksSnap.docs) {
-        const job = { ...doc.data(), id: doc.id, type: "task" };
-        job.completed = await getCompletedCount("task_submissions", doc.id);
-        allJobs.push(job);
-      }
-
-      // Affiliates
-      const affiliatesSnap = await firebase.firestore()
-        .collection("affiliateJobs").where("postedBy.uid", "==", uid).orderBy("postedAt", "desc").get();
-      for (const doc of affiliatesSnap.docs) {
-        const job = { ...doc.data(), id: doc.id, type: "affiliate" };
-        job.completed = await getCompletedCount("affiliate_submissions", doc.id);
-        allJobs.push(job);
-      }
-
+    // --- 🔹 Render Function
+    function renderJobs() {
       if (!allJobs.length) {
         jobList.innerHTML = '<p class="text-center text-gray-500">You haven\'t posted any jobs yet.</p>';
         return;
       }
-
       allJobs.sort((a, b) => (b.postedAt?.toMillis?.() || 0) - (a.postedAt?.toMillis?.() || 0));
-
       jobList.innerHTML = allJobs.map(job => renderJobCard(job)).join("");
-
-    } catch (err) {
-      console.error("🔥 Error loading jobs:", err);
-      jobList.innerHTML = '<p class="text-center text-red-500">Failed to load jobs. Please try again later.</p>';
     }
-  });
-}
 
-async function getCompletedCount(collection, jobId) {
-  const snap = await firebase.firestore().collection(collection).where("jobId", "==", jobId).get();
-  return snap.size;
+    // --- 🔹 Helper to add/replace job in array
+    function upsertJob(job) {
+      const i = allJobs.findIndex(j => j.id === job.id && j.type === job.type);
+      if (i > -1) {
+        allJobs[i] = job;
+      } else {
+        allJobs.push(job);
+      }
+    }
+
+    // --- 🔹 Watch Completed Submissions
+    function watchCompletedCount(collection, job) {
+      firebase.firestore().collection(collection)
+        .where("jobId", "==", job.id)
+        .onSnapshot(subSnap => {
+          job.completed = subSnap.size;
+          upsertJob(job);
+          renderJobs();
+        });
+    }
+
+    // --- 🔹 Listen to Tasks (live)
+    firebase.firestore().collection("tasks")
+      .where("postedBy.uid", "==", uid)
+      .orderBy("postedAt", "desc")
+      .onSnapshot(snapshot => {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === "added" || change.type === "modified") {
+            const job = { ...change.doc.data(), id: change.doc.id, type: "task" };
+            watchCompletedCount("task_submissions", job);
+            upsertJob(job);
+          } else if (change.type === "removed") {
+            allJobs = allJobs.filter(j => !(j.id === change.doc.id && j.type === "task"));
+          }
+        });
+        renderJobs();
+      });
+
+    // --- 🔹 Listen to Affiliate Jobs (live)
+    firebase.firestore().collection("affiliateJobs")
+      .where("postedBy.uid", "==", uid)
+      .orderBy("postedAt", "desc")
+      .onSnapshot(snapshot => {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === "added" || change.type === "modified") {
+            const job = { ...change.doc.data(), id: change.doc.id, type: "affiliate" };
+            watchCompletedCount("affiliate_submissions", job);
+            upsertJob(job);
+          } else if (change.type === "removed") {
+            allJobs = allJobs.filter(j => !(j.id === change.doc.id && j.type === "affiliate"));
+          }
+        });
+        renderJobs();
+      });
+  });
 }
 
 // === Job Card ===
@@ -4895,87 +4920,73 @@ function renderJobCard(job) {
 function checkJobDetails(jobId, jobType) {
   const collection = jobType === "task" ? "tasks" : "affiliateJobs";
 
-  // cleanup old listeners
-  if (activeJobUnsubscribe) activeJobUnsubscribe();
-  if (activeSubmissionsUnsubscribe) activeSubmissionsUnsubscribe();
+  firebase.firestore().collection(collection).doc(jobId)
+    .onSnapshot(doc => {
+      if (!doc.exists) return;
 
-  // switch sections
-  document.getElementById("myJobsSection").classList.add("hidden");
-  document.getElementById("jobDetailsSection").classList.remove("hidden");
+      const job = { ...doc.data(), id: doc.id, type: jobType };
 
-  const detailsBox = document.getElementById("jobDetailsContent");
-  detailsBox.innerHTML = "<p class='text-center text-gray-500'>Loading details...</p>";
+      // watch completed count live
+      firebase.firestore().collection(jobType === "task" ? "task_submissions" : "affiliate_submissions")
+        .where("jobId", "==", job.id)
+        .onSnapshot(subSnap => {
+          job.completed = subSnap.size;
+          renderJobDetails(job);
+        });
+    });
 
-  // Listen to job document
-  const jobRef = firebase.firestore().collection(collection).doc(jobId);
-  activeJobUnsubscribe = jobRef.onSnapshot(doc => {
-    if (!doc.exists) {
-      detailsBox.innerHTML = "<p class='text-center text-red-500'>Job not found.</p>";
-      return;
-    }
+  activateTab("jobDetailsSection");
+}
 
-    const job = { ...doc.data(), id: doc.id, type: jobType };
+// === Render Job Details ===
+function renderJobDetails(job) {
+  const progress = job.numWorkers ? Math.round((job.completed / job.numWorkers) * 100) : 0;
 
-    // Listen to submissions
-    activeSubmissionsUnsubscribe = firebase.firestore()
-      .collection(jobType === "task" ? "task_submissions" : "affiliate_submissions")
-      .where("jobId", "==", job.id)
-      .onSnapshot(subSnap => {
-        job.completed = subSnap.size;
-        const progress = job.numWorkers ? Math.round((job.completed / job.numWorkers) * 100) : 0;
+  let content = `
+    ${job.campaignLogoURL || job.screenshotURL ? `<img src="${job.campaignLogoURL || job.screenshotURL}" class="w-full h-48 object-cover rounded-xl" />` : ""}
+    <h4 class="text-lg font-bold text-blue-900 mt-3">${job.title || "Untitled Job"}</h4>
+    <p class="text-gray-600 text-sm">${job.category || "Uncategorized"}</p>
 
-        let content = `
-          ${job.campaignLogoURL || job.screenshotURL ? `<img src="${job.campaignLogoURL || job.screenshotURL}" class="w-full h-48 object-cover rounded-xl" />` : ""}
-          <h4 class="text-lg font-bold text-blue-900 mt-3">${job.title || "Untitled Job"}</h4>
-          <p class="text-gray-600 text-sm">${job.category || "Uncategorized"}</p>
+    <div class="mt-3 grid grid-cols-2 gap-4 text-sm text-gray-700">
+      <div><span class="font-semibold">Cost:</span> ₦${job.total || 0}</div>
+      <div><span class="font-semibold">Worker Pay:</span> ₦${job.workerEarn || job.workerPay || 0}</div>
+      <div><span class="font-semibold">Completed:</span> ${job.completed}/${job.numWorkers || 0}</div>
+      <div><span class="font-semibold">Posted:</span> ${job.postedAt?.toDate().toLocaleString() || "—"}</div>
+    </div>
 
-          <div class="mt-3 grid grid-cols-2 gap-4 text-sm text-gray-700">
-            <div><span class="font-semibold">Cost:</span> ₦${job.total || 0}</div>
-            <div><span class="font-semibold">Worker Pay:</span> ₦${job.workerEarn || job.workerPay || 0}</div>
-            <div><span class="font-semibold">Completed:</span> ${job.completed}/${job.numWorkers || 0}</div>
-            <div><span class="font-semibold">Posted:</span> ${job.postedAt?.toDate().toLocaleString() || "—"}</div>
-          </div>
+    <div class="mt-3">
+      <div class="w-full bg-gray-200 rounded-full h-2">
+        <div class="bg-blue-600 h-2 rounded-full" style="width: ${progress}%"></div>
+      </div>
+      <p class="text-xs text-gray-500 mt-1">${progress}% completed</p>
+    </div>
+  `;
 
-          <div class="mt-3">
-            <div class="w-full bg-gray-200 rounded-full h-2">
-              <div class="bg-blue-600 h-2 rounded-full" style="width: ${progress}%"></div>
-            </div>
-            <p class="text-xs text-gray-500 mt-1">${progress}% completed</p>
-          </div>
-        `;
+  if (job.type === "affiliate") {
+    content += `
+      <div class="mt-4 space-y-2">
+        <p><span class="font-semibold">Target Link:</span> <a href="${job.targetLink || "#"}" class="text-blue-600 underline">${job.targetLink || "—"}</a></p>
+        <p><span class="font-semibold">Proof Required:</span> ${job.proofRequired || "—"}</p>
+      </div>
+    `;
+  } else {
+    content += `
+      <div class="mt-4 space-y-2">
+        <p><span class="font-semibold">Description:</span> ${job.description || "—"}</p>
+        <p><span class="font-semibold">Proof:</span> ${job.proof || "—"}</p>
+      </div>
+    `;
+  }
 
-        if (jobType === "affiliate") {
-          content += `
-            <div class="mt-4 space-y-2">
-              <p><span class="font-semibold">Target Link:</span> <a href="${job.targetLink || "#"}" class="text-blue-600 underline">${job.targetLink || "—"}</a></p>
-              <p><span class="font-semibold">Proof Required:</span> ${job.proofRequired || "—"}</p>
-            </div>
-          `;
-        } else {
-          content += `
-            <div class="mt-4 space-y-2">
-              <p><span class="font-semibold">Description:</span> ${job.description || "—"}</p>
-              <p><span class="font-semibold">Proof:</span> ${job.proof || "—"}</p>
-            </div>
-          `;
-        }
-
-        detailsBox.innerHTML = content;
-      });
-  });
+  document.getElementById("jobDetailsContent").innerHTML = content;
 }
 
 // === Go Back to Jobs List ===
 function goBackToJobs() {
-  document.getElementById("jobDetailsSection").classList.add("hidden");
-  document.getElementById("myJobsSection").classList.remove("hidden");
-
-  if (activeJobUnsubscribe) { activeJobUnsubscribe(); activeJobUnsubscribe = null; }
-  if (activeSubmissionsUnsubscribe) { activeSubmissionsUnsubscribe(); activeSubmissionsUnsubscribe = null; }
+  activateTab("myJobsSection");
 }
 
 document.addEventListener("DOMContentLoaded", fetchAndDisplayUserJobs);
-
 
 
 
@@ -6966,6 +6977,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
