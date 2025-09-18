@@ -8,10 +8,11 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
   <script src="firebaseConfig.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+<body class="bg-gray-100 min-h-screen flex items-center justify-center px-4">
 
-  <div class="bg-white shadow-lg rounded-xl p-8 w-full max-w-md">
+  <div class="bg-white w-full max-w-md rounded-xl shadow-lg p-6 sm:p-8">
     
     <!-- Logo + Heading -->
     <img src="VERIFIED1.jpg" alt="Globals" class="mx-auto w-24 h-auto mb-4" />
@@ -21,36 +22,40 @@
     <!-- Signup Form -->
     <form id="signupForm" class="space-y-4">
       <input id="fullName" type="text" placeholder="Full Name" required
-        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-400">
+        class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
 
       <input id="username" type="text" placeholder="Username" required
-        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-400">
+        class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
 
       <input id="phone" type="text" placeholder="Phone Number" required
-        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-400">
+        class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
 
       <input id="email" type="email" placeholder="Email (must be Gmail)" required
-        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-400">
+        class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
 
       <!-- Password -->
       <div class="relative">
         <input id="password" type="password" placeholder="Password" required
-          class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-400 pr-10">
+          class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 pr-12">
         <button type="button" onclick="togglePasswordVisibility('password', this)" 
-          class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500">👁</button>
+          class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">
+          <i data-lucide="eye" class="w-5 h-5"></i>
+        </button>
       </div>
 
       <!-- Confirm Password -->
       <div class="relative">
         <input id="confirmPassword" type="password" placeholder="Confirm Password" required
-          class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-400 pr-10">
+          class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 pr-12">
         <button type="button" onclick="togglePasswordVisibility('confirmPassword', this)" 
-          class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500">👁</button>
+          class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">
+          <i data-lucide="eye" class="w-5 h-5"></i>
+        </button>
       </div>
 
       <!-- How did you hear about us -->
       <select id="heardAbout" required
-        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-400">
+        class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
         <option value="">How did you hear about us?</option>
         <option value="instagram">Instagram</option>
         <option value="tiktok">TikTok</option>
@@ -64,16 +69,18 @@
 
       <!-- Optional Referrer -->
       <input id="referrer" type="text" placeholder="Referral Username (optional)"
-        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-400">
+        class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
 
       <button type="submit"
-        class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium">Sign Up</button>
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium">Sign Up</button>
 
       <div id="message" class="text-center text-sm mt-2"></div>
     </form>
   </div>
 
   <script>
+    lucide.createIcons(); // activate icons
+
     const app = firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
@@ -81,13 +88,15 @@
     // Toggle password visibility
     function togglePasswordVisibility(id, btn) {
       const input = document.getElementById(id);
+      const icon = btn.querySelector("i");
       if (input.type === "password") {
         input.type = "text";
-        btn.textContent = "🙈";
+        icon.setAttribute("data-lucide", "eye-off");
       } else {
         input.type = "password";
-        btn.textContent = "👁";
+        icon.setAttribute("data-lucide", "eye");
       }
+      lucide.createIcons();
     }
 
     // Validation helpers
