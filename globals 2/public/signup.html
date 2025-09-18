@@ -5,79 +5,96 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>  
   <title>Signup | Globals</title>  
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">  
-  <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />  
   <script src="https://unpkg.com/feather-icons"></script>
   <style>  
-    body {  
-      background: linear-gradient(135deg, #e0f2fe, #fff);  
-    }  
-    .glass {  
-      background: rgba(255, 255, 255, 0.6);  
-      backdrop-filter: blur(15px);  
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);  
-    }  
-    .glow {  
-      box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);  
-    }  
+    body { background: linear-gradient(135deg, #e0f2fe, #fff); }  
+    .glass { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(15px); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); }  
+    .glow { box-shadow: 0 0 20px rgba(59, 130, 246, 0.6); }  
   </style>  
 </head>  
 <body class="flex items-center justify-center min-h-screen px-4">  
 
-  <div class="w-full max-w-md glass p-6 rounded-2xl animate-fade-in">  
+  <div class="w-full max-w-md glass p-6 rounded-2xl">  
     <div class="mb-6 text-center">  
-      <img src="VERIFIED1.jpg" alt="Globals Logo" class="mx-auto h-16 w-16 mb-2">  
+      <img src="public/VERIFIED1.jpg" alt="Globals Logo" class="mx-auto h-16 w-16 mb-2">  
       <h2 class="text-2xl font-extrabold text-blue-700">Create Account</h2>  
       <p class="text-sm text-gray-600 mt-2">Enter your details to create account</p>  
     </div>  
 
     <form id="signupForm" class="space-y-4">  
-      <input type="text" id="fullName" placeholder="Full Name" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" required />  
-      <input type="text" id="username" placeholder="Username" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" required />  
-      <input type="tel" id="phone" placeholder="Phone Number" maxlength="11" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" required />  
-      <input type="email" id="email" placeholder="Email (must be Gmail)" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" required />  
+
+      <!-- Full Name -->
+      <div>
+        <input type="text" id="fullName" placeholder="Full Name" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required />  
+        <p id="fullNameError" class="text-red-500 text-sm mt-1 hidden"></p>
+      </div>
+
+      <!-- Username -->
+      <div>
+        <input type="text" id="username" placeholder="Username" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required />  
+        <p id="usernameError" class="text-red-500 text-sm mt-1 hidden"></p>
+      </div>
+
+      <!-- Phone -->
+      <div>
+        <input type="tel" id="phone" placeholder="Phone Number" maxlength="11" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required />  
+        <p id="phoneError" class="text-red-500 text-sm mt-1 hidden"></p>
+      </div>
+
+      <!-- Email -->
+      <div>
+        <input type="email" id="email" placeholder="Email (must be Gmail)" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required />  
+        <p id="emailError" class="text-red-500 text-sm mt-1 hidden"></p>
+      </div>
 
       <!-- Password with eye toggle -->  
       <div class="relative">  
-        <input type="password" id="password" placeholder="Password" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 pr-10" required />  
-        <button type="button" onclick="togglePassword('password','togglePasswordIcon')" class="absolute inset-y-0 right-3 flex items-center text-gray-500">  
+        <input type="password" id="password" placeholder="Password" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 pr-10" required />  
+        <span onclick="togglePassword('password','togglePasswordIcon')" class="absolute inset-y-0 right-3 flex items-center cursor-pointer">  
           <i data-feather="eye-off" id="togglePasswordIcon"></i>  
-        </button>  
+        </span>  
+        <p id="passwordError" class="text-red-500 text-sm mt-1 hidden"></p>
       </div>  
 
+      <!-- Confirm Password -->
       <div class="relative">  
-        <input type="password" id="confirmPassword" placeholder="Confirm Password" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 pr-10" required />  
-        <button type="button" onclick="togglePassword('confirmPassword','toggleConfirmPasswordIcon')" class="absolute inset-y-0 right-3 flex items-center text-gray-500">  
+        <input type="password" id="confirmPassword" placeholder="Confirm Password" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 pr-10" required />  
+        <span onclick="togglePassword('confirmPassword','toggleConfirmPasswordIcon')" class="absolute inset-y-0 right-3 flex items-center cursor-pointer">  
           <i data-feather="eye-off" id="toggleConfirmPasswordIcon"></i>  
-        </button>  
+        </span>  
+        <p id="confirmPasswordError" class="text-red-500 text-sm mt-1 hidden"></p>
       </div>  
 
-      <input type="text" id="referrer" placeholder="Referral Username (Optional)" class="w-full p-3 rounded-lg border border-gray-300" />  
+      <!-- Referrer -->
+      <input type="text" id="referrer" placeholder="Referral Username (Optional)" class="w-full p-3 rounded-lg border" />  
 
       <!-- How did you hear about us -->  
-      <select id="heardAbout" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" required>  
-        <option value="">How did you hear about us?</option>  
-        <option value="Instagram">Instagram</option>  
-        <option value="TikTok">TikTok</option>  
-        <option value="Facebook">Facebook</option>  
-        <option value="WhatsApp">WhatsApp</option>  
-        <option value="X">X (Twitter)</option>  
-        <option value="Telegram">Telegram</option>  
-        <option value="Friend">Friend</option>  
-        <option value="Others">Others</option>  
-      </select>  
+      <div>
+        <select id="heardAbout" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required>  
+          <option value="">How did you hear about us?</option>  
+          <option value="Instagram">Instagram</option>  
+          <option value="TikTok">TikTok</option>  
+          <option value="Facebook">Facebook</option>  
+          <option value="WhatsApp">WhatsApp</option>  
+          <option value="X">X (Twitter)</option>  
+          <option value="Telegram">Telegram</option>  
+          <option value="Friend">Friend</option>  
+          <option value="Others">Others</option>  
+        </select>  
+        <p id="heardAboutError" class="text-red-500 text-sm mt-1 hidden"></p>
+      </div>
 
+      <!-- Submit -->
       <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 glow">🚀 Sign Up</button>  
     </form>  
 
     <p class="mt-5 text-sm text-center">Already have an account? <a href="login.html" class="text-blue-600 font-medium hover:underline">Login here</a></p>  
-    <div id="message" class="text-center mt-4 text-sm font-medium"></div>  
   </div>  
 
   <!-- Firebase SDKs -->  
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>  
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>  
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>  
-  <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>  
 
   <script>  
     const firebaseConfig = {  
@@ -91,13 +108,8 @@
     firebase.initializeApp(firebaseConfig);  
     const auth = firebase.auth();  
     const db = firebase.firestore();  
-  </script>  
 
-  <script>  
-    const form = document.getElementById('signupForm');  
-    const messageDiv = document.getElementById('message');  
-
-    // 👁️ Toggle password visibility  
+    // 👁️ Toggle password
     function togglePassword(inputId, iconId) {  
       const input = document.getElementById(inputId);  
       const icon = document.getElementById(iconId);  
@@ -111,51 +123,55 @@
       feather.replace();  
     }  
 
-    form.addEventListener('submit', async (e) => {  
-      e.preventDefault();  
+    // Validation rules
+    const validators = {
+      fullName: v => v.trim() ? "" : "Full name is required",
+      username: v => v.trim() ? "" : "Username is required",
+      phone: v => /^[0-9]{11}$/.test(v) ? "" : "Phone must be 11 digits",
+      email: v => /^[^ ]+@gmail\.com$/.test(v) ? "" : "Email must be a valid @gmail.com",
+      password: v => v.length >= 6 ? "" : "Password must be at least 6 characters",
+      confirmPassword: v => v === document.getElementById("password").value ? "" : "Passwords do not match",
+      heardAbout: v => v ? "" : "Please select an option"
+    };
+
+    Object.keys(validators).forEach(id => {
+      const input = document.getElementById(id);
+      const errorEl = document.getElementById(id + "Error");
+      if (input) {
+        input.addEventListener("input", () => {
+          const msg = validators[id](input.value);
+          if (msg) { errorEl.textContent = msg; errorEl.classList.remove("hidden"); }
+          else { errorEl.classList.add("hidden"); }
+        });
+      }
+    });
+
+    // Submit
+    document.getElementById("signupForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      let valid = true;
+      Object.keys(validators).forEach(id => {
+        const input = document.getElementById(id);
+        const errorEl = document.getElementById(id + "Error");
+        if (!input) return;
+        const msg = validators[id](input.value);
+        if (msg) { errorEl.textContent = msg; errorEl.classList.remove("hidden"); valid = false; }
+        else { errorEl.classList.add("hidden"); }
+      });
+      if (!valid) return;
+
       const fullName = document.getElementById('fullName').value.trim();  
       const username = document.getElementById('username').value.trim();  
       const phone = document.getElementById('phone').value.trim();  
       const email = document.getElementById('email').value.trim();  
       const password = document.getElementById('password').value;  
-      const confirmPassword = document.getElementById('confirmPassword').value;  
       const referrerUsername = document.getElementById('referrer').value.trim();  
       const heardAbout = document.getElementById('heardAbout').value;  
-
-      messageDiv.textContent = "";  
-      messageDiv.className = "";  
-
-      // ✅ Phone check  
-      if (!/^[0-9]{11}$/.test(phone)) {  
-        messageDiv.textContent = "❌ Phone must be 11 digits (Nigerian format).";  
-        messageDiv.className = "text-red-600";  
-        return;  
-      }  
-
-      // ✅ Gmail check  
-      if (!email.endsWith("@gmail.com")) {  
-        messageDiv.textContent = "❌ Only Gmail addresses are allowed.";  
-        messageDiv.className = "text-red-600";  
-        return;  
-      }  
-
-      if (password !== confirmPassword) {  
-        messageDiv.textContent = "❌ Passwords do not match.";  
-        messageDiv.className = "text-red-600";  
-        return;  
-      }  
-
-      if (!heardAbout) {  
-        messageDiv.textContent = "❌ Please select how you heard about us.";  
-        messageDiv.className = "text-red-600";  
-        return;  
-      }  
 
       try {  
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);  
         const userId = userCredential.user.uid;  
 
-        // --- Save user fields ---  
         const userData = {  
           fullName,  
           username,  
@@ -169,19 +185,16 @@
 
         await db.collection("users").doc(userId).set(userData);  
         localStorage.removeItem('pendingReferral');  
-
         alert("🎉 Signup successful! Welcome to Globals.");  
         window.location.href = "dashboard.html";  
-
       } catch (error) {  
         console.error(error);  
-        messageDiv.textContent = "❌ " + error.message;  
-        messageDiv.className = "text-red-600";  
+        alert("❌ " + error.message);  
       }  
     });  
-  </script>  
 
-  <script>feather.replace()</script>  
+    feather.replace();  
+  </script>  
 
   <script>  
     (function() {  
@@ -199,13 +212,9 @@
         localStorage.setItem('pendingReferral', ref);  
       } else if (refInput) {  
         const pending = localStorage.getItem('pendingReferral');  
-        if (pending && !refInput.value) {  
-          refInput.value = pending;  
-        }  
+        if (pending && !refInput.value) { refInput.value = pending; }  
       }  
-      window.clearPendingReferral = function() {  
-        localStorage.removeItem('pendingReferral');  
-      };  
+      window.clearPendingReferral = function() { localStorage.removeItem('pendingReferral'); };  
     })();  
   </script>  
 </body>  
