@@ -69,10 +69,12 @@
   </script>
 
   <script>
-    // icons
-    lucide.createIcons();
+  // run when DOM ready so all scripts are loaded
+  document.addEventListener('DOMContentLoaded', () => {
+    // init icons if using Lucide/Feather
+    if (window.lucide) lucide.createIcons();
+    if (window.feather) feather.replace();
 
-    // elements
     const loginForm = document.getElementById('loginForm');
     const loginEmail = document.getElementById('loginEmail');
     const loginPassword = document.getElementById('loginPassword');
@@ -80,7 +82,7 @@
     const loginPasswordError = document.getElementById('loginPasswordError');
     const loginTogglePassword = document.getElementById('loginTogglePassword');
 
-    // live validation
+    // show/hide inline errors while typing
     loginEmail.addEventListener('input', () => {
       loginEmailError.classList.toggle('hidden', loginEmail.validity.valid && loginEmail.value.trim() !== '');
     });
@@ -88,42 +90,52 @@
       loginPasswordError.classList.toggle('hidden', loginPassword.value.trim() !== '');
     });
 
-    // toggle password
+    // toggle eye
     loginTogglePassword.addEventListener('click', () => {
       const showing = loginPassword.type === 'text';
       loginPassword.type = showing ? 'password' : 'text';
       loginTogglePassword.innerHTML = showing
         ? '<i data-lucide="eye-off" class="w-5 h-5"></i>'
         : '<i data-lucide="eye" class="w-5 h-5"></i>';
-      lucide.createIcons();
+      if (window.lucide) lucide.createIcons();
     });
 
-    // submit (keeps your auth logic)
+    // submit
     loginForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = emailInput.value.trim();
-  const password = passwordInput.value;
+      e.preventDefault();                    // prevent actual form submission/reload
+      loginEmailError.classList.add('hidden');
+      loginPasswordError.classList.add('hidden');
 
-  if (!emailInput.validity.valid) {
-    emailError.classList.remove('hidden');
-    return;
-  }
-  if (!password) {
-    passwordError.classList.remove('hidden');
-    return;
-  }
+      const email = loginEmail.value.trim();
+      const password = loginPassword.value;
 
-  try {
-    const userCred = await auth.signInWithEmailAndPassword(email, password);
-    console.log("✅ Logged in user:", userCred.user);  // Debug
-    alert('✅ Login successful! Redirecting...');
-    window.location.href = 'dashboard.html';
-  } catch (error) {
-    console.error("❌ Login error:", error.message);
-    alert('❌ ' + error.message);
-  }
-});
-  </script>
+      // validations
+      if (!loginEmail.validity.valid || !email) {
+        loginEmailError.classList.remove('hidden');
+        console.warn('login: invalid email');
+        return;
+      }
+      if (!password) {
+        loginPasswordError.classList.remove('hidden');
+        console.warn('login: empty password');
+        return;
+      }
+
+      try {
+        // attempt sign-in
+        const userCred = await firebase.auth().signInWithEmailAndPassword(email, password);
+        console.log('Login success', userCred.user && userCred.user.uid);
+        // Redirect explicitly
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        console.error('Login failed', err);
+        // show friendly error
+        alert('❌ Login failed: ' + (err.message || 'Unknown error'));
+      }
+    });
+  });
+</script>
 </body>
 </html>
+
 
