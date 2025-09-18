@@ -38,7 +38,6 @@
       </div>
 
       <div class="text-right">
-        <!-- POINTS TO forgot-password.html -->
         <a href="forgot-password.html" class="text-sm text-blue-600 hover:underline">Forgot password?</a>
       </div>
 
@@ -55,7 +54,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 
   <script>
-    // YOUR FIREBASE CONFIG (kept same as your project)
     const firebaseConfig = {
       apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
       authDomain: "globals-17bf7.firebaseapp.com",
@@ -69,11 +67,8 @@
   </script>
 
   <script>
-  // run when DOM ready so all scripts are loaded
   document.addEventListener('DOMContentLoaded', () => {
-    // init icons if using Lucide/Feather
     if (window.lucide) lucide.createIcons();
-    if (window.feather) feather.replace();
 
     const loginForm = document.getElementById('loginForm');
     const loginEmail = document.getElementById('loginEmail');
@@ -82,7 +77,7 @@
     const loginPasswordError = document.getElementById('loginPasswordError');
     const loginTogglePassword = document.getElementById('loginTogglePassword');
 
-    // show/hide inline errors while typing
+    // input error toggle
     loginEmail.addEventListener('input', () => {
       loginEmailError.classList.toggle('hidden', loginEmail.validity.valid && loginEmail.value.trim() !== '');
     });
@@ -90,7 +85,7 @@
       loginPasswordError.classList.toggle('hidden', loginPassword.value.trim() !== '');
     });
 
-    // toggle eye
+    // eye toggle
     loginTogglePassword.addEventListener('click', () => {
       const showing = loginPassword.type === 'text';
       loginPassword.type = showing ? 'password' : 'text';
@@ -102,40 +97,36 @@
 
     // submit
     loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();                    // prevent actual form submission/reload
+      e.preventDefault();
       loginEmailError.classList.add('hidden');
       loginPasswordError.classList.add('hidden');
 
       const email = loginEmail.value.trim();
       const password = loginPassword.value;
 
-      // validations
       if (!loginEmail.validity.valid || !email) {
         loginEmailError.classList.remove('hidden');
-        console.warn('login: invalid email');
         return;
       }
       if (!password) {
         loginPasswordError.classList.remove('hidden');
-        console.warn('login: empty password');
         return;
       }
 
       try {
-        // attempt sign-in
-        const userCred = await firebase.auth().signInWithEmailAndPassword(email, password);
-        console.log('Login success', userCred.user && userCred.user.uid);
-        // Redirect explicitly
+        const userCred = await auth.signInWithEmailAndPassword(email, password);
         window.location.href = 'dashboard.html';
       } catch (err) {
-        console.error('Login failed', err);
-        // show friendly error
-        alert('❌ Login failed: ' + (err.message || 'Unknown error'));
+        // 🔹 Friendly error messages for user
+        let msg = 'Login failed. Please try again.';
+        if (err.code === 'auth/user-not-found') msg = 'No account found with this email.';
+        else if (err.code === 'auth/wrong-password') msg = 'Incorrect password. Try again.';
+        else if (err.code === 'auth/invalid-email') msg = 'Invalid email address.';
+        alert('❌ ' + msg);  // clean message
+        console.error('Login failed:', err); // keep detailed error in console only
       }
     });
   });
-</script>
+  </script>
 </body>
 </html>
-
-
