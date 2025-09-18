@@ -1,68 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Login | Globals</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <script src="https://unpkg.com/lucide-icons"></script>
+  <script src="https://unpkg.com/lucide@0.278.0/dist/lucide.min.js"></script>
   <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    .fade-in { animation: fadeIn 1s ease-in-out; }
-    @keyframes fadeIn { from { opacity:0; transform: translateY(20px);} to {opacity:1; transform: translateY(0);} }
-    .glass { background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); }
-    .error-text { font-size: 0.8rem; color: #dc2626; margin-top: 4px; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .fade-in { animation: fadeIn .9s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(18px);} to { opacity:1; transform: translateY(0);} }
+    .glass { background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); }
+    .error-text { font-size:.85rem; color:#dc2626; margin-top:6px; }
   </style>
 </head>
-<body class="bg-gradient-to-br from-blue-100 to-blue-300 min-h-screen flex flex-col justify-center">
+<body class="bg-gradient-to-br from-blue-100 to-blue-300 min-h-screen flex items-center justify-center p-4">
 
-  <!-- 🔐 Login Card -->
   <div class="w-full max-w-md mx-auto p-6 rounded-2xl shadow-xl glass fade-in">
     <div class="flex justify-center mb-4">
       <img src="assets/logo.png" alt="Globals Logo" class="h-14 w-auto">
     </div>
 
     <h2 class="text-2xl font-bold text-center text-blue-800 mb-6">Welcome Back 👋</h2>
-    
+
     <form id="loginForm" class="space-y-4">
-      <!-- Email -->
       <div>
-        <input type="email" id="loginEmail" placeholder="Email" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none transition" required />
-        <p id="emailError" class="error-text hidden">Please enter a valid email</p>
+        <input id="loginEmail" type="email" placeholder="Email" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500" required>
+        <p id="loginEmailError" class="error-text hidden">Please enter a valid email</p>
       </div>
 
-      <!-- Password + Eye -->
       <div class="relative">
-        <input type="password" id="loginPassword" placeholder="Password" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none transition" required />
-        <button type="button" id="togglePassword" class="absolute inset-y-0 right-3 flex items-center text-gray-500">
+        <input id="loginPassword" type="password" placeholder="Password" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500" required>
+        <button type="button" id="loginTogglePassword" class="absolute inset-y-0 right-3 flex items-center text-gray-500" aria-label="toggle password">
           <i data-lucide="eye-off" class="w-5 h-5"></i>
         </button>
-        <p id="passwordError" class="error-text hidden">Password cannot be empty</p>
+        <p id="loginPasswordError" class="error-text hidden">Password cannot be empty</p>
       </div>
 
-      <!-- Forgot Password -->
       <div class="text-right">
-        <a href="reset-password.html" class="text-sm text-blue-600 hover:underline">Forgot password?</a>
+        <!-- POINTS TO forgot-password.html -->
+        <a href="forgot-password.html" class="text-sm text-blue-600 hover:underline">Forgot password?</a>
       </div>
-      
-      <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold text-lg transition-all duration-300 shadow-md hover:shadow-lg">Login</button>
+
+      <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold text-lg">Login</button>
     </form>
 
     <p class="mt-4 text-center text-sm text-gray-600">
-      Don’t have an account? 
-      <a href="signup.html" class="text-blue-600 hover:underline font-medium">Register here</a>
+      Don’t have an account? <a href="signup.html" class="text-blue-600 hover:underline font-medium">Register here</a>
     </p>
   </div>
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
-  <!-- Firebase Config -->
   <script>
+    // YOUR FIREBASE CONFIG (kept same as your project)
     const firebaseConfig = {
       apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
       authDomain: "globals-17bf7.firebaseapp.com",
@@ -75,55 +68,52 @@
     const auth = firebase.auth();
   </script>
 
-  <!-- Login Logic -->
   <script>
+    // icons
     lucide.createIcons();
 
+    // elements
     const loginForm = document.getElementById('loginForm');
-    const emailInput = document.getElementById('loginEmail');
-    const passwordInput = document.getElementById('loginPassword');
-    const emailError = document.getElementById('emailError');
-    const passwordError = document.getElementById('passwordError');
+    const loginEmail = document.getElementById('loginEmail');
+    const loginPassword = document.getElementById('loginPassword');
+    const loginEmailError = document.getElementById('loginEmailError');
+    const loginPasswordError = document.getElementById('loginPasswordError');
+    const loginTogglePassword = document.getElementById('loginTogglePassword');
 
-    // Toggle password visibility
-    const togglePassword = document.getElementById('togglePassword');
-    togglePassword.addEventListener('click', () => {
-      const isPassword = passwordInput.type === 'password';
-      passwordInput.type = isPassword ? 'text' : 'password';
-      togglePassword.innerHTML = isPassword 
-        ? '<i data-lucide="eye" class="w-5 h-5"></i>'
-        : '<i data-lucide="eye-off" class="w-5 h-5"></i>';
+    // live validation
+    loginEmail.addEventListener('input', () => {
+      loginEmailError.classList.toggle('hidden', loginEmail.validity.valid && loginEmail.value.trim() !== '');
+    });
+    loginPassword.addEventListener('input', () => {
+      loginPasswordError.classList.toggle('hidden', loginPassword.value.trim() !== '');
+    });
+
+    // toggle password
+    loginTogglePassword.addEventListener('click', () => {
+      const showing = loginPassword.type === 'text';
+      loginPassword.type = showing ? 'password' : 'text';
+      loginTogglePassword.innerHTML = showing
+        ? '<i data-lucide="eye-off" class="w-5 h-5"></i>'
+        : '<i data-lucide="eye" class="w-5 h-5"></i>';
       lucide.createIcons();
     });
 
-    // Live validation
-    emailInput.addEventListener('input', () => {
-      emailError.classList.toggle('hidden', emailInput.validity.valid);
-    });
-    passwordInput.addEventListener('input', () => {
-      passwordError.classList.toggle('hidden', passwordInput.value.trim() !== '');
-    });
-
+    // submit (keeps your auth logic)
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = emailInput.value.trim();
-      const password = passwordInput.value;
+      const email = loginEmail.value.trim();
+      const password = loginPassword.value;
 
-      if (!emailInput.validity.valid) {
-        emailError.classList.remove('hidden');
-        return;
-      }
-      if (!password) {
-        passwordError.classList.remove('hidden');
-        return;
-      }
+      if (!loginEmail.validity.valid || !email) { loginEmailError.classList.remove('hidden'); return; }
+      if (!password) { loginPasswordError.classList.remove('hidden'); return; }
 
       try {
         await auth.signInWithEmailAndPassword(email, password);
-        alert('✅ Login successful! Redirecting...');
+        // successful -> go to dashboard (same as your original)
         window.location.href = 'dashboard.html';
-      } catch (error) {
-        alert('❌ ' + error.message);
+      } catch (err) {
+        // show friendly message
+        alert('❌ Login failed: ' + err.message);
       }
     });
   </script>
