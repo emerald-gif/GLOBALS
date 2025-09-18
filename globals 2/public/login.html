@@ -18,7 +18,7 @@
 
   <div class="w-full max-w-md mx-auto p-6 rounded-2xl shadow-xl glass fade-in">
     <div class="flex justify-center mb-4">
-      <img src="assets/logo.png" alt="Globals Logo" class="h-14 w-auto">
+      <img src="VERIFIED.jpg" alt="Globals Logo" class="h-14 w-auto">
     </div>
 
     <h2 class="text-2xl font-bold text-center text-blue-800 mb-6">Welcome Back 👋</h2>
@@ -100,22 +100,30 @@
 
     // submit (keeps your auth logic)
     loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = loginEmail.value.trim();
-      const password = loginPassword.value;
+  e.preventDefault();
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
 
-      if (!loginEmail.validity.valid || !email) { loginEmailError.classList.remove('hidden'); return; }
-      if (!password) { loginPasswordError.classList.remove('hidden'); return; }
+  if (!emailInput.validity.valid) {
+    emailError.classList.remove('hidden');
+    return;
+  }
+  if (!password) {
+    passwordError.classList.remove('hidden');
+    return;
+  }
 
-      try {
-        await auth.signInWithEmailAndPassword(email, password);
-        // successful -> go to dashboard (same as your original)
-        window.location.href = 'dashboard.html';
-      } catch (err) {
-        // show friendly message
-        alert('❌ Login failed: ' + err.message);
-      }
-    });
+  try {
+    const userCred = await auth.signInWithEmailAndPassword(email, password);
+    console.log("✅ Logged in user:", userCred.user);  // Debug
+    alert('✅ Login successful! Redirecting...');
+    window.location.href = 'dashboard.html';
+  } catch (error) {
+    console.error("❌ Login error:", error.message);
+    alert('❌ ' + error.message);
+  }
+});
   </script>
 </body>
 </html>
+
