@@ -34,11 +34,8 @@
       <input type="tel" id="phone" placeholder="Phone Number" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" required />
       <input type="email" id="email" placeholder="Email" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" required />
       <input type="password" id="password" placeholder="Password" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" required />
+      <input type="password" id="confirmPassword" placeholder="Confirm Password" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" required />
       <input type="text" id="referrer" placeholder="Referral Username (Optional)" class="w-full p-3 rounded-lg border border-gray-300" />
-      <div>
-        <input type="text" id="coupon" placeholder="Coupon Code" class="w-full p-2 border border-gray-300 rounded uppercase" required />
-        <p class="text-xs text-gray-600 mt-1">🎟️ Don’t have a coupon code? <a href="https://wa.link/7u8ob7" class="text-blue-600 hover:underline" target="_blank">GET NOW</a></p>
-      </div>
 
       <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 glow">🚀 Sign Up</button>
     </form>
@@ -46,20 +43,13 @@
     <p class="mt-5 text-sm text-center">Already have an account? <a href="login.html" class="text-blue-600 font-medium hover:underline">Login here</a></p>
     <div id="message" class="text-center mt-4 text-sm font-medium"></div>
 
- <!-- Footer & Credits -->
-  <footer class="mt-10 text-center text-xs text-gray-500 space-y-2">
-    <p>🚀 Powered by <span class="text-blue-700 font-bold">Globals</span> — Nigeria’s No. 1 earning platform</p>
-    <p>&copy; 2025 Globals. All rights reserved.</p>
-    <p>Designed by Team Globals | Empowering users with modern digital income</p>
-  </footer>
-
-
-  
+    <!-- Footer & Credits -->
+    <footer class="mt-10 text-center text-xs text-gray-500 space-y-2">
+      <p>🚀 Powered by <span class="text-blue-700 font-bold">Globals</span> — Nigeria’s No. 1 earning platform</p>
+      <p>&copy; 2025 Globals. All rights reserved.</p>
+      <p>Designed by Team Globals | Empowering users with modern digital income</p>
+    </footer>
   </div>
-
-     
-
-
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -87,134 +77,87 @@
     const form = document.getElementById('signupForm');
     const messageDiv = document.getElementById('message');
     
-  form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const fullName = document.getElementById('fullName').value.trim();
-  const username = document.getElementById('username').value.trim();
-  const phone = document.getElementById('phone').value.trim();
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
-  const coupon = document.getElementById('coupon').value.trim().toUpperCase();
-  const referrerUsername = document.getElementById('referrer').value.trim();
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fullName = document.getElementById('fullName').value.trim();
+      const username = document.getElementById('username').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const referrerUsername = document.getElementById('referrer').value.trim();
 
-  messageDiv.textContent = "";
-  messageDiv.className = "";
+      messageDiv.textContent = "";
+      messageDiv.className = "";
 
-  if (!coupon) {
-    messageDiv.textContent = "❌ Please enter a coupon code.";
-    messageDiv.className = "text-red-600";
-    return;
-  }
-
-  try {
-    const couponDoc = await db.collection("coupons").doc(coupon).get();
-    if (!couponDoc.exists || !couponDoc.data().valid) {
-      messageDiv.textContent = "❌ Invalid or already used coupon code.";
-      messageDiv.className = "text-red-600";
-      return;
-    }
-
-    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-    const userId = userCredential.user.uid;
-
-    // --- updated user fields ---
-    const userData = {
-      fullName,
-      username,
-      phone,
-      email,
-      joinedAt: new Date(),
-      balance: 0, // single balance field
-      referrer: referrerUsername || null
-    };
-
-    await db.collection("users").doc(userId).set(userData);
-    await db.collection("coupons").doc(coupon).update({ valid: false, usedBy: userId, usedAt: new Date() });
-
-    // --- referral reward logic ---
-    if (referrerUsername) {
-      const refQuery = await db.collection("users").where("username", "==", referrerUsername).get();
-      if (!refQuery.empty) {
-        const refDoc = refQuery.docs[0];
-        const refId = refDoc.id;
-
-        // first-level referrer reward
-        await db.collection("users").doc(refId).update({ 
-          balance: firebase.firestore.FieldValue.increment(1700) 
-        });
-
-        // check if first-level has a referrer (second-level)
-        const secondLevelRef = refDoc.data().referrer;
-        if (secondLevelRef) {
-          const secondQuery = await db.collection("users").where("username", "==", secondLevelRef).get();
-          if (!secondQuery.empty) {
-            const secondId = secondQuery.docs[0].id;
-            await db.collection("users").doc(secondId).update({ 
-              balance: firebase.firestore.FieldValue.increment(300) 
-            });
-          }
-        }
+      if (password !== confirmPassword) {
+        messageDiv.textContent = "❌ Passwords do not match.";
+        messageDiv.className = "text-red-600";
+        return;
       }
-    }
 
-    // ✅ remove signup bonus
-    // ✅ clear referral memory
-    localStorage.removeItem('pendingReferral');
+      try {
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const userId = userCredential.user.uid;
 
-    alert("🎉 Signup successful! Welcome to Globals.");
-    window.location.href = "dashboard.html";
+        // --- Save user fields ---
+        const userData = {
+          fullName,
+          username,
+          phone,
+          email,
+          joinedAt: new Date(),
+          balance: 0, // start balance
+          referrer: referrerUsername || null
+        };
 
-  } catch (error) {
-    console.error(error);
-    messageDiv.textContent = "❌ " + error.message;
-    messageDiv.className = "text-red-600";
-  }
-});
+        await db.collection("users").doc(userId).set(userData);
+
+        // ✅ remove signup bonus and referral auto-credit (Team handles rewards)
+        localStorage.removeItem('pendingReferral');
+
+        alert("🎉 Signup successful! Welcome to Globals.");
+        window.location.href = "dashboard.html";
+
+      } catch (error) {
+        console.error(error);
+        messageDiv.textContent = "❌ " + error.message;
+        messageDiv.className = "text-red-600";
+      }
+    });
   </script>
 
+  <script>
+    (function() {
+      const paramNames = ['ref', 'referral', 'r'];
+      const params = new URLSearchParams(window.location.search);
 
-
-<script>
-  (function() {
-    const paramNames = ['ref', 'referral', 'r'];
-    const params = new URLSearchParams(window.location.search);
-
-    let ref = null;
-    for (const name of paramNames) {
-      const v = params.get(name);
-      if (v) { ref = v; break; }
-    }
-
-    const refInput = document.getElementById('referrer');
-
-    if (ref && refInput) {
-      ref = decodeURIComponent(ref);
-      refInput.value = ref;
-      // keep editable
-      localStorage.setItem('pendingReferral', ref);
-    } else if (refInput) {
-      const pending = localStorage.getItem('pendingReferral');
-      if (pending && !refInput.value) {
-        refInput.value = pending;
-        // still editable
+      let ref = null;
+      for (const name of paramNames) {
+        const v = params.get(name);
+        if (v) { ref = v; break; }
       }
-    }
 
-    // Clear referral from storage after successful signup
-    window.clearPendingReferral = function() {
-      localStorage.removeItem('pendingReferral');
-    };
-  })();
-</script>
+      const refInput = document.getElementById('referrer');
 
+      if (ref && refInput) {
+        ref = decodeURIComponent(ref);
+        refInput.value = ref;
+        // keep editable
+        localStorage.setItem('pendingReferral', ref);
+      } else if (refInput) {
+        const pending = localStorage.getItem('pendingReferral');
+        if (pending && !refInput.value) {
+          refInput.value = pending;
+          // still editable
+        }
+      }
 
-
-
-  
+      // Clear referral from storage after successful signup
+      window.clearPendingReferral = function() {
+        localStorage.removeItem('pendingReferral');
+      };
+    })();
+  </script>
 </body>
-
- 
 </html>
- 
-
-
