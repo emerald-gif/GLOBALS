@@ -1,173 +1,212 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Globals - Signup</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
-  <script src="firebaseConfig.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
-</head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center px-4">
+<html lang="en">  
+<head>  
+  <meta charset="UTF-8" />  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>  
+  <title>Signup | Globals</title>  
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">  
+  <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />  
+  <script src="https://unpkg.com/feather-icons"></script>
+  <style>  
+    body {  
+      background: linear-gradient(135deg, #e0f2fe, #fff);  
+    }  
+    .glass {  
+      background: rgba(255, 255, 255, 0.6);  
+      backdrop-filter: blur(15px);  
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);  
+    }  
+    .glow {  
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);  
+    }  
+  </style>  
+</head>  
+<body class="flex items-center justify-center min-h-screen px-4">  
 
-  <div class="bg-white w-full max-w-md rounded-xl shadow-lg p-6 sm:p-8">
-    
-    <!-- Logo + Heading -->
-    <img src="VERIFIED1.jpg" alt="Globals" class="mx-auto w-24 h-auto mb-4" />
-    <h2 class="text-2xl font-bold text-center">Create account</h2>
-    <p class="text-sm text-center text-gray-600 mb-6">Enter your details to create account.</p>
-    
-    <!-- Signup Form -->
-    <form id="signupForm" class="space-y-4">
-      <input id="fullName" type="text" placeholder="Full Name" required
-        class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+  <div class="w-full max-w-md glass p-6 rounded-2xl animate-fade-in">  
+    <div class="mb-6 text-center">  
+      <img src="VERIFIED1.jpg" alt="Globals Logo" class="mx-auto h-16 w-16 mb-2">  
+      <h2 class="text-2xl font-extrabold text-blue-700">Create Account</h2>  
+      <p class="text-sm text-gray-600 mt-2">Enter your details to create account</p>  
+    </div>  
 
-      <input id="username" type="text" placeholder="Username" required
-        class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+    <form id="signupForm" class="space-y-4">  
+      <input type="text" id="fullName" placeholder="Full Name" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" required />  
+      <input type="text" id="username" placeholder="Username" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" required />  
+      <input type="tel" id="phone" placeholder="Phone Number" maxlength="11" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" required />  
+      <input type="email" id="email" placeholder="Email (must be Gmail)" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" required />  
 
-      <input id="phone" type="text" placeholder="Phone Number" required
-        class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <!-- Password with eye toggle -->  
+      <div class="relative">  
+        <input type="password" id="password" placeholder="Password" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 pr-10" required />  
+        <button type="button" onclick="togglePassword('password','togglePasswordIcon')" class="absolute inset-y-0 right-3 flex items-center text-gray-500">  
+          <i data-feather="eye-off" id="togglePasswordIcon"></i>  
+        </button>  
+      </div>  
 
-      <input id="email" type="email" placeholder="Email (must be Gmail)" required
-        class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <div class="relative">  
+        <input type="password" id="confirmPassword" placeholder="Confirm Password" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 pr-10" required />  
+        <button type="button" onclick="togglePassword('confirmPassword','toggleConfirmPasswordIcon')" class="absolute inset-y-0 right-3 flex items-center text-gray-500">  
+          <i data-feather="eye-off" id="toggleConfirmPasswordIcon"></i>  
+        </button>  
+      </div>  
 
-      <!-- Password -->
-      <div class="relative">
-        <input id="password" type="password" placeholder="Password" required
-          class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 pr-12">
-        <button type="button" onclick="togglePasswordVisibility('password', this)" 
-          class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">
-          <i data-lucide="eye" class="w-5 h-5"></i>
-        </button>
-      </div>
+      <input type="text" id="referrer" placeholder="Referral Username (Optional)" class="w-full p-3 rounded-lg border border-gray-300" />  
 
-      <!-- Confirm Password -->
-      <div class="relative">
-        <input id="confirmPassword" type="password" placeholder="Confirm Password" required
-          class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 pr-12">
-        <button type="button" onclick="togglePasswordVisibility('confirmPassword', this)" 
-          class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">
-          <i data-lucide="eye" class="w-5 h-5"></i>
-        </button>
-      </div>
+      <!-- How did you hear about us -->  
+      <select id="heardAbout" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" required>  
+        <option value="">How did you hear about us?</option>  
+        <option value="Instagram">Instagram</option>  
+        <option value="TikTok">TikTok</option>  
+        <option value="Facebook">Facebook</option>  
+        <option value="WhatsApp">WhatsApp</option>  
+        <option value="X">X (Twitter)</option>  
+        <option value="Telegram">Telegram</option>  
+        <option value="Friend">Friend</option>  
+        <option value="Others">Others</option>  
+      </select>  
 
-      <!-- How did you hear about us -->
-      <select id="heardAbout" required
-        class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
-        <option value="">How did you hear about us?</option>
-        <option value="instagram">Instagram</option>
-        <option value="tiktok">TikTok</option>
-        <option value="facebook">Facebook</option>
-        <option value="whatsapp">WhatsApp</option>
-        <option value="x">X</option>
-        <option value="telegram">Telegram</option>
-        <option value="friend">Friend</option>
-        <option value="others">Others</option>
-      </select>
+      <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 glow">🚀 Sign Up</button>  
+    </form>  
 
-      <!-- Optional Referrer -->
-      <input id="referrer" type="text" placeholder="Referral Username (optional)"
-        class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+    <p class="mt-5 text-sm text-center">Already have an account? <a href="login.html" class="text-blue-600 font-medium hover:underline">Login here</a></p>  
+    <div id="message" class="text-center mt-4 text-sm font-medium"></div>  
+  </div>  
 
-      <button type="submit"
-        class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium">Sign Up</button>
+  <!-- Firebase SDKs -->  
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>  
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>  
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>  
+  <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>  
 
-      <div id="message" class="text-center text-sm mt-2"></div>
-    </form>
-  </div>
+  <script>  
+    const firebaseConfig = {  
+      apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",  
+      authDomain: "globals-17bf7.firebaseapp.com",  
+      projectId: "globals-17bf7",  
+      storageBucket: "globals-17bf7.appspot.com",  
+      messagingSenderId: "603274362994",  
+      appId: "1:603274362994:web:c312c10cf0a42938e882eb"  
+    };  
+    firebase.initializeApp(firebaseConfig);  
+    const auth = firebase.auth();  
+    const db = firebase.firestore();  
+  </script>  
 
-  <script>
-    lucide.createIcons(); // activate icons
+  <script>  
+    const form = document.getElementById('signupForm');  
+    const messageDiv = document.getElementById('message');  
 
-    const app = firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+    // 👁️ Toggle password visibility  
+    function togglePassword(inputId, iconId) {  
+      const input = document.getElementById(inputId);  
+      const icon = document.getElementById(iconId);  
+      if (input.type === "password") {  
+        input.type = "text";  
+        icon.setAttribute("data-feather", "eye");  
+      } else {  
+        input.type = "password";  
+        icon.setAttribute("data-feather", "eye-off");  
+      }  
+      feather.replace();  
+    }  
 
-    // Toggle password visibility
-    function togglePasswordVisibility(id, btn) {
-      const input = document.getElementById(id);
-      const icon = btn.querySelector("i");
-      if (input.type === "password") {
-        input.type = "text";
-        icon.setAttribute("data-lucide", "eye-off");
-      } else {
-        input.type = "password";
-        icon.setAttribute("data-lucide", "eye");
-      }
-      lucide.createIcons();
-    }
+    form.addEventListener('submit', async (e) => {  
+      e.preventDefault();  
+      const fullName = document.getElementById('fullName').value.trim();  
+      const username = document.getElementById('username').value.trim();  
+      const phone = document.getElementById('phone').value.trim();  
+      const email = document.getElementById('email').value.trim();  
+      const password = document.getElementById('password').value;  
+      const confirmPassword = document.getElementById('confirmPassword').value;  
+      const referrerUsername = document.getElementById('referrer').value.trim();  
+      const heardAbout = document.getElementById('heardAbout').value;  
 
-    // Validation helpers
-    function isValidNigerianPhone(phone) {
-      const cleaned = phone.trim();
-      return /^(0\d{10}|\+234\d{10})$/.test(cleaned);
-    }
-    function isGmailAddress(email) {
-      if (!email) return false;
-      const e = email.trim().toLowerCase();
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && e.endsWith('@gmail.com');
-    }
+      messageDiv.textContent = "";  
+      messageDiv.className = "";  
 
-    document.getElementById("signupForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const fullName = document.getElementById("fullName").value.trim();
-      const username = document.getElementById("username").value.trim();
-      const phone = document.getElementById("phone").value.trim();
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
-      const confirmPassword = document.getElementById("confirmPassword").value;
-      const heardAbout = document.getElementById("heardAbout").value;
-      const referrer = document.getElementById("referrer").value.trim();
-      const messageDiv = document.getElementById("message");
+      // ✅ Phone check  
+      if (!/^[0-9]{11}$/.test(phone)) {  
+        messageDiv.textContent = "❌ Phone must be 11 digits (Nigerian format).";  
+        messageDiv.className = "text-red-600";  
+        return;  
+      }  
 
-      // Validations
-      if (!isValidNigerianPhone(phone)) {
-        messageDiv.textContent = "❌ Enter a valid Nigerian phone (11 digits or +234...)";
-        messageDiv.className = "text-red-600 text-center";
-        return;
-      }
-      if (!isGmailAddress(email)) {
-        messageDiv.textContent = "❌ Please use a Gmail address (example@gmail.com)";
-        messageDiv.className = "text-red-600 text-center";
-        return;
-      }
-      if (password !== confirmPassword) {
-        messageDiv.textContent = "❌ Passwords do not match.";
-        messageDiv.className = "text-red-600 text-center";
-        return;
-      }
-      if (!heardAbout) {
-        messageDiv.textContent = "❌ Please tell us how you heard about us.";
-        messageDiv.className = "text-red-600 text-center";
-        return;
-      }
+      // ✅ Gmail check  
+      if (!email.endsWith("@gmail.com")) {  
+        messageDiv.textContent = "❌ Only Gmail addresses are allowed.";  
+        messageDiv.className = "text-red-600";  
+        return;  
+      }  
 
-      try {
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        const userId = userCredential.user.uid;
+      if (password !== confirmPassword) {  
+        messageDiv.textContent = "❌ Passwords do not match.";  
+        messageDiv.className = "text-red-600";  
+        return;  
+      }  
 
-        const userData = {
-          fullName,
-          username,
-          phone,
-          email,
-          joinedAt: new Date(),
-          balance: 0,
-          referrer: referrer || null,
-          heardAbout
-        };
+      if (!heardAbout) {  
+        messageDiv.textContent = "❌ Please select how you heard about us.";  
+        messageDiv.className = "text-red-600";  
+        return;  
+      }  
 
-        await db.collection("users").doc(userId).set(userData);
-        messageDiv.textContent = "✅ Account created successfully!";
-        messageDiv.className = "text-green-600 text-center";
-      } catch (error) {
-        messageDiv.textContent = "❌ " + error.message;
-        messageDiv.className = "text-red-600 text-center";
-      }
-    });
-  </script>
+      try {  
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);  
+        const userId = userCredential.user.uid;  
 
-</body>
+        // --- Save user fields ---  
+        const userData = {  
+          fullName,  
+          username,  
+          phone,  
+          email,  
+          joinedAt: new Date(),  
+          balance: 0,  
+          referrer: referrerUsername || null,  
+          heardAbout  
+        };  
+
+        await db.collection("users").doc(userId).set(userData);  
+        localStorage.removeItem('pendingReferral');  
+
+        alert("🎉 Signup successful! Welcome to Globals.");  
+        window.location.href = "dashboard.html";  
+
+      } catch (error) {  
+        console.error(error);  
+        messageDiv.textContent = "❌ " + error.message;  
+        messageDiv.className = "text-red-600";  
+      }  
+    });  
+  </script>  
+
+  <script>feather.replace()</script>  
+
+  <script>  
+    (function() {  
+      const paramNames = ['ref', 'referral', 'r'];  
+      const params = new URLSearchParams(window.location.search);  
+      let ref = null;  
+      for (const name of paramNames) {  
+        const v = params.get(name);  
+        if (v) { ref = v; break; }  
+      }  
+      const refInput = document.getElementById('referrer');  
+      if (ref && refInput) {  
+        ref = decodeURIComponent(ref);  
+        refInput.value = ref;  
+        localStorage.setItem('pendingReferral', ref);  
+      } else if (refInput) {  
+        const pending = localStorage.getItem('pendingReferral');  
+        if (pending && !refInput.value) {  
+          refInput.value = pending;  
+        }  
+      }  
+      window.clearPendingReferral = function() {  
+        localStorage.removeItem('pendingReferral');  
+      };  
+    })();  
+  </script>  
+</body>  
 </html>
