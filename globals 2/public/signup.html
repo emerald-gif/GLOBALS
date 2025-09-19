@@ -1,129 +1,111 @@
 <!DOCTYPE html>
-<html lang="en">  
-<head>  
-  <meta charset="UTF-8" />  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>  
-  <title>Signup | Globals</title>  
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">  
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Signup | Globals</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <script src="https://unpkg.com/feather-icons"></script>
-  <style>  
-    body { background: linear-gradient(135deg, #e0f2fe, #fff); }  
-    .glass { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(15px); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); }  
-    .glow { box-shadow: 0 0 20px rgba(59, 130, 246, 0.6); }  
-  </style>  
-</head>  
-<body class="flex items-center justify-center min-h-screen px-4">  
+  <!-- EmailJS -->
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 
-  <div class="w-full max-w-md glass p-6 rounded-2xl">  
-    <div class="mb-6 text-center">  
-      <img src="VERIFIED.jpg" alt="Globals Logo" class="mx-auto h-16 w-16 mb-2">  
-      <h2 class="text-2xl font-extrabold text-blue-700">Create Account</h2>  
-      <p class="text-sm text-gray-600 mt-2">Enter your details to create account</p>  
-    </div>  
+  <style>
+    body { background: linear-gradient(135deg, #e0f2fe, #fff); }
+    .glass { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(15px); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12); }
+    .glow { box-shadow: 0 0 20px rgba(59, 130, 246, 0.32); }
+  </style>
+</head>
+<body class="flex items-center justify-center min-h-screen px-4">
 
-    <form id="signupForm" class="space-y-4">  
+  <div class="w-full max-w-md glass p-6 rounded-2xl">
+    <div class="mb-6 text-center">
+      <img src="VERIFIED.jpg" alt="Globals Logo" class="mx-auto h-16 w-16 mb-2">
+      <h2 class="text-2xl font-extrabold text-blue-700">Create Account</h2>
+      <p class="text-sm text-gray-600 mt-2">Enter your details to create account — Signup is free.</p>
+    </div>
 
-      <!-- Full Name -->
-      <div>
-        <input type="text" id="fullName" placeholder="Full Name" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required />  
-        <p id="fullNameError" class="text-red-500 text-sm mt-1 hidden"></p>
-      </div>
+    <form id="signupForm" class="space-y-4">
+      <div><input type="text" id="fullName" placeholder="Full Name" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required /><p id="fullNameError" class="text-red-500 text-sm mt-1 hidden"></p></div>
+      <div><input type="text" id="username" placeholder="Username" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required /><p id="usernameError" class="text-red-500 text-sm mt-1 hidden"></p></div>
+      <div><input type="tel" id="phone" placeholder="Phone Number" maxlength="11" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required /><p id="phoneError" class="text-red-500 text-sm mt-1 hidden"></p></div>
+      <div><input type="email" id="email" placeholder="Email (must be Gmail)" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required /><p id="emailError" class="text-red-500 text-sm mt-1 hidden"></p></div>
 
-      <!-- Username -->
-      <div>
-        <input type="text" id="username" placeholder="Username" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required />  
-        <p id="usernameError" class="text-red-500 text-sm mt-1 hidden"></p>
-      </div>
-
-      <!-- Phone -->
-      <div>
-        <input type="tel" id="phone" placeholder="Phone Number" maxlength="11" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required />  
-        <p id="phoneError" class="text-red-500 text-sm mt-1 hidden"></p>
-      </div>
-
-      <!-- Email -->
-      <div>
-        <input type="email" id="email" placeholder="Email (must be Gmail)" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required />  
-        <p id="emailError" class="text-red-500 text-sm mt-1 hidden"></p>
-      </div>
-
-      <!-- Password with eye toggle -->  
-      <div class="relative">  
-        <input type="password" id="password" placeholder="Password" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 pr-10" required />  
-        <span onclick="togglePassword('password','togglePasswordIcon')" class="absolute inset-y-0 right-3 flex items-center cursor-pointer">  
-          <i data-feather="eye-off" id="togglePasswordIcon"></i>  
-        </span>  
+      <div class="relative">
+        <input type="password" id="password" placeholder="Password" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 pr-10" required />
+        <span onclick="togglePassword('password','togglePasswordIcon')" class="absolute inset-y-0 right-3 flex items-center cursor-pointer">
+          <i data-feather="eye-off" id="togglePasswordIcon"></i>
+        </span>
         <p id="passwordError" class="text-red-500 text-sm mt-1 hidden"></p>
-      </div>  
+      </div>
 
-      <!-- Confirm Password -->
-      <div class="relative">  
-        <input type="password" id="confirmPassword" placeholder="Confirm Password" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 pr-10" required />  
-        <span onclick="togglePassword('confirmPassword','toggleConfirmPasswordIcon')" class="absolute inset-y-0 right-3 flex items-center cursor-pointer">  
-          <i data-feather="eye-off" id="toggleConfirmPasswordIcon"></i>  
-        </span>  
+      <div class="relative">
+        <input type="password" id="confirmPassword" placeholder="Confirm Password" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 pr-10" required />
+        <span onclick="togglePassword('confirmPassword','toggleConfirmPasswordIcon')" class="absolute inset-y-0 right-3 flex items-center cursor-pointer">
+          <i data-feather="eye-off" id="toggleConfirmPasswordIcon"></i>
+        </span>
         <p id="confirmPasswordError" class="text-red-500 text-sm mt-1 hidden"></p>
-      </div>  
+      </div>
 
-      <!-- Referrer -->
-      <input type="text" id="referrer" placeholder="Referral Username (Optional)" class="w-full p-3 rounded-lg border" />  
+      <input type="text" id="referrer" placeholder="Referral Username (Optional)" class="w-full p-3 rounded-lg border" />
 
-      <!-- How did you hear about us -->  
       <div>
-        <select id="heardAbout" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required>  
-          <option value="">How did you hear about us?</option>  
-          <option value="Instagram">Instagram</option>  
-          <option value="TikTok">TikTok</option>  
-          <option value="Facebook">Facebook</option>  
-          <option value="WhatsApp">WhatsApp</option>  
-          <option value="X">X (Twitter)</option>  
-          <option value="Telegram">Telegram</option>  
-          <option value="Friend">Friend</option>  
-          <option value="Others">Others</option>  
-        </select>  
+        <select id="heardAbout" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required>
+          <option value="">How did you hear about us?</option>
+          <option value="Instagram">Instagram</option>
+          <option value="TikTok">TikTok</option>
+          <option value="Facebook">Facebook</option>
+          <option value="WhatsApp">WhatsApp</option>
+          <option value="X">X (Twitter)</option>
+          <option value="Telegram">Telegram</option>
+          <option value="Friend">Friend</option>
+          <option value="Others">Others</option>
+        </select>
         <p id="heardAboutError" class="text-red-500 text-sm mt-1 hidden"></p>
       </div>
 
-      <!-- Submit -->
-      <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 glow">🚀 Sign Up</button>  
-    </form>  
+      <button id="submitBtn" type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 glow">🚀 Sign Up (Free)</button>
+    </form>
 
-    <p class="mt-5 text-sm text-center">Already have an account? <a href="login.html" class="text-blue-600 font-medium hover:underline">Login here</a></p>  
-  </div>  
+    <p class="mt-5 text-sm text-center">Already have an account? <a href="login.html" class="text-blue-600 font-medium hover:underline">Login here</a></p>
+  </div>
 
-  <!-- Firebase SDKs -->  
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>  
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>  
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>  
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
-  <script>  
-    const firebaseConfig = {  
-      apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",  
-      authDomain: "globals-17bf7.firebaseapp.com",  
-      projectId: "globals-17bf7",  
-      storageBucket: "globals-17bf7.appspot.com",  
-      messagingSenderId: "603274362994",  
-      appId: "1:603274362994:web:c312c10cf0a42938e882eb"  
-    };  
-    firebase.initializeApp(firebaseConfig);  
-    const auth = firebase.auth();  
-    const db = firebase.firestore();  
+  <script>
+    // ---------- config ----------
+    const firebaseConfig = {
+      apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
+      authDomain: "globals-17bf7.firebaseapp.com",
+      projectId: "globals-17bf7",
+      storageBucket: "globals-17bf7.appspot.com",
+      messagingSenderId: "603274362994",
+      appId: "1:603274362994:web:c312c10cf0a42938e882eb"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
-    // 👁️ Toggle password
-    function togglePassword(inputId, iconId) {  
-      const input = document.getElementById(inputId);  
-      const icon = document.getElementById(iconId);  
-      if (input.type === "password") {  
-        input.type = "text";  
-        icon.setAttribute("data-feather", "eye");  
-      } else {  
-        input.type = "password";  
-        icon.setAttribute("data-feather", "eye-off");  
-      }  
-      feather.replace();  
-    }  
+    // initialize EmailJS (public key you gave)
+    emailjs.init("tfc9HSxyhDy5qonKZ"); // <-- your EmailJS public key
 
-    // Validation rules
+    const EMAILJS_SERVICE_ID = "YOUR_EMAILJS_SERVICE_ID"; // <-- replace with your EmailJS service id
+    const TEMPLATE_VERIFY = "template_4nr76pb";       // your verify template id
+    const TEMPLATE_WELCOME = "template_u69npjv";     // your welcome template id
+
+    // UI helpers
+    function togglePassword(inputId, iconId) {
+      const input = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+      if (input.type === "password") { input.type = "text"; icon.setAttribute("data-feather","eye"); }
+      else { input.type = "password"; icon.setAttribute("data-feather","eye-off"); }
+      feather.replace();
+    }
+    feather.replace();
+
+    // validators (same as your original)
     const validators = {
       fullName: v => v.trim() ? "" : "Full name is required",
       username: v => v.trim() ? "" : "Username is required",
@@ -133,22 +115,26 @@
       confirmPassword: v => v === document.getElementById("password").value ? "" : "Passwords do not match",
       heardAbout: v => v ? "" : "Please select an option"
     };
-
     Object.keys(validators).forEach(id => {
-      const input = document.getElementById(id);
-      const errorEl = document.getElementById(id + "Error");
-      if (input) {
-        input.addEventListener("input", () => {
-          const msg = validators[id](input.value);
-          if (msg) { errorEl.textContent = msg; errorEl.classList.remove("hidden"); }
-          else { errorEl.classList.add("hidden"); }
-        });
-      }
+      const el = document.getElementById(id);
+      const err = document.getElementById(id + "Error");
+      if (!el) return;
+      el.addEventListener("input", () => {
+        const msg = validators[id](el.value);
+        if (msg) { err.textContent = msg; err.classList.remove("hidden"); }
+        else { err.classList.add("hidden"); }
+      });
     });
 
-    // Submit
+    // helper: generate 4-digit OTP
+    function genOtp() {
+      return Math.floor(1000 + Math.random() * 9000).toString();
+    }
+
+    // Submit handler
     document.getElementById("signupForm").addEventListener("submit", async (e) => {
       e.preventDefault();
+      // validate all
       let valid = true;
       Object.keys(validators).forEach(id => {
         const input = document.getElementById(id);
@@ -160,64 +146,60 @@
       });
       if (!valid) return;
 
-      const fullName = document.getElementById('fullName').value.trim();  
-      const username = document.getElementById('username').value.trim();  
-      const phone = document.getElementById('phone').value.trim();  
-      const email = document.getElementById('email').value.trim();  
-      const password = document.getElementById('password').value;  
-      const referrerUsername = document.getElementById('referrer').value.trim();  
-      const heardAbout = document.getElementById('heardAbout').value;  
+      // collect values
+      const fullName = document.getElementById('fullName').value.trim();
+      const username = document.getElementById('username').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const referrerUsername = document.getElementById('referrer').value.trim();
+      const heardAbout = document.getElementById('heardAbout').value;
 
-      try {  
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);  
-        const userId = userCredential.user.uid;  
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Creating account...';
 
-        const userData = {  
-          fullName,  
-          username,  
-          phone,  
-          email,  
-          joinedAt: new Date(),  
-          balance: 0,  
-          referrer: referrerUsername || null,  
-          heardAbout  
-        };  
+      try {
+        // 1) create firebase auth user
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const userId = userCredential.user.uid;
 
-        await db.collection("users").doc(userId).set(userData);  
-        localStorage.removeItem('pendingReferral');  
-        alert("🎉 Signup successful! Welcome to Globals.");  
-        window.location.href = "dashboard.html";  
-      } catch (error) {  
-        console.error(error);  
-        alert("❌ " + error.message);  
-      }  
-    });  
+        // 2) generate OTP and expiry
+        const otp = genOtp();
+        const now = Date.now();
+        const otpExpires = now + (10 * 60 * 1000); // 10 minutes
+        const lastOtpSentAt = now;
 
-    feather.replace();  
-  </script>  
+        // 3) save user document in Firestore (users collection)
+        const userData = {
+          fullName,
+          username,
+          phone,
+          email,
+          joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          balance: 0,
+          referrer: referrerUsername || null,
+          heardAbout,
+          verified: false,
+          otp,
+          otpExpires,
+          lastOtpSentAt
+        };
+        await db.collection("users").doc(userId).set(userData);
 
-  <script>  
-    (function() {  
-      const paramNames = ['ref', 'referral', 'r'];  
-      const params = new URLSearchParams(window.location.search);  
-      let ref = null;  
-      for (const name of paramNames) {  
-        const v = params.get(name);  
-        if (v) { ref = v; break; }  
-      }  
-      const refInput = document.getElementById('referrer');  
-      if (ref && refInput) {  
-        ref = decodeURIComponent(ref);  
-        refInput.value = ref;  
-        localStorage.setItem('pendingReferral', ref);  
-      } else if (refInput) {  
-        const pending = localStorage.getItem('pendingReferral');  
-        if (pending && !refInput.value) { refInput.value = pending; }  
-      }  
-      window.clearPendingReferral = function() { localStorage.removeItem('pendingReferral'); };  
-    })();  
-  </script>  
-</body>  
+        // 4) send OTP email via EmailJS
+        const templateParams = { to_email: email, otp: otp, name: fullName };
+        await emailjs.send(EMAILJS_SERVICE_ID, TEMPLATE_VERIFY, templateParams);
+
+        // 5) redirect to verify page (pass uid & email)
+        window.location.href = `verify.html?uid=${encodeURIComponent(userId)}&email=${encodeURIComponent(email)}`;
+      } catch (error) {
+        console.error(error);
+        alert("❌ " + (error.message || "Signup failed"));
+        submitBtn.disabled = false;
+        submitBtn.textContent = '🚀 Sign Up (Free)';
+      }
+    });
+  </script>
+</body>
 </html>
-
-
