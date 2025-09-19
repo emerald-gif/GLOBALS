@@ -52,6 +52,7 @@
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
   <script>
     const firebaseConfig = {
@@ -64,6 +65,7 @@
     };
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
+    const db = firebase.firestore(); // ✅ added Firestore
   </script>
 
   <script>
@@ -115,15 +117,28 @@
 
       try {
         const userCred = await auth.signInWithEmailAndPassword(email, password);
-        window.location.href = 'dashboard.html';
+        const uid = userCred.user.uid;
+
+        // ✅ check verification status from Firestore
+        const doc = await db.collection("users").doc(uid).get();
+        if (!doc.exists) {
+          alert("❌ User record not found. Please sign up again.");
+          return;
+        }
+        const data = doc.data();
+        if (!data.verified) {
+          alert("⚠️ Your account is not verified yet. Please enter the code sent to your email.");
+          window.location.href = `verify.html?uid=${uid}&email=${encodeURIComponent(data.email)}`;
+        } else {
+          window.location.href = 'dashboard.html';
+        }
       } catch (err) {
-        // 🔹 Friendly error messages for user
         let msg = 'Login failed. Please try again.';
         if (err.code === 'auth/user-not-found') msg = 'No account found with this email.';
         else if (err.code === 'auth/wrong-password') msg = 'Incorrect password. Try again.';
         else if (err.code === 'auth/invalid-email') msg = 'Invalid email address.';
-        alert('❌ ' + msg);  // clean message
-        console.error('Login failed:', err); // keep detailed error in console only
+        alert('❌ ' + msg);
+        console.error('Login failed:', err);
       }
     });
   });
