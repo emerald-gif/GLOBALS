@@ -89,21 +89,22 @@ auth.onAuthStateChanged(async (user) => {
 // ✅ Toggle Edit / Save
 const editToggleBtn = document.getElementById("editToggleBtn");
 const saveBtn = document.getElementById("saveBtn");
-const fullNameEditable = document.getElementById("fullNameEditable");
-const usernameEditable = document.getElementById("usernameEditable");
+
+const fullName = document.getElementById("fullName");
+const username = document.getElementById("editUsername");
+const fullNameLabel = document.getElementById("fullNameLabel");
+const usernameLabel = document.getElementById("usernameLabel");
 
 if (editToggleBtn) {
   editToggleBtn.onclick = () => {
-    const fullName = document.getElementById("fullName");
-    const username = document.getElementById("editUsername");
-
-    // Unlock only these two fields
     fullName.disabled = false;
     username.disabled = false;
 
-    // Show editable hints
-    if (fullNameEditable) fullNameEditable.classList.remove("hidden");
-    if (usernameEditable) usernameEditable.classList.remove("hidden");
+    // highlight labels in blue
+    fullNameLabel.classList.remove("text-gray-600");
+    fullNameLabel.classList.add("text-blue-600");
+    usernameLabel.classList.remove("text-gray-600");
+    usernameLabel.classList.add("text-blue-600");
 
     saveBtn.classList.remove("hidden");
     editToggleBtn.classList.add("hidden");
@@ -115,30 +116,31 @@ window.saveProfile = async function () {
   const user = auth.currentUser;
   if (!user) return;
 
-  const newFullName = document.getElementById("fullName").value.trim();
-  const newUsername = document.getElementById("editUsername").value.trim();
+  const newFullName = fullName.value.trim();
+  const newUsername = username.value.trim();
 
   await db.collection("users").doc(user.uid).update({
     fullName: newFullName,
     username: newUsername,
   });
 
-  // Lock fields again
-  document.getElementById("fullName").disabled = true;
-  document.getElementById("editUsername").disabled = true;
-
-  // Hide editable hints
-  if (fullNameEditable) fullNameEditable.classList.add("hidden");
-  if (usernameEditable) usernameEditable.classList.add("hidden");
+  // reset to view mode
+  fullName.disabled = true;
+  username.disabled = true;
+  fullNameLabel.classList.remove("text-blue-600");
+  fullNameLabel.classList.add("text-gray-600");
+  usernameLabel.classList.remove("text-blue-600");
+  usernameLabel.classList.add("text-gray-600");
 
   saveBtn.classList.add("hidden");
   editToggleBtn.classList.remove("hidden");
 
-  // Update referral link
-  document.getElementById("refLinkDisplay").value = `https://globals-myzv.onrender.com/signup.html?ref=${newUsername}`;
+  // update referral link
+  document.getElementById("refLinkDisplay").value = 
+    `https://globals-myzv.onrender.com/signup.html?ref=${newUsername}`;
+
   alert("Profile updated!");
 };
-
 // ✅ Copy to Clipboard Helper
 window.copyToClipboard = function (inputId) {
   const input = document.getElementById(inputId);
@@ -6966,6 +6968,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
