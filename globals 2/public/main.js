@@ -3650,13 +3650,21 @@ function showTapSection(tab) {
 
                                                               // LOGOUT
 															  
-const logoutBtn = document.getElementById('logoutBtn');
-if (logoutBtn) {
-  logoutBtn.addEventListener('click', async () => {
-    await auth.signOut();
-    window.location.href = "login.html";
-  });
-}
+
+  lucide.createIcons();
+
+  // 🔐 Logout functionality
+  function logoutUser() {
+    firebase.auth().signOut().then(() => {
+      alert("Logged out successfully");
+      window.location.href = "/"; // redirect to landing/login page
+    }).catch((error) => {
+      console.error("Logout Error:", error);
+      alert("Error logging out. Try again.");
+    });
+  }
+
+
 
 
 
@@ -6921,6 +6929,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
