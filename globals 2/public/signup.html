@@ -126,80 +126,110 @@
       });
     });
 
-    // helper: generate 4-digit OTP
-    function genOtp() {
-      return Math.floor(1000 + Math.random() * 9000).toString();
-    }
 
-    // Submit handler
-    document.getElementById("signupForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      // validate all
-      let valid = true;
-      Object.keys(validators).forEach(id => {
-        const input = document.getElementById(id);
-        const errorEl = document.getElementById(id + "Error");
-        if (!input) return;
-        const msg = validators[id](input.value);
-        if (msg) { errorEl.textContent = msg; errorEl.classList.remove("hidden"); valid = false; }
-        else { errorEl.classList.add("hidden"); }
-      });
-      if (!valid) return;
+  // helper: generate 4-digit OTP
+  function genOtp() {
+    return Math.floor(1000 + Math.random() * 9000).toString();
+  }
 
-      // collect values
-      const fullName = document.getElementById('fullName').value.trim();
-      const username = document.getElementById('username').value.trim();
-      const phone = document.getElementById('phone').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-      const referrerUsername = document.getElementById('referrer').value.trim();
-      const heardAbout = document.getElementById('heardAbout').value;
+  // Submit handler
+  document.getElementById("signupForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    // validate all
+    let valid = true;
+    Object.keys(validators).forEach(id => {
+      const input = document.getElementById(id);
+      const errorEl = document.getElementById(id + "Error");
+      if (!input) return;
+      const msg = validators[id](input.value);
+      if (msg) { errorEl.textContent = msg; errorEl.classList.remove("hidden"); valid = false; }
+      else { errorEl.classList.add("hidden"); }
+    });
+    if (!valid) return;
 
-      const submitBtn = document.getElementById('submitBtn');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Creating account...';
+    // collect values
+    const fullName = document.getElementById('fullName').value.trim();
+    const username = document.getElementById('username').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const referrerUsername = document.getElementById('referrer').value.trim();
+    const heardAbout = document.getElementById('heardAbout').value;
 
-      try {
-        // 1) create firebase auth user
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        const userId = userCredential.user.uid;
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Checking...';
 
-        // 2) generate OTP and expiry
-        const otp = genOtp();
-        const now = Date.now();
-        const otpExpires = now + (10 * 60 * 1000); // 10 minutes
-        const lastOtpSentAt = now;
-
-        // 3) save user document in Firestore (users collection)
-        const userData = {
-          fullName,
-          username,
-          phone,
-          email,
-          joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          balance: 0,
-          referrer: referrerUsername || null,
-          heardAbout,
-          verified: false,
-          otp,
-          otpExpires,
-          lastOtpSentAt
-        };
-        await db.collection("users").doc(userId).set(userData);
-
-        // 4) send OTP email via EmailJS
-        const templateParams = { to_email: email, otp: otp, name: fullName };
-        await emailjs.send(EMAILJS_SERVICE_ID, TEMPLATE_VERIFY, templateParams);
-
-        // 5) redirect to verify page (pass uid & email)
-        window.location.href = `verify.html?uid=${encodeURIComponent(userId)}&email=${encodeURIComponent(email)}`;
-      } catch (error) {
-        console.error(error);
-        alert("❌ " + (error.message || "Signup failed"));
+    try {
+      // ✅ 1) Check if phone already exists
+      const phoneSnap = await db.collection("users").where("phone", "==", phone).limit(1).get();
+      if (!phoneSnap.empty) {
+        alert("❌ Phone number already registered. Please login or use another.");
         submitBtn.disabled = false;
         submitBtn.textContent = '🚀 Sign Up (Free)';
+        return;
       }
-    });
+
+      // ✅ 2) Check if email already exists in Firestore
+      const emailSnap = await db.collection("users").where("email", "==", email).limit(1).get();
+      if (!emailSnap.empty) {
+        alert("❌ Email already registered. Please login instead.");
+        submitBtn.disabled = false;
+        submitBtn.textContent = '🚀 Sign Up (Free)';
+        return;
+      }
+
+      submitBtn.textContent = 'Creating account...';
+
+      // ✅ 3) Create firebase auth user
+      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+      const userId = userCredential.user.uid;
+
+      // ✅ 4) Generate OTP and expiry
+      const otp = genOtp();
+      const now = Date.now();
+      const otpExpires = now + (10 * 60 * 1000); // 10 minutes
+      const lastOtpSentAt = now;
+
+      // ✅ 5) Save user document in Firestore
+      const userData = {
+        fullName,
+        username,
+        phone,
+        email,
+        joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        balance: 0,
+        referrer: referrerUsername || null,
+        heardAbout,
+        verified: false,
+        otp,
+        otpExpires,
+        lastOtpSentAt
+      };
+      await db.collection("users").doc(userId).set(userData);
+
+      // ✅ 6) Send OTP email via EmailJS
+      const templateParams = { to_email: email, otp: otp, name: fullName };
+      emailjs.send(EMAILJS_SERVICE_ID, TEMPLATE_VERIFY, templateParams)
+        .then(() => {
+          // ✅ 7) Redirect immediately after sending OTP
+          window.location.href = `verify.html?uid=${encodeURIComponent(userId)}&email=${encodeURIComponent(email)}`;
+        })
+        .catch(err => {
+          console.error(err);
+          alert("⚠️ Account created, but failed to send OTP. Try resending on verify page.");
+          window.location.href = `verify.html?uid=${encodeURIComponent(userId)}&email=${encodeURIComponent(email)}`;
+        });
+
+    } catch (error) {
+      console.error(error);
+      alert("❌ Something went wrong while signing up. Please try again.");
+      submitBtn.disabled = false;
+      submitBtn.textContent = '🚀 Sign Up (Free)';
+    }
+  });
+
   </script>
 </body>
 </html>
+
