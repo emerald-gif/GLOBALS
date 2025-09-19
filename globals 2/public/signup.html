@@ -127,6 +127,7 @@
     });
 
 
+
   // helper: generate 4-digit OTP
   function genOtp() {
     return Math.floor(1000 + Math.random() * 9000).toString();
@@ -135,6 +136,7 @@
   // Submit handler
   document.getElementById("signupForm").addEventListener("submit", async (e) => {
     e.preventDefault();
+
     // validate all
     let valid = true;
     Object.keys(validators).forEach(id => {
@@ -161,7 +163,7 @@
     submitBtn.textContent = 'Checking...';
 
     try {
-      // ✅ 1) Check if phone already exists
+      // ✅ 1) Check if phone already exists in Firestore
       const phoneSnap = await db.collection("users").where("phone", "==", phone).limit(1).get();
       if (!phoneSnap.empty) {
         alert("❌ Phone number already registered. Please login or use another.");
@@ -170,28 +172,19 @@
         return;
       }
 
-      // ✅ 2) Check if email already exists in Firestore
-      const emailSnap = await db.collection("users").where("email", "==", email).limit(1).get();
-      if (!emailSnap.empty) {
-        alert("❌ Email already registered. Please login instead.");
-        submitBtn.disabled = false;
-        submitBtn.textContent = '🚀 Sign Up (Free)';
-        return;
-      }
-
       submitBtn.textContent = 'Creating account...';
 
-      // ✅ 3) Create firebase auth user
+      // ✅ 2) Create Firebase Auth user (this also checks if email is already used)
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       const userId = userCredential.user.uid;
 
-      // ✅ 4) Generate OTP and expiry
+      // ✅ 3) Generate OTP and expiry
       const otp = genOtp();
       const now = Date.now();
       const otpExpires = now + (10 * 60 * 1000); // 10 minutes
       const lastOtpSentAt = now;
 
-      // ✅ 5) Save user document in Firestore
+      // ✅ 4) Save user document in Firestore
       const userData = {
         fullName,
         username,
@@ -208,28 +201,31 @@
       };
       await db.collection("users").doc(userId).set(userData);
 
-      // ✅ 6) Send OTP email via EmailJS
+      // ✅ 5) Send OTP email via EmailJS
       const templateParams = { to_email: email, otp: otp, name: fullName };
       emailjs.send(EMAILJS_SERVICE_ID, TEMPLATE_VERIFY, templateParams)
-        .then(() => {
-          // ✅ 7) Redirect immediately after sending OTP
-          window.location.href = `verify.html?uid=${encodeURIComponent(userId)}&email=${encodeURIComponent(email)}`;
-        })
-        .catch(err => {
-          console.error(err);
-          alert("⚠️ Account created, but failed to send OTP. Try resending on verify page.");
-          window.location.href = `verify.html?uid=${encodeURIComponent(userId)}&email=${encodeURIComponent(email)}`;
+        .catch(() => {
+          // not blocking — user can still verify
+          alert("⚠️ Account created, but OTP email failed. Please request resend.");
         });
+
+      // ✅ 6) Redirect immediately (fast experience)
+      window.location.href = `verify.html?uid=${encodeURIComponent(userId)}&email=${encodeURIComponent(email)}`;
 
     } catch (error) {
       console.error(error);
-      alert("❌ Something went wrong while signing up. Please try again.");
+      let msg = "Signup failed. Please try again.";
+      if (error.code === "auth/email-already-in-use") msg = "❌ Email already registered. Please login instead.";
+      else if (error.code === "auth/invalid-email") msg = "❌ Invalid email address.";
+      else if (error.code === "auth/weak-password") msg = "❌ Password too weak. Use at least 6 characters.";
+
+      alert(msg);
       submitBtn.disabled = false;
       submitBtn.textContent = '🚀 Sign Up (Free)';
     }
   });
-
-  </script>
+</script>
 </body>
 </html>
+
 
