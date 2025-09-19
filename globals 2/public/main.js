@@ -44,15 +44,12 @@ tabBtns.forEach((btn) => {
 
 
                                            // AUTH CHECK AND DISPLAY USER INFO / ME NAV BAR INFO
-
 auth.onAuthStateChanged(async (user) => {
   if (!user) return window.location.href = "login.html";
 
   const uid = user.uid;
   const userDoc = await db.collection("users").doc(uid).get();
   const data = userDoc.data();
-
-  
 
   // ✅ ME SECTION: Show Profile Username & Picture
   const profileUsername = document.getElementById("profileUsername");
@@ -64,17 +61,12 @@ auth.onAuthStateChanged(async (user) => {
   if (document.getElementById("userId")) {
     document.getElementById("userId").value = uid;
     document.getElementById("editUsername").value = data.username || "";
-    document.getElementById("editEmail").value = data.email || "";
     document.getElementById("fullName").value = data.fullName || "";
-    document.getElementById("phoneNumber").value = data.phone || "";
-    document.getElementById("refLinkDisplay").value = `https://globals.com/signup.html?ref=${data.username}`;
+    document.getElementById("refLinkDisplay").value = `https://globals-myzv.onrender.com/signup.html?ref=${data.username}`;
     document.getElementById("joinDate").value = new Date(user.metadata.creationTime).toLocaleDateString();
   }
 
-  
-
-
-	// ✅ Upload profile picture
+  // ✅ Upload profile picture
   const profilePicUpload = document.getElementById("profilePicUpload");
   if (profilePicUpload) {
     profilePicUpload.onchange = async (e) => {
@@ -92,25 +84,53 @@ auth.onAuthStateChanged(async (user) => {
   }
 });
 
+// ✅ Toggle Edit / Save
+const editToggleBtn = document.getElementById("editToggleBtn");
+const saveBtn = document.getElementById("saveBtn");
 
+if (editToggleBtn) {
+  editToggleBtn.onclick = () => {
+    const fullName = document.getElementById("fullName");
+    const username = document.getElementById("editUsername");
 
-// ✅ Save Profile Button Function
+    fullName.disabled = false;
+    username.disabled = false;
+    saveBtn.classList.remove("hidden");
+    editToggleBtn.classList.add("hidden");
+  };
+}
+
+// ✅ Save Profile
 window.saveProfile = async function () {
   const user = auth.currentUser;
   if (!user) return;
 
-  const updated = {
-    username: document.getElementById("editUsername").value.trim(),
-    email: document.getElementById("editEmail").value.trim(),
-    fullName: document.getElementById("fullName").value.trim(),
-    phone: document.getElementById("phoneNumber").value.trim(),
-  };
+  const newFullName = document.getElementById("fullName").value.trim();
+  const newUsername = document.getElementById("editUsername").value.trim();
 
-  await db.collection("users").doc(user.uid).update(updated);
-  alert("Profile updated successfully!");
-  location.reload();
+  await db.collection("users").doc(user.uid).update({
+    fullName: newFullName,
+    username: newUsername,
+  });
+
+  // Reset UI
+  document.getElementById("fullName").disabled = true;
+  document.getElementById("editUsername").disabled = true;
+  saveBtn.classList.add("hidden");
+  editToggleBtn.classList.remove("hidden");
+
+  // Update referral link
+  document.getElementById("refLinkDisplay").value = `https://globals-myzv.onrender.com/signup.html?ref=${newUsername}`;
+  alert("Profile updated!");
 };
 
+// ✅ Copy to Clipboard Helper
+window.copyToClipboard = function (inputId) {
+  const input = document.getElementById(inputId);
+  navigator.clipboard.writeText(input.value).then(() => {
+    alert("Copied!");
+  });
+};
 
 
 
@@ -6929,6 +6949,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
