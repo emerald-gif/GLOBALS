@@ -62,6 +62,8 @@ auth.onAuthStateChanged(async (user) => {
     document.getElementById("userId").value = uid;
     document.getElementById("editUsername").value = data.username || "";
     document.getElementById("fullName").value = data.fullName || "";
+    document.getElementById("editEmail").value = data.email || "";
+    document.getElementById("phoneNumber").value = data.phone || "";
     document.getElementById("refLinkDisplay").value = `https://globals-myzv.onrender.com/signup.html?ref=${data.username}`;
     document.getElementById("joinDate").value = new Date(user.metadata.creationTime).toLocaleDateString();
   }
@@ -87,14 +89,22 @@ auth.onAuthStateChanged(async (user) => {
 // ✅ Toggle Edit / Save
 const editToggleBtn = document.getElementById("editToggleBtn");
 const saveBtn = document.getElementById("saveBtn");
+const fullNameEditable = document.getElementById("fullNameEditable");
+const usernameEditable = document.getElementById("usernameEditable");
 
 if (editToggleBtn) {
   editToggleBtn.onclick = () => {
     const fullName = document.getElementById("fullName");
     const username = document.getElementById("editUsername");
 
+    // Unlock only these two fields
     fullName.disabled = false;
     username.disabled = false;
+
+    // Show editable hints
+    if (fullNameEditable) fullNameEditable.classList.remove("hidden");
+    if (usernameEditable) usernameEditable.classList.remove("hidden");
+
     saveBtn.classList.remove("hidden");
     editToggleBtn.classList.add("hidden");
   };
@@ -113,9 +123,14 @@ window.saveProfile = async function () {
     username: newUsername,
   });
 
-  // Reset UI
+  // Lock fields again
   document.getElementById("fullName").disabled = true;
   document.getElementById("editUsername").disabled = true;
+
+  // Hide editable hints
+  if (fullNameEditable) fullNameEditable.classList.add("hidden");
+  if (usernameEditable) usernameEditable.classList.add("hidden");
+
   saveBtn.classList.add("hidden");
   editToggleBtn.classList.remove("hidden");
 
@@ -127,10 +142,12 @@ window.saveProfile = async function () {
 // ✅ Copy to Clipboard Helper
 window.copyToClipboard = function (inputId) {
   const input = document.getElementById(inputId);
+  if (!input) return;
   navigator.clipboard.writeText(input.value).then(() => {
     alert("Copied!");
   });
 };
+
 
 
 
@@ -6949,6 +6966,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
