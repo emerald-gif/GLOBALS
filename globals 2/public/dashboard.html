@@ -3469,11 +3469,15 @@
 
 
 
-<!-- 🔐 My Profile Inner Screen -->
 <div id="myProfile" class="tab-section hidden px-4 pt-8 pb-16 min-h-screen bg-gradient-to-b from-sky-50 via-white to-indigo-50">
-<button onclick="activateTab('me')" class="text-blue-500 text-sm">← Back</button>
   <div class="max-w-xl mx-auto bg-white/80 backdrop-blur-xl shadow-2xl rounded-3xl p-6 space-y-6">
-    
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl font-bold text-gray-800">My Profile</h2>
+      <button id="editToggleBtn" class="text-blue-600 font-semibold hover:underline">Edit Profile</button>
+    </div>
+
     <!-- Profile Photo -->
     <div class="text-center">
       <label for="profilePicUpload" class="cursor-pointer inline-block group">
@@ -3486,43 +3490,43 @@
 
     <!-- Profile Fields -->
     <div class="space-y-4 text-gray-800">
-      <div>
-        <label class="flex items-center gap-2 text-sm font-medium"><svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 12H8m0 0l4-4m-4 4l4 4"/></svg> User ID</label>
-        <input id="userId" type="text" disabled class="input bg-gray-100 text-sm" />
+      <!-- User ID -->
+      <div class="flex items-center gap-2">
+        <input id="userId" type="text" disabled class="input bg-gray-100 text-sm flex-1" />
+        <button onclick="copyToClipboard('userId')" class="px-2 text-gray-500 hover:text-blue-600">
+          📋
+        </button>
       </div>
 
+      <!-- Full Name -->
       <div>
-        <label class="flex items-center gap-2 text-sm font-medium"><svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5.121 17.804A3 3 0 017 17h10a3 3 0 012.828 2.121"/></svg> Full Name</label>
-        <input id="fullName" type="text" class="input" placeholder="Enter full name" />
+        <label class="block text-sm font-medium text-gray-600">Full Name</label>
+        <input id="fullName" type="text" disabled class="input" />
       </div>
 
+      <!-- Username -->
       <div>
-        <label class="flex items-center gap-2 text-sm font-medium"><svg class="w-4 h-4 text-fuchsia-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h7"/></svg> Username</label>
-        <input id="editUsername" type="text" class="input" />
+        <label class="block text-sm font-medium text-gray-600">Username</label>
+        <input id="editUsername" type="text" disabled class="input" />
       </div>
 
-      <div>
-        <label class="flex items-center gap-2 text-sm font-medium"><svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 12H8m0 0l4-4m-4 4l4 4"/></svg> Email</label>
-        <input id="editEmail" type="email" class="input" />
+      <!-- Referral Link -->
+      <div class="flex items-center gap-2">
+        <input id="refLinkDisplay" type="text" disabled class="input bg-gray-100 flex-1" />
+        <button onclick="copyToClipboard('refLinkDisplay')" class="px-2 text-gray-500 hover:text-blue-600">
+          📋
+        </button>
       </div>
 
+      <!-- Joined -->
       <div>
-        <label class="flex items-center gap-2 text-sm font-medium"><svg class="w-4 h-4 text-pink-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 5h18M3 12h18M3 19h18"/></svg> Phone Number</label>
-        <input id="phoneNumber" type="tel" class="input" placeholder="Enter phone number" />
-      </div>
-
-      <div>
-        <label class="flex items-center gap-2 text-sm font-medium"><svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 10h11m4 0h3m-8 4h8"/></svg> Referral Link</label>
-        <input id="refLinkDisplay" type="text" class="input bg-gray-100" disabled />
-      </div>
-
-      <div>
-        <label class="flex items-center gap-2 text-sm font-medium"><svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3h8v4m-5 4h2v5h-2z"/></svg> Joined</label>
-        <input id="joinDate" type="text" class="input bg-gray-100" disabled />
+        <label class="block text-sm font-medium text-gray-600">Joined</label>
+        <input id="joinDate" type="text" disabled class="input bg-gray-100" />
       </div>
     </div>
 
-    <button onclick="saveProfile()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition">💾 Save Changes</button>
+    <!-- Save button (hidden by default) -->
+    <button id="saveBtn" onclick="saveProfile()" class="hidden w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition">💾 Save Changes</button>
   </div>
 </div>
 
