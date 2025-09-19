@@ -3498,13 +3498,19 @@
 
       <!-- Full Name -->
       <div>
-        <label class="block text-sm font-medium text-gray-600">Full Name</label>
+        <label class="block text-sm font-medium text-gray-600">
+          Full Name 
+          <span id="fullNameEditable" class="text-xs text-blue-500 hidden">(Editable)</span>
+        </label>
         <input id="fullName" type="text" disabled class="input" />
       </div>
 
       <!-- Username -->
       <div>
-        <label class="block text-sm font-medium text-gray-600">Username</label>
+        <label class="block text-sm font-medium text-gray-600">
+          Username 
+          <span id="usernameEditable" class="text-xs text-blue-500 hidden">(Editable)</span>
+        </label>
         <input id="editUsername" type="text" disabled class="input" />
       </div>
 
@@ -3534,22 +3540,18 @@
     </div>
 
     <!-- Save button (hidden by default) -->
-    <!-- Save button (hidden by default) -->
-<button id="saveBtn" onclick="saveProfile()" 
-  class="hidden w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition">
-  <!-- Heroicon: Check Badge (solid) -->
-  <svg xmlns="http://www.w3.org/2000/svg" 
-       class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-    <path fill-rule="evenodd" 
-          d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 7.207a1 1 0 0 0-1.414-1.414L9 9.586 7.707 8.293a1 1 0 0 0-1.414 1.414L9 12.414l4.707-4.707Z" 
-          clip-rule="evenodd"/>
-  </svg>
-  Save Changes
-</button>
-	  
+    <button id="saveBtn" onclick="saveProfile()" 
+      class="hidden w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" 
+              d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 7.207a1 1 0 0 0-1.414-1.414L9 9.586 7.707 8.293a1 1 0 0 0-1.414 1.414L9 12.414l4.707-4.707Z" 
+              clip-rule="evenodd"/>
+      </svg>
+      Save Changes
+    </button>
+
   </div>
 </div>
-
 
 
 
