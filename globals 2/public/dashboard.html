@@ -3468,14 +3468,16 @@
 
 
 
-
 <div id="myProfile" class="tab-section hidden px-4 pt-8 pb-16 min-h-screen bg-gradient-to-b from-sky-50 via-white to-indigo-50">
-  <div class="max-w-xl mx-auto bg-white/80 backdrop-blur-xl shadow-2xl rounded-3xl p-6 space-y-6">
+  <div class="max-w-xl mx-auto bg-white/90 backdrop-blur-xl shadow-2xl rounded-3xl p-6 space-y-6">
 
     <!-- Header -->
     <div class="flex items-center justify-between">
       <h2 class="text-xl font-bold text-gray-800">My Profile</h2>
-      <button id="editToggleBtn" class="text-blue-600 font-semibold hover:underline">Edit Profile</button>
+      <button id="editToggleBtn" 
+              class="text-blue-600 font-semibold hover:underline transition">
+        Edit Profile
+      </button>
     </div>
 
     <!-- Profile Photo -->
@@ -3489,53 +3491,77 @@
     </div>
 
     <!-- Profile Fields -->
-    <div class="space-y-4 text-gray-800">
-      <!-- User ID -->
-      <div class="flex items-center gap-2">
-        <input id="userId" type="text" disabled class="input bg-gray-100 text-sm flex-1" />
-        <button onclick="copyToClipboard('userId')" class="px-2 text-gray-500 hover:text-blue-600">📋</button>
-      </div>
-
-      <!-- Full Name -->
+    <div class="space-y-5 text-gray-800">
+      <!-- User ID (readonly) -->
       <div>
-        <label class="block text-sm font-medium text-gray-600">
-          Full Name 
-          <span id="fullNameEditable" class="text-xs text-blue-500 hidden">(Editable)</span>
-        </label>
-        <input id="fullName" type="text" disabled class="input" />
+        <label class="block text-sm font-medium text-gray-500">User ID</label>
+        <div class="flex gap-2">
+          <input id="userId" type="text" disabled 
+                 class="input bg-gray-100 text-sm flex-1 cursor-not-allowed" />
+          <button onclick="copyToClipboard('userId')" 
+        class="p-2 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition" aria-label="Copy">
+  <!-- Heroicon Clipboard Document -->
+  <svg xmlns="http://www.w3.org/2000/svg" 
+       class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+    <path stroke-linecap="round" stroke-linejoin="round" 
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-4-2h4a2 2 0 012 2v0a2 2 0 01-2 2h-4a2 2 0 01-2-2v0a2 2 0 012-2z" />
+  </svg>
+</button>
+        </div>
       </div>
 
-      <!-- Username -->
+      <!-- Full Name (editable) -->
       <div>
-        <label class="block text-sm font-medium text-gray-600">
-          Username 
-          <span id="usernameEditable" class="text-xs text-blue-500 hidden">(Editable)</span>
-        </label>
-        <input id="editUsername" type="text" disabled class="input" />
+        <label id="fullNameLabel" 
+               class="block text-sm font-medium text-gray-600 transition">Full Name</label>
+        <input id="fullName" type="text" disabled 
+               class="input transition focus:ring-2 focus:ring-blue-500" />
       </div>
 
-      <!-- Email (read-only) -->
+      <!-- Username (editable) -->
       <div>
-        <label class="block text-sm font-medium text-gray-600">Email</label>
-        <input id="editEmail" type="email" disabled class="input bg-gray-100" />
+        <label id="usernameLabel" 
+               class="block text-sm font-medium text-gray-600 transition">Username</label>
+        <input id="editUsername" type="text" disabled 
+               class="input transition focus:ring-2 focus:ring-blue-500" />
       </div>
 
-      <!-- Phone Number (read-only) -->
+      <!-- Email (readonly) -->
       <div>
-        <label class="block text-sm font-medium text-gray-600">Phone Number</label>
-        <input id="phoneNumber" type="tel" disabled class="input bg-gray-100" />
+        <label class="block text-sm font-medium text-gray-500">Email</label>
+        <input id="editEmail" type="email" disabled 
+               class="input bg-gray-100 cursor-not-allowed" />
       </div>
 
-      <!-- Referral Link -->
-      <div class="flex items-center gap-2">
-        <input id="refLinkDisplay" type="text" disabled class="input bg-gray-100 flex-1" />
-        <button onclick="copyToClipboard('refLinkDisplay')" class="px-2 text-gray-500 hover:text-blue-600">📋</button>
-      </div>
-
-      <!-- Joined -->
+      <!-- Phone Number (readonly) -->
       <div>
-        <label class="block text-sm font-medium text-gray-600">Joined</label>
-        <input id="joinDate" type="text" disabled class="input bg-gray-100" />
+        <label class="block text-sm font-medium text-gray-500">Phone Number</label>
+        <input id="phoneNumber" type="tel" disabled 
+               class="input bg-gray-100 cursor-not-allowed" />
+      </div>
+
+      <!-- Referral Link (readonly) -->
+      <div>
+        <label class="block text-sm font-medium text-gray-500">Referral Link</label>
+        <div class="flex gap-2">
+          <input id="refLinkDisplay" type="text" disabled 
+                 class="input bg-gray-100 flex-1 cursor-not-allowed" />
+          <button onclick="copyToClipboard('refLinkDisplay')" 
+        class="p-2 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition" aria-label="Copy">
+  <svg xmlns="http://www.w3.org/2000/svg" 
+       class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+    <path stroke-linecap="round" stroke-linejoin="round" 
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-4-2h4a2 2 0 012 2v0a2 2 0 01-2 2h-4a2 2 0 01-2-2v0a2 2 0 012-2z" />
+  </svg>
+</button>
+        </div>
+      </div>
+
+      <!-- Joined (readonly) -->
+      <div>
+        <label class="block text-sm font-medium text-gray-500">Joined</label>
+        <input id="joinDate" type="text" disabled 
+               class="input bg-gray-100 cursor-not-allowed" />
       </div>
     </div>
 
