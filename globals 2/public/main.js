@@ -6953,7 +6953,453 @@ startCheckinListener();
 
 
 
+/* MAIN SPIN SECTION LOGIC
+   Assumptions:
+   - Firebase is already initialized on the page (firebase.auth() and firebase.firestore()).
+   - Collections used:
+     - affiliate_submissions (fields: userId, status ("approved"), approvedAt (timestamp))
+     - task_submissions (fields: userId, status ("approved"), approvedAt)
+     - bill_submissions (fields: userId, type: "data" or "airtime", amount: number, processed: true, createdAt)
+     - users (fields: username, is_Premium (bool), balance (number))
+     - spin_logs (new collection created by this code): { userId, type, reward, createdAt }
+   - Timestamps in Firestore are stored as Firestore.Timestamp in each collection under createdAt / approvedAt.
+*/
 
+// CONFIG: reward values (you can tune)
+const REWARDS = {
+  affiliate: 30,
+  task: 10,
+  data: 10,
+  airtime: 5,    // "depends on mood" we set to 5 for simplicity
+  refer: 100,
+  freeOptions: [0, 5, 10] // free daily spin possible values (we pick random)
+};
+
+// helper: get start of today (local)
+function startOfToday() {
+  const d = new Date();
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+// DOM refs
+const spinBtn = document.getElementById('spinBtn');
+const spinLeftEl = document.getElementById('spinLeft');
+const remainingSpinsEl = document.getElementById('remainingSpins');
+const spinCashbackEl = document.getElementById('spinCashback');
+const dailyTasksEl = document.getElementById('dailyTasks');
+const rewardModal = document.getElementById('rewardModal');
+const rewardMessage = document.getElementById('rewardMessage');
+const rewardOk = document.getElementById('rewardOk');
+const tickerInner = document.getElementById('tickerInner');
+const eligDateEl = document.getElementById('eligDate');
+
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+// fake live ticker data generator (10 repeating notices)
+const FAKE_TICKER = [
+  "ABUBAKAR won ₦1,000 cashback.",
+  "Mariam won ₦50 cashback.",
+  "Uche won ₦20 cashback.",
+  "Tunde won ₦100 cashback.",
+  "Ada won ₦10 cashback.",
+  "Chinedu won ₦500 cashback.",
+  "Emeka won ₦30 cashback.",
+  "Sade won ₦5 cashback.",
+  "Aisha won ₦20 cashback.",
+  "Bayo won ₦100 cashback."
+];
+
+// show ticker (rotate)
+function initTicker() {
+  tickerInner.innerHTML = '';
+  FAKE_TICKER.forEach(text => {
+    const p = document.createElement('div');
+    p.className = 'text-sm text-gray-700';
+    p.textContent = text;
+    tickerInner.appendChild(p);
+  });
+  // simple vertical slide effect (loop)
+  let idx = 0;
+  setInterval(() => {
+    idx = (idx + 1) % FAKE_TICKER.length;
+    tickerInner.style.transform = `translateY(-${idx * 2.3}rem)`;
+    tickerInner.style.transition = 'transform 0.6s ease';
+  }, 3000);
+}
+
+// UI helper: show reward modal
+function showReward(reward) {
+  rewardMessage.textContent = `You won ₦${reward}`;
+  rewardModal.classList.remove('hidden');
+  rewardModal.classList.add('flex');
+}
+rewardOk.addEventListener('click', () => {
+  rewardModal.classList.add('hidden');
+  rewardModal.classList.remove('flex');
+});
+
+// compute today start (Firestore Timestamp)
+function getTodayTimestamp() {
+  return firebase.firestore.Timestamp.fromDate(startOfToday());
+}
+
+// compute spins available for user
+async function computeAvailableSpins(uid, username, isPremium) {
+  const todayTs = getTodayTimestamp();
+
+  // 1. free base
+  const freeBase = isPremium ? 2 : 1;
+
+  // 2. count used spins today
+  const spinUsedSnap = await db.collection('spin_logs')
+    .where('userId','==', uid)
+    .where('createdAt','>=', todayTs)
+    .get();
+  const spinsUsedToday = spinUsedSnap.size;
+
+  // 3. affiliate submissions count (approved today)
+  const affSnap = await db.collection('affiliate_submissions')
+    .where('userId','==', uid)
+    .where('status','==','approved')
+    .where('approvedAt','>=', todayTs)
+    .get();
+  const affiliateCount = affSnap.size;
+  const affiliateSpinsGranted = Math.floor(affiliateCount / 10);
+
+  // 4. task submissions count (approved today)
+  const taskSnap = await db.collection('task_submissions')
+    .where('userId','==', uid)
+    .where('status','==','approved')
+    .where('approvedAt','>=', todayTs)
+    .get();
+  const taskCount = taskSnap.size;
+  const taskSpinsGranted = Math.floor(taskCount / 10);
+
+  // 5. data purchases today (sum amounts where type == 'data' and processed true)
+  const dataSnap = await db.collection('bill_submissions')
+    .where('userId','==', uid)
+    .where('type','==','data')
+    .where('processed','==', true)
+    .where('createdAt','>=', todayTs)
+    .get();
+  let dataSum = 0;
+  dataSnap.forEach(d => { const val = d.data().amount || 0; dataSum += val; });
+  const dataSpinsGranted = Math.floor(dataSum / 1000);
+
+  // 6. airtime purchases today (sum amounts where type == 'airtime' and processed true)
+  const airtimeSnap = await db.collection('bill_submissions')
+    .where('userId','==', uid)
+    .where('type','==','airtime')
+    .where('processed','==', true)
+    .where('createdAt','>=', todayTs)
+    .get();
+  let airtimeSum = 0;
+  airtimeSnap.forEach(d => { airtimeSum += (d.data().amount || 0); });
+  const airtimeSpinsGranted = Math.floor(airtimeSum / 500);
+
+  // 7. referrals today (where referrer == username and referred user is premium and createdAt >= today)
+  const referSnap = await db.collection('users')
+    .where('referrer','==', username)    // assumes referrer field stores username
+    .where('is_Premium','==', true)
+    .where('joinedAt','>=', todayTs)
+    .get();
+  const referCount = referSnap.size;
+  const referSpinsGranted = Math.floor(referCount / 2);
+
+  // total granted from challenges
+  const totalGranted = affiliateSpinsGranted + taskSpinsGranted + dataSpinsGranted + airtimeSpinsGranted + referSpinsGranted;
+
+  // available = freeBase + totalGranted - spinsUsedToday
+  let available = freeBase + totalGranted - spinsUsedToday;
+  if (available < 0) available = 0;
+
+  // return breakdown for UI
+  return {
+    available,
+    breakdown: {
+      freeBase,
+      spinsUsedToday,
+      affiliate: { count: affiliateCount, granted: affiliateSpinsGranted },
+      task: { count: taskCount, granted: taskSpinsGranted },
+      data: { sum: dataSum, granted: dataSpinsGranted },
+      airtime: { sum: airtimeSum, granted: airtimeSpinsGranted },
+      refer: { count: referCount, granted: referSpinsGranted }
+    }
+  };
+}
+
+// render tasks UI with progress bars
+function renderTasksUI(breakdown) {
+  dailyTasksEl.innerHTML = '';
+
+  // helper to render a row
+  function taskRow(title, progressText, progress, goal, reward, id) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'border border-gray-100 p-3 rounded-lg';
+    wrapper.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div class="text-sm font-semibold">${title}</div>
+        <div class="text-xs text-gray-500">${progressText}</div>
+      </div>
+      <div class="w-full bg-gray-100 rounded-full h-3 mt-3 overflow-hidden">
+        <div style="width:${Math.min(100, Math.round((progress/goal)*100))}%" class="h-3 bg-gradient-to-r from-indigo-500 to-blue-400"></div>
+      </div>
+      <div class="flex items-center justify-between mt-2 text-xs text-gray-600">
+        <div>Reward: ₦${reward}</div>
+        <div id="${id}" class="text-sm font-medium"></div>
+      </div>
+    `;
+    return wrapper;
+  }
+
+  // affiliate: goal 10 => reward 30
+  const aff = breakdown.affiliate;
+  const affRow = taskRow('Complete 10 affiliate tasks', `${aff.count}/10`, aff.count, 10, REWARDS.affiliate, 'affStatus');
+  dailyTasksEl.appendChild(affRow);
+
+  // tasks: goal 10 => reward 10
+  const t = breakdown.task;
+  const taskRowEl = taskRow('Complete 10 tasks', `${t.count}/10`, t.count, 10, REWARDS.task, 'taskStatus');
+  dailyTasksEl.appendChild(taskRowEl);
+
+  // data purchase: sum >= 1000 => reward 10
+  const d = breakdown.data;
+  const dataRow = taskRow('Buy data worth ₦1,000+', `₦${d.sum}/₦1000`, d.sum, 1000, REWARDS.data, 'dataStatus');
+  dailyTasksEl.appendChild(dataRow);
+
+  // airtime purchase: sum >= 500 => reward 5
+  const a = breakdown.airtime;
+  const airtimeRow = taskRow('Buy airtime worth ₦500+', `₦${a.sum}/₦500`, a.sum, 500, REWARDS.airtime, 'airtimeStatus');
+  dailyTasksEl.appendChild(airtimeRow);
+
+  // refer 2 premium => reward 100
+  const r = breakdown.refer;
+  const referRow = taskRow('Refer 2 users who upgrade to premium', `${r.count}/2`, r.count, 2, REWARDS.refer, 'referStatus');
+  dailyTasksEl.appendChild(referRow);
+
+  // update small status markers
+  ['affStatus','taskStatus','dataStatus','airtimeStatus','referStatus'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = ''; // filled later if needed
+  });
+}
+
+// utility: pick which reward type to consume when spinning (priority order)
+async function determineSpinSourceAndReward(uid) {
+  const todayTs = getTodayTimestamp();
+
+  // priority: refer, affiliate, task, data, airtime, free
+  // For each we compute granted - consumed and if >0, return that type and reward.
+
+  // helper to count spin_logs of type and createdAt >= today
+  async function countSpinLogsOfType(type) {
+    const snap = await db.collection('spin_logs')
+      .where('userId','==', uid)
+      .where('type','==', type)
+      .where('createdAt','>=', todayTs)
+      .get();
+    return snap.size;
+  }
+
+  // 1) refer
+  const referSnap = await db.collection('users')
+    .where('referrer','==', (await db.collection('users').doc(uid).get()).data().username || '')
+    .where('is_Premium','==', true)
+    .where('joinedAt','>=', todayTs)
+    .get();
+  const referCount = referSnap.size;
+  const referGranted = Math.floor(referCount/2);
+  const referUsed = await countSpinLogsOfType('refer');
+  if (referGranted - referUsed > 0) return { type:'refer', reward: REWARDS.refer };
+
+  // 2) affiliate
+  const affSnap = await db.collection('affiliate_submissions')
+    .where('userId','==', uid)
+    .where('status','==','approved')
+    .where('approvedAt','>=', todayTs)
+    .get();
+  const affCount = affSnap.size;
+  const affGranted = Math.floor(affCount/10);
+  const affUsed = await countSpinLogsOfType('affiliate');
+  if (affGranted - affUsed > 0) return { type:'affiliate', reward: REWARDS.affiliate };
+
+  // 3) task
+  const taskSnap = await db.collection('task_submissions')
+    .where('userId','==', uid)
+    .where('status','==','approved')
+    .where('approvedAt','>=', todayTs)
+    .get();
+  const tCount = taskSnap.size;
+  const tGranted = Math.floor(tCount/10);
+  const tUsed = await countSpinLogsOfType('task');
+  if (tGranted - tUsed > 0) return { type:'task', reward: REWARDS.task };
+
+  // 4) data purchases
+  const dataSnap = await db.collection('bill_submissions')
+    .where('userId','==', uid)
+    .where('type','==','data')
+    .where('processed','==', true)
+    .where('createdAt','>=', todayTs)
+    .get();
+  let dataSum = 0;
+  dataSnap.forEach(d => dataSum += (d.data().amount || 0));
+  const dataGranted = Math.floor(dataSum / 1000);
+  const dataUsed = await countSpinLogsOfType('data');
+  if (dataGranted - dataUsed > 0) return { type:'data', reward: REWARDS.data };
+
+  // 5) airtime
+  const airtimeSnap = await db.collection('bill_submissions')
+    .where('userId','==', uid)
+    .where('type','==','airtime')
+    .where('processed','==', true)
+    .where('createdAt','>=', todayTs)
+    .get();
+  let airtimeSum = 0;
+  airtimeSnap.forEach(d => airtimeSum += (d.data().amount || 0));
+  const airtimeGranted = Math.floor(airtimeSum / 500);
+  const airtimeUsed = await countSpinLogsOfType('airtime');
+  if (airtimeGranted - airtimeUsed > 0) return { type:'airtime', reward: REWARDS.airtime };
+
+  // 6) free
+  const userDoc = await db.collection('users').doc(uid).get();
+  const userData = userDoc.exists ? userDoc.data() : {};
+  const isPremium = !!userData.is_Premium;
+  const freeBase = isPremium ? 2 : 1;
+  const freeUsed = await countSpinLogsOfType('free');
+  if (freeBase - freeUsed > 0) {
+    // pick random free reward from options
+    const opt = REWARDS.freeOptions;
+    const pick = opt[Math.floor(Math.random() * opt.length)];
+    return { type:'free', reward: pick };
+  }
+
+  // none available
+  return null;
+}
+
+// perform spin animation and award
+async function performSpinAndAward(uid) {
+  // determine available first
+  const meDoc = await db.collection('users').doc(uid).get();
+  if (!meDoc.exists) { alert('User data missing'); return; }
+  const { username = '', is_Premium = false } = meDoc.data();
+
+  const computed = await computeAvailableSpins(uid, username, is_Premium);
+  if (computed.available <= 0) {
+    alert('No spins available. Complete daily challenges or come back tomorrow for a free spin.');
+    return;
+  }
+
+  // find which source to consume
+  const source = await determineSpinSourceAndReward(uid);
+  if (!source) {
+    alert('No spin source found. Try again.');
+    return;
+  }
+
+  // animate wheel (fake spin — always "land" on assigned reward)
+  // we rotate the wheel element and then show reward modal
+  const wheelEl = document.getElementById('wheel');
+  wheelEl.style.transition = 'transform 3.5s cubic-bezier(.12,.9,.2,1)';
+  const degrees = 360 * (3 + Math.random()); // a few rotations, random extra
+  wheelEl.style.transform = `rotate(${degrees}deg)`;
+
+  // after animation ends, record spin and give reward
+  setTimeout(async () => {
+    // stop rotation visually
+    wheelEl.style.transition = '';
+    wheelEl.style.transform = '';
+
+    // Create a spin log (records the spin)
+    const reward = source.reward;
+    await db.collection('spin_logs').add({
+      userId: uid,
+      type: source.type,
+      reward,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // credit user's balance
+    await db.collection('users').doc(uid).update({
+      balance: firebase.firestore.FieldValue.increment(reward)
+    });
+
+    // show popup
+    showReward(reward);
+
+    // update UI numbers quickly
+    refreshSpinSection();
+
+  }, 3600);
+}
+
+// refresh UI: available spins, earned cashback, tasks progress
+async function refreshSpinSection() {
+  const user = firebase.auth().currentUser;
+  if (!user) { console.warn('No user signed in'); return; }
+  const uid = user.uid;
+
+  // fetch user doc
+  const meDoc = await db.collection('users').doc(uid).get();
+  if (!meDoc.exists) return;
+  const me = meDoc.data();
+  const username = me.username || '';
+  const isPremium = !!me.is_Premium;
+  const balance = me.balance || 0;
+
+  // compute available and breakdown
+  const computed = await computeAvailableSpins(uid, username, isPremium);
+  const available = computed.available;
+  const breakdown = computed.breakdown;
+
+  // update DOM
+  remainingSpinsEl.textContent = available;
+  spinLeftEl.textContent = `${available} left`;
+  spinCashbackEl.textContent = `₦${balance}`;
+
+  // render tasks & progress
+  renderTasksUI(breakdown);
+
+  // eligibility deadline sample (you can customize)
+  const d = new Date();
+  d.setDate(d.getDate() + 30); // sample expiry
+  eligDateEl.textContent = d.toLocaleDateString();
+
+  // spin button enable/disable
+  spinBtn.disabled = available <= 0;
+}
+
+// on click spin
+spinBtn.addEventListener('click', async () => {
+  const user = firebase.auth().currentUser;
+  if (!user) { alert('Please login to spin.'); return; }
+  const uid = user.uid;
+  // recompute quickly to avoid race
+  const meDoc = await db.collection('users').doc(uid).get();
+  const me = meDoc.exists ? meDoc.data() : {};
+  const computed = await computeAvailableSpins(uid, me.username || '', !!me.is_Premium);
+  if (computed.available <= 0) {
+    alert('No spins left. Complete a daily challenge or come back tomorrow for your free spin.');
+    return;
+  }
+  // perform spin
+  performSpinAndAward(uid);
+});
+
+// start once auth state is ready
+auth.onAuthStateChanged(user => {
+  if (!user) return;
+  initTicker();
+  refreshSpinSection();
+
+  // periodically refresh (every 40s)
+  setInterval(() => {
+    refreshSpinSection();
+  }, 40000);
+});
 
 
 
@@ -6968,6 +7414,7 @@ startCheckinListener();
 
 
 	
+
 
 
 
