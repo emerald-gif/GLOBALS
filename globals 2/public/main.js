@@ -6952,456 +6952,361 @@ startCheckinListener();
 
 
 
-
-/* MAIN SPIN SECTION LOGIC
-   Assumptions:
-   - Firebase is already initialized on the page (firebase.auth() and firebase.firestore()).
-   - Collections used:
-     - affiliate_submissions (fields: userId, status ("approved"), approvedAt (timestamp))
-     - task_submissions (fields: userId, status ("approved"), approvedAt)
-     - bill_submissions (fields: userId, type: "data" or "airtime", amount: number, processed: true, createdAt)
-     - users (fields: username, is_Premium (bool), balance (number))
-     - spin_logs (new collection created by this code): { userId, type, reward, createdAt }
-   - Timestamps in Firestore are stored as Firestore.Timestamp in each collection under createdAt / approvedAt.
+/* === Spin-to-Win: production-ready (compat style) ===
+   Requirements:
+   - firebase.auth() and firebase.firestore() must be initialized earlier in your app (compat).
+   - Place COIN.jpg and VERIFIED.jpg in your assets folder or update paths below.
+   - This file DOES NOT create any transactions collection docs. It updates user.balance and spin metadata only.
 */
 
-// CONFIG: reward values (you can tune)
-const REWARDS = {
-  affiliate: 30,
-  task: 10,
-  data: 10,
-  airtime: 5,    // "depends on mood" we set to 5 for simplicity
-  refer: 100,
-  freeOptions: [0, 5, 10] // free daily spin possible values (we pick random)
-};
+/* ---------------- CONFIG ---------------- */
+const COIN_IMG = 'COIN.jpg';
+const VERIFIED_IMG = 'VERIFIED.jpg';
+const WHEEL_PRIZES = [10, 30, 20, 200, 5, 0, 100, 1000]; // internal amounts, hidden from user
+const WHEEL_WEIGHTS = [18, 12, 14, 2, 18, 20, 5, 1];    // matching indices above (1,000 is rare)
+const WHEEL_SEGMENTS = WHEEL_PRIZES.length;
+const ROTATIONS = 6; // base rotations for UX
 
-// helper: get start of today (local)
+/* ---------------- DOM refs ---------------- */
+const wheelEl = document.getElementById('wheel');
+const wheelCoinsEl = document.getElementById('wheel-coins');
+const spinBtn = document.getElementById('spin-btn');
+const spinCountEl = document.getElementById('spin-count');
+const liveFeedEl = document.getElementById('live-feed-items');
+const winModal = document.getElementById('win-modal');
+const winAmountEl = document.getElementById('win-amount');
+const winNoteEl = document.getElementById('win-note');
+const winVerifiedImg = document.getElementById('win-verified');
+const winCloseBtn = document.getElementById('win-close');
+const toastEl = document.getElementById('spin-toast');
+
+
+/* ---------------- state ---------------- */
+let currentUser = null;
+let spinsAvailable = 0;
+let userDocCached = null; // snapshot data
+let spinning = false;
+
+/* ---------------- utilities ---------------- */
+function todayKey() {
+  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+}
 function startOfToday() {
-  const d = new Date();
-  d.setHours(0,0,0,0);
-  return d;
+  const d = new Date(); d.setHours(0,0,0,0); return d;
+}
+function endOfToday() {
+  const d = new Date(); d.setHours(23,59,59,999); return d;
+}
+function weightedRandomIndex(weights) {
+  const sum = weights.reduce((s,w)=>s+w,0);
+  let r = Math.random()*sum;
+  for (let i=0;i<weights.length;i++){
+    if (r < weights[i]) return i;
+    r -= weights[i];
+  }
+  return weights.length-1;
 }
 
-// DOM refs
-const spinBtn = document.getElementById('spinBtn');
-const spinLeftEl = document.getElementById('spinLeft');
-const remainingSpinsEl = document.getElementById('remainingSpins');
-const spinCashbackEl = document.getElementById('spinCashback');
-const dailyTasksEl = document.getElementById('dailyTasks');
-const rewardModal = document.getElementById('rewardModal');
-const rewardMessage = document.getElementById('rewardMessage');
-const rewardOk = document.getElementById('rewardOk');
-const tickerInner = document.getElementById('tickerInner');
-const eligDateEl = document.getElementById('eligDate');
-
-
-
-// fake live ticker data generator (10 repeating notices)
-const FAKE_TICKER = [
-  "ABUBAKAR won ₦1,000 cashback.",
-  "Mariam won ₦50 cashback.",
-  "Uche won ₦20 cashback.",
-  "Tunde won ₦100 cashback.",
-  "Ada won ₦10 cashback.",
-  "Chinedu won ₦500 cashback.",
-  "Emeka won ₦30 cashback.",
-  "Sade won ₦5 cashback.",
-  "Aisha won ₦20 cashback.",
-  "Bayo won ₦100 cashback."
-];
-
-// show ticker (rotate)
-function initTicker() {
-  tickerInner.innerHTML = '';
-  FAKE_TICKER.forEach(text => {
-    const p = document.createElement('div');
-    p.className = 'text-sm text-gray-700';
-    p.textContent = text;
-    tickerInner.appendChild(p);
-  });
-  // simple vertical slide effect (loop)
-  let idx = 0;
-  setInterval(() => {
-    idx = (idx + 1) % FAKE_TICKER.length;
-    tickerInner.style.transform = `translateY(-${idx * 2.3}rem)`;
-    tickerInner.style.transition = 'transform 0.6s ease';
-  }, 3000);
+/* ---------------- Build wheel coins (no amounts shown) ---------------- */
+function buildWheelCoins() {
+  wheelCoinsEl.innerHTML = '';
+  const radius = 115; // px from center for coin placement in 320x320 container
+  const center = 160; // half of 320 (w-80 h-80)
+  for (let i=0;i<WHEEL_SEGMENTS;i++){
+    const angle = (360 / WHEEL_SEGMENTS) * i;
+    const rad = angle * (Math.PI/180);
+    const x = center + Math.cos(rad) * radius;
+    const y = center + Math.sin(rad) * radius;
+    const el = document.createElement('img');
+    el.src = COIN_IMG;
+    el.alt = 'coin';
+    el.className = 'wheel-coin';
+    el.style.width = '44px';
+    el.style.height = '44px';
+    el.style.position = 'absolute';
+    el.style.left = `${x - 22}px`;
+    el.style.top = `${y - 22}px`;
+    el.style.pointerEvents = 'none';
+    el.style.userSelect = 'none';
+    wheelCoinsEl.appendChild(el);
+  }
 }
 
-// UI helper: show reward modal
-function showReward(reward) {
-  rewardMessage.textContent = `You won ₦${reward}`;
-  rewardModal.classList.remove('hidden');
-  rewardModal.classList.add('flex');
-}
-rewardOk.addEventListener('click', () => {
-  rewardModal.classList.add('hidden');
-  rewardModal.classList.remove('flex');
-});
-
-// compute today start (Firestore Timestamp)
-function getTodayTimestamp() {
-  return firebase.firestore.Timestamp.fromDate(startOfToday());
-}
-
-// compute spins available for user
-async function computeAvailableSpins(uid, username, isPremium) {
-  const todayTs = getTodayTimestamp();
-
-  // 1. free base
-  const freeBase = isPremium ? 2 : 1;
-
-  // 2. count used spins today
-  const spinUsedSnap = await db.collection('spin_logs')
-    .where('userId','==', uid)
-    .where('createdAt','>=', todayTs)
-    .get();
-  const spinsUsedToday = spinUsedSnap.size;
-
-  // 3. affiliate submissions count (approved today)
-  const affSnap = await db.collection('affiliate_submissions')
-    .where('userId','==', uid)
-    .where('status','==','approved')
-    .where('approvedAt','>=', todayTs)
-    .get();
-  const affiliateCount = affSnap.size;
-  const affiliateSpinsGranted = Math.floor(affiliateCount / 10);
-
-  // 4. task submissions count (approved today)
-  const taskSnap = await db.collection('task_submissions')
-    .where('userId','==', uid)
-    .where('status','==','approved')
-    .where('approvedAt','>=', todayTs)
-    .get();
-  const taskCount = taskSnap.size;
-  const taskSpinsGranted = Math.floor(taskCount / 10);
-
-  // 5. data purchases today (sum amounts where type == 'data' and processed true)
-  const dataSnap = await db.collection('bill_submissions')
-    .where('userId','==', uid)
-    .where('type','==','data')
-    .where('processed','==', true)
-    .where('createdAt','>=', todayTs)
-    .get();
-  let dataSum = 0;
-  dataSnap.forEach(d => { const val = d.data().amount || 0; dataSum += val; });
-  const dataSpinsGranted = Math.floor(dataSum / 1000);
-
-  // 6. airtime purchases today (sum amounts where type == 'airtime' and processed true)
-  const airtimeSnap = await db.collection('bill_submissions')
-    .where('userId','==', uid)
-    .where('type','==','airtime')
-    .where('processed','==', true)
-    .where('createdAt','>=', todayTs)
-    .get();
-  let airtimeSum = 0;
-  airtimeSnap.forEach(d => { airtimeSum += (d.data().amount || 0); });
-  const airtimeSpinsGranted = Math.floor(airtimeSum / 500);
-
-  // 7. referrals today (where referrer == username and referred user is premium and createdAt >= today)
-  const referSnap = await db.collection('users')
-    .where('referrer','==', username)    // assumes referrer field stores username
-    .where('is_Premium','==', true)
-    .where('joinedAt','>=', todayTs)
-    .get();
-  const referCount = referSnap.size;
-  const referSpinsGranted = Math.floor(referCount / 2);
-
-  // total granted from challenges
-  const totalGranted = affiliateSpinsGranted + taskSpinsGranted + dataSpinsGranted + airtimeSpinsGranted + referSpinsGranted;
-
-  // available = freeBase + totalGranted - spinsUsedToday
-  let available = freeBase + totalGranted - spinsUsedToday;
-  if (available < 0) available = 0;
-
-  // return breakdown for UI
-  return {
-    available,
-    breakdown: {
-      freeBase,
-      spinsUsedToday,
-      affiliate: { count: affiliateCount, granted: affiliateSpinsGranted },
-      task: { count: taskCount, granted: taskSpinsGranted },
-      data: { sum: dataSum, granted: dataSpinsGranted },
-      airtime: { sum: airtimeSum, granted: airtimeSpinsGranted },
-      refer: { count: referCount, granted: referSpinsGranted }
+/* ---------------- fake live feed (demo) ---------------- */
+function startFakeLiveFeed() {
+  const names = ['ABUBAKAR','FATIMA','CHINEDU','SULEIMAN','GRACE','KINGSLEY','BOLA','AMINA','EMMA','TOBI'];
+  const created = [];
+  for (let i=0;i<10;i++){
+    const amt = WHEEL_PRIZES[Math.floor(Math.random()*WHEEL_PRIZES.length)];
+    const name = names[Math.floor(Math.random()*names.length)];
+    created.push(`${name} won ₦${amt} cashback.`);
+  }
+  let idx=0;
+  setInterval(()=>{
+    liveFeedEl.innerHTML='';
+    for (let i=0;i<3;i++){
+      const el = document.createElement('div');
+      el.className = 'px-2 py-1 rounded bg-indigo-50 text-indigo-700';
+      el.textContent = created[(idx+i) % created.length];
+      liveFeedEl.appendChild(el);
     }
-  };
+    idx=(idx+1)%created.length;
+  }, 2200);
 }
 
-// render tasks UI with progress bars
-function renderTasksUI(breakdown) {
-  dailyTasksEl.innerHTML = '';
+/* ---------------- progress calculations (uses Firestore) ---------------- */
+async function computeTodayProgress(uid, username) {
+  // default
+  const p = { affiliateApproved:0, taskApproved:0, dataAmount:0, airtimeAmount:0, referralsPremium:0 };
+  if (!db) return p;
+  const start = firebase.firestore.Timestamp.fromDate(startOfToday());
+  const end = firebase.firestore.Timestamp.fromDate(endOfToday());
 
-  // helper to render a row
-  function taskRow(title, progressText, progress, goal, reward, id) {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'border border-gray-100 p-3 rounded-lg';
-    wrapper.innerHTML = `
-      <div class="flex items-center justify-between">
-        <div class="text-sm font-semibold">${title}</div>
-        <div class="text-xs text-gray-500">${progressText}</div>
-      </div>
-      <div class="w-full bg-gray-100 rounded-full h-3 mt-3 overflow-hidden">
-        <div style="width:${Math.min(100, Math.round((progress/goal)*100))}%" class="h-3 bg-gradient-to-r from-indigo-500 to-blue-400"></div>
-      </div>
-      <div class="flex items-center justify-between mt-2 text-xs text-gray-600">
-        <div>Reward: ₦${reward}</div>
-        <div id="${id}" class="text-sm font-medium"></div>
-      </div>
-    `;
-    return wrapper;
+  try {
+    const qAff = await db.collection('affiliate_submissions')
+      .where('userId','==', uid)
+      .where('status','==','approved')
+      .where('createdAt','>=', start)
+      .where('createdAt','<=', end)
+      .get();
+    p.affiliateApproved = qAff.size;
+  } catch(e){ console.warn('aff query', e); }
+
+  try {
+    const qTask = await db.collection('task_submissions')
+      .where('userId','==', uid)
+      .where('status','==','approved')
+      .where('createdAt','>=', start)
+      .where('createdAt','<=', end)
+      .get();
+    p.taskApproved = qTask.size;
+  } catch(e){ console.warn('task query', e); }
+
+  try {
+    const qb = await db.collection('bill_submissions')
+      .where('userId','==', uid)
+      .where('processed','==', true)
+      .where('createdAt','>=', start)
+      .where('createdAt','<=', end)
+      .get();
+    qb.forEach(doc=>{
+      const d = doc.data();
+      const t = d.type || 'airtime';
+      const amt = Number(d.amount || 0);
+      if (t === 'data') p.dataAmount += amt;
+      else p.airtimeAmount += amt;
+    });
+  } catch(e){ console.warn('bill query', e); }
+
+  try {
+    const qr = await db.collection('users')
+      .where('referrer','==', username)
+      .where('is_Premium','==', true)
+      .where('createdAt','>=', start)
+      .where('createdAt','<=', end)
+      .get();
+    p.referralsPremium = qr.size;
+  } catch(e){ console.warn('ref query', e); }
+
+  return p;
+}
+
+/* ---------------- UI updates for challenge progress & spins ---------------- */
+function updateChallengeUI(progress, userDoc) {
+  const affiliatePercent = Math.min(100, (progress.affiliateApproved / 10) * 100);
+  const taskPercent = Math.min(100, (progress.taskApproved / 10) * 100);
+  const dataPercent = Math.min(100, (progress.dataAmount / 1000) * 100);
+  const airtimePercent = Math.min(100, (progress.airtimeAmount / 500) * 100);
+  const referPercent = Math.min(100, (progress.referralsPremium / 2) * 100);
+
+  const cards = document.querySelectorAll('#daily-challenges .challenge-card');
+  const percents = [affiliatePercent, taskPercent, dataPercent, airtimePercent, referPercent];
+  const statuses = [
+    progress.affiliateApproved >= 10,
+    progress.taskApproved >= 10,
+    progress.dataAmount >= 1000,
+    progress.airtimeAmount >= 500,
+    progress.referralsPremium >= 2
+  ];
+
+  cards.forEach((card,i)=>{
+    const bar = card.querySelector('.progress-bar');
+    const statusTxt = card.querySelector('.status-text');
+    bar.style.width = `${percents[i]}%`;
+    if (statuses[i]) {
+      statusTxt.textContent = 'Completed';
+      statusTxt.classList.remove('text-red-500');
+      statusTxt.classList.add('text-green-600');
+    } else {
+      statusTxt.textContent = 'Not completed';
+      statusTxt.classList.remove('text-green-600');
+      statusTxt.classList.add('text-red-500');
+    }
+  });
+
+  // compute spins available (persistent logic)
+  let completedCount = statuses.filter(Boolean).length;
+  const baseFree = 1;
+  let spinsUsed = 0;
+  let spinsUsedDate = null;
+  if (userDoc) {
+    spinsUsed = Number(userDoc.spinsUsedCount || 0);
+    spinsUsedDate = userDoc.spinsUsedDate || null;
+    if (spinsUsedDate !== todayKey()) {
+      // reset used count for UI purposes (actual doc will be set when user spins)
+      spinsUsed = 0;
+    }
   }
+  spinsAvailable = Math.max(0, baseFree + completedCount - spinsUsed);
+  spinCountEl.textContent = `(${spinsAvailable})`;
+}
 
-  // affiliate: goal 10 => reward 30
-  const aff = breakdown.affiliate;
-  const affRow = taskRow('Complete 10 affiliate tasks', `${aff.count}/10`, aff.count, 10, REWARDS.affiliate, 'affStatus');
-  dailyTasksEl.appendChild(affRow);
-
-  // tasks: goal 10 => reward 10
-  const t = breakdown.task;
-  const taskRowEl = taskRow('Complete 10 tasks', `${t.count}/10`, t.count, 10, REWARDS.task, 'taskStatus');
-  dailyTasksEl.appendChild(taskRowEl);
-
-  // data purchase: sum >= 1000 => reward 10
-  const d = breakdown.data;
-  const dataRow = taskRow('Buy data worth ₦1,000+', `₦${d.sum}/₦1000`, d.sum, 1000, REWARDS.data, 'dataStatus');
-  dailyTasksEl.appendChild(dataRow);
-
-  // airtime purchase: sum >= 500 => reward 5
-  const a = breakdown.airtime;
-  const airtimeRow = taskRow('Buy airtime worth ₦500+', `₦${a.sum}/₦500`, a.sum, 500, REWARDS.airtime, 'airtimeStatus');
-  dailyTasksEl.appendChild(airtimeRow);
-
-  // refer 2 premium => reward 100
-  const r = breakdown.refer;
-  const referRow = taskRow('Refer 2 users who upgrade to premium', `${r.count}/2`, r.count, 2, REWARDS.refer, 'referStatus');
-  dailyTasksEl.appendChild(referRow);
-
-  // update small status markers
-  ['affStatus','taskStatus','dataStatus','airtimeStatus','referStatus'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.textContent = ''; // filled later if needed
+/* ---------------- Animate wheel to chosen prize ---------------- */
+function animateWheelToPrize(prizeIndex) {
+  return new Promise(resolve => {
+    const degPer = 360 / WHEEL_SEGMENTS;
+    // center of segment
+    const target = (360 - (prizeIndex * degPer) + (degPer/2)) % 360;
+    const extraJitter = (Math.random() * (degPer/3)) - (degPer/6); // small randomness inside segment
+    const totalDeg = (ROTATIONS * 360) + target + extraJitter;
+    // animate
+    wheelEl.style.transition = 'transform 5s cubic-bezier(.12,.74,.12,1)';
+    wheelEl.style.transform = `rotate(${totalDeg}deg)`;
+    setTimeout(()=>{
+      // keep final small rotation
+      const finalAngle = target % 360;
+      wheelEl.style.transition = 'none';
+      wheelEl.style.transform = `rotate(${finalAngle}deg)`;
+      resolve(prizeIndex);
+    }, 5200);
   });
 }
 
-// utility: pick which reward type to consume when spinning (priority order)
-async function determineSpinSourceAndReward(uid) {
-  const todayTs = getTodayTimestamp();
-
-  // priority: refer, affiliate, task, data, airtime, free
-  // For each we compute granted - consumed and if >0, return that type and reward.
-
-  // helper to count spin_logs of type and createdAt >= today
-  async function countSpinLogsOfType(type) {
-    const snap = await db.collection('spin_logs')
-      .where('userId','==', uid)
-      .where('type','==', type)
-      .where('createdAt','>=', todayTs)
-      .get();
-    return snap.size;
+/* ---------------- handle spin click ---------------- */
+async function handleSpinClick() {
+  if (spinning) return;
+  if (!currentUser) {
+    showToast('Please login to spin.');
+    return;
   }
-
-  // 1) refer
-  const referSnap = await db.collection('users')
-    .where('referrer','==', (await db.collection('users').doc(uid).get()).data().username || '')
-    .where('is_Premium','==', true)
-    .where('joinedAt','>=', todayTs)
-    .get();
-  const referCount = referSnap.size;
-  const referGranted = Math.floor(referCount/2);
-  const referUsed = await countSpinLogsOfType('refer');
-  if (referGranted - referUsed > 0) return { type:'refer', reward: REWARDS.refer };
-
-  // 2) affiliate
-  const affSnap = await db.collection('affiliate_submissions')
-    .where('userId','==', uid)
-    .where('status','==','approved')
-    .where('approvedAt','>=', todayTs)
-    .get();
-  const affCount = affSnap.size;
-  const affGranted = Math.floor(affCount/10);
-  const affUsed = await countSpinLogsOfType('affiliate');
-  if (affGranted - affUsed > 0) return { type:'affiliate', reward: REWARDS.affiliate };
-
-  // 3) task
-  const taskSnap = await db.collection('task_submissions')
-    .where('userId','==', uid)
-    .where('status','==','approved')
-    .where('approvedAt','>=', todayTs)
-    .get();
-  const tCount = taskSnap.size;
-  const tGranted = Math.floor(tCount/10);
-  const tUsed = await countSpinLogsOfType('task');
-  if (tGranted - tUsed > 0) return { type:'task', reward: REWARDS.task };
-
-  // 4) data purchases
-  const dataSnap = await db.collection('bill_submissions')
-    .where('userId','==', uid)
-    .where('type','==','data')
-    .where('processed','==', true)
-    .where('createdAt','>=', todayTs)
-    .get();
-  let dataSum = 0;
-  dataSnap.forEach(d => dataSum += (d.data().amount || 0));
-  const dataGranted = Math.floor(dataSum / 1000);
-  const dataUsed = await countSpinLogsOfType('data');
-  if (dataGranted - dataUsed > 0) return { type:'data', reward: REWARDS.data };
-
-  // 5) airtime
-  const airtimeSnap = await db.collection('bill_submissions')
-    .where('userId','==', uid)
-    .where('type','==','airtime')
-    .where('processed','==', true)
-    .where('createdAt','>=', todayTs)
-    .get();
-  let airtimeSum = 0;
-  airtimeSnap.forEach(d => airtimeSum += (d.data().amount || 0));
-  const airtimeGranted = Math.floor(airtimeSum / 500);
-  const airtimeUsed = await countSpinLogsOfType('airtime');
-  if (airtimeGranted - airtimeUsed > 0) return { type:'airtime', reward: REWARDS.airtime };
-
-  // 6) free
-  const userDoc = await db.collection('users').doc(uid).get();
-  const userData = userDoc.exists ? userDoc.data() : {};
-  const isPremium = !!userData.is_Premium;
-  const freeBase = isPremium ? 2 : 1;
-  const freeUsed = await countSpinLogsOfType('free');
-  if (freeBase - freeUsed > 0) {
-    // pick random free reward from options
-    const opt = REWARDS.freeOptions;
-    const pick = opt[Math.floor(Math.random() * opt.length)];
-    return { type:'free', reward: pick };
-  }
-
-  // none available
-  return null;
-}
-
-// perform spin animation and award
-async function performSpinAndAward(uid) {
-  // determine available first
-  const meDoc = await db.collection('users').doc(uid).get();
-  if (!meDoc.exists) { alert('User data missing'); return; }
-  const { username = '', is_Premium = false } = meDoc.data();
-
-  const computed = await computeAvailableSpins(uid, username, is_Premium);
-  if (computed.available <= 0) {
-    alert('No spins available. Complete daily challenges or come back tomorrow for a free spin.');
+  if (spinsAvailable <= 0) {
+    showToast('Complete daily challenge or come back tomorrow for a free spin.');
     return;
   }
 
-  // find which source to consume
-  const source = await determineSpinSourceAndReward(uid);
-  if (!source) {
-    alert('No spin source found. Try again.');
-    return;
-  }
+  spinning = true;
+  spinBtn.classList.add('opacity-60','cursor-not-allowed');
+  // pick prize using weights
+  const prizeIdx = weightedRandomIndex(WHEEL_WEIGHTS);
+  await animateWheelToPrize(prizeIdx);
+  const amount = WHEEL_PRIZES[prizeIdx];
 
-  // animate wheel (fake spin — always "land" on assigned reward)
-  // we rotate the wheel element and then show reward modal
-  const wheelEl = document.getElementById('wheel');
-  wheelEl.style.transition = 'transform 3.5s cubic-bezier(.12,.9,.2,1)';
-  const degrees = 360 * (3 + Math.random()); // a few rotations, random extra
-  wheelEl.style.transform = `rotate(${degrees}deg)`;
-
-  // after animation ends, record spin and give reward
-  setTimeout(async () => {
-    // stop rotation visually
-    wheelEl.style.transition = '';
-    wheelEl.style.transform = '';
-
-    // Create a spin log (records the spin)
-    const reward = source.reward;
-    await db.collection('spin_logs').add({
-      userId: uid,
-      type: source.type,
-      reward,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  // update user balance + spin metadata atomically in a transaction on user doc
+  try {
+    const userRef = db.collection('users').doc(currentUser.uid);
+    const today = todayKey();
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(userRef);
+      if (!snap.exists) throw new Error('User doc not found');
+      const data = snap.data() || {};
+      const existingDate = data.spinsUsedDate || null;
+      // decide new spinsUsedCount
+      if (existingDate !== today) {
+        tx.update(userRef, {
+          balance: firebase.firestore.FieldValue.increment(amount),
+          spinsUsedCount: 1,
+          spinsUsedDate: today
+        });
+      } else {
+        tx.update(userRef, {
+          balance: firebase.firestore.FieldValue.increment(amount),
+          spinsUsedCount: firebase.firestore.FieldValue.increment(1)
+        });
+      }
     });
-
-    // credit user's balance
-    await db.collection('users').doc(uid).update({
-      balance: firebase.firestore.FieldValue.increment(reward)
-    });
-
-    // show popup
-    showReward(reward);
-
-    // update UI numbers quickly
-    refreshSpinSection();
-
-  }, 3600);
-}
-
-// refresh UI: available spins, earned cashback, tasks progress
-async function refreshSpinSection() {
-  const user = firebase.auth().currentUser;
-  if (!user) { console.warn('No user signed in'); return; }
-  const uid = user.uid;
-
-  // fetch user doc
-  const meDoc = await db.collection('users').doc(uid).get();
-  if (!meDoc.exists) return;
-  const me = meDoc.data();
-  const username = me.username || '';
-  const isPremium = !!me.is_Premium;
-  const balance = me.balance || 0;
-
-  // compute available and breakdown
-  const computed = await computeAvailableSpins(uid, username, isPremium);
-  const available = computed.available;
-  const breakdown = computed.breakdown;
-
-  // update DOM
-  remainingSpinsEl.textContent = available;
-  spinLeftEl.textContent = `${available} left`;
-  spinCashbackEl.textContent = `₦${balance}`;
-
-  // render tasks & progress
-  renderTasksUI(breakdown);
-
-  // eligibility deadline sample (you can customize)
-  const d = new Date();
-  d.setDate(d.getDate() + 30); // sample expiry
-  eligDateEl.textContent = d.toLocaleDateString();
-
-  // spin button enable/disable
-  spinBtn.disabled = available <= 0;
-}
-
-// on click spin
-spinBtn.addEventListener('click', async () => {
-  const user = firebase.auth().currentUser;
-  if (!user) { alert('Please login to spin.'); return; }
-  const uid = user.uid;
-  // recompute quickly to avoid race
-  const meDoc = await db.collection('users').doc(uid).get();
-  const me = meDoc.exists ? meDoc.data() : {};
-  const computed = await computeAvailableSpins(uid, me.username || '', !!me.is_Premium);
-  if (computed.available <= 0) {
-    alert('No spins left. Complete a daily challenge or come back tomorrow for your free spin.');
-    return;
+    // refresh local userDoc (simple get)
+    const refreshed = await db.collection('users').doc(currentUser.uid).get();
+    userDocCached = refreshed.exists ? refreshed.data() : userDocCached;
+  } catch (err) {
+    console.error('Spin DB update error', err);
+    showToast('An error occurred updating your balance. Check your connection.');
   }
-  // perform spin
-  performSpinAndAward(uid);
-});
 
-// start once auth state is ready
-auth.onAuthStateChanged(user => {
-  if (!user) return;
-  initTicker();
-  refreshSpinSection();
+  // show modal with amount; show VERIFIED overlay if 1000
+  winAmountEl.textContent = `₦${amount}`;
+  if (amount === 1000) {
+    winVerifiedImg.classList.remove('hidden');
+  } else {
+    winVerifiedImg.classList.add('hidden');
+  }
+  winModal.classList.remove('hidden');
+  winModal.style.display = 'flex';
 
-  // periodically refresh (every 40s)
-  setInterval(() => {
-    refreshSpinSection();
-  }, 40000);
-});
+  // prepend to live feed (user)
+  const who = (currentUser.displayName || currentUser.email || 'You').split('@')[0].toUpperCase();
+  const li = document.createElement('div');
+  li.className = 'px-2 py-1 rounded bg-indigo-50 text-indigo-700';
+  li.textContent = `${who} won ₦${amount} cashback.`;
+  liveFeedEl.prepend(li);
 
+  // recompute UI spins using latest userDoc & progress (re-run compute)
+  const username = userDocCached?.username || (currentUser.displayName || currentUser.email.split('@')[0]);
+  const progress = await computeTodayProgress(currentUser.uid, username);
+  updateChallengeUI(progress, userDocCached);
 
+  // re-enable
+  spinning = false;
+  spinBtn.classList.remove('opacity-60','cursor-not-allowed');
+}
 
+/* ---------------- Modal & toast helpers ---------------- */
+function showToast(message) {
+  if (!toastEl) return alert(message);
+  toastEl.querySelector('div').textContent = message;
+  toastEl.classList.remove('hidden');
+  setTimeout(()=> toastEl.classList.add('hidden'), 4200);
+}
+
+/* ---------------- Initialization ---------------- */
+async function initSpinSection() {
+  buildWheelCoins();
+  startFakeLiveFeed();
+
+  // Listen for auth changes
+  if (auth) {
+    auth.onAuthStateChanged(async (user) => {
+      currentUser = user;
+      if (!user) {
+        userDocCached = null;
+        spinsAvailable = 0;
+        spinCountEl.textContent = '(0)';
+        return;
+      }
+      // fetch user doc
+      try {
+        const doc = await db.collection('users').doc(user.uid).get();
+        userDocCached = doc.exists ? doc.data() : {};
+      } catch (e) { console.warn('user fetch', e); }
+
+      const username = userDocCached?.username || (user.displayName || user.email.split('@')[0]);
+      const progress = await computeTodayProgress(user.uid, username);
+      updateChallengeUI(progress, userDocCached);
+    });
+  } else {
+    // no firebase -> keep demo counts
+    spinCountEl.textContent = '(0)';
+  }
+
+  // events
+  spinBtn?.addEventListener('click', handleSpinClick);
+  winCloseBtn?.addEventListener('click', ()=>{
+    winModal.classList.add('hidden');
+    winModal.style.display = 'none';
+  });
+}
+
+// Run when DOM ready
+document.addEventListener('DOMContentLoaded', initSpinSection);
 
 
 
@@ -7413,6 +7318,7 @@ auth.onAuthStateChanged(user => {
 
 
 	
+
 
 
 
