@@ -6994,8 +6994,7 @@ const rewardOk = document.getElementById('rewardOk');
 const tickerInner = document.getElementById('tickerInner');
 const eligDateEl = document.getElementById('eligDate');
 
-const db = firebase.firestore();
-const auth = firebase.auth();
+
 
 // fake live ticker data generator (10 repeating notices)
 const FAKE_TICKER = [
@@ -7414,6 +7413,7 @@ auth.onAuthStateChanged(user => {
 
 
 	
+
 
 
 
