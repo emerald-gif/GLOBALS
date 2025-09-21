@@ -4078,11 +4078,10 @@
     <div class="relative w-80 h-80">
       <canvas id="spin-canvas" width="320" height="320" class="rounded-full shadow-inner"></canvas>
 
-      <!-- pointer -->
-      <div class="absolute -top-4 left-1/2 -translate-x-1/2 z-30">
-        <div style="width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-bottom:26px solid #4f46e5;filter:drop-shadow(0 4px 6px rgba(15,23,42,0.08))"></div>
-      </div>
-    </div>
+      <!-- pointer (replace existing pointer markup) -->
+<div id="wheel-pointer" class="absolute -top-6 left-1/2 -translate-x-1/2 z-40" aria-hidden="true">
+  <div style="width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-bottom:26px solid #06b6d4;"></div>
+</div>
 
     <!-- Spin CTA -->
     <div class="flex items-center gap-4">
@@ -4207,6 +4206,23 @@
 </div>
 
 
+
+	<style>
+/* pointer + checkin styles */
+#wheel-pointer { pointer-events: none; }
+#checkin-btn {
+  height: 36px;          /* small */
+  padding: 6px 10px;
+  border-radius: 10px;
+  background-color: rgba(59,130,246,0.09); /* clear blue */
+  color: #0369a1;
+  box-shadow: none !important;
+  border: none;
+  font-weight: 600;
+  line-height: 1;
+}
+
+</style>
 		
 
 	
