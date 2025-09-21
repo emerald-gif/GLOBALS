@@ -6952,22 +6952,28 @@ startCheckinListener();
 
 
 
-/* === Spin-to-Win: production-ready (compat style) ===
-   Requirements:
-   - firebase.auth() and firebase.firestore() must be initialized earlier in your app (compat).
-   - Place COIN.jpg and VERIFIED.jpg in your assets folder or update paths below.
-   - This file DOES NOT create any transactions collection docs. It updates user.balance and spin metadata only.
+
+
+
+
+/* === Spin-to-Win (production ready) ===
+   Uses existing global `db` and `auth` (compat).
+   Behavior:
+   - Rewards hidden on wheel (coin icons only)
+   - Uses spinsUsedCount/spinsUsedDate on user doc to track usage
+   - Updates only user.balance and spin metadata (no transactions)
+   - Live feed shows 1 item at a time
 */
 
-/* ---------------- CONFIG ---------------- */
+/* CONFIG */
 const COIN_IMG = 'COIN.jpg';
 const VERIFIED_IMG = 'VERIFIED.jpg';
-const WHEEL_PRIZES = [10, 30, 20, 200, 5, 0, 100, 1000]; // internal amounts, hidden from user
-const WHEEL_WEIGHTS = [18, 12, 14, 2, 18, 20, 5, 1];    // matching indices above (1,000 is rare)
+const WHEEL_PRIZES = [10, 30, 20, 200, 5, 0, 100, 1000];         // internal amounts (hidden)
+const WHEEL_WEIGHTS = [18, 12, 14, 2, 18, 20, 5, 1];            // weights (1,000 rare)
 const WHEEL_SEGMENTS = WHEEL_PRIZES.length;
-const ROTATIONS = 6; // base rotations for UX
+const ROTATIONS = 6; // full rotations for spin animation
 
-/* ---------------- DOM refs ---------------- */
+/* DOM refs */
 const wheelEl = document.getElementById('wheel');
 const wheelCoinsEl = document.getElementById('wheel-coins');
 const spinBtn = document.getElementById('spin-btn');
@@ -6975,113 +6981,98 @@ const spinCountEl = document.getElementById('spin-count');
 const liveFeedEl = document.getElementById('live-feed-items');
 const winModal = document.getElementById('win-modal');
 const winAmountEl = document.getElementById('win-amount');
-const winNoteEl = document.getElementById('win-note');
 const winVerifiedImg = document.getElementById('win-verified');
 const winCloseBtn = document.getElementById('win-close');
 const toastEl = document.getElementById('spin-toast');
 
-
-/* ---------------- state ---------------- */
+/* STATE */
 let currentUser = null;
 let spinsAvailable = 0;
-let userDocCached = null; // snapshot data
+let userDocCached = null;
 let spinning = false;
 
-/* ---------------- utilities ---------------- */
-function todayKey() {
-  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-}
-function startOfToday() {
-  const d = new Date(); d.setHours(0,0,0,0); return d;
-}
-function endOfToday() {
-  const d = new Date(); d.setHours(23,59,59,999); return d;
-}
-function weightedRandomIndex(weights) {
-  const sum = weights.reduce((s,w)=>s+w,0);
-  let r = Math.random()*sum;
-  for (let i=0;i<weights.length;i++){
+/* HELPERS */
+function todayKey() { return new Date().toISOString().slice(0,10); } // YYYY-MM-DD
+function startOfToday() { const d = new Date(); d.setHours(0,0,0,0); return d; }
+function endOfToday() { const d = new Date(); d.setHours(23,59,59,999); return d; }
+function weightedRandomIndex(weights){
+  const sum = weights.reduce((a,b)=>a+b,0);
+  let r = Math.random() * sum;
+  for(let i=0;i<weights.length;i++){
     if (r < weights[i]) return i;
     r -= weights[i];
   }
-  return weights.length-1;
+  return weights.length - 1;
 }
 
-/* ---------------- Build wheel coins (no amounts shown) ---------------- */
-function buildWheelCoins() {
+/* Build coin icons around wheel (no amounts shown) */
+function buildWheelCoins(){
+  if (!wheelCoinsEl) return;
   wheelCoinsEl.innerHTML = '';
-  const radius = 115; // px from center for coin placement in 320x320 container
-  const center = 160; // half of 320 (w-80 h-80)
-  for (let i=0;i<WHEEL_SEGMENTS;i++){
+  const size = wheelEl.clientWidth || 320;
+  const center = size/2;
+  const radius = (size/2) - 48; // padding to fit coins
+  for(let i=0;i<WHEEL_SEGMENTS;i++){
     const angle = (360 / WHEEL_SEGMENTS) * i;
     const rad = angle * (Math.PI/180);
     const x = center + Math.cos(rad) * radius;
     const y = center + Math.sin(rad) * radius;
-    const el = document.createElement('img');
-    el.src = COIN_IMG;
-    el.alt = 'coin';
-    el.className = 'wheel-coin';
-    el.style.width = '44px';
-    el.style.height = '44px';
-    el.style.position = 'absolute';
-    el.style.left = `${x - 22}px`;
-    el.style.top = `${y - 22}px`;
-    el.style.pointerEvents = 'none';
-    el.style.userSelect = 'none';
-    wheelCoinsEl.appendChild(el);
+    const img = document.createElement('img');
+    img.src = COIN_IMG;
+    img.alt = 'coin';
+    img.style.width = '44px';
+    img.style.height = '44px';
+    img.style.position = 'absolute';
+    img.style.left = `${x - 22}px`;
+    img.style.top = `${y - 22}px`;
+    img.style.pointerEvents = 'none';
+    img.style.userSelect = 'none';
+    wheelCoinsEl.appendChild(img);
   }
 }
 
-/* ---------------- fake live feed (demo) ---------------- */
-function startFakeLiveFeed() {
+/* Fake live feed — one item only, cycles */
+function startFakeLiveFeed(){
   const names = ['ABUBAKAR','FATIMA','CHINEDU','SULEIMAN','GRACE','KINGSLEY','BOLA','AMINA','EMMA','TOBI'];
-  const created = [];
-  for (let i=0;i<10;i++){
+  const messages = [];
+  for(let i=0;i<10;i++){
     const amt = WHEEL_PRIZES[Math.floor(Math.random()*WHEEL_PRIZES.length)];
     const name = names[Math.floor(Math.random()*names.length)];
-    created.push(`${name} won ₦${amt} cashback.`);
+    messages.push(`${name} won ₦${amt} cashback.`);
   }
-  let idx=0;
+  let idx = 0;
+  // initial
+  liveFeedEl.innerHTML = `<div class="px-2 py-1 rounded bg-indigo-50 text-indigo-700">${messages[0]}</div>`;
   setInterval(()=>{
-    liveFeedEl.innerHTML='';
-    for (let i=0;i<3;i++){
-      const el = document.createElement('div');
-      el.className = 'px-2 py-1 rounded bg-indigo-50 text-indigo-700';
-      el.textContent = created[(idx+i) % created.length];
-      liveFeedEl.appendChild(el);
-    }
-    idx=(idx+1)%created.length;
-  }, 2200);
+    idx = (idx + 1) % messages.length;
+    liveFeedEl.innerHTML = `<div class="px-2 py-1 rounded bg-indigo-50 text-indigo-700">${messages[idx]}</div>`;
+  }, 2800);
 }
 
-/* ---------------- progress calculations (uses Firestore) ---------------- */
-async function computeTodayProgress(uid, username) {
-  // default
-  const p = { affiliateApproved:0, taskApproved:0, dataAmount:0, airtimeAmount:0, referralsPremium:0 };
-  if (!db) return p;
+/* Compute today's progress (Firestore queries) */
+async function computeTodayProgress(uid, username){
+  const res = { affiliateApproved:0, taskApproved:0, dataAmount:0, airtimeAmount:0, referralsPremium:0 };
+  if (!db) return res; // if no db (shouldn't happen if you have firebase)
   const start = firebase.firestore.Timestamp.fromDate(startOfToday());
   const end = firebase.firestore.Timestamp.fromDate(endOfToday());
-
   try {
-    const qAff = await db.collection('affiliate_submissions')
+    const qa = await db.collection('affiliate_submissions')
       .where('userId','==', uid)
       .where('status','==','approved')
       .where('createdAt','>=', start)
       .where('createdAt','<=', end)
       .get();
-    p.affiliateApproved = qAff.size;
-  } catch(e){ console.warn('aff query', e); }
-
+    res.affiliateApproved = qa.size;
+  } catch(e){ console.warn('aff query err', e); }
   try {
-    const qTask = await db.collection('task_submissions')
+    const qt = await db.collection('task_submissions')
       .where('userId','==', uid)
       .where('status','==','approved')
       .where('createdAt','>=', start)
       .where('createdAt','<=', end)
       .get();
-    p.taskApproved = qTask.size;
-  } catch(e){ console.warn('task query', e); }
-
+    res.taskApproved = qt.size;
+  } catch(e){ console.warn('task query err', e); }
   try {
     const qb = await db.collection('bill_submissions')
       .where('userId','==', uid)
@@ -7093,11 +7084,10 @@ async function computeTodayProgress(uid, username) {
       const d = doc.data();
       const t = d.type || 'airtime';
       const amt = Number(d.amount || 0);
-      if (t === 'data') p.dataAmount += amt;
-      else p.airtimeAmount += amt;
+      if (t === 'data') res.dataAmount += amt;
+      else res.airtimeAmount += amt;
     });
-  } catch(e){ console.warn('bill query', e); }
-
+  } catch(e){ console.warn('bill query err', e); }
   try {
     const qr = await db.collection('users')
       .where('referrer','==', username)
@@ -7105,21 +7095,18 @@ async function computeTodayProgress(uid, username) {
       .where('createdAt','>=', start)
       .where('createdAt','<=', end)
       .get();
-    p.referralsPremium = qr.size;
-  } catch(e){ console.warn('ref query', e); }
-
-  return p;
+    res.referralsPremium = qr.size;
+  } catch(e){ console.warn('ref query err', e); }
+  return res;
 }
 
-/* ---------------- UI updates for challenge progress & spins ---------------- */
-function updateChallengeUI(progress, userDoc) {
+/* Update UI (progress bars + spins avail) */
+function updateChallengeUI(progress, userDoc){
   const affiliatePercent = Math.min(100, (progress.affiliateApproved / 10) * 100);
   const taskPercent = Math.min(100, (progress.taskApproved / 10) * 100);
   const dataPercent = Math.min(100, (progress.dataAmount / 1000) * 100);
   const airtimePercent = Math.min(100, (progress.airtimeAmount / 500) * 100);
   const referPercent = Math.min(100, (progress.referralsPremium / 2) * 100);
-
-  const cards = document.querySelectorAll('#daily-challenges .challenge-card');
   const percents = [affiliatePercent, taskPercent, dataPercent, airtimePercent, referPercent];
   const statuses = [
     progress.affiliateApproved >= 10,
@@ -7129,151 +7116,150 @@ function updateChallengeUI(progress, userDoc) {
     progress.referralsPremium >= 2
   ];
 
+  const cards = document.querySelectorAll('#daily-challenges .challenge-card');
   cards.forEach((card,i)=>{
     const bar = card.querySelector('.progress-bar');
-    const statusTxt = card.querySelector('.status-text');
+    const status = card.querySelector('.status-text');
     bar.style.width = `${percents[i]}%`;
     if (statuses[i]) {
-      statusTxt.textContent = 'Completed';
-      statusTxt.classList.remove('text-red-500');
-      statusTxt.classList.add('text-green-600');
+      status.textContent = 'Completed';
+      status.classList.remove('text-red-500');
+      status.classList.add('text-green-600');
     } else {
-      statusTxt.textContent = 'Not completed';
-      statusTxt.classList.remove('text-green-600');
-      statusTxt.classList.add('text-red-500');
+      status.textContent = 'Not completed';
+      status.classList.remove('text-green-600');
+      status.classList.add('text-red-500');
     }
   });
 
-  // compute spins available (persistent logic)
-  let completedCount = statuses.filter(Boolean).length;
+  // compute spinsAvailable
   const baseFree = 1;
-  let spinsUsed = 0;
-  let spinsUsedDate = null;
+  let completedCount = statuses.filter(Boolean).length;
+  let used = 0, usedDate = null;
   if (userDoc) {
-    spinsUsed = Number(userDoc.spinsUsedCount || 0);
-    spinsUsedDate = userDoc.spinsUsedDate || null;
-    if (spinsUsedDate !== todayKey()) {
-      // reset used count for UI purposes (actual doc will be set when user spins)
-      spinsUsed = 0;
-    }
+    used = Number(userDoc.spinsUsedCount || 0);
+    usedDate = userDoc.spinsUsedDate || null;
+    if (usedDate !== todayKey()) used = 0;
   }
-  spinsAvailable = Math.max(0, baseFree + completedCount - spinsUsed);
+  spinsAvailable = Math.max(0, baseFree + completedCount - used);
   spinCountEl.textContent = `(${spinsAvailable})`;
 }
 
-/* ---------------- Animate wheel to chosen prize ---------------- */
-function animateWheelToPrize(prizeIndex) {
-  return new Promise(resolve => {
+/* Animate wheel to chosen prizeIndex and resolve when done */
+function animateWheelToPrize(prizeIndex){
+  return new Promise(resolve=>{
     const degPer = 360 / WHEEL_SEGMENTS;
-    // center of segment
+    // center angle for the prize segment (pointer at top)
     const target = (360 - (prizeIndex * degPer) + (degPer/2)) % 360;
-    const extraJitter = (Math.random() * (degPer/3)) - (degPer/6); // small randomness inside segment
-    const totalDeg = (ROTATIONS * 360) + target + extraJitter;
-    // animate
+    const jitter = (Math.random() * (degPer/3)) - (degPer/6);
+    const finalDeg = (ROTATIONS * 360) + target + jitter;
     wheelEl.style.transition = 'transform 5s cubic-bezier(.12,.74,.12,1)';
-    wheelEl.style.transform = `rotate(${totalDeg}deg)`;
+    wheelEl.style.transform = `rotate(${finalDeg}deg)`;
     setTimeout(()=>{
-      // keep final small rotation
-      const finalAngle = target % 360;
+      const keepAngle = target % 360;
       wheelEl.style.transition = 'none';
-      wheelEl.style.transform = `rotate(${finalAngle}deg)`;
+      wheelEl.style.transform = `rotate(${keepAngle}deg)`;
       resolve(prizeIndex);
     }, 5200);
   });
 }
 
-/* ---------------- handle spin click ---------------- */
-async function handleSpinClick() {
-  if (spinning) return;
-  if (!currentUser) {
-    showToast('Please login to spin.');
-    return;
-  }
-  if (spinsAvailable <= 0) {
-    showToast('Complete daily challenge or come back tomorrow for a free spin.');
-    return;
-  }
+/* Show a toast (or fallback to alert) */
+function showToast(msg){
+  if (!toastEl) { alert(msg); return; }
+  toastEl.querySelector('div').textContent = msg;
+  toastEl.classList.remove('hidden');
+  setTimeout(()=> toastEl.classList.add('hidden'), 4200);
+}
 
+/* Spin handler */
+async function handleSpinClick(){
+  if (spinning) return;
+  if (!currentUser) { showToast('Please login to spin.'); return; }
+  if (spinsAvailable <= 0) { showToast('Complete daily challenge or come back tomorrow for a free spin.'); return; }
   spinning = true;
   spinBtn.classList.add('opacity-60','cursor-not-allowed');
-  // pick prize using weights
+
+  // choose prize by weights
   const prizeIdx = weightedRandomIndex(WHEEL_WEIGHTS);
   await animateWheelToPrize(prizeIdx);
   const amount = WHEEL_PRIZES[prizeIdx];
 
-  // update user balance + spin metadata atomically in a transaction on user doc
+  // update user doc (balance + spin metadata) in transaction
   try {
     const userRef = db.collection('users').doc(currentUser.uid);
     const today = todayKey();
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
-      if (!snap.exists) throw new Error('User doc not found');
-      const data = snap.data() || {};
-      const existingDate = data.spinsUsedDate || null;
-      // decide new spinsUsedCount
-      if (existingDate !== today) {
-        tx.update(userRef, {
-          balance: firebase.firestore.FieldValue.increment(amount),
+      if (!snap.exists) {
+        // create minimal doc with balance & spin meta
+        tx.set(userRef, {
+          balance: amount,
           spinsUsedCount: 1,
-          spinsUsedDate: today
-        });
+          spinsUsedDate: today,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
       } else {
-        tx.update(userRef, {
-          balance: firebase.firestore.FieldValue.increment(amount),
-          spinsUsedCount: firebase.firestore.FieldValue.increment(1)
-        });
+        const data = snap.data() || {};
+        const prevDate = data.spinsUsedDate || null;
+        if (prevDate !== today) {
+          tx.update(userRef, {
+            balance: firebase.firestore.FieldValue.increment(amount),
+            spinsUsedCount: 1,
+            spinsUsedDate: today,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } else {
+          tx.update(userRef, {
+            balance: firebase.firestore.FieldValue.increment(amount),
+            spinsUsedCount: firebase.firestore.FieldValue.increment(1),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
       }
     });
-    // refresh local userDoc (simple get)
+    // refresh cached user doc
     const refreshed = await db.collection('users').doc(currentUser.uid).get();
     userDocCached = refreshed.exists ? refreshed.data() : userDocCached;
   } catch (err) {
     console.error('Spin DB update error', err);
-    showToast('An error occurred updating your balance. Check your connection.');
+    showToast('Error updating balance. Try again.');
   }
 
-  // show modal with amount; show VERIFIED overlay if 1000
+  // Show result modal
   winAmountEl.textContent = `₦${amount}`;
-  if (amount === 1000) {
-    winVerifiedImg.classList.remove('hidden');
-  } else {
-    winVerifiedImg.classList.add('hidden');
-  }
+  if (amount === 1000) winVerifiedImg.classList.remove('hidden');
+  else winVerifiedImg.classList.add('hidden');
   winModal.classList.remove('hidden');
   winModal.style.display = 'flex';
 
-  // prepend to live feed (user)
+  // Update live feed (show only the last win)
   const who = (currentUser.displayName || currentUser.email || 'You').split('@')[0].toUpperCase();
-  const li = document.createElement('div');
-  li.className = 'px-2 py-1 rounded bg-indigo-50 text-indigo-700';
-  li.textContent = `${who} won ₦${amount} cashback.`;
-  liveFeedEl.prepend(li);
+  liveFeedEl.innerHTML = `<div class="px-2 py-1 rounded bg-indigo-50 text-indigo-700">${who} won ₦${amount} cashback.</div>`;
 
-  // recompute UI spins using latest userDoc & progress (re-run compute)
+  // recompute progress + spins UI
   const username = userDocCached?.username || (currentUser.displayName || currentUser.email.split('@')[0]);
   const progress = await computeTodayProgress(currentUser.uid, username);
   updateChallengeUI(progress, userDocCached);
 
-  // re-enable
   spinning = false;
   spinBtn.classList.remove('opacity-60','cursor-not-allowed');
 }
 
-/* ---------------- Modal & toast helpers ---------------- */
-function showToast(message) {
-  if (!toastEl) return alert(message);
-  toastEl.querySelector('div').textContent = message;
-  toastEl.classList.remove('hidden');
-  setTimeout(()=> toastEl.classList.add('hidden'), 4200);
-}
-
-/* ---------------- Initialization ---------------- */
-async function initSpinSection() {
+/* Initialize everything */
+async function initSpinSection(){
   buildWheelCoins();
   startFakeLiveFeed();
 
-  // Listen for auth changes
-  if (auth) {
+  // attach events
+  spinBtn?.addEventListener('click', handleSpinClick);
+  winCloseBtn?.addEventListener('click', ()=>{
+    winModal.classList.add('hidden');
+    winModal.style.display = 'none';
+  });
+
+  // auth listener (uses your existing auth)
+  if (typeof auth !== 'undefined' && auth) {
     auth.onAuthStateChanged(async (user) => {
       currentUser = user;
       if (!user) {
@@ -7286,38 +7272,29 @@ async function initSpinSection() {
       try {
         const doc = await db.collection('users').doc(user.uid).get();
         userDocCached = doc.exists ? doc.data() : {};
-      } catch (e) { console.warn('user fetch', e); }
+      } catch(e){ console.warn('user fetch err', e); }
 
       const username = userDocCached?.username || (user.displayName || user.email.split('@')[0]);
       const progress = await computeTodayProgress(user.uid, username);
       updateChallengeUI(progress, userDocCached);
     });
   } else {
-    // no firebase -> keep demo counts
+    // no auth available — still build UI in demo mode
     spinCountEl.textContent = '(0)';
   }
 
-  // events
-  spinBtn?.addEventListener('click', handleSpinClick);
-  winCloseBtn?.addEventListener('click', ()=>{
-    winModal.classList.add('hidden');
-    winModal.style.display = 'none';
+  // Rebuild coins if layout changes (responsive)
+  window.addEventListener('resize', () => {
+    buildWheelCoins();
   });
 }
 
-// Run when DOM ready
+/* Start when DOM ready */
 document.addEventListener('DOMContentLoaded', initSpinSection);
 
 
-
-
-
-
-
-
-
-
 	
+
 
 
 
