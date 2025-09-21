@@ -7133,7 +7133,7 @@ function drawWheel(rotationDeg = 0) {
     ctx.textBaseline = 'middle';
     ctx.fillText(`₦${PRIZES[i]}`, 0, 0);
     ctx.restore();
-  }
+  
 
   // inner circle center highlight (draw on top)
   ctx.beginPath();
@@ -7499,6 +7499,7 @@ function initSpinModule() {
 
 /* ---------- start module on DOM ready ---------- */
 document.addEventListener('DOMContentLoaded', initSpinModule);
+
 
 
 
