@@ -7005,7 +7005,7 @@ function weightedRandomIndex(weights){
 
 // ====== HD Canvas setup + image preload (insert before drawWheel) ======
 
-const VERIFIED_IMG = 'VERIFIED.jpg';
+
 let coinImg = new Image();
 let verifiedImg = new Image();
 coinImg.src = COIN_IMG;
@@ -7499,6 +7499,7 @@ function initSpinModule() {
 
 /* ---------- start module on DOM ready ---------- */
 document.addEventListener('DOMContentLoaded', initSpinModule);
+
 
 
 
