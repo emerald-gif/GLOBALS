@@ -4055,34 +4055,31 @@
 
 
 
-<!-- === DAILY SPIN / CHALLENGES (FINTECH 2025 STYLE) ===
-     Requires TailwindCSS in your project and COIN.jpg + VERIFIED.jpg available.
-     Place images in the same folder or update the paths below.
+
+<!-- === Spin-to-Win (2025 fintech style) ===
+     Requires TailwindCSS. Place COIN.jpg and VERIFIED.jpg in same folder or update paths.
 -->
-<section id="daily-spin-section" class="tab-section hidden p-6 bg-gradient-to-b from-gray-50 via-white to-gray-100 rounded-2xl shadow-xl">
+<section id="daily-spin-section" class="tab-section p-6 bg-gradient-to-b from-gray-50 via-white to-gray-100 rounded-2xl shadow-xl">
   <!-- Header -->
   <div class="flex items-center justify-between mb-6">
     <div>
       <h2 class="text-3xl font-extrabold text-slate-800">Spin to Earn</h2>
       <p class="text-sm text-slate-500 mt-1">Win up to <span class="font-extrabold text-indigo-600">₦1,000</span> — try your luck!</p>
     </div>
-    <div class="text-right text-xs text-slate-400">Daily spin resets every 24 hours</div>
+    <div class="text-right text-xs text-slate-400">Free spin resets daily</div>
   </div>
 
-  <!-- Wheel + Controls -->
+  <!-- Wheel + CTA -->
   <div class="flex flex-col items-center gap-6">
     <div class="relative w-80 h-80">
-      <!-- Wheel (rotates) -->
       <div id="wheel" class="w-full h-full rounded-full shadow-inner overflow-visible transition-transform duration-[5200ms] ease-out"
-           style="background: conic-gradient(#eef2ff 0deg 45deg, #f0f9ff 45deg 90deg, #fef3c7 90deg 135deg, #ecfdf5 135deg 180deg, #fff1f2 180deg 225deg, #eef2ff 225deg 270deg, #f3f4f6 270deg 315deg, #eef2ff 315deg 360deg);">
-        <!-- inner center circle -->
+           style="transform-origin:center center; background: conic-gradient(#eef2ff 0deg 45deg, #f0f9ff 45deg 90deg, #fef3c7 90deg 135deg, #ecfdf5 135deg 180deg, #fff1f2 180deg 225deg, #eef2ff 225deg 270deg, #f3f4f6 270deg 315deg, #eef2ff 315deg 360deg);">
         <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 bg-white rounded-full shadow-md flex items-center justify-center">
           <div class="text-center">
             <div class="text-sm text-slate-500">Tap</div>
             <div class="text-lg font-extrabold text-indigo-600">to Spin</div>
           </div>
         </div>
-        <!-- coin placeholders (positioned by JS inside #wheel) -->
         <div id="wheel-coins" class="absolute inset-0 pointer-events-none"></div>
       </div>
 
@@ -4092,7 +4089,7 @@
       </div>
     </div>
 
-    <!-- Spin CTA -->
+    <!-- CTA -->
     <div class="flex items-center gap-4">
       <button id="spin-btn" class="px-10 py-3 rounded-full text-white font-semibold bg-gradient-to-r from-indigo-600 to-violet-500 shadow-lg hover:scale-[0.995] transition-transform">
         Spin Now <span id="spin-count" class="ml-2 text-sm text-yellow-100">(0)</span>
@@ -4100,28 +4097,33 @@
       <div id="spin-hint" class="text-sm text-slate-500">Hidden reward — revealed after spin</div>
     </div>
 
-    <!-- Live feed -->
+    <!-- Live feed (one item) -->
     <div class="w-full max-w-3xl bg-white p-3 rounded-xl shadow-sm border">
       <div class="flex items-center justify-between mb-2">
         <div class="text-sm font-semibold text-slate-700">Live Wins</div>
-        <div class="text-xs text-slate-400">Updates (demo)</div>
+        <div class="text-xs text-slate-400">Demo</div>
       </div>
-      <div id="live-feed-items" class="flex flex-col gap-2 text-sm text-indigo-700"></div>
+      <div id="live-feed-items" class="text-sm text-indigo-700"></div>
     </div>
   </div>
 
-  <!-- Rules (replaces Eligibility) -->
+  <!-- Rules -->
   <div class="mt-6 bg-white p-4 rounded-xl shadow-sm border">
     <h4 class="font-semibold text-slate-800">Rules</h4>
     <p class="text-sm text-slate-500 mt-2">
-      Complete daily challenges to earn extra spins. You can win up to ₦1,000 per spin.
-      Free spin resets each day at midnight (local time).
+      Complete daily challenges to earn extra spins. You can win up to ₦1,000 per spin. Free spin resets each day at midnight.
     </p>
   </div>
 
-  <!-- Daily Challenges (no reward amounts shown) -->
+  <!-- Daily Challenge Tasks header -->
+  <div class="mt-6">
+    <h3 class="text-xl font-bold text-slate-800">Daily Challenge Tasks</h3>
+    <p class="text-sm text-slate-500 mt-1">Complete tasks today to earn more spins.</p>
+  </div>
+
+  <!-- Tasks cards -->
   <div id="daily-challenges" class="mt-4 grid grid-cols-1 gap-3">
-    <!-- Cards: JS updates progress/status -->
+    <!-- 5 cards; JS will update progress and status -->
     <div class="challenge-card bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between">
       <div>
         <div class="text-sm font-medium">a. Complete 10 affiliate tasks</div>
@@ -4132,7 +4134,6 @@
       </div>
       <div class="text-right">
         <div class="status-text text-sm text-red-500">Not completed</div>
-        <div class="text-xs text-slate-400 mt-1">—</div>
       </div>
     </div>
 
@@ -4146,7 +4147,6 @@
       </div>
       <div class="text-right">
         <div class="status-text text-sm text-red-500">Not completed</div>
-        <div class="text-xs text-slate-400 mt-1">—</div>
       </div>
     </div>
 
@@ -4160,7 +4160,6 @@
       </div>
       <div class="text-right">
         <div class="status-text text-sm text-red-500">Not completed</div>
-        <div class="text-xs text-slate-400 mt-1">—</div>
       </div>
     </div>
 
@@ -4174,7 +4173,6 @@
       </div>
       <div class="text-right">
         <div class="status-text text-sm text-red-500">Not completed</div>
-        <div class="text-xs text-slate-400 mt-1">—</div>
       </div>
     </div>
 
@@ -4188,13 +4186,12 @@
       </div>
       <div class="text-right">
         <div class="status-text text-sm text-red-500">Not completed</div>
-        <div class="text-xs text-slate-400 mt-1">—</div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Win Modal (hidden by default) -->
+<!-- Win Modal -->
 <div id="win-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
   <div class="bg-white rounded-2xl p-6 w-11/12 max-w-sm text-center shadow-2xl">
     <img id="win-verified" src="VERIFIED.jpg" alt="verified" class="w-12 h-12 mx-auto mb-3 hidden">
@@ -4205,12 +4202,13 @@
   </div>
 </div>
 
-<!-- Small toast for 'no spins left' -->
+<!-- toast -->
 <div id="spin-toast" class="fixed bottom-6 right-6 hidden bg-white border px-4 py-2 rounded-lg shadow">
   <div class="text-sm text-slate-700">Complete daily challenge or come back tomorrow for a free spin.</div>
 </div>
 
 
+		
 
 		
 
