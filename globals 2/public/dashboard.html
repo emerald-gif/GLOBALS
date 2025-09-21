@@ -4056,10 +4056,8 @@
 
 
 
-<!-- === Spin-to-Win (2025 fintech style) ===
-     Requires TailwindCSS. Place COIN.jpg and VERIFIED.jpg in same folder or update paths.
--->
-<section id="daily-spin-section" class="tab-section p-6 bg-gradient-to-b from-gray-50 via-white to-gray-100 rounded-2xl shadow-xl">
+<!-- === Spin-to-Win (2025 fintech style, improved) === -->
+<section id="daily-spin-section" class="tab-section hidden p-6 bg-gradient-to-b from-gray-50 via-white to-gray-100 rounded-2xl shadow-xl">
   <!-- Header -->
   <div class="flex items-center justify-between mb-6">
     <div>
@@ -4072,16 +4070,8 @@
   <!-- Wheel + CTA -->
   <div class="flex flex-col items-center gap-6">
     <div class="relative w-80 h-80">
-      <div id="wheel" class="w-full h-full rounded-full shadow-inner overflow-visible transition-transform duration-[5200ms] ease-out"
-           style="transform-origin:center center; background: conic-gradient(#eef2ff 0deg 45deg, #f0f9ff 45deg 90deg, #fef3c7 90deg 135deg, #ecfdf5 135deg 180deg, #fff1f2 180deg 225deg, #eef2ff 225deg 270deg, #f3f4f6 270deg 315deg, #eef2ff 315deg 360deg);">
-        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 bg-white rounded-full shadow-md flex items-center justify-center">
-          <div class="text-center">
-            <div class="text-sm text-slate-500">Tap</div>
-            <div class="text-lg font-extrabold text-indigo-600">to Spin</div>
-          </div>
-        </div>
-        <div id="wheel-coins" class="absolute inset-0 pointer-events-none"></div>
-      </div>
+      <!-- SVG wheel drawn by JS -->
+      <svg id="wheel-svg" viewBox="0 0 320 320" class="w-full h-full rounded-full"></svg>
 
       <!-- Pointer -->
       <div class="absolute -top-4 left-1/2 -translate-x-1/2 z-30">
@@ -4091,13 +4081,13 @@
 
     <!-- CTA -->
     <div class="flex items-center gap-4">
-      <button id="spin-btn" class="px-10 py-3 rounded-full text-white font-semibold bg-gradient-to-r from-indigo-600 to-violet-500 shadow-lg hover:scale-[0.995] transition-transform">
+      <button id="spin-btn" class="px-10 py-3 rounded-full text-white font-semibold bg-gradient-to-r from-indigo-600 to-violet-500 shadow-lg">
         Spin Now <span id="spin-count" class="ml-2 text-sm text-yellow-100">(0)</span>
       </button>
       <div id="spin-hint" class="text-sm text-slate-500">Hidden reward — revealed after spin</div>
     </div>
 
-    <!-- Live feed (one item) -->
+    <!-- Live feed (single message) -->
     <div class="w-full max-w-3xl bg-white p-3 rounded-xl shadow-sm border">
       <div class="flex items-center justify-between mb-2">
         <div class="text-sm font-semibold text-slate-700">Live Wins</div>
@@ -4123,7 +4113,6 @@
 
   <!-- Tasks cards -->
   <div id="daily-challenges" class="mt-4 grid grid-cols-1 gap-3">
-    <!-- 5 cards; JS will update progress and status -->
     <div class="challenge-card bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between">
       <div>
         <div class="text-sm font-medium">a. Complete 10 affiliate tasks</div>
@@ -4209,6 +4198,7 @@
 
 
 		
+
 
 		
 
