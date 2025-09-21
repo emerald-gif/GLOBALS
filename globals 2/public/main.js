@@ -7154,7 +7154,7 @@ function drawWheel(rotationDeg = 0) {
   ctx.fillText('Tap', cx, cy + 12);
 
   ctx.restore();
-}
+
 
 /* ---------- animate rotation (easing) ---------- */
 function rotateAnimationTo(finalDeg, duration = 5200) {
@@ -7499,6 +7499,7 @@ function initSpinModule() {
 
 /* ---------- start module on DOM ready ---------- */
 document.addEventListener('DOMContentLoaded', initSpinModule);
+
 
 
 
