@@ -4057,37 +4057,42 @@
 
 
 <!-- === Spin-to-Win (2025 fintech style, improved) === -->
-<section id="daily-spin-section" class="tab-section hidden p-6 bg-gradient-to-b from-gray-50 via-white to-gray-100 rounded-2xl shadow-xl">
+
+        <!-- ====== SPIN TO WIN SECTION (Canvas + Tasks) ======
+  Place inside dashboard where you want the section.
+  Requires TailwindCSS in your project.
+  Images: COIN.jpg and VERIFIED.jpg should be reachable from this page.
+-->
+<section id="daily-spin-section" class="tab-section p-6 bg-gradient-to-b from-[#f8fbff] via-white to-[#f3f7ff] rounded-2xl shadow-xl">
   <!-- Header -->
   <div class="flex items-center justify-between mb-6">
     <div>
       <h2 class="text-3xl font-extrabold text-slate-800">Spin to Earn</h2>
-      <p class="text-sm text-slate-500 mt-1">Win up to <span class="font-extrabold text-indigo-600">₦1,000</span> — try your luck!</p>
+      <p class="text-sm text-slate-500 mt-1">Win up to <span class="font-extrabold text-indigo-600">₦1,000</span> cashback. Complete daily challenges to earn extra spins.</p>
     </div>
     <div class="text-right text-xs text-slate-400">Free spin resets daily</div>
   </div>
 
-  <!-- Wheel + CTA -->
-  <div class="flex flex-col items-center gap-6">
+  <!-- Wheel + Spin -->
+  <div class="flex flex-col items-center gap-5">
     <div class="relative w-80 h-80">
-      <!-- SVG wheel drawn by JS -->
-      <svg id="wheel-svg" viewBox="0 0 320 320" class="w-full h-full rounded-full"></svg>
+      <canvas id="spin-canvas" width="320" height="320" class="rounded-full shadow-inner"></canvas>
 
-      <!-- Pointer -->
+      <!-- pointer -->
       <div class="absolute -top-4 left-1/2 -translate-x-1/2 z-30">
-        <div class="w-0 h-0 border-l-[14px] border-r-[14px] border-b-[26px] border-l-transparent border-r-transparent border-b-indigo-600 drop-shadow"></div>
+        <div style="width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-bottom:26px solid #4f46e5;filter:drop-shadow(0 4px 6px rgba(15,23,42,0.08))"></div>
       </div>
     </div>
 
-    <!-- CTA -->
+    <!-- Spin CTA -->
     <div class="flex items-center gap-4">
-      <button id="spin-btn" class="px-10 py-3 rounded-full text-white font-semibold bg-gradient-to-r from-indigo-600 to-violet-500 shadow-lg">
+      <button id="spin-btn" class="px-10 py-3 rounded-full text-white font-semibold bg-gradient-to-r from-[#06b6d4] to-[#7c3aed] shadow-lg hover:scale-[0.995] transition-transform">
         Spin Now <span id="spin-count" class="ml-2 text-sm text-yellow-100">(0)</span>
       </button>
       <div id="spin-hint" class="text-sm text-slate-500">Hidden reward — revealed after spin</div>
     </div>
 
-    <!-- Live feed (single message) -->
+    <!-- Live feed single -->
     <div class="w-full max-w-3xl bg-white p-3 rounded-xl shadow-sm border">
       <div class="flex items-center justify-between mb-2">
         <div class="text-sm font-semibold text-slate-700">Live Wins</div>
@@ -4111,8 +4116,9 @@
     <p class="text-sm text-slate-500 mt-1">Complete tasks today to earn more spins.</p>
   </div>
 
-  <!-- Tasks cards -->
+  <!-- Tasks -->
   <div id="daily-challenges" class="mt-4 grid grid-cols-1 gap-3">
+    <!-- affiliate -->
     <div class="challenge-card bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between">
       <div>
         <div class="text-sm font-medium">a. Complete 10 affiliate tasks</div>
@@ -4126,6 +4132,7 @@
       </div>
     </div>
 
+    <!-- normal tasks -->
     <div class="challenge-card bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between">
       <div>
         <div class="text-sm font-medium">b. Complete 10 normal tasks</div>
@@ -4139,6 +4146,7 @@
       </div>
     </div>
 
+    <!-- data -->
     <div class="challenge-card bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between">
       <div>
         <div class="text-sm font-medium">c. Data purchase ≥ ₦1,000 (today)</div>
@@ -4152,6 +4160,7 @@
       </div>
     </div>
 
+    <!-- airtime -->
     <div class="challenge-card bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between">
       <div>
         <div class="text-sm font-medium">d. Airtime purchase ≥ ₦500 (today)</div>
@@ -4165,6 +4174,7 @@
       </div>
     </div>
 
+    <!-- referrals -->
     <div class="challenge-card bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between">
       <div>
         <div class="text-sm font-medium">e. Refer 2 premium users (today)</div>
@@ -4195,9 +4205,6 @@
 <div id="spin-toast" class="fixed bottom-6 right-6 hidden bg-white border px-4 py-2 rounded-lg shadow">
   <div class="text-sm text-slate-700">Complete daily challenge or come back tomorrow for a free spin.</div>
 </div>
-
-
-		
 
 
 		
