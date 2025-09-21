@@ -7002,63 +7002,123 @@ function weightedRandomIndex(weights){
   return weights.length-1;
 }
 
+
+// ====== HD Canvas setup + image preload (insert before drawWheel) ======
+const COIN_IMG = 'COIN.jpg';
+const VERIFIED_IMG = 'VERIFIED.jpg';
+let coinImg = new Image();
+let verifiedImg = new Image();
+coinImg.src = COIN_IMG;
+verifiedImg.src = VERIFIED_IMG;
+
+// Ensure canvas is crisp on high-DPI screens
+function setupCanvasHD(cssSize = 320) {
+  const ratio = window.devicePixelRatio || 1;
+  // CSS size (what page sees)
+  canvas.style.width = `${cssSize}px`;
+  canvas.style.height = `${cssSize}px`;
+  // Actual backing store size
+  canvas.width = Math.round(cssSize * ratio);
+  canvas.height = Math.round(cssSize * ratio);
+  // Map drawing units to CSS pixels (so later drawing uses CSS pixel coordinates)
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  // store last rotation if needed (we keep get/set functions later)
+  drawWheel(getCurrentRotation());
+}
+
+
+					 
 /* ---------- draw wheel on canvas ---------- */
+/* ---------- draw wheel on canvas (HD, coins + amounts) ---------- */
 function drawWheel(rotationDeg = 0) {
-  const w = canvas.width;
-  const h = canvas.height;
-  const cx = w/2, cy = h/2, r = Math.min(w,h)/2 - 8;
-  ctx.clearRect(0,0,w,h);
+  // drawing uses CSS pixel coords because ctx.setTransform was set in setupCanvasHD()
+  const cssW = canvas.clientWidth || parseInt(canvas.style.width || 320, 10);
+  const cssH = canvas.clientHeight || cssW;
+  const cx = cssW / 2, cy = cssH / 2, r = Math.min(cssW, cssH) / 2 - 8;
+
+  // clear using CSS pixels
+  ctx.clearRect(0, 0, cssW, cssH);
+
   ctx.save();
-  ctx.translate(cx,cy);
-  ctx.rotate(rotationDeg * Math.PI/180);
-  ctx.translate(-cx,-cy);
+  // rotate around center (rotationDeg is in degrees)
+  ctx.translate(cx, cy);
+  ctx.rotate(rotationDeg * Math.PI / 180);
+  ctx.translate(-cx, -cy);
 
   const segAngle = 2 * Math.PI / SEGMENTS;
   const colors = ['#dff6ff','#e9fcd8','#fff7d6','#f0f7ff','#fff0f2','#eef2ff','#f7f7fb','#f0fbff'];
 
-  for (let i=0;i<SEGMENTS;i++){
+  for (let i = 0; i < SEGMENTS; i++) {
     const start = -Math.PI/2 + i*segAngle;
     const end = start + segAngle;
-    // slice background
+
+    // slice
     ctx.beginPath();
-    ctx.moveTo(cx,cy);
-    ctx.arc(cx,cy,r,start,end);
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, start, end);
     ctx.closePath();
     ctx.fillStyle = colors[i % colors.length];
     ctx.fill();
-    // inner wedge stroke
     ctx.strokeStyle = 'rgba(2,6,23,0.04)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Add coin image in middle of slice
+    // coin position (CSS pixels)
     const mid = (start + end) / 2;
     const imgRadius = r * 0.58;
     const imgX = cx + Math.cos(mid) * imgRadius;
     const imgY = cy + Math.sin(mid) * imgRadius;
 
-    // draw coin (sized)
-    const coin = new Image();
-    coin.src = COIN_IMG;
-    // draw when loaded (immediate draws might not show but canvas will update next frames)
-    ((x,y,iIndex)=>{
-      coin.onload = () => {
-        ctx.save();
-        // center the coin and rotate it so coin is upright relative to screen
-        ctx.translate(x, y);
-        ctx.rotate(-(rotationDeg * Math.PI/180)); // ensure coin isn't rotated with wheel visually
-        ctx.drawImage(coin, -20, -20, 40, 40);
-        // If prize is 1000 overlay verified (small)
-        if (PRIZES[iIndex] === 1000) {
-          const v = new Image();
-          v.src = VERIFIED_IMG;
-          v.onload = () => {
-            ctx.drawImage(v, 6, 6, 18, 18); // offset on top-right of coin
-          };
-        }
-        ctx.restore();
-      };
-    })(imgX, imgY, i);
+    // draw preloaded coin image (if loaded); keep size responsive
+    if (coinImg && coinImg.complete) {
+      ctx.save();
+      ctx.translate(imgX, imgY);
+      // keep coin upright regardless of rotation by counter-rotating
+      ctx.rotate(-(rotationDeg * Math.PI/180));
+      const coinSize = Math.max(28, Math.round(cssW * 0.12)); // responsive sizing
+      ctx.drawImage(coinImg, -coinSize/2, -coinSize/2, coinSize, coinSize);
+      // if prize is 1000 overlay verified badge
+      if (PRIZES[i] === 1000 && verifiedImg && verifiedImg.complete) {
+        const badgeSize = Math.round(coinSize * 0.45);
+        ctx.drawImage(verifiedImg, coinSize/4, coinSize/4, badgeSize, badgeSize);
+      }
+      ctx.restore();
+    }
+
+    // amount label near rim (CSS pix)
+    const labelRadius = r * 0.82;
+    const labelX = cx + Math.cos(mid) * labelRadius;
+    const labelY = cy + Math.sin(mid) * labelRadius;
+    ctx.save();
+    ctx.translate(labelX, labelY);
+    ctx.rotate(mid + Math.PI/2);
+    ctx.fillStyle = '#0f172a';
+    ctx.font = `${Math.max(11, Math.round(cssW * 0.035))}px Inter, system-ui, -apple-system, "Segoe UI", Roboto`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`₦${PRIZES[i]}`, 0, 0);
+    ctx.restore();
+  }
+
+  // inner circle + text
+  ctx.beginPath();
+  ctx.arc(cx, cy, 44, 0, Math.PI*2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(15, 23, 42, 0.04)';
+  ctx.stroke();
+
+  ctx.fillStyle = '#0f172a';
+  ctx.font = '700 14px Inter, system-ui';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('SPIN NOW', cx, cy - 6);
+  ctx.font = '600 12px Inter, system-ui';
+  ctx.fillText('Tap', cx, cy + 12);
+
+  ctx.restore();
+}
 
     // draw amount label near rim (small, subtle)
     const labelRadius = r * 0.82;
@@ -7212,24 +7272,38 @@ function recomputeSpinsUI() {
 let unsubAffiliate = null, unsubTask = null, unsubBills = null, unsubRef = null, unsubUserDoc = null;
 
 function attachRealtimeProgress(uid, username) {
-  // remove old
   if (unsubAffiliate) { unsubAffiliate(); unsubAffiliate = null; }
   if (unsubTask) { unsubTask(); unsubTask = null; }
   if (unsubBills) { unsubBills(); unsubBills = null; }
   if (unsubRef) { unsubRef(); unsubRef = null; }
 
-  const start = firebase.firestore.Timestamp.fromDate(startOfToday());
-  const end = firebase.firestore.Timestamp.fromDate(endOfToday());
+  const startDate = startOfToday();
+  const endDate = endOfToday();
 
-  // affiliate_submissions (approved)
+  const timestampCandidates = ['createdAt','submittedAt','timestamp','submittedOn','time'];
+
+  function docInToday(d) {
+    // accept Firestore Timestamp or ISO string / number
+    for (const f of timestampCandidates) {
+      const ts = d[f];
+      if (!ts) continue;
+      const dt = (typeof ts.toDate === 'function') ? ts.toDate() : new Date(ts);
+      if (!isNaN(dt.getTime()) && dt >= startDate && dt <= endDate) return true;
+    }
+    return false;
+  }
+
+  // affiliate_submissions
   try {
     unsubAffiliate = db.collection('affiliate_submissions')
       .where('userId','==', uid)
       .where('status','==','approved')
-      .where('createdAt','>=', start)
-      .where('createdAt','<=', end)
       .onSnapshot(snap => {
-        progressState.affiliateApproved = snap.size;
+        let count = 0;
+        snap.forEach(doc => {
+          if (docInToday(doc.data())) count++;
+        });
+        progressState.affiliateApproved = count;
         recomputeSpinsUI();
       }, err => console.warn('aff listener', err));
   } catch(e) { console.warn('aff attach err', e); }
@@ -7239,25 +7313,24 @@ function attachRealtimeProgress(uid, username) {
     unsubTask = db.collection('task_submissions')
       .where('userId','==', uid)
       .where('status','==','approved')
-      .where('createdAt','>=', start)
-      .where('createdAt','<=', end)
       .onSnapshot(snap => {
-        progressState.taskApproved = snap.size;
+        let count = 0;
+        snap.forEach(doc => { if (docInToday(doc.data())) count++; });
+        progressState.taskApproved = count;
         recomputeSpinsUI();
       }, err => console.warn('task listener', err));
   } catch(e) { console.warn('task attach err', e); }
 
-  // bill_submissions (processed true) -> sum amounts split by type (data or airtime)
+  // bill_submissions
   try {
     unsubBills = db.collection('bill_submissions')
       .where('userId','==', uid)
       .where('processed','==', true)
-      .where('createdAt','>=', start)
-      .where('createdAt','<=', end)
       .onSnapshot(snap => {
         let dataSum = 0, airtimeSum = 0;
         snap.forEach(doc => {
           const d = doc.data();
+          if (!docInToday(d)) return;
           const t = d.type || 'airtime';
           const amt = Number(d.amount || 0);
           if (t === 'data') dataSum += amt;
@@ -7269,16 +7342,18 @@ function attachRealtimeProgress(uid, username) {
       }, err => console.warn('bill listener', err));
   } catch(e) { console.warn('bill attach err', e); }
 
-  // referrals: users where referrer == username and is_Premium true (today)
+  // referrals (username)
   if (username) {
     try {
       unsubRef = db.collection('users')
         .where('referrer','==', username)
         .where('is_Premium','==', true)
-        .where('createdAt','>=', start)
-        .where('createdAt','<=', end)
         .onSnapshot(snap => {
-          progressState.referralsPremium = snap.size;
+          let count = 0;
+          snap.forEach(doc => {
+            if (docInToday(doc.data())) count++;
+          });
+          progressState.referralsPremium = count;
           recomputeSpinsUI();
         }, err => console.warn('ref listener', err));
     } catch(e) { console.warn('ref attach err', e); }
@@ -7356,10 +7431,20 @@ async function handleSpinBtn() {
   spinBtn.classList.remove('opacity-60','cursor-not-allowed');
 }
 
-/* ---------- attach auth listener + realtime listeners ---------- */
+
+
+
+
+  // init spin
+
 function initSpinModule() {
-  // initial draw
-  drawWheel(0);
+  // Setup HD canvas (320px CSS size — change the number if you want bigger)
+  setupCanvasHD(320);
+
+  // initial draw (will use preloaded coin images if ready)
+  drawWheel(getCurrentRotation());
+
+  // start live feed demo
   startLiveFeedDemo();
 
   // events
@@ -7368,7 +7453,12 @@ function initSpinModule() {
     winModal.classList.add('hidden');
     winModal.style.display = 'none';
   });
-  window.addEventListener('resize', ()=> drawWheel(getCurrentRotation()));
+
+  // re-setup on resize so canvas stays crisp
+  window.addEventListener('resize', () => {
+    setupCanvasHD(320);
+    drawWheel(getCurrentRotation());
+  });
 
   // auth
   if (typeof auth !== 'undefined' && auth && typeof db !== 'undefined' && db) {
@@ -7409,6 +7499,7 @@ function initSpinModule() {
 
 /* ---------- start module on DOM ready ---------- */
 document.addEventListener('DOMContentLoaded', initSpinModule);
+
 
 
 
