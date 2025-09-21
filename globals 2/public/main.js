@@ -6956,26 +6956,26 @@ startCheckinListener();
 
 
 
-/* === Spin-to-Win (production ready) ===
-   Uses existing global `db` and `auth` (compat).
-   Behavior:
-   - Rewards hidden on wheel (coin icons only)
-   - Uses spinsUsedCount/spinsUsedDate on user doc to track usage
-   - Updates only user.balance and spin metadata (no transactions)
-   - Live feed shows 1 item at a time
+
+
+/* ====== SPIN & TASKS — Robust version (uses compat Firestore/auth) ======
+   - SVG wheel (segments built by JS)
+   - onSnapshot listeners for today's progress (live updates)
+   - Atomic transaction to update user's balance + spin metadata
+   - No transactions collection writes
+   - Live feed (one message)
+   - Uses your existing `db` and `auth` globals (compat)
 */
 
-/* CONFIG */
 const COIN_IMG = 'COIN.jpg';
 const VERIFIED_IMG = 'VERIFIED.jpg';
-const WHEEL_PRIZES = [10, 30, 20, 200, 5, 0, 100, 1000];         // internal amounts (hidden)
-const WHEEL_WEIGHTS = [18, 12, 14, 2, 18, 20, 5, 1];            // weights (1,000 rare)
-const WHEEL_SEGMENTS = WHEEL_PRIZES.length;
-const ROTATIONS = 6; // full rotations for spin animation
+const WHEEL_PRIZES = [10, 30, 20, 200, 5, 0, 100, 1000];
+const WHEEL_WEIGHTS = [18, 12, 14, 2, 18, 20, 5, 1];
+const SEG_COUNT = WHEEL_PRIZES.length;
+const ROTATIONS = 6; // base rotations
 
-/* DOM refs */
-const wheelEl = document.getElementById('wheel');
-const wheelCoinsEl = document.getElementById('wheel-coins');
+// DOM
+const svgEl = document.getElementById('wheel-svg');
 const spinBtn = document.getElementById('spin-btn');
 const spinCountEl = document.getElementById('spin-count');
 const liveFeedEl = document.getElementById('live-feed-items');
@@ -6985,135 +6985,217 @@ const winVerifiedImg = document.getElementById('win-verified');
 const winCloseBtn = document.getElementById('win-close');
 const toastEl = document.getElementById('spin-toast');
 
-/* STATE */
+// state
 let currentUser = null;
+let userUnsub = null;
+let affiliateUnsub = null;
+let taskUnsub = null;
+let billUnsub = null;
+let referUnsub = null;
 let spinsAvailable = 0;
 let userDocCached = null;
+let progressState = { affiliateApproved:0, taskApproved:0, dataAmount:0, airtimeAmount:0, referralsPremium:0 };
 let spinning = false;
+let fakeFeedTimer = null;
 
-/* HELPERS */
-function todayKey() { return new Date().toISOString().slice(0,10); } // YYYY-MM-DD
-function startOfToday() { const d = new Date(); d.setHours(0,0,0,0); return d; }
-function endOfToday() { const d = new Date(); d.setHours(23,59,59,999); return d; }
+/* ---------- helpers ---------- */
+function degToRad(deg){ return deg * Math.PI / 180; }
+function todayKey(){ return new Date().toISOString().slice(0,10); }
+function startOfToday(){ const d = new Date(); d.setHours(0,0,0,0); return d; }
+function endOfToday(){ const d = new Date(); d.setHours(23,59,59,999); return d; }
 function weightedRandomIndex(weights){
   const sum = weights.reduce((a,b)=>a+b,0);
-  let r = Math.random() * sum;
+  let r = Math.random()*sum;
   for(let i=0;i<weights.length;i++){
     if (r < weights[i]) return i;
     r -= weights[i];
   }
-  return weights.length - 1;
+  return weights.length-1;
 }
 
-/* Build coin icons around wheel (no amounts shown) */
-function buildWheelCoins(){
-  if (!wheelCoinsEl) return;
-  wheelCoinsEl.innerHTML = '';
-  const size = wheelEl.clientWidth || 320;
-  const center = size/2;
-  const radius = (size/2) - 48; // padding to fit coins
-  for(let i=0;i<WHEEL_SEGMENTS;i++){
-    const angle = (360 / WHEEL_SEGMENTS) * i;
-    const rad = angle * (Math.PI/180);
-    const x = center + Math.cos(rad) * radius;
-    const y = center + Math.sin(rad) * radius;
-    const img = document.createElement('img');
-    img.src = COIN_IMG;
-    img.alt = 'coin';
-    img.style.width = '44px';
-    img.style.height = '44px';
-    img.style.position = 'absolute';
-    img.style.left = `${x - 22}px`;
-    img.style.top = `${y - 22}px`;
-    img.style.pointerEvents = 'none';
-    img.style.userSelect = 'none';
-    wheelCoinsEl.appendChild(img);
+/* ---------- build svg wheel ---------- */
+function buildWheelSVG(){
+  if (!svgEl) return;
+  svgEl.innerHTML = '';
+  const size = 320;
+  const cx = size/2, cy = size/2, r = size/2 - 8;
+  const segAngle = 360 / SEG_COUNT;
+  const colors = ['#eef2ff','#f0f9ff','#fef3c7','#ecfdf5','#fff1f2','#eef2ff','#f3f4f6','#eef2ff'];
+
+  for (let i=0;i<SEG_COUNT;i++){
+    const start = -90 + i*segAngle; // start angle so -90 = top
+    const end = start + segAngle;
+    const x1 = cx + r * Math.cos(degToRad(start));
+    const y1 = cy + r * Math.sin(degToRad(start));
+    const x2 = cx + r * Math.cos(degToRad(end));
+    const y2 = cy + r * Math.sin(degToRad(end));
+    const large = (segAngle > 180) ? 1 : 0;
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
+    path.setAttribute('d', d);
+    path.setAttribute('fill', colors[i % colors.length]);
+    path.setAttribute('stroke', 'rgba(0,0,0,0.04)');
+    path.setAttribute('stroke-width', '1');
+    svgEl.appendChild(path);
+
+    // add coin image roughly in middle of segment
+    const mid = start + segAngle/2;
+    const imgRadius = r * 0.62;
+    const imgX = cx + imgRadius * Math.cos(degToRad(mid));
+    const imgY = cy + imgRadius * Math.sin(degToRad(mid));
+    const img = document.createElementNS('http://www.w3.org/2000/svg','image');
+    img.setAttributeNS('http://www.w3.org/1999/xlink','href', COIN_IMG);
+    img.setAttribute('width', '40');
+    img.setAttribute('height', '40');
+    img.setAttribute('x', (imgX - 20).toString());
+    img.setAttribute('y', (imgY - 20).toString());
+    img.setAttribute('preserveAspectRatio','xMidYMid slice');
+    svgEl.appendChild(img);
   }
+  // center circle visual
+  const centerCircle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+  centerCircle.setAttribute('cx', cx);
+  centerCircle.setAttribute('cy', cy);
+  centerCircle.setAttribute('r', 44);
+  centerCircle.setAttribute('fill','#ffffff');
+  centerCircle.setAttribute('stroke','rgba(2,6,23,0.04)');
+  svgEl.appendChild(centerCircle);
+
+  // set transform origin
+  svgEl.style.transformOrigin = '50% 50%';
 }
 
-/* Fake live feed — one item only, cycles */
+/* ---------- animate wheel to prize ---------- */
+function animateWheelToPrize(prizeIndex){
+  return new Promise(resolve=>{
+    const segAngle = 360 / SEG_COUNT;
+    const centerAngle = -90 + (prizeIndex + 0.5) * segAngle; // segment center (degrees)
+    // We want: centerAngle + rotation = -90  (so the segment center lands at top)
+    // => rotation = -90 - centerAngle + k*360
+    const rotationToCenter = -90 - centerAngle;
+    const jitter = (Math.random() * (segAngle/3)) - (segAngle/6);
+    const totalRotation = (ROTATIONS * 360) + rotationToCenter + jitter;
+    // apply rotation (CSS rotate clockwise positive)
+    svgEl.style.transition = 'transform 5s cubic-bezier(.12,.74,.12,1)';
+    svgEl.style.transform = `rotate(${totalRotation}deg)`;
+    setTimeout(()=>{
+      // set final resting angle (normalize)
+      const finalAngle = ((rotationToCenter + jitter) % 360 + 360) % 360;
+      svgEl.style.transition = 'none';
+      svgEl.style.transform = `rotate(${finalAngle}deg)`;
+      resolve(prizeIndex);
+    }, 5200);
+  });
+}
+
+/* ---------- live feed (one item) ---------- */
 function startFakeLiveFeed(){
+  clearInterval(fakeFeedTimer);
   const names = ['ABUBAKAR','FATIMA','CHINEDU','SULEIMAN','GRACE','KINGSLEY','BOLA','AMINA','EMMA','TOBI'];
   const messages = [];
-  for(let i=0;i<10;i++){
+  for (let i=0;i<10;i++){
     const amt = WHEEL_PRIZES[Math.floor(Math.random()*WHEEL_PRIZES.length)];
     const name = names[Math.floor(Math.random()*names.length)];
     messages.push(`${name} won ₦${amt} cashback.`);
   }
-  let idx = 0;
-  // initial
+  let idx=0;
   liveFeedEl.innerHTML = `<div class="px-2 py-1 rounded bg-indigo-50 text-indigo-700">${messages[0]}</div>`;
-  setInterval(()=>{
+  fakeFeedTimer = setInterval(()=>{
     idx = (idx + 1) % messages.length;
     liveFeedEl.innerHTML = `<div class="px-2 py-1 rounded bg-indigo-50 text-indigo-700">${messages[idx]}</div>`;
-  }, 2800);
+  }, 3000);
 }
 
-/* Compute today's progress (Firestore queries) */
-async function computeTodayProgress(uid, username){
-  const res = { affiliateApproved:0, taskApproved:0, dataAmount:0, airtimeAmount:0, referralsPremium:0 };
-  if (!db) return res; // if no db (shouldn't happen if you have firebase)
+/* ---------- firestore listeners for today's progress ---------- */
+function attachProgressListeners(uid, username){
+  // cleanup old unsub if any
+  if (affiliateUnsub) { affiliateUnsub(); affiliateUnsub = null; }
+  if (taskUnsub) { taskUnsub(); taskUnsub = null; }
+  if (billUnsub) { billUnsub(); billUnsub = null; }
+  if (referUnsub) { referUnsub(); referUnsub = null; }
+
   const start = firebase.firestore.Timestamp.fromDate(startOfToday());
   const end = firebase.firestore.Timestamp.fromDate(endOfToday());
+
+  // affiliate_submissions
   try {
-    const qa = await db.collection('affiliate_submissions')
+    affiliateUnsub = db.collection('affiliate_submissions')
       .where('userId','==', uid)
       .where('status','==','approved')
       .where('createdAt','>=', start)
       .where('createdAt','<=', end)
-      .get();
-    res.affiliateApproved = qa.size;
-  } catch(e){ console.warn('aff query err', e); }
+      .onSnapshot(snap=>{
+        progressState.affiliateApproved = snap.size;
+        updateChallengeUI();
+      }, err=> console.warn('aff listener',err));
+  } catch(e){ console.warn('aff attach err', e); }
+
+  // task_submissions
   try {
-    const qt = await db.collection('task_submissions')
+    taskUnsub = db.collection('task_submissions')
       .where('userId','==', uid)
       .where('status','==','approved')
       .where('createdAt','>=', start)
       .where('createdAt','<=', end)
-      .get();
-    res.taskApproved = qt.size;
-  } catch(e){ console.warn('task query err', e); }
+      .onSnapshot(snap=>{
+        progressState.taskApproved = snap.size;
+        updateChallengeUI();
+      }, err=> console.warn('task listener',err));
+  } catch(e){ console.warn('task attach err', e); }
+
+  // bills (data + airtime)
   try {
-    const qb = await db.collection('bill_submissions')
+    billUnsub = db.collection('bill_submissions')
       .where('userId','==', uid)
       .where('processed','==', true)
       .where('createdAt','>=', start)
       .where('createdAt','<=', end)
-      .get();
-    qb.forEach(doc=>{
-      const d = doc.data();
-      const t = d.type || 'airtime';
-      const amt = Number(d.amount || 0);
-      if (t === 'data') res.dataAmount += amt;
-      else res.airtimeAmount += amt;
-    });
-  } catch(e){ console.warn('bill query err', e); }
-  try {
-    const qr = await db.collection('users')
-      .where('referrer','==', username)
-      .where('is_Premium','==', true)
-      .where('createdAt','>=', start)
-      .where('createdAt','<=', end)
-      .get();
-    res.referralsPremium = qr.size;
-  } catch(e){ console.warn('ref query err', e); }
-  return res;
+      .onSnapshot(snap=>{
+        let dataSum = 0, airtimeSum = 0;
+        snap.forEach(doc=>{
+          const d = doc.data();
+          const t = d.type || 'airtime';
+          const amt = Number(d.amount || 0);
+          if (t === 'data') dataSum += amt;
+          else airtimeSum += amt;
+        });
+        progressState.dataAmount = dataSum;
+        progressState.airtimeAmount = airtimeSum;
+        updateChallengeUI();
+      }, err=> console.warn('bill listener',err));
+  } catch(e){ console.warn('bill attach err', e); }
+
+  // referrals (by username)
+  if (username) {
+    try {
+      referUnsub = db.collection('users')
+        .where('referrer','==', username)
+        .where('is_Premium','==', true)
+        .where('createdAt','>=', start)
+        .where('createdAt','<=', end)
+        .onSnapshot(snap=>{
+          progressState.referralsPremium = snap.size;
+          updateChallengeUI();
+        }, err=> console.warn('ref listener',err));
+    } catch(e){ console.warn('ref attach err', e); }
+  }
 }
 
-/* Update UI (progress bars + spins avail) */
-function updateChallengeUI(progress, userDoc){
-  const affiliatePercent = Math.min(100, (progress.affiliateApproved / 10) * 100);
-  const taskPercent = Math.min(100, (progress.taskApproved / 10) * 100);
-  const dataPercent = Math.min(100, (progress.dataAmount / 1000) * 100);
-  const airtimePercent = Math.min(100, (progress.airtimeAmount / 500) * 100);
-  const referPercent = Math.min(100, (progress.referralsPremium / 2) * 100);
+/* ---------- update UI from progressState & userDocCached ---------- */
+function updateChallengeUI(){
+  const affiliatePercent = Math.min(100, (progressState.affiliateApproved / 10) * 100);
+  const taskPercent = Math.min(100, (progressState.taskApproved / 10) * 100);
+  const dataPercent = Math.min(100, (progressState.dataAmount / 1000) * 100);
+  const airtimePercent = Math.min(100, (progressState.airtimeAmount / 500) * 100);
+  const referPercent = Math.min(100, (progressState.referralsPremium / 2) * 100);
+
   const percents = [affiliatePercent, taskPercent, dataPercent, airtimePercent, referPercent];
   const statuses = [
-    progress.affiliateApproved >= 10,
-    progress.taskApproved >= 10,
-    progress.dataAmount >= 1000,
-    progress.airtimeAmount >= 500,
-    progress.referralsPremium >= 2
+    progressState.affiliateApproved >= 10,
+    progressState.taskApproved >= 10,
+    progressState.dataAmount >= 1000,
+    progressState.airtimeAmount >= 500,
+    progressState.referralsPremium >= 2
   ];
 
   const cards = document.querySelectorAll('#daily-challenges .challenge-card');
@@ -7132,67 +7214,40 @@ function updateChallengeUI(progress, userDoc){
     }
   });
 
-  // compute spinsAvailable
+  // compute spins: baseFree(1) + completedCount - spinsUsed (today)
   const baseFree = 1;
-  let completedCount = statuses.filter(Boolean).length;
-  let used = 0, usedDate = null;
-  if (userDoc) {
-    used = Number(userDoc.spinsUsedCount || 0);
-    usedDate = userDoc.spinsUsedDate || null;
+  const completedCount = statuses.filter(Boolean).length;
+  let used = 0;
+  let usedDate = null;
+  if (userDocCached) {
+    used = Number(userDocCached.spinsUsedCount || 0);
+    usedDate = userDocCached.spinsUsedDate || null;
     if (usedDate !== todayKey()) used = 0;
   }
   spinsAvailable = Math.max(0, baseFree + completedCount - used);
   spinCountEl.textContent = `(${spinsAvailable})`;
 }
 
-/* Animate wheel to chosen prizeIndex and resolve when done */
-function animateWheelToPrize(prizeIndex){
-  return new Promise(resolve=>{
-    const degPer = 360 / WHEEL_SEGMENTS;
-    // center angle for the prize segment (pointer at top)
-    const target = (360 - (prizeIndex * degPer) + (degPer/2)) % 360;
-    const jitter = (Math.random() * (degPer/3)) - (degPer/6);
-    const finalDeg = (ROTATIONS * 360) + target + jitter;
-    wheelEl.style.transition = 'transform 5s cubic-bezier(.12,.74,.12,1)';
-    wheelEl.style.transform = `rotate(${finalDeg}deg)`;
-    setTimeout(()=>{
-      const keepAngle = target % 360;
-      wheelEl.style.transition = 'none';
-      wheelEl.style.transform = `rotate(${keepAngle}deg)`;
-      resolve(prizeIndex);
-    }, 5200);
-  });
-}
-
-/* Show a toast (or fallback to alert) */
-function showToast(msg){
-  if (!toastEl) { alert(msg); return; }
-  toastEl.querySelector('div').textContent = msg;
-  toastEl.classList.remove('hidden');
-  setTimeout(()=> toastEl.classList.add('hidden'), 4200);
-}
-
-/* Spin handler */
+/* ---------- spin click handler ---------- */
 async function handleSpinClick(){
   if (spinning) return;
   if (!currentUser) { showToast('Please login to spin.'); return; }
   if (spinsAvailable <= 0) { showToast('Complete daily challenge or come back tomorrow for a free spin.'); return; }
+
   spinning = true;
   spinBtn.classList.add('opacity-60','cursor-not-allowed');
 
-  // choose prize by weights
   const prizeIdx = weightedRandomIndex(WHEEL_WEIGHTS);
   await animateWheelToPrize(prizeIdx);
   const amount = WHEEL_PRIZES[prizeIdx];
 
-  // update user doc (balance + spin metadata) in transaction
+  // atomic update of user doc (balance + spins used)
   try {
     const userRef = db.collection('users').doc(currentUser.uid);
     const today = todayKey();
-    await db.runTransaction(async (tx) => {
+    await db.runTransaction(async (tx)=>{
       const snap = await tx.get(userRef);
       if (!snap.exists) {
-        // create minimal doc with balance & spin meta
         tx.set(userRef, {
           balance: amount,
           spinsUsedCount: 1,
@@ -7218,87 +7273,103 @@ async function handleSpinClick(){
         }
       }
     });
-    // refresh cached user doc
+
+    // refresh cached userDoc (quick fetch)
     const refreshed = await db.collection('users').doc(currentUser.uid).get();
     userDocCached = refreshed.exists ? refreshed.data() : userDocCached;
-  } catch (err) {
-    console.error('Spin DB update error', err);
+  } catch(err){
+    console.error('Spin transaction error', err);
     showToast('Error updating balance. Try again.');
   }
 
-  // Show result modal
+  // show result modal
   winAmountEl.textContent = `₦${amount}`;
   if (amount === 1000) winVerifiedImg.classList.remove('hidden');
   else winVerifiedImg.classList.add('hidden');
   winModal.classList.remove('hidden');
   winModal.style.display = 'flex';
 
-  // Update live feed (show only the last win)
+  // update live feed with the last win
   const who = (currentUser.displayName || currentUser.email || 'You').split('@')[0].toUpperCase();
   liveFeedEl.innerHTML = `<div class="px-2 py-1 rounded bg-indigo-50 text-indigo-700">${who} won ₦${amount} cashback.</div>`;
 
-  // recompute progress + spins UI
-  const username = userDocCached?.username || (currentUser.displayName || currentUser.email.split('@')[0]);
-  const progress = await computeTodayProgress(currentUser.uid, username);
-  updateChallengeUI(progress, userDocCached);
+  // recompute UI from latest progress & userDoc
+  updateChallengeUI();
 
   spinning = false;
   spinBtn.classList.remove('opacity-60','cursor-not-allowed');
 }
 
-/* Initialize everything */
-async function initSpinSection(){
-  buildWheelCoins();
+/* ---------- toast ---------- */
+function showToast(msg){
+  if (!toastEl) { alert(msg); return; }
+  toastEl.querySelector('div').textContent = msg;
+  toastEl.classList.remove('hidden');
+  setTimeout(()=> toastEl.classList.add('hidden'), 4000);
+}
+
+/* ---------- cleanup listeners ---------- */
+function detachAllListeners(){
+  if (userUnsub) { userUnsub(); userUnsub = null; }
+  if (affiliateUnsub) { affiliateUnsub(); affiliateUnsub = null; }
+  if (taskUnsub) { taskUnsub(); taskUnsub = null; }
+  if (billUnsub) { billUnsub(); billUnsub = null; }
+  if (referUnsub) { referUnsub(); referUnsub = null; }
+}
+
+/* ---------- init ---------- */
+function initSpinAndTasks(){
+  buildWheelSVG();
   startFakeLiveFeed();
 
-  // attach events
+  // attach UI events
   spinBtn?.addEventListener('click', handleSpinClick);
   winCloseBtn?.addEventListener('click', ()=>{
     winModal.classList.add('hidden');
     winModal.style.display = 'none';
   });
+  window.addEventListener('resize', buildWheelSVG);
 
-  // auth listener (uses your existing auth)
-  if (typeof auth !== 'undefined' && auth) {
-    auth.onAuthStateChanged(async (user) => {
+  // auth listener - uses your existing `auth`
+  if (typeof auth !== 'undefined' && auth && db) {
+    auth.onAuthStateChanged(async (user)=>{
+      // detach any old listeners
+      detachAllListeners();
       currentUser = user;
+      userDocCached = null;
       if (!user) {
-        userDocCached = null;
         spinsAvailable = 0;
         spinCountEl.textContent = '(0)';
         return;
       }
-      // fetch user doc
-      try {
-        const doc = await db.collection('users').doc(user.uid).get();
-        userDocCached = doc.exists ? doc.data() : {};
-      } catch(e){ console.warn('user fetch err', e); }
 
-      const username = userDocCached?.username || (user.displayName || user.email.split('@')[0]);
-      const progress = await computeTodayProgress(user.uid, username);
-      updateChallengeUI(progress, userDocCached);
+      // user doc real-time listener (to keep spinsUsedCount in sync)
+      userUnsub = db.collection('users').doc(user.uid).onSnapshot(snap=>{
+        userDocCached = snap.exists ? snap.data() : {};
+        // we may now attach progress listeners after username is known
+        const username = userDocCached?.username || (user.displayName || user.email.split('@')[0]);
+        attachProgressListeners(user.uid, username);
+        // update UI after user doc snapshot change
+        updateChallengeUI();
+      }, err => {
+        console.warn('user doc listener err', err);
+        // fallback: fetch once
+        db.collection('users').doc(user.uid).get().then(snap=>{
+          userDocCached = snap.exists ? snap.data() : {};
+          const username = userDocCached?.username || (user.displayName || user.email.split('@')[0]);
+          attachProgressListeners(user.uid, username);
+          updateChallengeUI();
+        }).catch(e=>console.warn('user fetch fallback', e));
+      });
     });
   } else {
-    // no auth available — still build UI in demo mode
+    // no firebase present: show UI but zeroed
     spinCountEl.textContent = '(0)';
   }
-
-  // Rebuild coins if layout changes (responsive)
-  window.addEventListener('resize', () => {
-    buildWheelCoins();
-  });
 }
 
-/* Start when DOM ready */
-document.addEventListener('DOMContentLoaded', initSpinSection);
-
-
-	
-
-
-
-
-
+// start
+document.addEventListener('DOMContentLoaded', initSpinAndTasks);
 
 
 
