@@ -4242,6 +4242,56 @@
     .confetti-left, .confetti-right { display:none; }
     .live-text { font-size:13px; }
   }
+
+
+
+   /* 🎯 Wheel container with background frame */
+#wheel-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 0 auto;
+  padding: 40px 20px;       /* More padding for breathing space */
+  max-width: 350px;
+  width: 100%;
+}
+
+/* 🎯 Background circle frame */
+#wheel-container::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 320px;             /* Adjust to match canvas size */
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, #ffffff 40%, #f0f0f0 100%);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  transform: translate(-50%, -50%);
+  z-index: 0;               /* Keep it behind the wheel */
+}
+
+/* 🎯 Canvas stays above the frame */
+#wheelcanvas {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  height: auto;
+  position: relative;
+  z-index: 1;
+}
+
+/* 🎯 Spin button centered under wheel */
+#spin {
+  display: block;
+  margin: 25px auto 0 auto;
+  position: relative;
+  z-index: 2;
+}
+
+	
 </style>
 
 <!-- ====== Script: complete logic (single-file) ====== -->
