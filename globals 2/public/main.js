@@ -6954,12 +6954,6 @@ startCheckinListener();
 
     
 
-
-
-
-/* ====== Spin Wheel + Daily Challenges ====== */
-
-
 /* ====== Spin Wheel + Daily Challenge Script (Firebase compat) ====== */
 (() => {
   // ---------- CONFIG ----------
@@ -6998,6 +6992,7 @@ startCheckinListener();
   let spinsAvailable = 0;
   let progressState = { affiliateApproved:0, taskApproved:0, dataAmount:0, airtimeAmount:0, referralsPremium:0 };
   let unsubs = [];
+  let liveInterval = null;
 
   // ---------- HELPERS ----------
   const todayKey = () => new Date().toISOString().slice(0,10);
@@ -7006,18 +7001,10 @@ startCheckinListener();
 
   function dateFromMaybe(v){
     if (!v && v !== 0) return null;
-    // Firestore Timestamp object
-    if (v && typeof v.toDate === 'function') {
-      try { return v.toDate(); } catch(e){ return null; }
-    }
-    // Plain object with seconds
-    if (v && typeof v === 'object' && typeof v.seconds === 'number') {
-      return new Date(v.seconds * 1000);
-    }
-    // numeric or string
-    try {
-      return new Date(v);
-    } catch(e){ return null; }
+    if (v && typeof v.toDate === 'function') { try { return v.toDate(); } catch(e){ return null; } }
+    if (v && typeof v === 'object' && typeof v.seconds === 'number') return new Date(v.seconds * 1000);
+    if (typeof v === 'number') return new Date(v);
+    try { return new Date(v); } catch(e){ return null; }
   }
   function docIsToday(data){
     if (!data) return false;
@@ -7027,7 +7014,6 @@ startCheckinListener();
       if (!dt || isNaN(dt.getTime())) continue;
       if (dt >= startOfToday() && dt <= endOfToday()) return true;
     }
-    // fallback: if document has no matching fields, treat createdAt equivalent if present
     return false;
   }
   function weightedRandomIndex(weights){
@@ -7046,33 +7032,36 @@ startCheckinListener();
   const coinImg = new Image(); coinImg.src = COIN_IMG;
   const verifiedImg = new Image(); verifiedImg.src = VERIFIED_IMG;
 
-  // ---------- canvas HD setup ----------
-  function setupCanvasHD(cssSize = 384) {
+  // ---------- responsive HD canvas setup ----------
+  function setupCanvasHD(maxCss = 320) {
     DPR = window.devicePixelRatio || 1;
-    // attempt to size canvas to container CSS width if available
+    // choose CSS size: min(maxCss, containerWidth*0.9)
     const container = canvas.parentElement;
-    let width = cssSize;
+    let css = maxCss;
     if (container) {
       const rect = container.getBoundingClientRect();
-      if (rect.width > 0) width = Math.round(Math.min(cssSize + 36, rect.width)); // keep it large but bounded
+      if (rect.width > 0) css = Math.round(Math.min(maxCss, Math.max(220, rect.width * 0.9)));
+    } else {
+      css = Math.round(Math.min(maxCss, window.innerWidth * 0.9));
     }
-    canvas.style.width = width + 'px';
-    canvas.style.height = width + 'px';
-    canvas.width = Math.round(width * DPR);
-    canvas.height = Math.round(width * DPR);
+    canvas.style.width = css + 'px';
+    canvas.style.height = css + 'px';
+    canvas.width = Math.round(css * DPR);
+    canvas.height = Math.round(css * DPR);
     // map drawing to CSS pixels
     ctx.setTransform(DPR,0,0,DPR,0,0);
+    // re-draw
     drawWheel(lastRotation);
   }
 
   // ---------- draw wheel ----------
   function drawWheel(rotationDeg = 0){
-    // use CSS pixels for layout
-    const cssW = canvas.clientWidth || parseInt(canvas.style.width || '384',10);
+    // CSS pixels
+    const cssW = canvas.clientWidth || parseInt(canvas.style.width || '320',10);
     const cx = cssW/2, cy = cssW/2, r = Math.min(cssW, cssW)/2 - 12;
     ctx.clearRect(0,0,cssW,cssW);
     ctx.save();
-    // rotate whole wheel
+    // rotate wheel around center
     ctx.translate(cx,cy);
     ctx.rotate(rotationDeg * Math.PI/180);
     ctx.translate(-cx,-cy);
@@ -7084,17 +7073,11 @@ startCheckinListener();
       const start = -Math.PI/2 + i*segAngle;
       const end = start + segAngle;
       // slice
-      ctx.beginPath();
-      ctx.moveTo(cx,cy);
-      ctx.arc(cx,cy,r,start,end);
-      ctx.closePath();
-      ctx.fillStyle = colors[i % colors.length];
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(2,6,23,0.04)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,end); ctx.closePath();
+      ctx.fillStyle = colors[i % colors.length]; ctx.fill();
+      ctx.strokeStyle = 'rgba(2,6,23,0.04)'; ctx.lineWidth = 1; ctx.stroke();
 
-      // label near rim
+      // label near rim (amount)
       const mid = (start + end) / 2;
       const labelR = r * 0.78;
       const lx = cx + Math.cos(mid) * labelR;
@@ -7104,8 +7087,7 @@ startCheckinListener();
       ctx.rotate(mid + Math.PI/2);
       ctx.fillStyle = '#0f172a';
       ctx.font = `${Math.max(11, Math.round(cssW * 0.035))}px Inter, system-ui`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(`₦${PRIZES[i]}`, 0, 0);
       ctx.restore();
 
@@ -7116,7 +7098,7 @@ startCheckinListener();
         const iy = cy + Math.sin(mid) * imgR;
         ctx.save();
         ctx.translate(ix, iy);
-        ctx.rotate(-(rotationDeg * Math.PI/180)); // keep upright
+        ctx.rotate(-(rotationDeg * Math.PI/180)); // keep upright visually
         const coinSize = Math.max(28, Math.round(cssW * 0.12));
         ctx.drawImage(coinImg, -coinSize/2, -coinSize/2, coinSize, coinSize);
         if (PRIZES[i] === 1000 && verifiedImg.complete) {
@@ -7137,7 +7119,7 @@ startCheckinListener();
     ctx.restore();
   }
 
-  // ---------- animate rotation ----------
+  // ---------- easing animation ----------
   function animateTo(targetAbsolute, duration = 5200){
     return new Promise(resolve => {
       const start = performance.now();
@@ -7171,7 +7153,7 @@ startCheckinListener();
     const completedCount = flags.filter(Boolean).length;
     const base = 1;
 
-    // used today count from user doc
+    // used today from user doc (resilient parse)
     let used = 0;
     let usedDateKey = null;
     if (userDocCached) {
@@ -7184,11 +7166,15 @@ startCheckinListener();
       if (usedDateKey !== todayKey()) used = 0;
     }
 
-    spinsAvailable = Math.max(0, base + completedCount - used);
-    if (spinCountEl) spinCountEl.textContent = `(${spinsAvailable})`;
+    const newAvailable = Math.max(0, base + completedCount - used);
+    // immediate UI update (only update if changed to avoid flicker)
+    if (newAvailable !== spinsAvailable) {
+      spinsAvailable = newAvailable;
+      if (spinCountEl) spinCountEl.textContent = `(${spinsAvailable})`;
+    }
 
     // update bars & status
-    challengeCards.forEach((card, idx) => {
+    challengeCards.forEach((card) => {
       const key = card.dataset.key;
       const goal = Number(card.dataset.goal || 1);
       let val = 0;
@@ -7250,7 +7236,8 @@ startCheckinListener();
           if (!docIsToday(doc)) return;
           const t = (doc.type || 'airtime').toString().toLowerCase();
           const amt = Number(doc.amount || 0);
-          if (t === 'data') dataSum += amt; else airtimeSum += amt;
+          if (t === 'data') dataSum += amt;
+          else airtimeSum += amt;
         });
         progressState.dataAmount = dataSum;
         progressState.airtimeAmount = airtimeSum;
@@ -7275,7 +7262,6 @@ startCheckinListener();
   }
 
   // ---------- live feed single message demo (like screenshot) ----------
-  let liveInterval = null;
   function startLiveFeedDemo(){
     const names = ['NOFISAT','ABUBAKAR','FATIMA','CHINEDU','SULEIMAN','GRACE','KINGSLEY','BOLA','AMINA','EMMA'];
     const msgs = [];
@@ -7296,17 +7282,12 @@ startCheckinListener();
   // ---------- spin math & animation (lands exactly on prize) ----------
   async function spinToIndex(idx) {
     const segDeg = 360 / SEGMENTS;
-    // center angle of the slice relative to top
     const sliceCenter = -90 + (idx + 0.5) * segDeg;
-    // we want that center to align with the pointer (pointer at top facing down),
-    // rotation needed so sliceCenter comes to -90 degrees -> rotationToCenter = -90 - sliceCenter
     const rotationToCenter = -90 - sliceCenter;
-    // add small jitter so spins look real
     const jitter = (Math.random() * (segDeg / 12)) - (segDeg / 24);
     const total = ROTATIONS * 360 + rotationToCenter + jitter;
     const target = lastRotation + total;
     await animateTo(target, 5200);
-    // update lastRotation normalized
     lastRotation = ((target % 360) + 360) % 360;
   }
 
@@ -7315,7 +7296,6 @@ startCheckinListener();
     if (spinning) return;
     if (!auth || !auth.currentUser) { showToast('Please login to spin.'); return; }
     if (spinsAvailable <= 0) {
-      // show no-spin modal
       if (noSpinModal) { noSpinModal.classList.remove('hidden'); noSpinModal.style.display = 'flex'; }
       return;
     }
@@ -7323,19 +7303,16 @@ startCheckinListener();
     spinning = true;
     if (spinBtn) spinBtn.disabled = true;
 
-    // optimistic UI decrement (instant feedback)
+    // optimistic decrement for immediate UX
     spinsAvailable = Math.max(0, spinsAvailable - 1);
     if (spinCountEl) spinCountEl.textContent = `(${spinsAvailable})`;
 
-    // pick prize index (weighted)
+    // pick prize index (weighted) and spin
     const idx = weightedRandomIndex(WEIGHTS);
-
-    // animate wheel to the selected index
     await spinToIndex(idx);
-
     const amount = PRIZES[idx];
 
-    // update user's balance and spinsUsed in transaction
+    // update DB (balance + spinsUsedCount + spinsUsedDate)
     try {
       const uid = auth.currentUser.uid;
       const userRef = db.collection('users').doc(uid);
@@ -7370,37 +7347,39 @@ startCheckinListener();
           }
         }
       });
-
-      // refresh userDocCached
+      // refresh cached userDoc
       const fresh = await db.collection('users').doc(auth.currentUser.uid).get();
       userDocCached = fresh.exists ? fresh.data() : userDocCached;
     } catch (err) {
       console.error('spin update failed', err);
       showToast('Error updating balance. See console.');
-      // on failure we will resync on next recompute from userDocCached
     }
 
-    // show win modal
+    // win modal
     if (winAmountEl) winAmountEl.textContent = `₦${amount}`;
     if (amount === 1000 && winVerifiedImg) winVerifiedImg.classList.remove('hidden'); else if (winVerifiedImg) winVerifiedImg.classList.add('hidden');
     if (winModal) { winModal.classList.remove('hidden'); winModal.style.display = 'flex'; }
 
-    // live pill update to show the win (username or fallback)
+    // live pill update
     if (auth.currentUser && liveText) {
       const who = (auth.currentUser.displayName || auth.currentUser.email || 'You').split('@')[0].toUpperCase();
       liveText.textContent = `${who} won ₦${amount} cashback.`;
     }
 
-    // ensure UI reflects DB state
+    // recompute UI for accurate counts (spinsUsed may be different if tx failed)
     recomputeSpinsUI();
 
     spinning = false;
-    if (spinBtn) { spinBtn.disabled = false; }
+    if (spinBtn) spinBtn.disabled = false;
   }
 
   // ---------- attach auth + init ----------
   function init() {
+    // responsive canvas size: max 320 css on small screens, 420 on larger
     setupCanvasHD(320);
+    // if desktop wide, allow a larger size up to 420
+    if (window.innerWidth > 900) setupCanvasHD(420);
+
     drawWheel(lastRotation);
     startLiveFeedDemo();
 
@@ -7408,7 +7387,11 @@ startCheckinListener();
     if (spinBtn) spinBtn.addEventListener('click', handleSpinClick);
     if (winCloseBtn) winCloseBtn.addEventListener('click', ()=>{ if (winModal) { winModal.classList.add('hidden'); winModal.style.display = 'none'; } });
     if (noSpinClose) noSpinClose.addEventListener('click', ()=>{ if (noSpinModal) { noSpinModal.classList.add('hidden'); noSpinModal.style.display = 'none'; } });
-    window.addEventListener('resize', ()=> setupCanvasHD(420));
+    window.addEventListener('resize', ()=> {
+      // choose a sane max based on width
+      const max = (window.innerWidth > 900) ? 420 : 320;
+      setupCanvasHD(max);
+    });
 
     if (!auth || !db) {
       console.warn('Firebase compat not found. Running in demo mode.');
@@ -7416,6 +7399,7 @@ startCheckinListener();
       return;
     }
 
+    // auth listener
     auth.onAuthStateChanged(user => {
       currentUser = user;
       if (!user) {
@@ -7425,7 +7409,6 @@ startCheckinListener();
       const uRef = db.collection('users').doc(user.uid);
       const unsubUser = uRef.onSnapshot(snap => {
         userDocCached = snap.exists ? snap.data() : {};
-        // username fallback
         const username = (userDocCached && userDocCached.username) ? userDocCached.username : (user.displayName || (user.email || '').split('@')[0]);
         attachRealtimeProgress(user.uid, username);
         recomputeSpinsUI();
@@ -7449,11 +7432,6 @@ startCheckinListener();
   window.__spinDebug = { drawWheel, setupCanvasHD, recomputeSpinsUI, progressState, PRIZES };
 
 })();
-
-
-
-
-
 
 
 
