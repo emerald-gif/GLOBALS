@@ -4056,7 +4056,10 @@
 
 
 <!-- ====== SPIN TO WIN SECTION (Fintech UI/UX) ====== -->
-<section id="daily-spin-section" class="tab-section p-6 bg-gradient-to-b from-[#f9fbff] via-white to-[#f3f7ff] rounded-2xl shadow-lg">
+
+
+ <!-- ========= SPIN TO WIN (Fintech 2025) ========= -->
+<section id="daily-spin-section" class="tab-section hidden p-6 bg-gradient-to-b from-[#f9fbff] via-white to-[#f3f7ff] rounded-2xl shadow-lg">
   <!-- Header -->
   <div class="flex items-center justify-between mb-6">
     <div>
@@ -4068,30 +4071,29 @@
     <span class="text-xs text-slate-400">Resets daily at midnight</span>
   </div>
 
-  <!-- Wheel + Spin -->
-  <div class="flex flex-col items-center gap-4">
+  <!-- Wheel + CTA -->
+  <div class="flex flex-col items-center gap-3">
     <div class="relative w-72 h-72 md:w-80 md:h-80">
-      <canvas id="spin-canvas" width="320" height="320" class="rounded-full shadow-inner"></canvas>
+      <canvas id="spin-canvas" class="rounded-full shadow-inner w-full h-full"></canvas>
 
-      <!-- Pointer (animated bounce) -->
-      <div id="wheel-pointer" class="absolute -top-5 left-1/2 -translate-x-1/2 z-30 animate-bounce">
-        <div class="w-0 h-0 border-l-[14px] border-l-transparent border-r-[14px] border-r-transparent border-b-[26px] border-b-sky-500 drop-shadow-md"></div>
+      <!-- Pointer -->
+      <div id="wheel-pointer" class="absolute -top-4 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+        <div class="pointer-arrow"></div>
       </div>
     </div>
 
-    <!-- Spin Button -->
-    <button id="spin-btn"
-      class="mt-1 px-8 py-2 rounded-full text-sm font-semibold text-white bg-gradient-to-r from-sky-500 to-indigo-600 shadow hover:scale-[0.98] transition">
+    <!-- Spin button (smaller, fine blue) -->
+    <button id="spin-btn" class="spin-btn">
       Spin Now <span id="spin-count" class="ml-1 text-xs text-yellow-100">(0)</span>
     </button>
 
-    <!-- Live feed -->
-    <div class="w-full max-w-2xl bg-white p-3 rounded-xl shadow-sm border border-slate-100">
+    <!-- Live feed (single entry) -->
+    <div class="w-full max-w-2xl bg-white p-3 rounded-xl border border-slate-100 shadow-sm mt-1">
       <div class="flex items-center justify-between mb-1">
         <div class="text-sm font-semibold text-slate-700">Live Wins</div>
-        <span class="text-xs text-slate-400">Auto-updating</span>
+        <span class="text-xs text-slate-400">Demo</span>
       </div>
-      <div id="live-feed-items" class="text-sm font-medium text-indigo-700"></div>
+      <div id="live-feed-items" class="text-sm font-medium text-indigo-700 min-h-[28px]">Loading...</div>
     </div>
   </div>
 
@@ -4099,78 +4101,104 @@
   <div class="mt-6 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
     <h4 class="font-semibold text-slate-800">Rules</h4>
     <p class="text-sm text-slate-500 mt-2">
-      You get 1 free spin daily. Complete daily challenges to earn more spins. Rewards are added instantly to your balance.
+      You get 1 free spin daily. Complete the tasks below (today) to earn extra spins. Rewards are added instantly to balance.
     </p>
   </div>
 
   <!-- Daily Challenge Tasks -->
   <div class="mt-6">
-    <h3 class="text-lg font-bold text-slate-800">Daily Challenge Tasks</h3>
-    <p class="text-sm text-slate-500">Complete these today to unlock more spins.</p>
+    <div class="flex items-center justify-between">
+      <h3 class="text-lg font-bold text-slate-800">Daily Challenge Tasks</h3>
+      <div class="text-sm text-slate-500">Complete today to increase spins</div>
+    </div>
 
     <div id="daily-challenges" class="mt-4 space-y-3">
-      <!-- Each card -->
-      <div class="challenge-card bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between">
+      <!-- 1: Affiliate (assigned ₦30) -->
+      <div class="challenge-card flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border" data-goal="10" data-key="affiliateApproved" data-assigned="30">
         <div>
           <div class="text-sm font-medium">a. Complete 10 affiliate tasks</div>
+          <div class="text-xs text-slate-400 mt-1">Progress</div>
           <div class="w-full h-2 bg-gray-100 rounded-full mt-2 overflow-hidden">
-            <div class="progress-bar h-2 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500" style="width:0%"></div>
+            <div class="progress-bar h-2 rounded-full" style="width:0%"></div>
           </div>
         </div>
-        <span class="status-text text-xs font-semibold text-red-500">Not completed</span>
+        <div class="text-right">
+          <div class="status-text text-xs font-semibold text-red-500">Not completed</div>
+          <div class="text-xs text-slate-400 mt-1">Reward: <span class="font-semibold">₦30</span></div>
+        </div>
       </div>
 
-      <div class="challenge-card bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between">
+      <!-- 2: Normal tasks (assigned ₦10) -->
+      <div class="challenge-card flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border" data-goal="10" data-key="taskApproved" data-assigned="10">
         <div>
           <div class="text-sm font-medium">b. Complete 10 normal tasks</div>
+          <div class="text-xs text-slate-400 mt-1">Progress</div>
           <div class="w-full h-2 bg-gray-100 rounded-full mt-2 overflow-hidden">
-            <div class="progress-bar h-2 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500" style="width:0%"></div>
+            <div class="progress-bar h-2 rounded-full" style="width:0%"></div>
           </div>
         </div>
-        <span class="status-text text-xs font-semibold text-red-500">Not completed</span>
+        <div class="text-right">
+          <div class="status-text text-xs font-semibold text-red-500">Not completed</div>
+          <div class="text-xs text-slate-400 mt-1">Reward: <span class="font-semibold">₦10</span></div>
+        </div>
       </div>
 
-      <div class="challenge-card bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between">
+      <!-- 3: Data (assigned ₦10) -->
+      <div class="challenge-card flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border" data-goal="1000" data-key="dataAmount" data-assigned="10">
         <div>
           <div class="text-sm font-medium">c. Data purchase ≥ ₦1,000 (today)</div>
+          <div class="text-xs text-slate-400 mt-1">Progress</div>
           <div class="w-full h-2 bg-gray-100 rounded-full mt-2 overflow-hidden">
-            <div class="progress-bar h-2 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500" style="width:0%"></div>
+            <div class="progress-bar h-2 rounded-full" style="width:0%"></div>
           </div>
         </div>
-        <span class="status-text text-xs font-semibold text-red-500">Not completed</span>
+        <div class="text-right">
+          <div class="status-text text-xs font-semibold text-red-500">Not completed</div>
+          <div class="text-xs text-slate-400 mt-1">Reward: <span class="font-semibold">₦10</span></div>
+        </div>
       </div>
 
-      <div class="challenge-card bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between">
+      <!-- 4: Airtime (assigned 0 or 5; shown as 5 for UI) -->
+      <div class="challenge-card flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border" data-goal="500" data-key="airtimeAmount" data-assigned="5">
         <div>
           <div class="text-sm font-medium">d. Airtime purchase ≥ ₦500 (today)</div>
+          <div class="text-xs text-slate-400 mt-1">Progress</div>
           <div class="w-full h-2 bg-gray-100 rounded-full mt-2 overflow-hidden">
-            <div class="progress-bar h-2 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500" style="width:0%"></div>
+            <div class="progress-bar h-2 rounded-full" style="width:0%"></div>
           </div>
         </div>
-        <span class="status-text text-xs font-semibold text-red-500">Not completed</span>
+        <div class="text-right">
+          <div class="status-text text-xs font-semibold text-red-500">Not completed</div>
+          <div class="text-xs text-slate-400 mt-1">Reward: <span class="font-semibold">₦0–₦5</span></div>
+        </div>
       </div>
 
-      <div class="challenge-card bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between">
+      <!-- 5: Referrals (assigned ₦100) -->
+      <div class="challenge-card flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border" data-goal="2" data-key="referralsPremium" data-assigned="100">
         <div>
           <div class="text-sm font-medium">e. Refer 2 premium users (today)</div>
+          <div class="text-xs text-slate-400 mt-1">Progress</div>
           <div class="w-full h-2 bg-gray-100 rounded-full mt-2 overflow-hidden">
-            <div class="progress-bar h-2 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500" style="width:0%"></div>
+            <div class="progress-bar h-2 rounded-full" style="width:0%"></div>
           </div>
         </div>
-        <span class="status-text text-xs font-semibold text-red-500">Not completed</span>
+        <div class="text-right">
+          <div class="status-text text-xs font-semibold text-red-500">Not completed</div>
+          <div class="text-xs text-slate-400 mt-1">Reward: <span class="font-semibold">₦100</span></div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
 <!-- Win Modal -->
-<div id="win-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
+<div id="win-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
   <div class="bg-white rounded-2xl p-6 w-11/12 max-w-sm text-center shadow-2xl">
     <img id="win-verified" src="VERIFIED.jpg" alt="verified" class="w-12 h-12 mx-auto mb-3 hidden">
     <div class="text-sm text-slate-500">Congratulations 🎉</div>
     <div id="win-amount" class="text-3xl font-extrabold text-indigo-600 my-3">₦0</div>
-    <p class="text-sm text-slate-600 mb-4">Your reward has been added to balance</p>
-    <button id="win-close" class="px-6 py-2 rounded-full bg-indigo-600 text-white font-semibold shadow hover:scale-[0.98]">Nice!</button>
+    <p class="text-sm text-slate-600 mb-4">Amount added to your balance</p>
+    <button id="win-close" class="px-6 py-2 rounded-full bg-indigo-600 text-white font-semibold">Nice!</button>
   </div>
 </div>
 
@@ -4179,10 +4207,53 @@
   <div class="text-sm text-slate-700"></div>
 </div>
 
+<!-- Small styles (drop into your main css if preferred) -->
+<style>
+  /* pointer arrow */
+  .pointer-arrow {
+    width: 0; height: 0;
+    border-left: 14px solid transparent;
+    border-right: 14px solid transparent;
+    border-bottom: 26px solid #2563eb;
+    filter: drop-shadow(0 6px 10px rgba(2,6,23,0.08));
+    animation: pointerPulse 1600ms infinite;
+  }
+  @keyframes pointerPulse {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+    100% { transform: translateY(0); }
+  }
+
+  /* spin button (smaller fine blue) */
+  .spin-btn {
+    background: linear-gradient(90deg,#06b6d4,#7c3aed);
+    color: #fff;
+    border-radius: 999px;
+    padding: 8px 20px;
+    font-weight: 600;
+    font-size: 14px;
+    box-shadow: 0 6px 18px rgba(124,58,237,0.08);
+    border: none;
+  }
+
+  /* progress bar colors */
+  .progress-bar { background: linear-gradient(90deg,#06b6d4,#7c3aed); width: 0%; height:100%; }
+
+  /* challenge card spacing tweaks */
+  .challenge-card { gap: 12px; align-items: center; }
+
+  /* live feed */
+  #live-feed-items > div { transition: opacity .4s ease; border-radius: 8px; padding: 6px 8px; display:inline-block; }
+</style>     
+		
+
+
+
+
+
+
 
 		
-		
-
 	
 
 
