@@ -4061,6 +4061,12 @@
 		
 
 <!-- ====== SPIN TO WIN SECTION (paste into dashboard.html) ====== -->
+
+
+
+
+
+<!-- ====== SPIN TO WIN SECTION (paste into dashboard.html) ====== -->
 <section id="daily-spin-section" class="tab-section p-6 bg-gradient-to-b from-[#f7fbff] via-white to-[#eef6ff] rounded-2xl shadow-xl">
   <!-- Header -->
   <div class="flex items-center justify-between mb-6">
@@ -4073,7 +4079,7 @@
 
   <!-- Wheel stage (club-light glow) -->
   <div class="flex flex-col items-center gap-4">
-    <div class="relative w-[320px] h-[320px] mx-auto">
+    <div class="relative w-[320px] h-[320px] md:w-[420px] md:h-[420px]">
       <!-- rotating glow ring (club lights) -->
       <div class="absolute inset-0 rounded-full pointer-events-none glow-ring"></div>
 
@@ -4084,18 +4090,18 @@
 
       <!-- pointer at top facing down -->
       <div id="wheel-pointer" class="absolute -top-8 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-        <div class="pointer-arrow"></div>
+        <div class="pointer-arrow" aria-hidden="true"></div>
       </div>
     </div>
 
     <!-- Spin CTA (smaller fine blue directly below wheel) -->
-    <button id="spin-btn" class="spin-btn">
+    <button id="spin-btn" class="spin-btn" aria-live="polite" aria-label="Spin Now">
       Spin Now <span id="spin-count" class="ml-2 text-sm text-yellow-100">(0)</span>
     </button>
 
     <!-- Live Win pill (single item like your screenshot) -->
     <div class="w-full max-w-2xl mt-1">
-      <div id="live-feed-items" class="live-pill">
+      <div id="live-feed-items" class="live-pill" role="status" aria-atomic="true">
         <svg class="live-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M3 10v4h4l5 5V5L7 10H3z" fill="#0F172A"/>
         </svg>
@@ -4118,7 +4124,6 @@
     </div>
 
     <div id="daily-challenges" class="mt-4 space-y-3">
-      <!-- Note: data-goal is used by the script to compute progress -->
       <div class="challenge-card" data-key="affiliateApproved" data-goal="10">
         <div class="challenge-left">
           <div class="challenge-title">a. Finish 10 affiliate campaigns</div>
@@ -4204,25 +4209,22 @@
 
 <!-- Styles (copy into your main CSS or keep inline) -->
 <style>
-  /* glow ring */
   .glow-ring {
     border-radius:999px;
     pointer-events:none;
     position:absolute;
     inset:0;
-    background: conic-gradient(from 0deg, rgba(6,182,212,0.25), rgba(124,58,237,0.25), rgba(6,182,212,0.25));
-    filter: blur(8px);
-    animation: spinGlow 8s linear infinite;
+    background: conic-gradient(from 0deg, rgba(6,182,212,0.22), rgba(124,58,237,0.22), rgba(6,182,212,0.22));
+    filter: blur(10px) saturate(1.05);
+    animation: spinGlow 10s linear infinite;
     transform-origin:center;
-    opacity:0.9;
+    opacity:0.95;
   }
   @keyframes spinGlow { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 
-  /* pointer arrow */
-  .pointer-arrow { width:0;height:0;border-left:20px solid transparent;border-right:20px solid transparent;border-top:36px solid #4f46e5; filter:drop-shadow(0 6px 12px rgba(2,6,23,0.12)); animation: pointerBounce 1600ms infinite }
+  .pointer-arrow { width:0;height:0;border-left:20px solid transparent;border-right:20px solid transparent;border-top:36px solid #4f46e5; filter:drop-shadow(0 6px 12px rgba(2,6,23,0.12)); animation: pointerBounce 1600ms infinite; border-radius:4px 4px 0 0; }
   @keyframes pointerBounce { 0%{transform:translateY(0)}50%{transform:translateY(6px)}100%{transform:translateY(0)} }
 
-  /* spin button */
   .spin-btn {
     background: linear-gradient(90deg,#06b6d4,#7c3aed);
     color: #fff;
@@ -4233,7 +4235,6 @@
     box-shadow: 0 12px 28px rgba(124,58,237,0.09);
   }
 
-  /* live pill */
   .live-pill {
     display:flex;
     align-items:center;
@@ -4246,7 +4247,6 @@
   }
   .live-text { font-size:14px; color:#0f172a; font-weight:600; }
 
-  /* challenge card layout */
   #daily-challenges .challenge-card {
     display:flex; align-items:center; justify-content:space-between;
     background:#fff; padding:14px; border-radius:12px; box-shadow:0 6px 18px rgba(2,6,23,0.03); border:1px solid rgba(2,6,23,0.04);
@@ -4254,7 +4254,7 @@
   .challenge-left { width:70%; }
   .challenge-title { font-size:14px; font-weight:600; color:#0f172a; }
   .progress-track { width:100%; height:10px; background:#f1f5f9; border-radius:999px; margin-top:8px; overflow:hidden; }
-  .progress-bar { height:100%; width:0%; background:linear-gradient(90deg,#06b6d4,#7c3aed); transition:width 500ms ease; }
+  .progress-bar { height:100%; width:0%; background:linear-gradient(90deg,#06b6d4,#7c3aed); transition:width 400ms ease; }
 
   .challenge-right { text-align:right; width:28%; }
   .status-text { font-size:13px; font-weight:700; }
@@ -4262,17 +4262,13 @@
   .status-text.completed { color:#16a34a; }
   .hint { font-size:12px; color:#64748b; margin-top:6px; }
 
-  /* small responsive */
   @media (max-width:768px){
     .glow-ring { filter: blur(6px); }
     .live-text { font-size:13px; }
+    .challenge-left { width:65%; }
+    .challenge-right { width:33%; }
   }
 </style>
-
-
-
-
-
 
 
 
