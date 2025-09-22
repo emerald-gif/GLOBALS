@@ -4058,136 +4058,228 @@
 <!-- ====== SPIN TO WIN SECTION (Fintech UI/UX) ====== -->
 
 
- <!-- ========= SPIN TO WIN (Fintech 2025) ========= -->
+		
 
-          
-
-          
-<!-- ====== SPIN TO WIN SECTION ====== -->
-<section id="daily-spin-section" class="tab-section p-6 bg-gradient-to-b from-[#f7faff] via-white to-[#eef4ff] rounded-2xl shadow-xl">
+<!-- ====== SPIN TO WIN SECTION (paste into dashboard.html) ====== -->
+<section id="daily-spin-section" class="tab-section p-6 bg-gradient-to-b from-[#f7fbff] via-white to-[#eef6ff] rounded-2xl shadow-xl">
   <!-- Header -->
   <div class="flex items-center justify-between mb-6">
     <div>
       <h2 class="text-3xl font-extrabold text-slate-800">Spin & Earn</h2>
-      <p class="text-sm text-slate-500 mt-1">
-        Try your luck daily. Complete challenges to unlock extra spins.
-      </p>
+      <p class="text-sm text-slate-500 mt-1">Try your luck daily. Complete challenges to unlock extra spins.</p>
     </div>
     <div class="text-right text-xs text-slate-400">Free spin resets daily</div>
   </div>
 
-  <!-- Wheel -->
-  <!-- Wheel Stage with Glow -->
-<div class="relative w-[420px] h-[420px] flex items-center justify-center">
-  <!-- Neon Glow Ring -->
-  <div class="absolute inset-0 rounded-full border-[14px] border-transparent 
-              bg-[conic-gradient(from_var(--angle),#06b6d4,#7c3aed,#06b6d4)] 
-              animate-spinGlow blur-[3px] opacity-80"></div>
+  <!-- Wheel stage (club-light glow) -->
+  <div class="flex flex-col items-center gap-4">
+    <div class="relative w-[420px] h-[420px]">
+      <!-- rotating glow ring (club lights) -->
+      <div class="absolute inset-0 rounded-full pointer-events-none glow-ring"></div>
 
-  <!-- Wheel Canvas -->
-  <canvas id="spin-canvas" width="384" height="384"
-    class="relative z-10 rounded-full shadow-2xl bg-white"></canvas>
+      <!-- canvas (wheel) sits above the glow -->
+      <div class="absolute inset-6 rounded-full bg-white flex items-center justify-center z-10 shadow-2xl">
+        <canvas id="spin-canvas" class="rounded-full" style="width:100%;height:100%"></canvas>
+      </div>
 
-  <!-- Pointer Arrow (downwards at top) -->
-  <div class="absolute -top-7 left-1/2 -translate-x-1/2 z-30">
-    <div class="w-0 h-0 border-l-[18px] border-l-transparent border-r-[18px] border-r-transparent border-t-[34px] border-t-indigo-600 drop-shadow-lg"></div>
-  </div>
-</div>
+      <!-- pointer at top facing down -->
+      <div id="wheel-pointer" class="absolute -top-8 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+        <div class="pointer-arrow"></div>
+      </div>
+    </div>
 
-    <!-- Spin Button -->
-    <button id="spin-btn"
-      class="px-8 py-2 rounded-full text-white font-semibold bg-gradient-to-r from-[#06b6d4] to-[#7c3aed] shadow hover:opacity-90 transition">
+    <!-- Spin CTA (smaller fine blue directly below wheel) -->
+    <button id="spin-btn" class="spin-btn">
       Spin Now <span id="spin-count" class="ml-2 text-sm text-yellow-100">(0)</span>
     </button>
 
-    <!-- Live Win Feed -->
-    <div class="w-full max-w-md bg-white p-3 rounded-xl shadow-sm border">
-      <div id="live-feed-items" class="flex items-center gap-2 text-indigo-700 text-sm">
-        <span class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span>
-        <span class="font-semibold">Loading wins...</span>
+    <!-- Live Win pill (single item like your screenshot) -->
+    <div class="w-full max-w-2xl mt-1">
+      <div id="live-feed-items" class="live-pill">
+        <svg class="live-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 10v4h4l5 5V5L7 10H3z" fill="#0F172A"/>
+        </svg>
+        <div id="live-text" class="live-text">Loading wins...</div>
       </div>
     </div>
   </div>
 
-  <!-- Challenges -->
+  <!-- Rules -->
+  <div class="mt-6 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+    <h4 class="font-semibold text-slate-800">Rules</h4>
+    <p class="text-sm text-slate-500 mt-2">You receive one free spin every 24 hours. Complete today's challenges to earn extra spins. Rewards are credited instantly.</p>
+  </div>
+
+  <!-- Daily Challenges -->
   <div class="mt-6">
-    <h3 class="text-xl font-bold text-slate-800">Daily Challenges</h3>
-    <p class="text-sm text-slate-500 mt-1">Complete these to earn bonus spins.</p>
-  </div>
-  <div id="daily-challenges" class="mt-4 grid grid-cols-1 gap-3">
-    <div class="challenge-card bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between">
-      <div>
-        <div class="text-sm font-medium">a. Complete 10 Affiliate Tasks</div>
-        <div class="w-full h-2 bg-gray-100 rounded-full mt-2">
-          <div class="progress-bar h-2 rounded-full bg-indigo-500" style="width:0%"></div>
-        </div>
-      </div>
-      <div class="status-text text-sm text-red-500">Not completed</div>
+    <div class="flex items-center justify-between">
+      <h3 class="text-lg font-bold text-slate-800">Daily Challenges</h3>
+      <div class="text-sm text-slate-500">Complete today to increase your spins</div>
     </div>
 
-    <div class="challenge-card bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between">
-      <div>
-        <div class="text-sm font-medium">b. Complete 10 Normal Tasks</div>
-        <div class="w-full h-2 bg-gray-100 rounded-full mt-2">
-          <div class="progress-bar h-2 rounded-full bg-indigo-500" style="width:0%"></div>
+    <div id="daily-challenges" class="mt-4 space-y-3">
+      <!-- Note: data-goal is used by the script to compute progress -->
+      <div class="challenge-card" data-key="affiliateApproved" data-goal="10">
+        <div class="challenge-left">
+          <div class="challenge-title">a. Finish 10 affiliate campaigns</div>
+          <div class="progress-track"><div class="progress-bar" style="width:0%"></div></div>
+        </div>
+        <div class="challenge-right">
+          <div class="status-text not-completed">Not completed</div>
+          <div class="hint">Reward: Confidential</div>
         </div>
       </div>
-      <div class="status-text text-sm text-red-500">Not completed</div>
-    </div>
 
-    <div class="challenge-card bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between">
-      <div>
-        <div class="text-sm font-medium">c. Buy Data worth ₦1,000+</div>
-        <div class="w-full h-2 bg-gray-100 rounded-full mt-2">
-          <div class="progress-bar h-2 rounded-full bg-indigo-500" style="width:0%"></div>
+      <div class="challenge-card" data-key="taskApproved" data-goal="10">
+        <div class="challenge-left">
+          <div class="challenge-title">b. Complete 10 standard tasks</div>
+          <div class="progress-track"><div class="progress-bar" style="width:0%"></div></div>
+        </div>
+        <div class="challenge-right">
+          <div class="status-text not-completed">Not completed</div>
+          <div class="hint">Reward: Confidential</div>
         </div>
       </div>
-      <div class="status-text text-sm text-red-500">Not completed</div>
-    </div>
 
-    <div class="challenge-card bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between">
-      <div>
-        <div class="text-sm font-medium">d. Buy Airtime worth ₦500+</div>
-        <div class="w-full h-2 bg-gray-100 rounded-full mt-2">
-          <div class="progress-bar h-2 rounded-full bg-indigo-500" style="width:0%"></div>
+      <div class="challenge-card" data-key="dataAmount" data-goal="1000">
+        <div class="challenge-left">
+          <div class="challenge-title">c. Purchase mobile data worth ₦1,000+ today</div>
+          <div class="progress-track"><div class="progress-bar" style="width:0%"></div></div>
+        </div>
+        <div class="challenge-right">
+          <div class="status-text not-completed">Not completed</div>
+          <div class="hint">Reward: Confidential</div>
         </div>
       </div>
-      <div class="status-text text-sm text-red-500">Not completed</div>
-    </div>
 
-    <div class="challenge-card bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between">
-      <div>
-        <div class="text-sm font-medium">e. Refer 2 Premium Users</div>
-        <div class="w-full h-2 bg-gray-100 rounded-full mt-2">
-          <div class="progress-bar h-2 rounded-full bg-indigo-500" style="width:0%"></div>
+      <div class="challenge-card" data-key="airtimeAmount" data-goal="500">
+        <div class="challenge-left">
+          <div class="challenge-title">d. Purchase airtime worth ₦500+ today</div>
+          <div class="progress-track"><div class="progress-bar" style="width:0%"></div></div>
+        </div>
+        <div class="challenge-right">
+          <div class="status-text not-completed">Not completed</div>
+          <div class="hint">Reward: Confidential</div>
         </div>
       </div>
-      <div class="status-text text-sm text-red-500">Not completed</div>
+
+      <div class="challenge-card" data-key="referralsPremium" data-goal="2">
+        <div class="challenge-left">
+          <div class="challenge-title">e. Invite 2 premium members today</div>
+          <div class="progress-track"><div class="progress-bar" style="width:0%"></div></div>
+        </div>
+        <div class="challenge-right">
+          <div class="status-text not-completed">Not completed</div>
+          <div class="hint">Reward: Confidential</div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
 <!-- Win Modal -->
-<div id="win-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
+<div id="win-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
   <div class="bg-white rounded-2xl p-6 w-11/12 max-w-sm text-center shadow-2xl">
-    <img id="win-verified" src="VERIFIED.jpg" alt="verified"
-      class="w-12 h-12 mx-auto mb-3 hidden">
-    <div class="text-sm text-slate-500">Congratulations</div>
+    <img id="win-verified" src="VERIFIED.jpg" alt="verified" class="w-12 h-12 mx-auto mb-3 hidden">
+    <div class="text-sm text-slate-500">Congratulations 🎉</div>
     <div id="win-amount" class="text-3xl font-extrabold text-indigo-600 my-3">₦0</div>
-    <div id="win-note" class="text-sm text-slate-600 mb-4">Amount added to your balance</div>
+    <p class="text-sm text-slate-600 mb-4">Amount added to your balance</p>
     <button id="win-close" class="px-6 py-2 rounded-full bg-indigo-600 text-white font-semibold">Nice!</button>
   </div>
 </div>
 
-<style>
-@keyframes spinGlow {
-  0%   { --angle: 0deg; }
-  100% { --angle: 360deg; }
-}
+<!-- No-spins Modal -->
+<div id="no-spin-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
+  <div class="bg-white rounded-2xl p-6 w-11/12 max-w-sm text-center shadow-2xl">
+    <div class="text-sm text-slate-600">No spins remaining</div>
+    <div class="text-lg font-bold text-slate-800 mt-2 mb-3">Complete today's challenges to earn more spins</div>
+    <button id="no-spin-close" class="px-6 py-2 rounded-full bg-sky-500 text-white font-semibold">Okay</button>
+  </div>
+</div>
 
+<!-- Toast fallback -->
+<div id="spin-toast" style="display:none; position:fixed; right:20px; bottom:20px; background:white; border-radius:8px; padding:10px; box-shadow:0 6px 18px rgba(2,6,23,0.08);">
+  <div id="spin-toast-text" style="font-size:13px;color:#0f172a;"></div>
+</div>
+
+<!-- Styles (copy into your main CSS or keep inline) -->
+<style>
+  /* glow ring */
+  .glow-ring {
+    border-radius:999px;
+    pointer-events:none;
+    position:absolute;
+    inset:0;
+    background: conic-gradient(from 0deg, rgba(6,182,212,0.25), rgba(124,58,237,0.25), rgba(6,182,212,0.25));
+    filter: blur(8px);
+    animation: spinGlow 8s linear infinite;
+    transform-origin:center;
+    opacity:0.9;
+  }
+  @keyframes spinGlow { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+  /* pointer arrow */
+  .pointer-arrow { width:0;height:0;border-left:20px solid transparent;border-right:20px solid transparent;border-top:36px solid #4f46e5; filter:drop-shadow(0 6px 12px rgba(2,6,23,0.12)); animation: pointerBounce 1600ms infinite }
+  @keyframes pointerBounce { 0%{transform:translateY(0)}50%{transform:translateY(6px)}100%{transform:translateY(0)} }
+
+  /* spin button */
+  .spin-btn {
+    background: linear-gradient(90deg,#06b6d4,#7c3aed);
+    color: #fff;
+    border-radius:999px;
+    padding:8px 18px;
+    font-weight:700;
+    border:none;
+    box-shadow: 0 12px 28px rgba(124,58,237,0.09);
+  }
+
+  /* live pill */
+  .live-pill {
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:10px 14px;
+    background:#fff;
+    border-radius:999px;
+    box-shadow:0 6px 18px rgba(2,6,23,0.03);
+    border:1px solid rgba(2,6,23,0.04);
+  }
+  .live-text { font-size:14px; color:#0f172a; font-weight:600; }
+
+  /* challenge card layout */
+  #daily-challenges .challenge-card {
+    display:flex; align-items:center; justify-content:space-between;
+    background:#fff; padding:14px; border-radius:12px; box-shadow:0 6px 18px rgba(2,6,23,0.03); border:1px solid rgba(2,6,23,0.04);
+  }
+  .challenge-left { width:70%; }
+  .challenge-title { font-size:14px; font-weight:600; color:#0f172a; }
+  .progress-track { width:100%; height:10px; background:#f1f5f9; border-radius:999px; margin-top:8px; overflow:hidden; }
+  .progress-bar { height:100%; width:0%; background:linear-gradient(90deg,#06b6d4,#7c3aed); transition:width 500ms ease; }
+
+  .challenge-right { text-align:right; width:28%; }
+  .status-text { font-size:13px; font-weight:700; }
+  .status-text.not-completed { color:#ef4444; }
+  .status-text.completed { color:#16a34a; }
+  .hint { font-size:12px; color:#64748b; margin-top:6px; }
+
+  /* small responsive */
+  @media (max-width:768px){
+    .glow-ring { filter: blur(6px); }
+    .live-text { font-size:13px; }
+  }
 </style>
+
+
+
+
+
+
+
+
+
+
+
 		
-	
 
 
 <footer class="text-center text-sm text-gray-400 py-6">
