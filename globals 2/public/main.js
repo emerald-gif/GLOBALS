@@ -7400,7 +7400,7 @@ startCheckinListener();
 
   // ---------- attach auth + init ----------
   function init() {
-    setupCanvasHD(420);
+    setupCanvasHD(320);
     drawWheel(lastRotation);
     startLiveFeedDemo();
 
@@ -7449,6 +7449,7 @@ startCheckinListener();
   window.__spinDebug = { drawWheel, setupCanvasHD, recomputeSpinsUI, progressState, PRIZES };
 
 })();
+
 
 
 
