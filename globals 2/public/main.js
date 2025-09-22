@@ -6957,19 +6957,23 @@ startCheckinListener();
 
 
 
-	// ---------- SPIN FUNCTION 
+/* ====== Spin Wheel + Daily Challenges ====== */
 
+
+/* ====== Spin Wheel + Daily Challenge Script (Firebase compat) ====== */
 (() => {
   // ---------- CONFIG ----------
-  const PRIZES = [10,30,20,200,5,0,100,1000];
+  const COIN_IMG = 'COIN.jpg';
+  const VERIFIED_IMG = 'VERIFIED.jpg';
+  const PRIZES = [10, 30, 20, 200, 5, 0, 100, 1000];
   const WEIGHTS = [18,12,14,2,18,20,5,1];
   const SEGMENTS = PRIZES.length;
   const ROTATIONS = 6;
-  const TIMESTAMP_FIELDS = ['createdAt','submittedAt','timestamp','time','submittedOn','created_on'];
+  const TIMESTAMP_CANDIDATES = ['createdAt','submittedAt','timestamp','time','submittedOn','created_on'];
 
   // ---------- DOM ----------
   const canvas = document.getElementById('spin-canvas');
-  if (!canvas) { console.error('spin canvas missing'); return; }
+  if (!canvas) { console.error('spin canvas not found'); return; }
   const ctx = canvas.getContext('2d');
   const spinBtn = document.getElementById('spin-btn');
   const spinCountEl = document.getElementById('spin-count');
@@ -6982,6 +6986,7 @@ startCheckinListener();
   const noSpinModal = document.getElementById('no-spin-modal');
   const noSpinClose = document.getElementById('no-spin-close');
   const toastEl = document.getElementById('spin-toast');
+  const toastTextEl = document.getElementById('spin-toast-text');
   const challengeCards = Array.from(document.querySelectorAll('#daily-challenges .challenge-card'));
 
   // ---------- STATE ----------
@@ -7000,149 +7005,173 @@ startCheckinListener();
   const endOfToday = () => { const d = new Date(); d.setHours(23,59,59,999); return d; };
 
   function dateFromMaybe(v){
-    if (!v) return null;
-    try { if (typeof v.toDate === 'function') return v.toDate(); return new Date(v); } catch(e){ return null; }
+    if (!v && v !== 0) return null;
+    // Firestore Timestamp object
+    if (v && typeof v.toDate === 'function') {
+      try { return v.toDate(); } catch(e){ return null; }
+    }
+    // Plain object with seconds
+    if (v && typeof v === 'object' && typeof v.seconds === 'number') {
+      return new Date(v.seconds * 1000);
+    }
+    // numeric or string
+    try {
+      return new Date(v);
+    } catch(e){ return null; }
   }
   function docIsToday(data){
     if (!data) return false;
-    for (const f of TIMESTAMP_FIELDS) {
+    for (const f of TIMESTAMP_CANDIDATES) {
       if (!data[f]) continue;
       const dt = dateFromMaybe(data[f]);
-      if (!dt) continue;
+      if (!dt || isNaN(dt.getTime())) continue;
       if (dt >= startOfToday() && dt <= endOfToday()) return true;
     }
+    // fallback: if document has no matching fields, treat createdAt equivalent if present
     return false;
   }
   function weightedRandomIndex(weights){
     const sum = weights.reduce((a,b)=>a+b,0); let r=Math.random()*sum;
-    for (let i=0;i<weights.length;i++){ if (r<weights[i]) return i; r-=weights[i]; } return weights.length-1;
+    for (let i=0;i<weights.length;i++){ if (r < weights[i]) return i; r -= weights[i]; } return weights.length-1;
   }
-  function showToast(msg){ if (!toastEl) return alert(msg); toastEl.querySelector('div').textContent = msg; toastEl.style.display='block'; setTimeout(()=>toastEl.style.display='none',3200); }
+  function showToast(msg){
+    if (toastEl && toastTextEl) {
+      toastTextEl.textContent = msg;
+      toastEl.style.display = 'block';
+      setTimeout(()=> toastEl.style.display = 'none', 3200);
+    } else alert(msg);
+  }
 
   // ---------- preload images ----------
-  const coinImg = new Image(); coinImg.src = 'COIN.jpg';
-  const verifiedImg = new Image(); verifiedImg.src = 'VERIFIED.jpg';
+  const coinImg = new Image(); coinImg.src = COIN_IMG;
+  const verifiedImg = new Image(); verifiedImg.src = VERIFIED_IMG;
 
-  // ---------- Canvas HD setup ----------
-  function setupCanvas(cssSize = 320){
+  // ---------- canvas HD setup ----------
+  function setupCanvasHD(cssSize = 384) {
     DPR = window.devicePixelRatio || 1;
+    // attempt to size canvas to container CSS width if available
     const container = canvas.parentElement;
     let width = cssSize;
     if (container) {
       const rect = container.getBoundingClientRect();
-      if (rect.width > 0) width = Math.min(cssSize, Math.round(rect.width));
+      if (rect.width > 0) width = Math.round(Math.min(cssSize + 36, rect.width)); // keep it large but bounded
     }
     canvas.style.width = width + 'px';
     canvas.style.height = width + 'px';
     canvas.width = Math.round(width * DPR);
     canvas.height = Math.round(width * DPR);
+    // map drawing to CSS pixels
     ctx.setTransform(DPR,0,0,DPR,0,0);
     drawWheel(lastRotation);
   }
 
-  // ---------- Draw Wheel (crisp, coins, labels) ----------
+  // ---------- draw wheel ----------
   function drawWheel(rotationDeg = 0){
-    const cssW = canvas.clientWidth || parseInt(canvas.style.width || '320',10) || 320;
-    const cx = cssW/2, cy = cssW/2, r = Math.min(cssW, cssW)/2 - 10;
+    // use CSS pixels for layout
+    const cssW = canvas.clientWidth || parseInt(canvas.style.width || '384',10);
+    const cx = cssW/2, cy = cssW/2, r = Math.min(cssW, cssW)/2 - 12;
     ctx.clearRect(0,0,cssW,cssW);
     ctx.save();
-
-    // rotate
+    // rotate whole wheel
     ctx.translate(cx,cy);
     ctx.rotate(rotationDeg * Math.PI/180);
     ctx.translate(-cx,-cy);
 
-    const segAngle = 2*Math.PI/SEGMENTS;
-    const colors = ['#ecfeff','#eff6ff','#fef3c7','#ecfccb','#fde68a','#ede9fe','#fee2e2','#eef2ff'];
+    const segAngle = 2 * Math.PI / SEGMENTS;
+    const colors = ['#ecfeff','#e6f7ff','#fff8e1','#f3f5ff','#fff0f6','#eef6ff','#fbfbfd','#f0fbff'];
 
     for (let i=0;i<SEGMENTS;i++){
       const start = -Math.PI/2 + i*segAngle;
       const end = start + segAngle;
-      // fill slice
-      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,end); ctx.closePath();
-      ctx.fillStyle = colors[i % colors.length]; ctx.fill();
-      ctx.strokeStyle = 'rgba(15,23,42,0.04)'; ctx.lineWidth = 1; ctx.stroke();
+      // slice
+      ctx.beginPath();
+      ctx.moveTo(cx,cy);
+      ctx.arc(cx,cy,r,start,end);
+      ctx.closePath();
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(2,6,23,0.04)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
 
-      const mid = (start + end)/2;
-      // prize label near rim
+      // label near rim
+      const mid = (start + end) / 2;
       const labelR = r * 0.78;
       const lx = cx + Math.cos(mid) * labelR;
       const ly = cy + Math.sin(mid) * labelR;
-      ctx.save(); ctx.translate(lx,ly); ctx.rotate(mid + Math.PI/2);
-      ctx.fillStyle = '#0f172a'; ctx.font = `${Math.max(11, Math.round(cssW * 0.034))}px Inter, system-ui`; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(`₦${PRIZES[i]}`,0,0); ctx.restore();
+      ctx.save();
+      ctx.translate(lx, ly);
+      ctx.rotate(mid + Math.PI/2);
+      ctx.fillStyle = '#0f172a';
+      ctx.font = `${Math.max(11, Math.round(cssW * 0.035))}px Inter, system-ui`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`₦${PRIZES[i]}`, 0, 0);
+      ctx.restore();
 
-      // coin image
-      if (coinImg.complete) {
-        const imgR = r * 0.55;
+      // coin image inside slice (upright)
+      if (coinImg && coinImg.complete) {
+        const imgR = r * 0.56;
         const ix = cx + Math.cos(mid) * imgR;
         const iy = cy + Math.sin(mid) * imgR;
-        ctx.save(); ctx.translate(ix,iy); ctx.rotate(-(rotationDeg * Math.PI/180));
+        ctx.save();
+        ctx.translate(ix, iy);
+        ctx.rotate(-(rotationDeg * Math.PI/180)); // keep upright
         const coinSize = Math.max(28, Math.round(cssW * 0.12));
         ctx.drawImage(coinImg, -coinSize/2, -coinSize/2, coinSize, coinSize);
-        if (PRIZES[i] === 1000 && verifiedImg.complete) { const b = Math.round(coinSize*0.45); ctx.drawImage(verifiedImg, coinSize/4, coinSize/4, b, b); }
+        if (PRIZES[i] === 1000 && verifiedImg.complete) {
+          const b = Math.round(coinSize * 0.45);
+          ctx.drawImage(verifiedImg, coinSize/4, coinSize/4, b, b);
+        }
         ctx.restore();
       }
     }
 
-    // center
-    ctx.beginPath(); ctx.arc(cx,cy,44,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
-    ctx.lineWidth=2; ctx.strokeStyle='rgba(15,23,42,0.04)'; ctx.stroke();
-    ctx.fillStyle='#0f172a'; ctx.font='700 14px Inter'; ctx.textAlign='center'; ctx.fillText('SPIN',cx,cy-6); ctx.font='600 12px Inter'; ctx.fillText('NOW',cx,cy+12);
+    // center button
+    ctx.beginPath(); ctx.arc(cx, cy, 48, 0, Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(15,23,42,0.06)'; ctx.stroke();
+    ctx.fillStyle = '#0f172a'; ctx.font = '700 14px Inter, system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('SPIN', cx, cy - 6);
+    ctx.font = '600 12px Inter, system-ui'; ctx.fillText('NOW', cx, cy + 12);
+
     ctx.restore();
   }
 
   // ---------- animate rotation ----------
-  function animateTo(targetAbs, duration = 5200){
+  function animateTo(targetAbsolute, duration = 5200){
     return new Promise(resolve => {
       const start = performance.now();
       const from = lastRotation;
-      const diff = targetAbs - from;
-      function easeOutCubic(t){ return 1 - Math.pow(1-t,3); }
+      const diff = targetAbsolute - from;
+      function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
       function frame(now){
-        const t = Math.min(1, (now-start)/duration);
+        const t = Math.min(1, (now - start) / duration);
         const v = from + diff * easeOutCubic(t);
         drawWheel(v);
         if (t < 1) requestAnimationFrame(frame);
-        else { lastRotation = ((targetAbs%360)+360)%360; drawWheel(lastRotation); resolve(); }
+        else {
+          lastRotation = ((targetAbsolute % 360) + 360) % 360;
+          drawWheel(lastRotation);
+          resolve();
+        }
       }
       requestAnimationFrame(frame);
     });
   }
 
-  // ---------- spin to index (ensures exact landing) ----------
-  async function spinToIndex(idx) {
-    const segDeg = 360 / SEGMENTS;
-    const centerAngle = -90 + (idx + 0.5) * segDeg;
-    const rotationToCenter = -90 - centerAngle;
-    const jitter = (Math.random() * (segDeg/12)) - (segDeg/24);
-    const total = ROTATIONS * 360 + rotationToCenter + jitter;
-    await animateTo(lastRotation + total, 5200);
-  }
-
-  // ---------- live feed demo (one message) ----------
-  let liveInterval = null;
-  function startLiveDemo(){
-    const names = ['NOFISAT','ABUBAKAR','FATIMA','CHINEDU','SULEIMAN','GRACE','KINGSLEY','BOLA','AMINA','EMMA'];
-    const msgs = Array.from({length:10}, ()=> `${names[Math.floor(Math.random()*names.length)]} won ₦${PRIZES[Math.floor(Math.random()*PRIZES.length)]} cashback.`);
-    let i=0;
-    liveText.textContent = msgs[0];
-    liveInterval && clearInterval(liveInterval);
-    liveInterval = setInterval(()=> { i=(i+1)%msgs.length; liveText.textContent = msgs[i]; }, 3000);
-  }
-
-  // ---------- UI updates for challenges + spins ----------
+  // ---------- compute available spins & update UI ----------
   function recomputeSpinsUI(){
     const flags = [
-      progressState.affiliateApproved >= 10,
-      progressState.taskApproved >= 10,
-      progressState.dataAmount >= 1000,
-      progressState.airtimeAmount >= 500,
-      progressState.referralsPremium >= 2
+      (progressState.affiliateApproved || 0) >= 10,
+      (progressState.taskApproved || 0) >= 10,
+      (progressState.dataAmount || 0) >= 1000,
+      (progressState.airtimeAmount || 0) >= 500,
+      (progressState.referralsPremium || 0) >= 2
     ];
     const completedCount = flags.filter(Boolean).length;
     const base = 1;
 
+    // used today count from user doc
     let used = 0;
     let usedDateKey = null;
     if (userDocCached) {
@@ -7155,219 +7184,271 @@ startCheckinListener();
       if (usedDateKey !== todayKey()) used = 0;
     }
 
-    const newAvailable = Math.max(0, base + completedCount - used);
-    // immediate UI update (keeps local state)
-    spinsAvailable = newAvailable;
+    spinsAvailable = Math.max(0, base + completedCount - used);
     if (spinCountEl) spinCountEl.textContent = `(${spinsAvailable})`;
 
-    // update challenge cards visually
-    challengeCards.forEach(card => {
+    // update bars & status
+    challengeCards.forEach((card, idx) => {
       const key = card.dataset.key;
       const goal = Number(card.dataset.goal || 1);
-      const bar = card.querySelector('.progress-bar');
-      const status = card.querySelector('.status-text');
       let val = 0;
       if (key === 'affiliateApproved') val = progressState.affiliateApproved || 0;
       else if (key === 'taskApproved') val = progressState.taskApproved || 0;
       else if (key === 'dataAmount') val = progressState.dataAmount || 0;
       else if (key === 'airtimeAmount') val = progressState.airtimeAmount || 0;
       else if (key === 'referralsPremium') val = progressState.referralsPremium || 0;
+
       const percent = Math.min(100, (val / goal) * 100);
+      const bar = card.querySelector('.progress-bar');
+      const status = card.querySelector('.status-text');
       if (bar) bar.style.width = percent + '%';
       if (status) {
-        if (val >= goal) { status.textContent = 'Completed'; status.classList.remove('text-red-500'); status.classList.add('text-green-600'); }
-        else { status.textContent = 'Not completed'; status.classList.remove('text-green-600'); status.classList.add('text-red-500'); }
+        if (val >= goal) { status.textContent = 'Completed'; status.classList.remove('not-completed'); status.classList.add('completed'); }
+        else { status.textContent = 'Not completed'; status.classList.remove('completed'); status.classList.add('not-completed'); }
       }
     });
   }
 
-  // ---------- realtime listeners (robust) ----------
-  function clearUnsubs(){ unsubs.forEach(u=>{ try{ u(); }catch(e){} }); unsubs=[]; }
+  // ---------- realtime listeners ----------
+  function clearUnsubs(){ unsubs.forEach(u=>{ try{ u(); }catch(e){} }); unsubs = []; }
 
   function attachRealtimeProgress(uid, username){
     clearUnsubs();
+    if (!db) { console.warn('db missing'); return; }
 
-    // affiliate_submissions
+    // affiliate_submissions (approved)
     try {
       const q = db.collection('affiliate_submissions').where('userId','==',uid).where('status','==','approved');
-      const unsub = q.onSnapshot(snap => { let c=0; snap.forEach(d=>{ if (docIsToday(d.data())) c++; }); progressState.affiliateApproved=c; recomputeSpinsUI(); }, err=>console.warn('aff err',err));
+      const unsub = q.onSnapshot(snap => {
+        let count = 0;
+        snap.forEach(d => { if (docIsToday(d.data())) count++; });
+        progressState.affiliateApproved = count;
+        recomputeSpinsUI();
+      }, err => console.warn('aff listener err', err));
       unsubs.push(unsub);
-    } catch(e){ console.warn('aff attach',e); }
+    } catch(e){ console.warn('attach aff err', e); }
 
-    // task_submissions
+    // task_submissions (approved)
     try {
       const q = db.collection('task_submissions').where('userId','==',uid).where('status','==','approved');
-      const unsub = q.onSnapshot(snap => { let c=0; snap.forEach(d=>{ if (docIsToday(d.data())) c++; }); progressState.taskApproved=c; recomputeSpinsUI(); }, err=>console.warn('task err',err));
+      const unsub = q.onSnapshot(snap => {
+        let count = 0;
+        snap.forEach(d => { if (docIsToday(d.data())) count++; });
+        progressState.taskApproved = count;
+        recomputeSpinsUI();
+      }, err => console.warn('task listener err', err));
       unsubs.push(unsub);
-    } catch(e){ console.warn('task attach',e); }
+    } catch(e){ console.warn('attach task err', e); }
 
-    // bill_submissions
+    // bill_submissions (processed true) -> data vs airtime amounts, filter today
     try {
       const q = db.collection('bill_submissions').where('userId','==',uid).where('processed','==',true);
       const unsub = q.onSnapshot(snap => {
-        let dataSum=0, airtimeSum=0;
-        snap.forEach(d=>{
+        let dataSum = 0, airtimeSum = 0;
+        snap.forEach(d => {
           const doc = d.data();
           if (!docIsToday(doc)) return;
-          const t = (doc.type || 'airtime').toLowerCase();
-          const amt = Number(doc.amount||0);
+          const t = (doc.type || 'airtime').toString().toLowerCase();
+          const amt = Number(doc.amount || 0);
           if (t === 'data') dataSum += amt; else airtimeSum += amt;
         });
-        progressState.dataAmount = dataSum; progressState.airtimeAmount = airtimeSum; recomputeSpinsUI();
-      }, err=>console.warn('bills err',err));
+        progressState.dataAmount = dataSum;
+        progressState.airtimeAmount = airtimeSum;
+        recomputeSpinsUI();
+      }, err => console.warn('bills listener err', err));
       unsubs.push(unsub);
-    } catch(e){ console.warn('bills attach',e); }
+    } catch(e){ console.warn('attach bills err', e); }
 
-    // referrals (users where referrer == username AND is_Premium true) - robust timestamp
+    // referrals: users where referrer == username and is_Premium true
     if (username) {
       try {
         const q = db.collection('users').where('referrer','==',username).where('is_Premium','==',true);
         const unsub = q.onSnapshot(snap => {
-          let c=0;
+          let c = 0;
           snap.forEach(d => { if (docIsToday(d.data())) c++; });
-          progressState.referralsPremium = c; recomputeSpinsUI();
-        }, err=>console.warn('ref err',err));
+          progressState.referralsPremium = c;
+          recomputeSpinsUI();
+        }, err => console.warn('ref listener err', err));
         unsubs.push(unsub);
-      } catch(e){ console.warn('ref attach',e); }
+      } catch(e){ console.warn('attach ref err', e); }
     }
   }
 
-  // ---------- Spin action ----------
+  // ---------- live feed single message demo (like screenshot) ----------
+  let liveInterval = null;
+  function startLiveFeedDemo(){
+    const names = ['NOFISAT','ABUBAKAR','FATIMA','CHINEDU','SULEIMAN','GRACE','KINGSLEY','BOLA','AMINA','EMMA'];
+    const msgs = [];
+    for (let i=0;i<10;i++){
+      const n = names[Math.floor(Math.random()*names.length)];
+      const a = PRIZES[Math.floor(Math.random()*PRIZES.length)];
+      msgs.push(`${n} won ₦${a} cashback.`);
+    }
+    let idx = 0;
+    if (liveText) liveText.textContent = msgs[0];
+    if (liveInterval) clearInterval(liveInterval);
+    liveInterval = setInterval(()=> {
+      idx = (idx + 1) % msgs.length;
+      if (liveText) liveText.textContent = msgs[idx];
+    }, 3000);
+  }
+
+  // ---------- spin math & animation (lands exactly on prize) ----------
+  async function spinToIndex(idx) {
+    const segDeg = 360 / SEGMENTS;
+    // center angle of the slice relative to top
+    const sliceCenter = -90 + (idx + 0.5) * segDeg;
+    // we want that center to align with the pointer (pointer at top facing down),
+    // rotation needed so sliceCenter comes to -90 degrees -> rotationToCenter = -90 - sliceCenter
+    const rotationToCenter = -90 - sliceCenter;
+    // add small jitter so spins look real
+    const jitter = (Math.random() * (segDeg / 12)) - (segDeg / 24);
+    const total = ROTATIONS * 360 + rotationToCenter + jitter;
+    const target = lastRotation + total;
+    await animateTo(target, 5200);
+    // update lastRotation normalized
+    lastRotation = ((target % 360) + 360) % 360;
+  }
+
+  // ---------- spin handler ----------
   async function handleSpinClick(){
     if (spinning) return;
-    if (!auth || !auth.currentUser) return showToast('Please login to spin.');
+    if (!auth || !auth.currentUser) { showToast('Please login to spin.'); return; }
     if (spinsAvailable <= 0) {
-      // show no-spin modal (styled like congrats)
-      if (noSpinModal) { noSpinModal.classList.remove('hidden'); noSpinModal.style.display='flex'; }
+      // show no-spin modal
+      if (noSpinModal) { noSpinModal.classList.remove('hidden'); noSpinModal.style.display = 'flex'; }
       return;
     }
 
     spinning = true;
-    if (spinBtn) { spinBtn.disabled = true; spinBtn.classList.add('opacity-60'); }
+    if (spinBtn) spinBtn.disabled = true;
 
-    // immediate visual decrement (optimistic UI)
+    // optimistic UI decrement (instant feedback)
     spinsAvailable = Math.max(0, spinsAvailable - 1);
     if (spinCountEl) spinCountEl.textContent = `(${spinsAvailable})`;
 
-    // pick prize index by weight
+    // pick prize index (weighted)
     const idx = weightedRandomIndex(WEIGHTS);
 
-    // animate wheel to idx
+    // animate wheel to the selected index
     await spinToIndex(idx);
 
-    // prize amount
     const amount = PRIZES[idx];
 
-    // db transaction: update balance and spinsUsed
+    // update user's balance and spinsUsed in transaction
     try {
       const uid = auth.currentUser.uid;
-      const ref = db.collection('users').doc(uid);
+      const userRef = db.collection('users').doc(uid);
       const today = todayKey();
       await db.runTransaction(async tx => {
-        const snap = await tx.get(ref);
+        const snap = await tx.get(userRef);
         if (!snap.exists) {
-          tx.set(ref, { balance: amount, spinsUsedCount: 1, spinsUsedDate: today, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge:true });
+          tx.set(userRef, {
+            balance: amount,
+            spinsUsedCount: 1,
+            spinsUsedDate: today,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
         } else {
           const data = snap.data() || {};
           const prev = data.spinsUsedDate || null;
           let prevKey = null;
           try { prevKey = prev && typeof prev.toDate === 'function' ? prev.toDate().toISOString().slice(0,10) : prev; } catch(e){ prevKey = prev; }
           if (prevKey !== today) {
-            tx.update(ref, { balance: firebase.firestore.FieldValue.increment(amount), spinsUsedCount: 1, spinsUsedDate: today, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+            tx.update(userRef, {
+              balance: firebase.firestore.FieldValue.increment(amount),
+              spinsUsedCount: 1,
+              spinsUsedDate: today,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
           } else {
-            tx.update(ref, { balance: firebase.firestore.FieldValue.increment(amount), spinsUsedCount: firebase.firestore.FieldValue.increment(1), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+            tx.update(userRef, {
+              balance: firebase.firestore.FieldValue.increment(amount),
+              spinsUsedCount: firebase.firestore.FieldValue.increment(1),
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
           }
         }
       });
 
-      // refresh local user doc cache
+      // refresh userDocCached
       const fresh = await db.collection('users').doc(auth.currentUser.uid).get();
       userDocCached = fresh.exists ? fresh.data() : userDocCached;
-    } catch(err) {
-      console.error('spin update err',err);
-      showToast('Error updating balance. Check console.');
-      // in case of DB error, we could re-sync spinsAvailable in recomputeSpinsUI
+    } catch (err) {
+      console.error('spin update failed', err);
+      showToast('Error updating balance. See console.');
+      // on failure we will resync on next recompute from userDocCached
     }
 
     // show win modal
     if (winAmountEl) winAmountEl.textContent = `₦${amount}`;
     if (amount === 1000 && winVerifiedImg) winVerifiedImg.classList.remove('hidden'); else if (winVerifiedImg) winVerifiedImg.classList.add('hidden');
-    if (winModal) { winModal.classList.remove('hidden'); winModal.style.display='flex'; }
+    if (winModal) { winModal.classList.remove('hidden'); winModal.style.display = 'flex'; }
 
-    // update live pill (use username/email)
-    if (liveText && auth.currentUser) {
+    // live pill update to show the win (username or fallback)
+    if (auth.currentUser && liveText) {
       const who = (auth.currentUser.displayName || auth.currentUser.email || 'You').split('@')[0].toUpperCase();
       liveText.textContent = `${who} won ₦${amount} cashback.`;
     }
 
-    // recompute UI (will ensure consistency)
+    // ensure UI reflects DB state
     recomputeSpinsUI();
 
     spinning = false;
-    if (spinBtn) { spinBtn.disabled = false; spinBtn.classList.remove('opacity-60'); }
+    if (spinBtn) { spinBtn.disabled = false; }
   }
 
-  // ---------- helpers for spin animation wrapper ----------
-  function spinToIndex(idx) { return spinToIndex_impl(idx); }
-  async function spinToIndex_impl(idx){
-    const segDeg = 360 / SEGMENTS;
-    const centerAngle = -90 + (idx + 0.5) * segDeg;
-    const rotationToCenter = -90 - centerAngle;
-    const jitter = (Math.random() * (segDeg/12)) - (segDeg/24);
-    const total = ROTATIONS*360 + rotationToCenter + jitter;
-    const target = lastRotation + total;
-    await animateTo(target, 5200);
-  }
-
-  // ---------- init + auth wiring ----------
-  function init(){
-    setupCanvas(320);
+  // ---------- attach auth + init ----------
+  function init() {
+    setupCanvasHD(420);
     drawWheel(lastRotation);
-    startLiveDemo();
+    startLiveFeedDemo();
 
     // events
     if (spinBtn) spinBtn.addEventListener('click', handleSpinClick);
-    if (winCloseBtn) winCloseBtn.addEventListener('click', ()=>{ if (winModal) { winModal.classList.add('hidden'); winModal.style.display='none'; } });
-    if (noSpinClose) noSpinClose.addEventListener('click', ()=>{ if (noSpinModal) { noSpinModal.classList.add('hidden'); noSpinModal.style.display='none'; } });
-
-    window.addEventListener('resize', ()=> setupCanvas(320) );
+    if (winCloseBtn) winCloseBtn.addEventListener('click', ()=>{ if (winModal) { winModal.classList.add('hidden'); winModal.style.display = 'none'; } });
+    if (noSpinClose) noSpinClose.addEventListener('click', ()=>{ if (noSpinModal) { noSpinModal.classList.add('hidden'); noSpinModal.style.display = 'none'; } });
+    window.addEventListener('resize', ()=> setupCanvasHD(420));
 
     if (!auth || !db) {
-      console.warn('Firebase compat not found — running in demo mode.');
+      console.warn('Firebase compat not found. Running in demo mode.');
       recomputeSpinsUI();
       return;
     }
 
-    // auth listener to attach progress realtime listeners
-    auth.onAuthStateChanged(user=>{
+    auth.onAuthStateChanged(user => {
       currentUser = user;
-      if (!user) { userDocCached=null; recomputeSpinsUI(); clearUnsubs(); return; }
-
+      if (!user) {
+        userDocCached = null; recomputeSpinsUI(); clearUnsubs(); return;
+      }
+      // listen to user doc
       const uRef = db.collection('users').doc(user.uid);
-      const unsubUser = uRef.onSnapshot(snap=>{
+      const unsubUser = uRef.onSnapshot(snap => {
         userDocCached = snap.exists ? snap.data() : {};
-        const username = (userDocCached && userDocCached.username) ? userDocCached.username : (user.displayName || user.email.split('@')[0]);
+        // username fallback
+        const username = (userDocCached && userDocCached.username) ? userDocCached.username : (user.displayName || (user.email || '').split('@')[0]);
         attachRealtimeProgress(user.uid, username);
         recomputeSpinsUI();
-      }, err=>{
-        console.warn('user doc err',err);
-        // fallback one-time fetch
-        uRef.get().then(snap=>{ userDocCached = snap.exists ? snap.data() : {}; const username = (userDocCached && userDocCached.username) ? userDocCached.username : (user.displayName || user.email.split('@')[0]); attachRealtimeProgress(user.uid, username); recomputeSpinsUI(); }).catch(e=>console.warn(e));
+      }, err => {
+        console.warn('user doc listener error', err);
+        uRef.get().then(snap => {
+          userDocCached = snap.exists ? snap.data() : {};
+          const username = (userDocCached && userDocCached.username) ? userDocCached.username : (user.displayName || (user.email || '').split('@')[0]);
+          attachRealtimeProgress(user.uid, username);
+          recomputeSpinsUI();
+        }).catch(e => console.warn('user fetch failed', e));
       });
       unsubs.push(unsubUser);
     });
   }
 
   // ---------- start ----------
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 
-  // expose debug helpers
-  window.__spin = { drawWheel, setupCanvas, recomputeSpinsUI, progressState, PRIZES };
+  // ---------- debug helpers ----------
+  window.__spinDebug = { drawWheel, setupCanvasHD, recomputeSpinsUI, progressState, PRIZES };
 
 })();
-
-
 
 
 
