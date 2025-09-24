@@ -3944,6 +3944,12 @@
 ‎
 ‎
 
+
+                                                                <!-- GLOBALS AI Help Center Section -->
+
+‎
+‎
+
 <!-- GLOBALS AI Help Center Section -->
 
 
@@ -4034,7 +4040,7 @@
     <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center font-semibold text-sm">G</div>
     <div>
       <div class="font-semibold text-sm">Globals Support</div>
-      <div class="text-xs text-green-SPIN300">● Online</div>
+      <div class="text-xs text-green-300">● Online</div>
     </div>
   </div>
 </div>
@@ -4056,113 +4062,177 @@
 
 
 
-<section id="spin-section" class=" tab-section hidden" style="max-width:980px;margin:20px auto;padding:20px;border-radius:18px;background:linear-gradient(180deg,#f7fbff,#fff);box-shadow:0 18px 40px rgba(12,20,40,0.06);font-family:Inter,system-ui,'Segoe UI',Roboto;">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+
+    <!-- SPIN FUNCTIONS -->
+<style>
+  /* Responsive layout */
+  #spin-section { max-width:980px; margin:18px auto; padding:18px; border-radius:16px; background:linear-gradient(180deg,#f7fbff,#fff); box-shadow:0 18px 40px rgba(12,20,40,0.06); font-family:Inter,system-ui,Segoe UI,Roboto; }
+  .spin-row { display:flex; gap:12px; align-items:center; justify-content:center; flex-direction:column; }
+
+  /* Wheel container - mobile friendly */
+  #wheel-outer { position:relative; width:min(92vw,420px); height:min(92vw,420px); display:flex; align-items:center; justify-content:center; margin:6px auto; }
+  #wheel-glow { position:absolute; inset:0; border-radius:999px; pointer-events:none; filter:blur(14px); background:conic-gradient(from 0deg, rgba(6,182,212,0.18), rgba(124,58,237,0.14), rgba(250,204,21,0.08)); z-index:1; }
+  #wheel-plate { position:relative; z-index:6; border-radius:999px; background:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 18px 40px rgba(15,23,42,0.06); overflow:hidden; }
+
+  /* Pointer - svg */
+  #wheel-pointer { position:absolute; left:50%; top:0; transform:translate(-50%,-50%); z-index:30; pointer-events:none; }
+  .pointer-svg { width:46px; height:46px; display:block; filter:drop-shadow(0 10px 18px rgba(2,6,23,0.12)); }
+  .pointer-bounce { animation:pointerBounce 1400ms infinite; transform-origin:center; }
+  @keyframes pointerBounce { 0%{ transform:translateY(0) } 50%{ transform:translateY(6px) } 100%{ transform:translateY(0) } }
+
+  /* Spin button */
+  #spin-btn { margin-top:14px; background:linear-gradient(90deg,#06b6d4,#3b82f6 60%,#7c3aed); color:#fff; border:none; padding:12px 34px; border-radius:999px; font-weight:800; box-shadow:0 12px 28px rgba(124,58,237,0.08); display:inline-flex; align-items:center; gap:10px; }
+
+  /* Live pill */
+  .live-pill { display:flex; align-items:center; gap:10px; padding:10px 14px; background:#fff; border-radius:999px; box-shadow:0 6px 18px rgba(2,6,23,0.03); border:1px solid rgba(2,6,23,0.04); margin-top:10px; }
+
+  /* Challenges */
+  #daily-challenges { margin-top:10px; display:flex; flex-direction:column; gap:10px; }
+  .challenge-card { display:flex; justify-content:space-between; align-items:center; padding:12px; background:#fff; border-radius:12px; border:1px solid rgba(2,6,23,0.04); box-shadow:0 6px 18px rgba(2,6,23,0.03); }
+  .progress-track { height:10px; background:#f1f5f9; border-radius:999px; overflow:hidden; margin-top:8px; }
+  .progress-bar { height:100%; width:0%; background:linear-gradient(90deg,#06b6d4,#7c3aed); transition: width 420ms cubic-bezier(.2,.9,.2,1); }
+
+  /* Overlays */
+  #no-firebase-overlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.5); z-index:2000; }
+  .overlay-card { background:#fff; padding:18px; border-radius:12px; width:min(92%,520px); text-align:center; }
+
+  /* Small screens tweaks */
+  @media (max-width:420px) {
+    #spin-btn { padding:10px 18px; }
+    .pointer-svg { width:36px; height:36px; }
+  }
+</style>
+
+<section id="spin-section">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
     <div>
-      <h2 style="font-size:22px;margin:0 0 6px 0;color:#0f172a;font-weight:800">Spin & Earn</h2>
-      <p style="margin:0;color:#64748b;font-size:13px">1 free spin every 24 hours. Complete challenges to earn extra spins. Firebase + local fallback.</p>
+      <h2 style="font-size:20px;margin:0;color:#0f172a;font-weight:800">Spin & Earn</h2>
+      <div style="font-size:13px;color:#64748b;margin-top:6px">1 free spin every 24 hours. Complete challenges to earn extra spins.</div>
     </div>
-    <div style="color:#94a3b8;font-size:12px">Free spin resets daily</div>
+    <div style="font-size:12px;color:#94a3b8">Free spin resets daily</div>
   </div>
 
-  <div style="display:flex;flex-direction:column;align-items:center;position:relative;">
-    <div id="wheel-outer" style="position:relative;width:420px;height:420px;border-radius:999px;display:flex;align-items:center;justify-content:center;">
-      <div id="wheel-glow" style="position:absolute;inset:0;border-radius:999px;pointer-events:none;filter:blur(14px);background:conic-gradient(from 0deg, rgba(6,182,212,0.18), rgba(124,58,237,0.14), rgba(250,204,21,0.08));"></div>
+  <div class="spin-row">
+    <div id="wheel-outer">
+      <div id="wheel-glow" aria-hidden="true"></div>
 
-      <div id="wheel-plate" style="width:300px;height:300px;border-radius:999px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 18px 40px rgba(15,23,42,0.06);">
-        <canvas id="spin-canvas" style="width:100%;height:100%;border-radius:999px;display:block;will-change:transform;opacity:0;"></canvas>
+      <div id="wheel-plate" style="width:72%; height:72%;">
+        <canvas id="spin-canvas" style="width:100%;height:100%;display:block;"></canvas>
       </div>
 
-      <div id="wheel-pointer" style="position:absolute;left:50%;top:0;transform:translate(-50%,-50%);z-index:40;pointer-events:none;">
-        <div style="width:0;height:0;border-left:20px solid transparent;border-right:20px solid transparent;border-bottom:36px solid #4f46e5;border-radius:3px 3px 0 0;filter:drop-shadow(0 10px 18px rgba(2,6,23,0.12));"></div>
+      <!-- nicer pointer (svg) -->
+      <div id="wheel-pointer" role="img" aria-hidden="true">
+        <svg class="pointer-svg pointer-bounce" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <g transform="translate(0,0)">
+            <ellipse cx="32" cy="50" rx="12" ry="4" fill="rgba(0,0,0,0.08)"/>
+            <path d="M32 4 L42 28 L34 28 L34 46 L30 46 L30 28 L22 28 Z" fill="#4f46e5" stroke="#3b30c8" stroke-width="1"/>
+            <circle cx="32" cy="30" r="2.5" fill="#fff"/>
+          </g>
+        </svg>
       </div>
     </div>
 
-    <button id="spin-btn" style="margin-top:14px;background:linear-gradient(90deg,#06b6d4,#3b82f6 60%,#7c3aed);color:#fff;border:none;padding:12px 36px;border-radius:999px;font-weight:800;box-shadow:0 12px 28px rgba(124,58,237,0.08);display:inline-flex;align-items:center;gap:12px;">
+    <button id="spin-btn" aria-live="polite" aria-label="Spin Now">
       <span>Spin Now</span> <span id="spin-count" style="font-weight:800">(0)</span>
     </button>
 
-    <div style="width:100%;max-width:760px;margin-top:12px;">
-      <div id="live-pill" style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#fff;border-radius:999px;box-shadow:0 6px 18px rgba(2,6,23,0.03);border:1px solid rgba(2,6,23,0.04);">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 10v4h4l5 5V5L7 10H3z" fill="#0F172A"/></svg>
-        <div id="live-text" style="font-weight:700;color:#0f172a;font-size:14px">Loading wins...</div>
-      </div>
+    <div class="live-pill">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 10v4h4l5 5V5L7 10H3z" fill="#0F172A"/></svg>
+      <div id="live-text" style="font-weight:700;color:#0f172a;font-size:14px">Loading wins...</div>
     </div>
   </div>
 
-  <div style="margin-top:14px;background:#fff;padding:14px;border-radius:12px;border:1px solid #f1f5f9;box-shadow:0 6px 18px rgba(2,6,23,0.02);">
-    <h4 style="margin:0 0 6px 0;font-weight:700;color:#0f172a">Rules</h4>
-    <p style="margin:0;color:#64748b;font-size:13px">One free spin every 24 hours. Complete challenges to earn an extra spin credited server-side.</p>
+  <div style="margin-top:14px;background:#fff;padding:12px;border-radius:12px;border:1px solid #f1f5f9;">
+    <h4 style="margin:0;color:#0f172a">Rules</h4>
+    <p style="margin:8px 0 0 0;color:#64748b;font-size:13px">One free spin every 24 hours. Challenge completions grant extra spins server-side.</p>
   </div>
 
-  <div style="margin-top:14px">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <h3 style="margin:0;font-size:16px;font-weight:800;color:#0f172a">Daily Challenges</h3>
-      <div style="font-size:13px;color:#94a3b8">Server-aware (Firebase) — demo tap allowed</div>
+  <div style="margin-top:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="margin:0;font-size:15px;color:#0f172a">Daily Challenges</h3>
+      <div style="font-size:13px;color:#94a3b8">Progress syncs automatically</div>
     </div>
 
-    <div id="daily-challenges" style="margin-top:10px;display:flex;flex-direction:column;gap:10px">
-      <div class="challenge-card" data-key="affiliateApproved" data-goal="10" style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:#fff;border-radius:12px;border:1px solid rgba(2,6,23,0.04);box-shadow:0 6px 18px rgba(2,6,23,0.03);">
-        <div style="width:70%"><div style="font-weight:700;color:#0f172a">Finish 10 affiliate campaigns</div><div style="height:10px;background:#f1f5f9;border-radius:999px;margin-top:8px;overflow:hidden"><div class="progress-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#06b6d4,#7c3aed);transition:width 420ms;"></div></div></div>
+    <div id="daily-challenges">
+      <div class="challenge-card" data-key="affiliateApproved" data-goal="10">
+        <div style="width:70%">
+          <div style="font-weight:700;color:#0f172a">Finish 10 affiliate campaigns</div>
+          <div class="progress-track"><div class="progress-bar"></div></div>
+        </div>
         <div style="width:28%;text-align:right"><div class="status-text not-completed" style="font-weight:800;color:#ef4444">Not completed</div></div>
       </div>
 
-      <div class="challenge-card" data-key="taskApproved" data-goal="10" style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:#fff;border-radius:12px;border:1px solid rgba(2,6,23,0.04);box-shadow:0 6px 18px rgba(2,6,23,0.03);">
-        <div style="width:70%"><div style="font-weight:700;color:#0f172a">Complete 10 standard tasks</div><div style="height:10px;background:#f1f5f9;border-radius:999px;margin-top:8px;overflow:hidden"><div class="progress-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#06b6d4,#7c3aed);transition:width 420ms;"></div></div></div>
+      <div class="challenge-card" data-key="taskApproved" data-goal="10">
+        <div style="width:70%">
+          <div style="font-weight:700;color:#0f172a">Complete 10 standard tasks</div>
+          <div class="progress-track"><div class="progress-bar"></div></div>
+        </div>
         <div style="width:28%;text-align:right"><div class="status-text not-completed" style="font-weight:800;color:#ef4444">Not completed</div></div>
       </div>
 
-      <div class="challenge-card" data-key="dataAmount" data-goal="1000" style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:#fff;border-radius:12px;border:1px solid rgba(2,6,23,0.04);box-shadow:0 6px 18px rgba(2,6,23,0.03);">
-        <div style="width:70%"><div style="font-weight:700;color:#0f172a">Purchase mobile data worth ₦1,000+ (today)</div><div style="height:10px;background:#f1f5f9;border-radius:999px;margin-top:8px;overflow:hidden"><div class="progress-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#06b6d4,#7c3aed);transition:width 420ms;"></div></div></div>
+      <div class="challenge-card" data-key="dataAmount" data-goal="1000">
+        <div style="width:70%">
+          <div style="font-weight:700;color:#0f172a">Purchase mobile data worth ₦1,000+ (today)</div>
+          <div class="progress-track"><div class="progress-bar"></div></div>
+        </div>
         <div style="width:28%;text-align:right"><div class="status-text not-completed" style="font-weight:800;color:#ef4444">Not completed</div></div>
       </div>
 
-      <div class="challenge-card" data-key="airtimeAmount" data-goal="500" style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:#fff;border-radius:12px;border:1px solid rgba(2,6,23,0.04);box-shadow:0 6px 18px rgba(2,6,23,0.03);">
-        <div style="width:70%"><div style="font-weight:700;color:#0f172a">Purchase airtime worth ₦500+ (today)</div><div style="height:10px;background:#f1f5f9;border-radius:999px;margin-top:8px;overflow:hidden"><div class="progress-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#06b6d4,#7c3aed);transition:width 420ms;"></div></div></div>
+      <div class="challenge-card" data-key="airtimeAmount" data-goal="500">
+        <div style="width:70%">
+          <div style="font-weight:700;color:#0f172a">Purchase airtime worth ₦500+ (today)</div>
+          <div class="progress-track"><div class="progress-bar"></div></div>
+        </div>
         <div style="width:28%;text-align:right"><div class="status-text not-completed" style="font-weight:800;color:#ef4444">Not completed</div></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- MODALS & TOAST -->
-<div id="win-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;z-index:1200">
-  <div style="background:#fff;border-radius:16px;padding:18px;width:92%;max-width:380px;text-align:center;box-shadow:0 20px 60px rgba(2,6,23,0.25)">
-    <div style="font-size:14px;color:#64748b">Congratulations 🎉</div>
-    <div id="win-amount" style="font-size:28px;font-weight:800;color:#4f46e5;margin:12px 0">₦0</div>
-    <div style="color:#475569;font-size:13px">Amount added to your balance</div>
-    <button id="win-close" style="margin-top:14px;background:#4f46e5;color:white;padding:10px 20px;border-radius:999px;border:none;font-weight:700">Nice!</button>
+<!-- no firebase overlay -->
+<div id="no-firebase-overlay" role="alert" aria-hidden="true">
+  <div class="overlay-card">
+    <h3 style="margin-top:0">Firebase not detected</h3>
+    <p style="color:#475569">This Spin module requires Firebase to be initialized before the script runs. Please initialize Firebase (compat) and set <code>window.auth</code> and <code>window.db</code>.</p>
+    <p style="font-size:13px;color:#6b7280;margin-top:8px">See the top of this snippet for the example initialization code.</p>
   </div>
 </div>
 
-<div id="no-spin-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;z-index:1200">
-  <div style="background:#fff;border-radius:16px;padding:18px;width:92%;max-width:380px;text-align:center;">
+<!-- Win / No-spin modals & toast -->
+<div id="win-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;z-index:1500">
+  <div style="background:#fff;border-radius:14px;padding:18px;width:88%;max-width:380px;text-align:center;">
+    <div style="font-size:14px;color:#64748b">Congratulations 🎉</div>
+    <div id="win-amount" style="font-size:26px;font-weight:800;color:#4f46e5;margin:10px 0">₦0</div>
+    <div style="color:#475569;font-size:13px">Amount added to your balance</div>
+    <button id="win-close" style="margin-top:12px;background:#4f46e5;color:white;padding:8px 16px;border-radius:999px;border:none;font-weight:700">Nice!</button>
+  </div>
+</div>
+
+<div id="no-spin-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;z-index:1500">
+  <div style="background:#fff;border-radius:14px;padding:18px;width:88%;max-width:380px;text-align:center;">
     <div style="font-size:14px;color:#475569">No spins remaining</div>
     <div style="font-size:16px;font-weight:800;margin-top:8px">Complete today's challenges to earn more spins</div>
-    <button id="no-spin-close" style="margin-top:12px;background:#0ea5e9;color:white;padding:10px 18px;border-radius:999px;border:none;font-weight:700">Okay</button>
+    <button id="no-spin-close" style="margin-top:12px;background:#0ea5e9;color:white;padding:8px 16px;border-radius:999px;border:none;font-weight:700">Okay</button>
   </div>
 </div>
 
-<div id="spin-toast" style="display:none;position:fixed;right:18px;bottom:18px;background:#fff;border-radius:10px;padding:10px 12px;box-shadow:0 10px 30px rgba(2,6,23,0.12);z-index:1300">
+<div id="spin-toast" style="display:none;position:fixed;right:14px;bottom:16px;background:#fff;border-radius:10px;padding:10px 12px;box-shadow:0 10px 30px rgba(2,6,23,0.12);z-index:1600">
   <div id="spin-toast-text" style="font-size:13px;color:#0f172a"></div>
 </div>
 
-<!-- THE FIXED SCRIPT -->
 <script>
 (() => {
   'use strict';
 
-  // ---------- CONFIG (edit prizes / weights here) ----------
+  // ---------- config ----------
   const PRIZES = [10,30,20,200,5,0,100,1000];
   const WEIGHTS = [18,12,14,2,18,20,5,1];
   const SEGMENTS = PRIZES.length;
   const ROTATIONS = 6;
   const ANIM_DURATION = 5200;
   const BASE_FREE = 1;
-  const LS_KEY = 'spin_module_prod_v1';
-  const CHALLENGE_PRIZE_INDEX = { affiliateApproved:0, taskApproved:2, dataAmount:1, airtimeAmount:4 };
 
-  // ---------- DOM ----------
+  // ---------- dom ----------
   const canvas = document.getElementById('spin-canvas');
   const wheelPlate = document.getElementById('wheel-plate');
   const wheelOuter = document.getElementById('wheel-outer');
@@ -4176,70 +4246,45 @@
   const noSpinClose = document.getElementById('no-spin-close');
   const toastEl = document.getElementById('spin-toast');
   const toastTextEl = document.getElementById('spin-toast-text');
-  const challengeCards = Array.from(document.querySelectorAll('.challenge-card'));
-  const ctx = canvas ? canvas.getContext('2d') : null;
+  const noFirebaseOverlay = document.getElementById('no-firebase-overlay');
 
-  if (!canvas || !ctx) {
-    console.error('Spin wheel canvas/context missing — script aborted.');
-    // still allow rest of page to function
-    return;
-  }
+  if (!canvas) { console.error('Canvas missing'); return; }
+  const ctx = canvas.getContext('2d');
+  if (!ctx) { console.error('Canvas context missing'); return; }
 
-  // ---------- STATE ----------
+  // ---------- state ----------
   let DPR = window.devicePixelRatio || 1;
   let lastRotation = 0;
   let spinning = false;
-  let guaranteedSpinQueue = [];
-  let prevCompletedFlags = null;
-  let dataUnsubs = []; // store firebase data unsubs (not auth)
-  let authUnsub = null; // store auth unsub separately
-  let userDocCached = null;
-  let localState = null;
+  let userDoc = null;
+  let dataUnsubs = [];
+  let authUnsub = null;
   let liveInterval = null;
+  let liveMsgs = [];
+  let liveIndex = 0;
 
   // ---------- util ----------
-  function todayKey() { return new Date().toISOString().slice(0,10); }
-  function showToast(msg) {
+  function todayKey(){ return new Date().toISOString().slice(0,10); }
+  function showToast(msg){
     if (!toastEl || !toastTextEl) { console.log('TOAST:', msg); return; }
     toastTextEl.textContent = msg;
     toastEl.style.display = 'block';
     setTimeout(()=> toastEl.style.display = 'none', 3000);
   }
-  function weighRandom(weights) { const sum = weights.reduce((a,b)=>a+b,0); let r=Math.random()*sum; for (let i=0;i<weights.length;i++){ if (r<weights[i]) return i; r-=weights[i]; } return weights.length-1; }
-
-  // ---------- local state persistence ----------
-  function defaultState(){ return { dateKey: todayKey(), used:0, bonus:0, progress:{affiliateApproved:0,taskApproved:0,dataAmount:0,airtimeAmount:0}, completed:{}, balance:0, history:[] }; }
-  function loadState(){
-    try {
-      const raw = localStorage.getItem(LS_KEY);
-      if (!raw) { const s = defaultState(); saveState(s); return s; }
-      const p = JSON.parse(raw);
-      if (!p || p.dateKey !== todayKey()) {
-        const s = defaultState();
-        if (p && typeof p.balance === 'number') s.balance = p.balance;
-        saveState(s);
-        return s;
-      }
-      p.progress = p.progress || defaultState().progress;
-      p.completed = p.completed || {};
-      p.history = p.history || [];
-      return p;
-    } catch(e){ const s = defaultState(); saveState(s); return s; }
+  function weighRandom(w){
+    const sum = w.reduce((a,b)=>a+b,0);
+    let r = Math.random()*sum;
+    for (let i=0;i<w.length;i++){ if (r < w[i]) return i; r -= w[i]; }
+    return w.length - 1;
   }
-  function saveState(s) { try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch(e){ console.warn('saveState failed', e); } }
 
-  localState = loadState();
-
-  // ---------- canvas sizing & draw ----------
+  // ---------- sizing & drawing ----------
   function setupSizes() {
-    let inner = 300;
-    const vw = Math.max(document.documentElement.clientWidth || 320, window.innerWidth || 320);
-    if (vw >= 1024) inner = 420; else if (vw >= 768) inner = 360; else inner = 300;
+    // base inner size is 72% of wheelOuter
+    const outerRect = wheelOuter.getBoundingClientRect();
+    let inner = Math.max(220, Math.round(outerRect.width * 0.72));
     wheelPlate.style.width = inner + 'px';
     wheelPlate.style.height = inner + 'px';
-    const outer = Math.round(inner * 1.4);
-    wheelOuter.style.width = outer + 'px';
-    wheelOuter.style.height = outer + 'px';
     DPR = window.devicePixelRatio || 1;
     canvas.style.width = inner + 'px';
     canvas.style.height = inner + 'px';
@@ -4248,142 +4293,97 @@
     ctx.setTransform(DPR,0,0,DPR,0,0);
   }
 
-  function drawWheel(rotationDeg = 0) {
+  function drawWheel(rotation = 0) {
     const cssW = canvas.clientWidth || parseInt(canvas.style.width || '320',10);
-    const cx = cssW/2, cy = cssW/2, r = Math.min(cssW,cssW)/2 - 12;
+    const cx = cssW / 2, cy = cssW / 2, r = Math.min(cssW, cssW) / 2 - 12;
     ctx.clearRect(0,0,cssW,cssW);
-    ctx.save(); ctx.translate(cx,cy); ctx.rotate(rotationDeg*Math.PI/180); ctx.translate(-cx,-cy);
-    const segAngle = 2*Math.PI / SEGMENTS;
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate(rotation * Math.PI / 180);
+    ctx.translate(-cx,-cy);
+
+    const segAngle = 2 * Math.PI / SEGMENTS;
     const colors = ['#ecfeff','#e6f7ff','#fff8e1','#f3f5ff','#fff0f6','#eef6ff','#fbfbfd','#f0fbff'];
+
     for (let i=0;i<SEGMENTS;i++){
-      const start = -Math.PI/2 + i*segAngle, end = start + segAngle;
+      const start = -Math.PI/2 + i * segAngle;
+      const end = start + segAngle;
       ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,end); ctx.closePath();
       ctx.fillStyle = colors[i % colors.length]; ctx.fill();
       ctx.strokeStyle = 'rgba(2,6,23,0.04)'; ctx.lineWidth = 1; ctx.stroke();
-      const mid = (start+end)/2, lr = r * 0.78;
-      const lx = cx + Math.cos(mid)*lr, ly = cy + Math.sin(mid)*lr;
-      ctx.save(); ctx.translate(lx,ly); ctx.rotate(mid + Math.PI/2);
-      ctx.fillStyle = '#0f172a'; const labelFont = Math.max(11, Math.round(cssW * 0.035));
-      ctx.font = '600 ' + labelFont + 'px Inter, system-ui'; ctx.textAlign = 'center'; ctx.textBaseline='middle';
+
+      const mid = (start + end) / 2;
+      const labelRadius = r * 0.78;
+      const labelX = cx + Math.cos(mid) * labelRadius;
+      const labelY = cy + Math.sin(mid) * labelRadius;
+      ctx.save(); ctx.translate(labelX,labelY); ctx.rotate(mid + Math.PI/2);
+      const fontSize = Math.max(11, Math.round(cssW * 0.035));
+      ctx.fillStyle = '#0f172a'; ctx.font = '600 ' + fontSize + 'px Inter, system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('₦' + PRIZES[i], 0, 0); ctx.restore();
     }
-    ctx.beginPath(); ctx.arc(cx,cy,r+6,0,Math.PI*2); ctx.lineWidth=10; ctx.strokeStyle='rgba(15,23,42,0.06)'; ctx.stroke();
-    ctx.beginPath(); ctx.arc(cx,cy,48,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
-    ctx.lineWidth=2; ctx.strokeStyle='rgba(15,23,42,0.06)'; ctx.stroke();
-    ctx.fillStyle='#0f172a'; ctx.font='700 14px Inter, system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('SPIN', cx, cy - 6); ctx.font='600 12px Inter, system-ui'; ctx.fillText('NOW', cx, cy + 12);
+
+    // outer ring and center
+    ctx.beginPath(); ctx.arc(cx,cy,r+6,0,Math.PI*2); ctx.lineWidth = 10; ctx.strokeStyle = 'rgba(15,23,42,0.06)'; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx,cy,48,0,Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(15,23,42,0.06)'; ctx.stroke();
+    ctx.fillStyle = '#0f172a'; ctx.font = '700 14px Inter, system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('SPIN', cx, cy - 6);
+    ctx.font = '600 12px Inter, system-ui'; ctx.fillText('NOW', cx, cy + 12);
+
     ctx.restore();
   }
 
-  // ---------- animation ----------
-  function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
-  function animateTo(targetAbsolute, duration = ANIM_DURATION){
-    return new Promise(resolve => {
+  // animate easing
+  function easeOutCubic(t){ return 1 - Math.pow(1-t,3); }
+  function animateTo(target, duration = ANIM_DURATION){
+    return new Promise(resolve=>{
       const start = performance.now();
-      const from = lastRotation; const diff = targetAbsolute - from;
-      function frame(now) {
-        const t = Math.min(1, (now - start) / duration);
+      const from = lastRotation;
+      const diff = target - from;
+      function frame(now){
+        const t = Math.min(1, (now - start)/duration);
         const v = from + diff * easeOutCubic(t);
         drawWheel(v);
         if (t < 1) requestAnimationFrame(frame);
-        else { lastRotation = ((targetAbsolute % 360) + 360) % 360; drawWheel(lastRotation); resolve(); }
+        else { lastRotation = ((target % 360) + 360) % 360; drawWheel(lastRotation); resolve(); }
       }
       requestAnimationFrame(frame);
     });
   }
-  async function spinToIndex(idx, duration = ANIM_DURATION) {
+  async function spinToIndex(idx, duration = ANIM_DURATION){
     const segDeg = 360 / SEGMENTS;
     const sliceCenter = -90 + (idx + 0.5) * segDeg;
     const rotationToCenter = -90 - sliceCenter;
-    const jitter = (Math.random() * (segDeg / 20)) - (segDeg / 40);
-    const totalRotation = ROTATIONS * 360 + rotationToCenter + jitter;
-    const target = lastRotation + totalRotation;
+    const jitter = (Math.random() * (segDeg/20)) - (segDeg/40);
+    const total = ROTATIONS * 360 + rotationToCenter + jitter;
+    const target = lastRotation + total;
     await animateTo(target, duration);
     lastRotation = ((target % 360) + 360) % 360;
   }
 
-  // ---------- small helpers ----------
-  const TIMESTAMP_CANDIDATES = ['createdAt','submittedAt','timestamp','time','submittedOn','created_on','created_at'];
-  function dateFromMaybe(v) { if (!v) return null; if (typeof v.toDate === 'function') try { return v.toDate(); } catch(e){} if (v && typeof v.seconds === 'number') return new Date(v.seconds*1000); if (typeof v === 'number') return new Date(v); try { return new Date(v); } catch(e){ return null; } }
-  function docIsToday(data){ if (!data) return false; for (const f of TIMESTAMP_CANDIDATES) { if (!data[f]) continue; const d = dateFromMaybe(data[f]); if (!d || isNaN(d.getTime())) continue; const s=new Date(); s.setHours(0,0,0,0); const e=new Date(); e.setHours(23,59,59,999); if (d>=s && d<=e) return true; } return false; }
-
-  // ---------- compute used / available ----------
-  function computeUsedFromDoc(doc) {
-    if (!doc) return 0;
-    try {
-      const used = Number(doc.spinsUsedCount || 0);
-      let prevKey = null;
-      if (doc.spinsUsedDate && typeof doc.spinsUsedDate.toDate === 'function') prevKey = doc.spinsUsedDate.toDate().toISOString().slice(0,10);
-      else prevKey = doc.spinsUsedDate;
-      return (prevKey === todayKey()) ? used : 0;
-    } catch(e) { return 0; }
-  }
-
-  function countCompletedLocal() {
-    return Object.values(localState.completed || {}).filter(Boolean).length;
-  }
-
-  // compute available in one place: prefers server doc if present, otherwise local state
-  function computeAvailable() {
-    if (userDocCached) {
-      const used = computeUsedFromDoc(userDocCached);
-      const serverBonus = (typeof userDocCached.spinsBonus === 'number') ? userDocCached.spinsBonus : 0;
-      const serverCompletedCount = (userDocCached.completedChallenges) ? Object.values(userDocCached.completedChallenges).filter(Boolean).length : 0;
-      const localCompletedCount = countCompletedLocal();
-      // pending (local completed not yet reflected on server)
-      const pendingUnclaimed = Math.max(0, localCompletedCount - serverCompletedCount);
-      return Math.max(0, BASE_FREE + serverBonus + pendingUnclaimed - used);
-    } else {
-      return Math.max(0, BASE_FREE + (localState.bonus || 0) + countCompletedLocal() - (localState.used || 0));
-    }
-  }
-
-  function updateSpinUI() {
-    const available = computeAvailable();
-    if (spinCountEl) spinCountEl.textContent = '(' + available + ')';
-  }
-
-  function recomputeChallengesUI() {
-    challengeCards.forEach(card => {
-      const key = card.dataset.key;
-      const goal = Number(card.dataset.goal || 1);
-      const val = localState.progress[key] || 0;
-      const pct = Math.min(100, Math.round((val / goal) * 100));
-      const bar = card.querySelector('.progress-bar');
-      const status = card.querySelector('.status-text');
-      if (bar) bar.style.width = pct + '%';
-      if (status) {
-        if (localState.completed[key]) { status.textContent = 'Completed'; status.style.color = '#16a34a'; }
-        else { status.textContent = (val >= goal) ? 'Completed' : 'Not completed'; status.style.color = (val >= goal) ? '#16a34a' : '#ef4444'; }
-      }
-    });
-  }
-
   // ---------- firebase helpers ----------
-  function hasFirebase() { return (typeof window.db !== 'undefined' && typeof window.auth !== 'undefined' && window.db && window.auth); }
+  function hasFirebase(){ return (typeof window.db !== 'undefined' && typeof window.auth !== 'undefined' && window.db && window.auth); }
 
-  function clearDataUnsubs() { (dataUnsubs || []).forEach(fn => { try { fn(); } catch(_){} }); dataUnsubs = []; }
+  function clearDataUnsubs(){ dataUnsubs.forEach(fn=>{ try{ fn(); }catch(e){} }); dataUnsubs = []; }
 
-  // claim challenge bonus server-side (atomic): sets completedChallenges[key]=true and increments spinsBonus once
-  async function claimServerChallengeBonus(uid, key) {
-    if (!hasFirebase()) return Promise.resolve({ ok:false, reason:'no-firebase' });
+  // claim challenge bonus server-side (atomic)
+  async function claimServerChallengeBonus(uid, key){
+    if (!hasFirebase()) return { ok:false, reason:'no-firebase' };
     const userRef = db.collection('users').doc(uid);
     try {
-      await db.runTransaction(async tx => {
+      await db.runTransaction(async tx=>{
         const snap = await tx.get(userRef);
         const data = snap.exists ? snap.data() : {};
-        const already = (data.completedChallenges && !!data.completedChallenges[key]);
+        const already = data.completedChallenges && data.completedChallenges[key];
         if (already) return;
+        const cc = data.completedChallenges || {};
+        cc[key] = true;
         if (!snap.exists) {
-          const cc = {}; cc[key] = true;
           tx.set(userRef, {
             completedChallenges: cc,
             spinsBonus: 1,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          }, { merge: true });
+          }, { merge:true });
         } else {
-          const cc = data.completedChallenges || {};
-          cc[key] = true;
           tx.update(userRef, {
             completedChallenges: cc,
             spinsBonus: firebase.firestore.FieldValue.increment(1),
@@ -4391,114 +4391,44 @@
           });
         }
       });
-      // set local completed flag immediately (UI responsiveness)
-      localState.completed[key] = true;
-      saveState(localState);
       return { ok:true };
-    } catch(err) {
+    } catch(err){
       console.warn('claimServerChallengeBonus failed', err);
       return { ok:false, reason:err };
     }
   }
 
-  // attach realtime listeners for progress (affiliate/task/bill)
-  // NOTE: this function DOES NOT clear auth listener; it only pushes data unsubs into dataUnsubs.
-  function attachRealtimeProgress(uid, username) {
-    if (!hasFirebase()) { console.warn('No firebase — skipping realtime progress listeners'); return; }
-
-    // affiliate submissions
-    try {
-      const q = db.collection('affiliate_submissions').where('userId','==',uid).where('status','==','approved');
-      const unsub = q.onSnapshot(snap => {
-        let cnt = 0;
-        snap.forEach(d => { if (docIsToday(d.data())) cnt++; });
-        localState.progress.affiliateApproved = cnt;
-        if (cnt >= 10 && !localState.completed.affiliateApproved) {
-          localState.completed.affiliateApproved = true;
-          saveState(localState);
-          // attempt server claim; if offline, local bonus will be used
-          claimServerChallengeBonus(uid, 'affiliateApproved').then(res => {
-            if (!res.ok) {
-              // server claim failed - keep local completion (will attempt again next session)
-              console.warn('claimServerChallengeBonus failed for affiliateApproved', res);
-            }
-          });
-        }
-        recomputeChallengesUI(); updateSpinUI();
-      }, err=> console.warn('affiliate listener err', err));
-      dataUnsubs.push(unsub);
-    } catch(e) { console.warn('attach affiliate err', e); }
-
-    // task submissions
-    try {
-      const q = db.collection('task_submissions').where('userId','==',uid).where('status','==','approved');
-      const unsub = q.onSnapshot(snap => {
-        let cnt = 0;
-        snap.forEach(d => { if (docIsToday(d.data())) cnt++; });
-        localState.progress.taskApproved = cnt;
-        if (cnt >= 10 && !localState.completed.taskApproved) {
-          localState.completed.taskApproved = true; saveState(localState);
-          claimServerChallengeBonus(uid, 'taskApproved').then(res => { if (!res.ok) console.warn(res); });
-        }
-        recomputeChallengesUI(); updateSpinUI();
-      }, err=> console.warn('task listener err', err));
-      dataUnsubs.push(unsub);
-    } catch(e) { console.warn('attach task err', e); }
-
-    // bill_submissions
-    try {
-      const q = db.collection('bill_submissions').where('userId','==',uid).where('processed','==',true);
-      const unsub = q.onSnapshot(snap => {
-        let dataSum=0, airtimeSum=0;
-        snap.forEach(d => {
-          const doc = d.data();
-          if (!docIsToday(doc)) return;
-          const t = (doc.type || 'airtime').toString().toLowerCase();
-          const amt = Number(doc.amount || 0);
-          if (t === 'data') dataSum += amt; else airtimeSum += amt;
-        });
-        localState.progress.dataAmount = dataSum; localState.progress.airtimeAmount = airtimeSum;
-        if (dataSum >= 1000 && !localState.completed.dataAmount) { localState.completed.dataAmount = true; saveState(localState); claimServerChallengeBonus(uid, 'dataAmount').then(()=>{}); }
-        if (airtimeSum >= 500 && !localState.completed.airtimeAmount) { localState.completed.airtimeAmount=true; saveState(localState); claimServerChallengeBonus(uid, 'airtimeAmount').then(()=>{}); }
-        recomputeChallengesUI(); updateSpinUI();
-      }, err => console.warn('bills listener err', err));
-      dataUnsubs.push(unsub);
-    } catch(e) { console.warn('attach bills err', e); }
-  }
-
-  // server-side safe spin transaction: verifies availability server-side using userDoc.spinsUsedDate/spinsUsedCount and spinsBonus
-  async function runSpinTransaction(uid, prizeAmount) {
+  // run spin transaction (server-authoritative)
+  async function runSpinTransaction(uid, prizeAmount){
     if (!hasFirebase()) return { ok:false, reason:'no-firebase' };
     const userRef = db.collection('users').doc(uid);
     const today = todayKey();
     try {
-      await db.runTransaction(async tx => {
+      await db.runTransaction(async tx=>{
         const snap = await tx.get(userRef);
         const data = snap.exists ? snap.data() : {};
-        // compute used today
         let used = 0;
         if (data.spinsUsedDate) {
           const prev = (typeof data.spinsUsedDate.toDate === 'function') ? data.spinsUsedDate.toDate().toISOString().slice(0,10) : data.spinsUsedDate;
           if (prev === today) used = Number(data.spinsUsedCount || 0);
         }
-        const bonus = Number(data.spinsBonus || 0); // server-authoritative bonus
+        const bonus = Number(data.spinsBonus || 0);
         const available = Math.max(0, BASE_FREE + bonus - used);
         if (available <= 0) throw new Error('no-spins-available');
-        // apply win: inc balance, update used count/date, and log to spin_logs
+
         if (!snap.exists) {
           tx.set(userRef, {
             balance: prizeAmount,
             spinsUsedCount: 1,
             spinsUsedDate: today,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          }, { merge: true });
+          }, { merge:true });
         } else {
-          // if previous day, reset count
-          let updateObj = {
+          const prev = (data.spinsUsedDate && typeof data.spinsUsedDate.toDate === 'function') ? data.spinsUsedDate.toDate().toISOString().slice(0,10) : data.spinsUsedDate;
+          const updateObj = {
             balance: firebase.firestore.FieldValue.increment(prizeAmount),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           };
-          const prev = (data.spinsUsedDate && typeof data.spinsUsedDate.toDate === 'function') ? data.spinsUsedDate.toDate().toISOString().slice(0,10) : data.spinsUsedDate;
           if (prev !== today) {
             updateObj.spinsUsedCount = 1;
             updateObj.spinsUsedDate = today;
@@ -4507,24 +4437,180 @@
           }
           tx.update(userRef, updateObj);
         }
-        // log spin (server time)
         const logRef = db.collection('spin_logs').doc();
-        tx.set(logRef, {
-          userId: uid,
-          amount: prizeAmount,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        tx.set(logRef, { userId: uid, amount: prizeAmount, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
       });
       return { ok:true };
-    } catch(err) {
+    } catch(err){
       if (err && err.message === 'no-spins-available') return { ok:false, reason:'no-spins-available' };
       console.error('runSpinTransaction error', err);
       return { ok:false, reason:err };
     }
   }
 
+  // ---------- compute / UI helpers ----------
+  function computeUsedFromDoc(doc){
+    if (!doc) return 0;
+    try {
+      const used = Number(doc.spinsUsedCount || 0);
+      let prev = doc.spinsUsedDate && (typeof doc.spinsUsedDate.toDate === 'function' ? doc.spinsUsedDate.toDate().toISOString().slice(0,10) : doc.spinsUsedDate);
+      return prev === todayKey() ? used : 0;
+    } catch(e){ return 0; }
+  }
+
+  function countCompletedRemote(doc){
+    if (!doc || !doc.completedChallenges) return 0;
+    return Object.values(doc.completedChallenges).filter(Boolean).length;
+  }
+
+  function computeAvailable() {
+    if (userDoc) {
+      const used = computeUsedFromDoc(userDoc);
+      const serverBonus = Number(userDoc.spinsBonus || 0);
+      // if challenges completed but not reflected server-side, they should be claimed server-side by listeners
+      return Math.max(0, BASE_FREE + serverBonus - used);
+    } else {
+      return 0; // require server
+    }
+  }
+
+  function updateSpinUI() {
+    const available = computeAvailable();
+    spinCountEl.textContent = '(' + available + ')';
+  }
+
+  function recomputeChallengesUIFromLocalProgress(progress = {}) {
+    // progress expected to be an object { affiliateApproved: n, taskApproved: n, dataAmount: n, airtimeAmount: n }
+    const cards = document.querySelectorAll('.challenge-card');
+    cards.forEach(card => {
+      const key = card.dataset.key;
+      const goal = Number(card.dataset.goal || 1);
+      const val = progress[key] || 0;
+      const pct = Math.min(100, Math.round((val / goal) * 100));
+      const bar = card.querySelector('.progress-bar');
+      const status = card.querySelector('.status-text');
+      if (bar) bar.style.width = pct + '%';
+      if (status) {
+        const isComplete = val >= goal;
+        status.textContent = isComplete ? 'Completed' : 'Not completed';
+        status.style.color = isComplete ? '#16a34a' : '#ef4444';
+      }
+    });
+  }
+
+  // ---------- realtime listeners ----------
+  function attachUserListeners() {
+    if (!hasFirebase()) {
+      noFirebaseOverlay.style.display = 'flex';
+      spinBtn.disabled = true;
+      return;
+    } else {
+      noFirebaseOverlay.style.display = 'none';
+    }
+
+    // remove old data listeners
+    clearDataUnsubs();
+
+    // set up auth listener (single)
+    if (typeof authUnsub === 'function') {
+      try { authUnsub(); } catch(e){}
+      authUnsub = null;
+    }
+    authUnsub = auth.onAuthStateChanged(user => {
+      // clear previous data listeners
+      clearDataUnsubs();
+      userDoc = null;
+      updateSpinUI();
+
+      if (!user) {
+        spinBtn.disabled = true;
+        showToast('Please sign in to spin.');
+        return;
+      }
+
+      // user doc listener
+      const uRef = db.collection('users').doc(user.uid);
+      const unsubUser = uRef.onSnapshot(snap => {
+        userDoc = snap.exists ? snap.data() : null;
+        // update challenge progress UI (server-side fields if present)
+        if (userDoc && userDoc.progress) {
+          recomputeChallengesUIFromLocalProgress(userDoc.progress);
+        }
+        updateSpinUI();
+      }, err=>{
+        console.warn('user doc snapshot err', err);
+      });
+      dataUnsubs.push(unsubUser);
+
+      // attach progress listeners: affiliate_submissions, task_submissions, bill_submissions
+      try {
+        const q1 = db.collection('affiliate_submissions').where('userId','==',user.uid).where('status','==','approved');
+        const unsub1 = q1.onSnapshot(snap=>{
+          let cnt = 0;
+          snap.forEach(d => { const dd = d.data(); if (docIsToday(dd)) cnt++; });
+          // If server user doc exists we can call claimServerChallengeBonus so spinsBonus is incremented
+          if (cnt >= 10 && userDoc && !(userDoc.completedChallenges && userDoc.completedChallenges.affiliateApproved)) {
+            claimServerChallengeBonus(user.uid, 'affiliateApproved').catch(e=>console.warn(e));
+          }
+          // reflect progress UI (we don't store progress on user doc here)
+          recomputeChallengesUIFromLocalProgress({ affiliateApproved: cnt, taskApproved: 0, dataAmount: 0, airtimeAmount: 0 });
+        }, err => console.warn('affiliate listener', err));
+        dataUnsubs.push(unsub1);
+      } catch(e){ console.warn(e); }
+
+      try {
+        const q2 = db.collection('task_submissions').where('userId','==',user.uid).where('status','==','approved');
+        const unsub2 = q2.onSnapshot(snap=>{
+          let cnt = 0;
+          snap.forEach(d => { const dd = d.data(); if (docIsToday(dd)) cnt++; });
+          if (cnt >= 10 && userDoc && !(userDoc.completedChallenges && userDoc.completedChallenges.taskApproved)) {
+            claimServerChallengeBonus(user.uid, 'taskApproved').catch(e=>console.warn(e));
+          }
+          recomputeChallengesUIFromLocalProgress({ affiliateApproved: 0, taskApproved: cnt, dataAmount: 0, airtimeAmount: 0 });
+        }, err => console.warn('task listener', err));
+        dataUnsubs.push(unsub2);
+      } catch(e){ console.warn(e); }
+
+      try {
+        const q3 = db.collection('bill_submissions').where('userId','==',user.uid).where('processed','==',true);
+        const unsub3 = q3.onSnapshot(snap=>{
+          let dataSum=0, airtimeSum=0;
+          snap.forEach(d=>{ const dd = d.data(); if (!docIsToday(dd)) return; const t = (dd.type||'airtime').toString().toLowerCase(); const amt = Number(dd.amount||0); if (t==='data') dataSum += amt; else airtimeSum += amt;});
+          if (dataSum >= 1000 && userDoc && !(userDoc.completedChallenges && userDoc.completedChallenges.dataAmount)) {
+            claimServerChallengeBonus(user.uid, 'dataAmount').catch(e=>console.warn(e));
+          }
+          if (airtimeSum >= 500 && userDoc && !(userDoc.completedChallenges && userDoc.completedChallenges.airtimeAmount)) {
+            claimServerChallengeBonus(user.uid, 'airtimeAmount').catch(e=>console.warn(e));
+          }
+          recomputeChallengesUIFromLocalProgress({ affiliateApproved:0, taskApproved:0, dataAmount: dataSum, airtimeAmount: airtimeSum });
+        }, err=>console.warn('bills listener', err));
+        dataUnsubs.push(unsub3);
+      } catch(e){ console.warn(e); }
+
+      // attach live feed subscription (spin_logs)
+      try {
+        const feedQ = db.collection('spin_logs').orderBy('createdAt','desc').limit(20);
+        const feedUnsub = feedQ.onSnapshot(snap=>{
+          liveMsgs = [];
+          snap.forEach(d=>{ const dd = d.data(); const who = (dd.userId || 'Someone').toString().slice(0,12).toUpperCase(); const a = dd.amount || 0; liveMsgs.push(`${who} won ₦${a}`); });
+          if (liveMsgs.length) {
+            liveIndex = 0;
+            liveText.textContent = liveMsgs[0];
+            if (liveInterval) clearInterval(liveInterval);
+            liveInterval = setInterval(()=>{ liveIndex = (liveIndex+1) % liveMsgs.length; liveText.textContent = liveMsgs[liveIndex]; }, 3000);
+          }
+        }, err => console.warn('spin_logs listener err', err));
+        dataUnsubs.push(feedUnsub);
+      } catch(e){ console.warn(e); }
+
+      updateSpinUI();
+    });
+  }
+
   // ---------- spin flow ----------
-  async function handleSpinClick() {
+  async function handleSpinClick(){
+    if (!hasFirebase()) { showToast('Firebase not initialized'); return; }
+    if (!auth || !auth.currentUser) { showToast('Please sign in to spin'); return; }
     if (spinning) return;
     const available = computeAvailable();
     if (available <= 0) { noSpinModal.style.display = 'flex'; return; }
@@ -4532,149 +4618,77 @@
     spinning = true;
     spinBtn.disabled = true;
 
-    // prize pick
-    let prizeIndex = (guaranteedSpinQueue.length) ? guaranteedSpinQueue.shift() : weighRandom(WEIGHTS);
-
-    // optimistic local used increment (mirror server attempt)
-    localState.used = (localState.used || 0) + 1;
-    saveState(localState);
-    updateSpinUI();
-
-    // animate wheel
-    try { await spinToIndex(prizeIndex); } catch(e){ console.error('animation error', e); }
+    const prizeIndex = weighRandom(WEIGHTS);
+    // optimistic: animate to chosen prize
+    try { await spinToIndex(prizeIndex); } catch(e){ console.error(e); }
 
     const amount = PRIZES[prizeIndex] || 0;
 
-    // attempt server transaction if possible
-    if (hasFirebase() && auth && auth.currentUser) {
-      const uid = auth.currentUser.uid;
-      const res = await runSpinTransaction(uid, amount);
-      if (!res.ok) {
-        if (res.reason === 'no-spins-available') {
-          showToast('No spins available (server). Reverting local');
-          // revert local used increment if possible and resync
-          localState.used = Math.max(0, (localState.used||1) - 1);
-          saveState(localState);
-          // try fetch server doc to re-sync UI
-          try { const snap = await db.collection('users').doc(uid).get(); userDocCached = snap.exists ? snap.data() : null; } catch(e){ console.warn('post-reject fetch failed', e); }
-        } else {
-          showToast('Server save failed — local result applied.');
-          // still add local balance
-          localState.balance = (localState.balance || 0) + amount;
-          localState.history.unshift({ ts: Date.now(), amount, prizeIndex });
-          saveState(localState);
-        }
+    // server transaction
+    const uid = auth.currentUser.uid;
+    const res = await runSpinTransaction(uid, amount);
+    if (!res.ok) {
+      if (res.reason === 'no-spins-available') {
+        showToast('No spins available (server) — try again later.');
       } else {
-        // server accepted: fetch fresh user doc to sync
-        try {
-          const snap = await db.collection('users').doc(uid).get();
-          userDocCached = snap.exists ? snap.data() : userDocCached;
-          if (userDocCached && typeof userDocCached.balance === 'number') localState.balance = userDocCached.balance;
-          // set local used according to server
-          localState.used = computeUsedFromDoc(userDocCached);
-          saveState(localState);
-        } catch(e){ console.warn('post-spin fetch failed', e); }
+        showToast('Spin failed to save (server error). Check console.');
       }
     } else {
-      // local-only: apply win locally
-      localState.balance = (localState.balance || 0) + amount;
-      localState.history.unshift({ ts: Date.now(), amount, prizeIndex });
-      saveState(localState);
+      // success: server listener on user doc and spin_logs will reflect changes automatically
+      // still show immediate win modal
+      winAmountEl.textContent = '₦' + amount;
+      winModal.style.display = 'flex';
     }
 
-    // show win UI
-    winAmountEl.textContent = '₦' + amount;
-    winModal.style.display = 'flex';
-
-    // update live feed
-    const who = (hasFirebase() && auth && auth.currentUser && (auth.currentUser.displayName || auth.currentUser.email)) ? (auth.currentUser.displayName || auth.currentUser.email.split('@')[0]).toUpperCase() : 'YOU';
-    liveText.textContent = `${who} won ₦${amount} cashback.`;
-
-    recomputeChallengesUI();
     updateSpinUI();
-
     spinning = false;
     spinBtn.disabled = false;
   }
 
-  // ---------- attach user & progress listeners ----------
-  function attachUserListeners() {
-    if (!hasFirebase()) { updateSpinUI(); recomputeChallengesUI(); return; }
-    // ensure only one auth listener
-    if (typeof authUnsub === 'function') { authUnsub(); authUnsub = null; }
-    authUnsub = auth.onAuthStateChanged(user => {
-      // clear only data listeners (keep auth listener active)
-      clearDataUnsubs();
-      userDocCached = null;
-      if (!user) { updateSpinUI(); recomputeChallengesUI(); return; }
-      // user doc listener
-      const uRef = db.collection('users').doc(user.uid);
-      const unsubUser = uRef.onSnapshot(snapshot => {
-        userDocCached = snapshot.exists ? snapshot.data() : null;
-        updateSpinUI();
-      }, err => {
-        console.warn('user doc listener err', err);
-        uRef.get().then(snap => { userDocCached = snap.exists ? snap.data() : null; updateSpinUI(); }).catch(()=>{});
-      });
-      dataUnsubs.push(unsubUser);
-      // attach progress listeners which will claim server bonus when appropriate
-      attachRealtimeProgress(user.uid, (user.displayName || (user.email||'').split('@')[0]));
-    });
-  }
-
-  // ---------- live feed demo ----------
-  function startLiveFeedDemo() {
-    const names = ['NOFISAT','ABUBAKAR','FATIMA','CHINEDU','SULEIMAN','GRACE','KINGSLEY','BOLA','AMINA','EMMA'];
-    const msgs = [];
-    for (let i=0;i<10;i++) { const who = names[Math.floor(Math.random()*names.length)]; const a=PRIZES[Math.floor(Math.random()*PRIZES.length)]; msgs.push(`${who} won ₦${a} cashback.`); }
-    let idx=0; liveText.textContent = msgs[0];
-    if (liveInterval) clearInterval(liveInterval);
-    liveInterval = setInterval(()=> { idx=(idx+1)%msgs.length; liveText.textContent = msgs[idx]; }, 3000);
+  // ---------- helpers ----------
+  function docIsToday(doc){
+    if (!doc) return false;
+    const fields = ['createdAt','submittedAt','timestamp','time','submittedOn','created_on','created_at'];
+    for (const f of fields) {
+      if (!doc[f]) continue;
+      try {
+        const v = doc[f];
+        let d = null;
+        if (typeof v.toDate === 'function') d = v.toDate();
+        else if (v && typeof v.seconds === 'number') d = new Date(v.seconds * 1000);
+        else d = new Date(v);
+        if (!d || isNaN(d.getTime())) continue;
+        const s = new Date(); s.setHours(0,0,0,0);
+        const e = new Date(); e.setHours(23,59,59,999);
+        if (d >= s && d <= e) return true;
+      } catch(e){}
+    }
+    return false;
   }
 
   // ---------- init ----------
-  function init() {
+  function init(){
     setupSizes();
     drawWheel(lastRotation);
-    canvas.style.opacity='1';
-    recomputeChallengesUI();
-    updateSpinUI();
-    startLiveFeedDemo();
+    canvas.style.opacity = '1';
+
+    // wire UI events
     spinBtn.addEventListener('click', handleSpinClick);
-    winCloseBtn.addEventListener('click', ()=> { winModal.style.display='none'; });
-    noSpinClose.addEventListener('click', ()=> { noSpinModal.style.display='none'; });
-    window.addEventListener('resize', ()=> { clearTimeout(window.__spinresize); window.__spinresize = setTimeout(()=> { setupSizes(); drawWheel(lastRotation); }, 120); });
+    winCloseBtn.addEventListener('click', ()=> winModal.style.display = 'none');
+    noSpinClose.addEventListener('click', ()=> noSpinModal.style.display = 'none');
+    window.addEventListener('resize', ()=> { clearTimeout(window.__spinresize); window.__spinresize = setTimeout(()=>{ setupSizes(); drawWheel(lastRotation); }, 120); });
 
-    // demo tap handlers for testing (keeps server claiming active)
-    challengeCards.forEach(card => {
-      card.addEventListener('click', () => {
-        const key = card.dataset.key, goal = Number(card.dataset.goal || 1);
-        const inc = (goal >= 1000) ? Math.floor(goal/4) : 1;
-        localState.progress[key] = (localState.progress[key] || 0) + inc;
-        if (localState.progress[key] >= goal && !localState.completed[key]) {
-          localState.completed[key] = true; saveState(localState);
-          // if logged in, attempt server claim
-          if (hasFirebase() && auth && auth.currentUser) {
-            claimServerChallengeBonus(auth.currentUser.uid, key).then(res => {
-              if (!res.ok) console.warn('claimServerChallengeBonus returned', res);
-            }).catch(e => console.warn('claimServerChallengeBonus error', e));
-          } else {
-            // local-only demo: give a local bonus
-            localState.bonus = (localState.bonus || 0) + 1;
-            saveState(localState);
-            showToast('Challenge completed — +1 spin (local)');
-          }
-        }
-        recomputeChallengesUI(); updateSpinUI();
-      });
-    });
+    // require firebase; attach listeners if present
+    if (!hasFirebase()) {
+      noFirebaseOverlay.style.display = 'flex';
+      spinBtn.disabled = true;
+      return;
+    } else {
+      noFirebaseOverlay.style.display = 'none';
+      spinBtn.disabled = false;
+    }
 
-    // attach firebase listeners if present
-    if (hasFirebase()) attachUserListeners();
-    else { saveState(localState); updateSpinUI(); recomputeChallengesUI(); }
-
-    // expose quick debug
-    window.__spinmodule = { localState, saveState, loadState, drawWheel, setupSizes, computeAvailable };
+    attachUserListeners();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
@@ -4684,7 +4698,7 @@
 
 
 
-
+		
 
 		
 
