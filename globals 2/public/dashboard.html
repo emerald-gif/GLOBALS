@@ -4079,22 +4079,23 @@
     <div class="text-right text-xs text-slate-400">Free spin resets daily</div>
   </div>
 
-  <!-- Wheel stage -->
+  <!-- Wheel stage (centered, stable) -->
   <div class="flex flex-col items-center gap-4 relative">
     <!-- confetti-like decorations -->
     <div class="absolute left-[-22px] top-1/3 -translate-y-1/2 text-2xl pointer-events-none confetti-left">🎊</div>
     <div class="absolute right-[-22px] top-2/3 -translate-y-1/2 text-2xl pointer-events-none confetti-right">🎉</div>
 
-    <div class="relative w-[320px] h-[320px] md:w-[380px] md:h-[380px] lg:w-[420px] lg:h-[420px]">
-      <!-- animated glow ring -->
+    <!-- IMPORTANT: wheel-wrap is the sizing anchor used by JS so the wheel stays fixed and centered -->
+    <div id="wheel-wrap" class="relative w-[320px] h-[320px] md:w-[380px] md:h-[380px] lg:w-[420px] lg:h-[420px] mx-auto">
+      <!-- animated glow ring (behind) -->
       <div class="absolute inset-0 rounded-full pointer-events-none wheel-glow"></div>
 
-      <!-- white plate (canvas lives here) -->
+      <!-- central white plate holding canvas -->
       <div class="absolute inset-6 rounded-full bg-white flex items-center justify-center z-10 shadow-2xl wheel-plate">
-        <canvas id="spin-canvas" class="rounded-full" style="width:100%;height:100%"></canvas>
+        <canvas id="spin-canvas" class="rounded-full" style="width:100%;height:100%;display:block"></canvas>
       </div>
 
-      <!-- pointer at top of wheel (points down) -->
+      <!-- pointer at top (fixed, facing down) -->
       <div id="wheel-pointer" class="absolute -top-10 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
         <div class="pointer-arrow" aria-hidden="true"></div>
       </div>
@@ -4122,7 +4123,7 @@
     <p class="text-sm text-slate-500 mt-2">You receive one free spin every 24 hours. Complete today's challenges to earn extra spins. Rewards are credited instantly.</p>
   </div>
 
-  <!-- Daily Challenges (no reward text, no alphabet labels) -->
+  <!-- Daily Challenges (cleaned up UI, no reward text/labels) -->
   <div class="mt-6">
     <div class="flex items-center justify-between">
       <h3 class="text-lg font-bold text-slate-800">Daily Challenges</h3>
@@ -4198,15 +4199,14 @@
   <div id="spin-toast-text" style="font-size:13px;color:#0f172a;"></div>
 </div>
 
-<!-- Styles (paste into page head or keep here) -->
+<!-- Styles (paste into head or keep here) -->
 <style>
   /* glow ring */
   .wheel-glow {
     border-radius:999px; pointer-events:none; position:absolute; inset:0;
     background: conic-gradient(from 0deg, rgba(6,182,212,0.22), rgba(124,58,237,0.22), rgba(6,182,212,0.22));
-    filter: blur(12px) saturate(1.05);
-    animation: spinGlow 9s linear infinite; transform-origin:center;
-    mix-blend-mode: screen;
+    filter: blur(12px) saturate(1.05); animation: spinGlow 9s linear infinite; transform-origin:center;
+    mix-blend-mode: screen; will-change: transform, filter;
   }
   @keyframes spinGlow { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 
@@ -4218,9 +4218,8 @@
   .pointer-arrow {
     width:0; height:0;
     border-left:18px solid transparent; border-right:18px solid transparent;
-    border-bottom:32px solid #4f46e5;
-    filter: drop-shadow(0 6px 10px rgba(2,6,23,0.12));
-    border-radius:3px 3px 0 0; animation: pointerBounce 1600ms infinite;
+    border-bottom:32px solid #4f46e5; filter: drop-shadow(0 6px 10px rgba(2,6,23,0.12));
+    border-radius:3px 3px 0 0; animation: pointerBounce 1600ms infinite; will-change: transform;
   }
   @keyframes pointerBounce { 0%{ transform: translateY(0)} 50%{ transform: translateY(6px)} 100%{ transform: translateY(0)} }
 
@@ -4246,6 +4245,11 @@
   .status-text.not-completed { color:#ef4444; }
   .status-text.completed { color:#16a34a; }
 
+  /* safety: keep canvas stable and avoid inline baseline jumps */
+  #wheel-wrap { display:block; box-sizing:border-box; }
+  .wheel-plate { will-change: transform; }
+  #spin-canvas { display:block; will-change: transform; border-radius:999px; }
+
   @media (max-width:768px){
     .confetti-left, .confetti-right { display:none; }
     .challenge-left { width:65%; } .challenge-right { width:33%; }
@@ -4255,9 +4259,7 @@
 <!-- ====== Script: complete logic (single file) ====== -->
 <script>
 /* ====== Spin Wheel + Daily Challenge Script (Firebase compat) ======
-   - Requires global `db` and `auth` (Firebase compat API).
-   - COIN_IMG / VERIFIED_IMG should exist in the same folder or update paths.
-   - This file keeps all behavior in one self-contained IIFE.
+   Single-file IIFE. Uses global `db` and `auth` (compat).
 */
 (() => {
   // ---------- CONFIG ----------
@@ -4269,18 +4271,18 @@
   const ROTATIONS = 6;
   const TIMESTAMP_CANDIDATES = ['createdAt','submittedAt','timestamp','time','submittedOn','created_on'];
 
-  // Map challenge key -> prize index on the wheel (guaranteed spin mapping).
-  // Adjust as desired — this mapping makes some earned spins land on the intended prize.
+  // challenge -> prize index mapping (guaranteed spin landing)
   const CHALLENGE_TO_PRIZE_IDX = {
     affiliateApproved: 2, // ₦20
     taskApproved: 0,      // ₦10
-    dataAmount: 1,        // ₦30 (you asked data -> ₦30)
+    dataAmount: 1,        // ₦30
     airtimeAmount: 6      // ₦100
   };
 
   // ---------- DOM ----------
   const canvas = document.getElementById('spin-canvas');
-  if (!canvas) { console.error('Spin canvas not found'); return; }
+  const wheelWrap = document.getElementById('wheel-wrap'); // anchor for fixed positioning & sizing
+  if (!canvas || !wheelWrap) { console.error('Spin canvas or wrapper not found'); return; }
   const ctx = canvas.getContext('2d');
   const spinBtn = document.getElementById('spin-btn');
   const spinCountEl = document.getElementById('spin-count');
@@ -4297,18 +4299,19 @@
   const challengeCards = Array.from(document.querySelectorAll('#daily-challenges .challenge-card'));
 
   // ---------- STATE ----------
-  let DPR = window.devicePixelRatio || 1;
-  let lastRotation = 0; // degrees
+  let DPR = Math.max(1, window.devicePixelRatio || 1);
+  let lastRotation = 0;
   let spinning = false;
   let currentUser = null;
   let userDocCached = null;
   let spinsAvailable = 0;
   let progressState = { affiliateApproved:0, taskApproved:0, dataAmount:0, airtimeAmount:0 };
   let unsubs = [];
-  let guaranteedQueue = []; // indices of PRIZES that must be awarded next (from challenge completions)
-  let prevCompletedFlags = {}; // remembers per-session which challenges were already completed
-  let firstRecompute = true;
+  let guaranteedQueue = [];
+  let prevCompletedFlags = {};
+  let firstRun = true;
   let liveInterval = null;
+  let resizeTimeout = null;
 
   // ---------- HELPERS ----------
   const todayKey = () => new Date().toISOString().slice(0,10);
@@ -4339,7 +4342,7 @@
       if (r < weights[i]) return i;
       r -= weights[i];
     }
-    return weights.length-1;
+    return weights.length - 1;
   }
   function showToast(msg){
     if (toastEl && toastTextEl) {
@@ -4353,35 +4356,29 @@
   const coinImg = new Image(); coinImg.src = COIN_IMG;
   const verifiedImg = new Image(); verifiedImg.src = VERIFIED_IMG;
 
-  // ---------- responsive HD canvas setup ----------
+  // ---------- canvas setup using wrapper width (keeps wheel stable centered) ----------
   function setupCanvasHD(maxCss = 380) {
-    DPR = window.devicePixelRatio || 1;
-    const container = canvas.parentElement;
-    let css = maxCss;
-    if (container) {
-      const rect = container.getBoundingClientRect();
-      if (rect.width > 0) css = Math.round(Math.min(maxCss, Math.max(220, rect.width * 0.95)));
-    } else {
-      css = Math.round(Math.min(maxCss, window.innerWidth * 0.9));
-    }
+    DPR = Math.max(1, window.devicePixelRatio || 1);
+    // anchor to wrapper width so wheel never "floats"
+    const wrapW = Math.max(220, Math.min(maxCss, Math.round(wheelWrap.clientWidth || maxCss)));
+    const css = wrapW;
     canvas.style.width = css + 'px';
     canvas.style.height = css + 'px';
     canvas.width = Math.round(css * DPR);
     canvas.height = Math.round(css * DPR);
+    // map drawing units to CSS pixels
     ctx.setTransform(DPR,0,0,DPR,0,0);
     drawWheel(lastRotation);
   }
 
-  // ---------- draw wheel (HD, shine, bold edge, coin/verified) ----------
+  // ---------- draw wheel (uses CSS units after ctx.setTransform) ----------
   function drawWheel(rotationDeg = 0) {
-    // Use CSS pixels for coordinates because setTransform mapped device pixels to CSS
-    const cssW = canvas.clientWidth || parseInt(canvas.style.width || '320',10);
-    const cx = cssW/2, cy = cssW/2, r = Math.min(cssW, cssW)/2 - 12;
+    const cssW = parseFloat(getComputedStyle(canvas).width) || canvas.clientWidth || 320;
+    const cx = cssW / 2, cy = cssW / 2, r = Math.min(cssW, cssW) / 2 - 12;
+    // clear using CSS units (ctx transform already maps back)
+    ctx.clearRect(0, 0, cssW, cssW);
 
-    // Clear
-    ctx.clearRect(0,0,cssW,cssW);
-
-    // subtle radial background / party shine
+    // subtle background shine
     const bgGrad = ctx.createRadialGradient(cx, cy, r*0.2, cx, cy, r);
     bgGrad.addColorStop(0, 'rgba(255,255,255,0.18)');
     bgGrad.addColorStop(0.6, 'rgba(255,255,255,0.06)');
@@ -4390,7 +4387,7 @@
     ctx.beginPath(); ctx.arc(cx, cy, r+8, 0, Math.PI*2); ctx.fill();
 
     ctx.save();
-    // rotate wheel about center
+    // rotate wheel
     ctx.translate(cx, cy);
     ctx.rotate(rotationDeg * Math.PI / 180);
     ctx.translate(-cx, -cy);
@@ -4398,29 +4395,18 @@
     const segAngle = 2 * Math.PI / SEGMENTS;
     const colors = ['#ecfeff','#e6f7ff','#fff8e1','#f3f5ff','#fff0f6','#eef6ff','#fbfbfd','#f0fbff'];
 
-    for (let i = 0; i < SEGMENTS; i++) {
+    for (let i=0;i<SEGMENTS;i++){
       const start = -Math.PI/2 + i*segAngle;
       const end = start + segAngle;
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,end); ctx.closePath();
+      ctx.fillStyle = colors[i % colors.length]; ctx.fill();
+      ctx.strokeStyle = 'rgba(2,6,23,0.04)'; ctx.lineWidth = 1; ctx.stroke();
 
-      // slice
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, r, start, end);
-      ctx.closePath();
-      ctx.fillStyle = colors[i % colors.length];
-      ctx.fill();
-
-      // thin inner stroke for segment separation
-      ctx.strokeStyle = 'rgba(2,6,23,0.04)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      // amount label near rim
+      // label
       const mid = (start + end) / 2;
       const labelR = r * 0.78;
       const lx = cx + Math.cos(mid) * labelR;
       const ly = cy + Math.sin(mid) * labelR;
-
       ctx.save();
       ctx.translate(lx, ly);
       ctx.rotate(mid + Math.PI/2);
@@ -4431,7 +4417,7 @@
       ctx.fillText(`₦${PRIZES[i]}`, 0, 0);
       ctx.restore();
 
-      // coin (keeps upright)
+      // coin / verified (upright)
       if (coinImg && coinImg.complete) {
         const imgR = r * 0.56;
         const ix = cx + Math.cos(mid) * imgR;
@@ -4440,7 +4426,6 @@
         ctx.translate(ix, iy);
         ctx.rotate(-(rotationDeg * Math.PI / 180));
         const coinSize = Math.max(28, Math.round(cssW * 0.12));
-        // If the prize is 1000, draw verified image at same size (visual emphasis)
         if (PRIZES[i] === 1000 && verifiedImg.complete) {
           ctx.drawImage(verifiedImg, -coinSize/2, -coinSize/2, coinSize, coinSize);
         } else {
@@ -4450,43 +4435,20 @@
       }
     }
 
-    // bold outer ring for club-light visual
-    ctx.beginPath();
-    ctx.arc(cx, cy, r + 6, 0, Math.PI*2);
-    ctx.strokeStyle = 'rgba(15,23,42,0.07)';
-    ctx.lineWidth = 10;
-    ctx.stroke();
+    // bold outer ring
+    ctx.beginPath(); ctx.arc(cx, cy, r + 6, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(15,23,42,0.07)'; ctx.lineWidth = 10; ctx.stroke();
 
-    // decorative ticks around rim (subtle)
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(0);
-    for (let t=0; t<SEGMENTS*3; t++) {
-      ctx.beginPath();
-      const angle = (t / (SEGMENTS*3)) * Math.PI * 2 - Math.PI/2;
-      const x1 = Math.cos(angle) * (r + 2);
-      const y1 = Math.sin(angle) * (r + 2);
-      const x2 = Math.cos(angle) * (r + 8);
-      const y2 = Math.sin(angle) * (r + 8);
-      ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
-      ctx.strokeStyle = 'rgba(15,23,42,0.04)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    // center "SPIN NOW" button drawn on top
-    ctx.beginPath(); ctx.arc(cx, cy, 48, 0, Math.PI*2);
-    ctx.fillStyle = '#ffffff'; ctx.fill();
+    // central button
+    ctx.beginPath(); ctx.arc(cx, cy, 48, 0, Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(15,23,42,0.06)'; ctx.stroke();
     ctx.fillStyle = '#0f172a'; ctx.font = '700 14px Inter, system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('SPIN', cx, cy - 6);
-    ctx.font = '600 12px Inter, system-ui'; ctx.fillText('NOW', cx, cy + 12);
+    ctx.fillText('SPIN', cx, cy - 6); ctx.font = '600 12px Inter, system-ui'; ctx.fillText('NOW', cx, cy + 12);
 
     ctx.restore();
   }
 
-  // ---------- animate rotation (easing out cubic) ----------
+  // ---------- easing animation ----------
   function animateTo(targetAbsolute, duration = 5200) {
     return new Promise(resolve => {
       const start = performance.now();
@@ -4508,8 +4470,7 @@
     });
   }
 
-  // ---------- recompute spins UI (called frequently) ----------
-  let firstRun = true;
+  // ---------- recompute spins UI ----------
   function recomputeSpinsUI() {
     const flags = [
       (progressState.affiliateApproved || 0) >= 10,
@@ -4520,7 +4481,6 @@
     const completedCount = flags.filter(Boolean).length;
     const baseFree = 1;
 
-    // used today from user doc (support timestamp or plain string)
     let used = 0;
     let usedDateKey = null;
     if (userDocCached) {
@@ -4539,7 +4499,7 @@
       if (spinCountEl) spinCountEl.textContent = `(${spinsAvailable})`;
     }
 
-    // update progress bars and statuses
+    // progress bars & statuses
     challengeCards.forEach(card => {
       const key = card.dataset.key;
       const goal = Number(card.dataset.goal || 1);
@@ -4559,8 +4519,7 @@
       }
     });
 
-    // handle newly completed challenges: award guaranteed prize for next earned spin
-    // don't auto-award for all already-completed challenges on first run - only award on state transitions
+    // award guaranteed queue entries when challenge transitions happen (skip awarding for existing completed on first run)
     challengeCards.forEach(card => {
       const key = card.dataset.key;
       const goal = Number(card.dataset.goal || 1);
@@ -4571,25 +4530,19 @@
       else if (key === 'airtimeAmount') val = progressState.airtimeAmount || 0;
 
       const completed = val >= goal;
-      // initialize prev flags on first run to prevent retroactive awarding
       if (firstRun) {
         prevCompletedFlags[key] = completed;
       } else {
-        // transition from not completed -> completed
         if (completed && !prevCompletedFlags[key]) {
           prevCompletedFlags[key] = true;
-          // map to prize idx if configured
           const prizeIdx = CHALLENGE_TO_PRIZE_IDX[key];
           if (typeof prizeIdx === 'number' && PRIZES[prizeIdx] !== undefined) {
             guaranteedQueue.push(prizeIdx);
-            // UI feedback: toast + ensure spinsAvailable updated immediately (recompute already updated)
-            showToast('You earned a bonus spin — will be used on your next spin.');
+            showToast('You earned a bonus spin — next spin will honor the challenge reward.');
           } else {
-            // no mapping -> still +1 spin via recompute (don't force prize)
             showToast('You earned a bonus spin.');
           }
         } else if (!completed && prevCompletedFlags[key]) {
-          // became not completed (rare within day) - reset flag
           prevCompletedFlags[key] = false;
         }
       }
@@ -4598,14 +4551,14 @@
     firstRun = false;
   }
 
-  // ---------- realtime listeners (FireStore compat) ----------
-  function clearUnsubs(){ unsubs.forEach(u=>{ try{ u(); }catch(e){} }); unsubs = []; }
+  // ---------- realtime listeners (Firebase compat) ----------
+  function clearUnsubs() { unsubs.forEach(u=>{ try{ u(); }catch(e){} }); unsubs = []; }
 
   function attachRealtimeProgress(uid, username) {
     clearUnsubs();
     if (!db) { console.warn('db missing'); return; }
 
-    // affiliate_submissions (approved) -> count today
+    // affiliate_submissions (approved)
     try {
       const q = db.collection('affiliate_submissions').where('userId','==',uid).where('status','==','approved');
       const unsub = q.onSnapshot(snap => {
@@ -4629,7 +4582,7 @@
       unsubs.push(unsub);
     } catch(e){ console.warn('attach task err', e); }
 
-    // bill_submissions (processed true) -> sum amounts for data & airtime today
+    // bill_submissions (processed) -> data & airtime totals for today
     try {
       const q = db.collection('bill_submissions').where('userId','==',uid).where('processed','==',true);
       const unsub = q.onSnapshot(snap => {
@@ -4639,8 +4592,7 @@
           if (!docIsToday(doc)) return;
           const t = (doc.type || 'airtime').toString().toLowerCase();
           const amt = Number(doc.amount || 0);
-          if (t === 'data') dataSum += amt;
-          else airtimeSum += amt;
+          if (t === 'data') dataSum += amt; else airtimeSum += amt;
         });
         progressState.dataAmount = dataSum;
         progressState.airtimeAmount = airtimeSum;
@@ -4660,29 +4612,26 @@
       msgs.push(`${n} won ₦${a} cashback.`);
     }
     let idx = 0;
-    if (liveText) { liveText.style.opacity = '0'; liveText.textContent = msgs[0]; setTimeout(()=> liveText.style.opacity = '1', 30); }
+    if (liveText) { liveText.style.opacity = '0'; liveText.textContent = msgs[0]; setTimeout(()=> liveText.style.opacity = '1', 20); }
     if (liveInterval) clearInterval(liveInterval);
     liveInterval = setInterval(()=> {
       idx = (idx + 1) % msgs.length;
       if (liveText) {
-        // simple fade out -> change -> fade in
         liveText.style.opacity = '0';
         setTimeout(()=> {
           liveText.textContent = msgs[idx];
           liveText.style.transform = 'translateY(4px)';
           liveText.style.opacity = '1';
           setTimeout(()=> liveText.style.transform = 'translateY(0)', 180);
-        }, 300);
+        }, 280);
       }
     }, 2600);
   }
 
-  // ---------- spin math that lands exactly on a chosen index ----------
+  // ---------- spin math & landing ----------
   async function spinToIndex(idx) {
     const segDeg = 360 / SEGMENTS;
-    // slice center (degrees)
     const sliceCenter = -90 + (idx + 0.5) * segDeg;
-    // rotation needed so that sliceCenter aligns to pointer (top)
     const rotationDelta = -90 - sliceCenter;
     const jitter = (Math.random() * (segDeg / 12)) - (segDeg / 24);
     const total = ROTATIONS * 360 + rotationDelta + jitter;
@@ -4703,21 +4652,21 @@
     spinning = true;
     if (spinBtn) spinBtn.disabled = true;
 
-    // pick prize index: prefer guaranteed queue if any
+    // choose prize index: use guaranteedQueue first
     let prizeIdx = null;
     if (guaranteedQueue.length > 0) prizeIdx = guaranteedQueue.shift();
     else prizeIdx = weightedRandomIndex(WEIGHTS);
 
-    // optimistic decrement in UI
+    // optimistic decrement
     const prevAvailable = spinsAvailable;
     spinsAvailable = Math.max(0, spinsAvailable - 1);
     if (spinCountEl) spinCountEl.textContent = `(${spinsAvailable})`;
 
-    // animate
+    // animate wheel to chosen prize exactly
     await spinToIndex(prizeIdx);
     const amount = PRIZES[prizeIdx];
 
-    // DB transaction: update balance and spinsUsedCount atomically
+    // DB update (transaction)
     let txSucceeded = false;
     try {
       const uid = auth.currentUser.uid;
@@ -4762,20 +4711,15 @@
       showToast('Error updating balance. Try again.');
     }
 
-    // If transaction failed, revert optimistic decrement and push prize back if it was guaranteed
+    // handle tx failure: revert UI and re-queue guaranteed if necessary
     if (!txSucceeded) {
       spinsAvailable = prevAvailable;
       if (spinCountEl) spinCountEl.textContent = `(${spinsAvailable})`;
-      // if prize was guaranteed we should put it back so user doesn't lose that guarantee
-      // (only if this spin was supposed to consume a guaranteed)
-      // We cannot reliably detect here whether prizeIdx was from queue since we popped earlier.
-      // For safety, if the prizeIdx equals CHALLENGE_TO_PRIZE_IDX for any key and we used a guaranteed recently, re-queue it.
-      // (Simpler: re-queue prizeIdx if it matches any mapping)
       const mapped = Object.values(CHALLENGE_TO_PRIZE_IDX).includes(prizeIdx);
       if (mapped) guaranteedQueue.unshift(prizeIdx);
     }
 
-    // show modal
+    // show result modal
     if (winAmountEl) winAmountEl.textContent = `₦${amount}`;
     if (amount === 1000 && winVerifiedImg) winVerifiedImg.classList.remove('hidden'); else if (winVerifiedImg) winVerifiedImg.classList.add('hidden');
     if (winModal) { winModal.classList.remove('hidden'); winModal.style.display = 'flex'; }
@@ -4786,16 +4730,16 @@
       liveText.textContent = `${who} won ₦${amount} cashback.`;
     }
 
-    // recompute UI to refresh counts (spinsUsed might be different due to server)
+    // recompute UI
     recomputeSpinsUI();
 
     spinning = false;
     if (spinBtn) spinBtn.disabled = false;
   }
 
-  // ---------- attach auth + init ----------
+  // ---------- attach auth & init ----------
   function init() {
-    // responsive initial canvas size, smaller on mobile
+    // initial canvas size anchored to wrapper (keeps wheel stable and centered)
     const max = (window.innerWidth >= 1024) ? 420 : (window.innerWidth >= 768 ? 380 : 320);
     setupCanvasHD(max);
     drawWheel(lastRotation);
@@ -4805,29 +4749,28 @@
     if (spinBtn) spinBtn.addEventListener('click', handleSpinClick);
     if (winCloseBtn) winCloseBtn.addEventListener('click', ()=> { if (winModal) { winModal.classList.add('hidden'); winModal.style.display = 'none'; } });
     if (noSpinClose) noSpinClose.addEventListener('click', ()=> { if (noSpinModal) { noSpinModal.classList.add('hidden'); noSpinModal.style.display = 'none'; } });
+
+    // debounced resize to prevent jitter
     window.addEventListener('resize', ()=> {
-      const max = (window.innerWidth >= 1024) ? 420 : (window.innerWidth >= 768 ? 380 : 320);
-      setupCanvasHD(max);
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(()=> {
+        const max = (window.innerWidth >= 1024) ? 420 : (window.innerWidth >= 768 ? 380 : 320);
+        setupCanvasHD(max);
+      }, 80);
     });
 
-    // if firebase not available - demo-only
+    // firebase check
     if (typeof auth === 'undefined' || !auth || typeof db === 'undefined' || !db) {
       console.warn('Firebase compat not found. Running demo-only UI.');
       recomputeSpinsUI();
       return;
     }
 
-    // auth listener
     auth.onAuthStateChanged(user => {
       currentUser = user;
       if (!user) {
-        userDocCached = null;
-        recomputeSpinsUI();
-        clearUnsubs();
-        return;
+        userDocCached = null; recomputeSpinsUI(); clearUnsubs(); return;
       }
-
-      // listen to user doc for spins metadata
       const uRef = db.collection('users').doc(user.uid);
       const unsubUser = uRef.onSnapshot(snap => {
         userDocCached = snap.exists ? snap.data() : {};
@@ -4836,7 +4779,6 @@
         recomputeSpinsUI();
       }, err => {
         console.warn('user doc listener err', err);
-        // fallback one-time read
         uRef.get().then(snap => {
           userDocCached = snap.exists ? snap.data() : {};
           const username = (userDocCached && userDocCached.username) ? userDocCached.username : (user.displayName || (user.email || '').split('@')[0]);
@@ -4851,13 +4793,10 @@
   // start
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 
-  // debug helpers (expose safe functions)
-  window.__spinDebug = {
-    drawWheel, setupCanvasHD, recomputeSpinsUI, progressState, PRIZES, guaranteedQueue
-  };
+  // debug
+  window.__spinDebug = { drawWheel, setupCanvasHD, recomputeSpinsUI, progressState, PRIZES, guaranteedQueue };
 })();
 </script>
-
 
 
 		
