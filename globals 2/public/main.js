@@ -2654,7 +2654,7 @@ async function showTaskSubmissionDetailsUser(submissionId) {
         </div>
       `;
 
-      // populate modal progress from cache (if available)
+      // populate modals progress from cache (if available)
       (function updateModalProgress() {
         const cached = jobCache.get(jobId) || {};
         const approvedCount = cached.approvedCount || 0;
@@ -6953,4 +6953,5 @@ startCheckinListener();
 
 
     
+
 
