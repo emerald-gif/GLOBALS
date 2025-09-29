@@ -425,12 +425,7 @@
       </a>
     </li>
     
-    <li>
-      <a href="#" onclick="switchTab('affiliate-tasks'); activeTab(this)" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition font-medium">
-        <i data-lucide="list-checks" class="w-5 h-5 text-indigo-500"></i>
-        <span>Affiliate Tasks</span>
-      </a>
-    </li>
+    
 	  
     <li>
       <a href="#" onclick="switchTab('myJobsSection'); activeTab(this)" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-700 hover:bg-teal-50 hover:text-teal-600 transition font-medium">
@@ -481,11 +476,7 @@
 <!-- ✅ General Back (controlled by JS) -->
 <!-- ✅ General Back (Only visible on allowed screens) -->
 <!-- ✅ General Back -->
-<div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
-  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
-    ← Back
-  </button>
-</div>
+
 
 
 	
@@ -1103,6 +1094,13 @@
 
 <!-- PREMIUM SECTION (non-interfering) -->
 <section id="premium-section" class="tab-section hidden">
+
+	<div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
+    ← Back
+  </button>
+</div>
+	
   <div class="gp-container">
     <!-- HEADER -->
     <div class="gp-header">
@@ -1248,7 +1246,11 @@
 
 <!-- POST TASK SECTION (small id additions) -->
 <section id="postTaskSection" class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6">
-  <button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Task Job</button>
+  <div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
+    ← Back
+  </button>
+</div>
 
   <div class="max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow-xl space-y-6">
     <h2 class="text-2xl font-bold text-center text-gray-800">Post a Job Task</h2>
@@ -1356,7 +1358,11 @@
 
 	
 <section id="afffiliateJobFormSection" class="tab-section hidden">
-<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Affiliate Job</button>
+<div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
+    ← Back
+  </button>
+</div>
   <div class="max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow-xl space-y-6">
     <h2 class="text-2xl font-bold text-center text-gray-800">Submit an Affiliate Campaign</h2>
 
