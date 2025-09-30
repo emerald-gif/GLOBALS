@@ -5581,24 +5581,13 @@ firebase.auth().onAuthStateChanged(user=>{
 
 
 
-
-/* ---------- CLIENT: deposit + withdrawal fixes ---------- */
-
-
-
-
-
 // deposit_withdraw_client.js
-// Client script for deposit + withdrawal flows.
-// Ensure this script runs after Firebase SDK is loaded in the page.
+// Place this after Firebase SDK in your HTML (or import into main bundle)
 
-/* ---------- CONFIG ---------- */
 const PAYSTACK_PUBLIC_KEY = "pk_live_8490c2179be3d6cb47b027152bdc2e04b774d22d";
 
-/* ---------- UTIL ---------- */
 function debugLog(...args) { try { console.log('[CLIENT]', ...args); } catch (e) {} }
 
-/* ---------- Load Paystack inline script ---------- */
 function loadPaystackScript(timeoutMs = 7000) {
   if (window.PaystackPop) return Promise.resolve(window.PaystackPop);
   return new Promise((resolve, reject) => {
@@ -5624,7 +5613,6 @@ function loadPaystackScript(timeoutMs = 7000) {
   });
 }
 
-/* ---------- Firebase helpers ---------- */
 function waitForFirebaseAuth(timeoutMs = 7000) {
   return new Promise(resolve => {
     const start = Date.now();
@@ -5652,7 +5640,7 @@ function ensureFirebaseUser(timeoutMs = 5000) {
   });
 }
 
-/* ---------- Deposit UI helpers ---------- */
+/* Deposit helpers */
 function _getDepositBtn() {
   return document.getElementById('depositBtn') || document.querySelector('#depositSection button[onclick="handleDeposit()"]');
 }
@@ -5670,7 +5658,6 @@ function setDepositLoading(isLoading, text = 'Processing...') {
   }
 }
 
-/* ---------- DEPOSIT: payWithPaystack ---------- */
 async function payWithPaystack(amount) {
   debugLog('payWithPaystack called with', amount);
   setDepositLoading(true, 'Opening checkout...');
@@ -5696,16 +5683,17 @@ async function payWithPaystack(amount) {
     return;
   }
 
-  // Try to get fresh idToken and save before opening checkout
-  let idToken = null;
+  // save fresh idToken to sessionStorage before checkout (fallback)
   try {
-    idToken = await user.getIdToken(true);
+    const idToken = await user.getIdToken(true);
     try { sessionStorage.setItem('globals_id_token', idToken); } catch (e) {}
   } catch (err) {
-    console.warn('Could not get idToken before checkout', err);
+    console.warn('Could not obtain idToken before checkout', err);
   }
 
-  try { await loadPaystackScript(); } catch (err) {
+  try {
+    await loadPaystackScript();
+  } catch (err) {
     setDepositLoading(false);
     console.error('Failed to load Paystack library:', err);
     alert('Payment library failed to load. Refresh the page and try again.');
@@ -5728,23 +5716,22 @@ async function payWithPaystack(amount) {
           debugLog('Paystack callback', response);
           setDepositLoading(true, 'Verifying payment...');
           try {
+            // prefer fresh token; fallback to sessionStorage saved token
             let usedToken = null;
-            try { usedToken = await user.getIdToken(true); } catch (e) { /* ignore */ }
+            try { usedToken = await user.getIdToken(true); } catch (e) {}
             if (!usedToken) usedToken = sessionStorage.getItem('globals_id_token') || null;
 
-            // send verification request with Authorization header
             const verifyRes = await fetch('/api/verify-payment', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
                 ...(usedToken ? { 'Authorization': 'Bearer ' + usedToken } : {})
               },
-              body: JSON.stringify({ reference: response.reference, amount: amtNum })
+              body: JSON.stringify({ reference: response.reference, amount: amtNum, idToken: usedToken || null })
             });
 
             let data = null;
             try { data = await verifyRes.json(); } catch (e) {}
-
             debugLog('verify-payment response', verifyRes.status, data);
             if (verifyRes.ok && data && data.status === 'success') {
               setDepositLoading(false);
@@ -5764,9 +5751,8 @@ async function payWithPaystack(amount) {
           }
         })();
       },
-      onClose: function () { setDepositLoading(false); debugLog('Paystack checkout closed by user'); }
+      onClose: function() { setDepositLoading(false); debugLog('Paystack checkout closed by user'); }
     });
-
     handler.openIframe();
     debugLog('opened Paystack iframe');
   } catch (err) {
@@ -5790,7 +5776,7 @@ function handleDeposit() {
   payWithPaystack(amount).catch(err => { console.error('Unhandled payWithPaystack error', err); setDepositLoading(false); });
 }
 
-/* ---------- BANKS & ACCOUNT VERIFY ---------- */
+/* BANKS & ACCOUNT VERIFY */
 async function loadBanks() {
   const bankSelect = document.getElementById('withdrawBankSelect');
   if (!bankSelect) return;
@@ -5803,7 +5789,7 @@ async function loadBanks() {
     try {
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) { debugLog('banks fetch non-ok', url, res.status); continue; }
-      const json = await res.json().catch(() => null);
+      const json = await res.json().catch(()=>null);
       if (Array.isArray(json)) banks = json;
       else if (json && Array.isArray(json.data)) banks = json.data;
       if (banks && banks.length) { debugLog('banks loaded from', url, banks.length); break; }
@@ -5826,8 +5812,8 @@ async function loadBanks() {
   });
   bankSelect.disabled = false;
 }
-let _verifyAccountTimer = null;
 
+let _verifyAccountTimer = null;
 async function verifyAccount() {
   const accEl = document.getElementById('withdrawAccountNumber');
   const bankEl = document.getElementById('withdrawBankSelect');
@@ -5848,7 +5834,7 @@ async function verifyAccount() {
     try {
       const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accNum, bankCode }) });
       if (!res.ok) { debugLog('verify-account non-ok', url, res.status); continue; }
-      const data = await res.json().catch(() => null);
+      const data = await res.json().catch(()=>null);
       if (!data) { debugLog('verify-account empty json', url); continue; }
       if (data.status === 'success' && data.account_name) {
         nameDisplay.innerText = `✅ ${data.account_name}`;
@@ -5863,18 +5849,19 @@ async function verifyAccount() {
   nameStatus.classList.add('hidden');
 }
 
-/* ---------- SUBMIT WITHDRAWAL ---------- */
+/* SUBMIT WITHDRAWAL */
 async function submitWithdrawal() {
   const accNum = (document.getElementById('withdrawAccountNumber')?.value || '').toString().trim();
   const bankCode = (document.getElementById('withdrawBankSelect')?.value || '').toString().trim();
   const rawName = (document.getElementById('accountNameDisplay')?.innerText || '').replace('✅ ', '');
   const accountName = rawName.trim();
   const amount = parseInt(document.getElementById('withdrawAmount')?.value || '0', 10);
-  const pin = (document.getElementById('withdrawPin')?.value || '').toString().trim();
+  // support both withdrawPin or withdrawPassword id (legacy)
+  const pinEl = document.getElementById('withdrawPin') || document.getElementById('withdrawPassword');
+  const pin = (pinEl?.value || '').toString().trim();
 
   if (!accNum || !bankCode || !amount || !pin || amount < 1000) { alert('Please fill all fields correctly (min ₦1000)'); return; }
 
-  // ensure firebase user and get fresh idToken
   const user = await ensureFirebaseUser();
   if (!user) { alert('You must be signed in to withdraw.'); return; }
 
@@ -5882,7 +5869,6 @@ async function submitWithdrawal() {
   try { idToken = await user.getIdToken(true); } catch (err) { console.warn('Could not get idToken', err); }
   if (!idToken) { alert('Authentication failed. Please sign out and sign in again.'); return; }
 
-  // disable withdraw button while processing (if present)
   const withdrawBtn = document.querySelector('#withdrawFundsSection button[onclick="submitWithdrawal()"]') || document.querySelector('#withdrawFundsSection button');
   if (withdrawBtn) { withdrawBtn.disabled = true; withdrawBtn.dataset.prev = withdrawBtn.innerHTML; withdrawBtn.innerHTML = 'Processing...'; }
 
@@ -5892,7 +5878,7 @@ async function submitWithdrawal() {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
       body: JSON.stringify({ accNum, bankCode, account_name: accountName, amount, pin })
     });
-    const data = await resp.json().catch(() => null);
+    const data = await resp.json().catch(()=>null);
     debugLog('request-withdrawal response', resp.status, data);
     if (resp.ok && data && data.status === 'success') {
       alert('✅ Withdrawal successful! The transfer was initiated.');
@@ -5909,31 +5895,30 @@ async function submitWithdrawal() {
   }
 }
 
-/* ---------- DOM: attach listeners ---------- */
+/* DOM listeners */
 document.addEventListener('DOMContentLoaded', async () => {
-  // load banks
-  try { await loadBanks(); } catch (e) { debugLog('loadBanks threw', e); }
+  try { await loadBanks(); } catch(e) { debugLog('loadBanks threw', e); }
 
-  // auto-fill deposit email when auth ready
+  // auto-fill deposit email
   const auth = await waitForFirebaseAuth(7000);
   const depositEl = () => document.getElementById('depositEmail');
   if (auth) {
     try {
       auth.onAuthStateChanged(user => { const el = depositEl(); if (el) el.value = user ? (user.email || '') : ''; });
       const cur = auth.currentUser; if (cur && depositEl()) depositEl().value = cur.email || '';
-    } catch (e) { debugLog('auth attach error', e); }
+    } catch(e) { debugLog('auth attach error', e); }
   } else {
-    // attempt a delayed attach if auth appears later
+    // fallback attempt
     setTimeout(async () => {
       const a = await waitForFirebaseAuth(7000);
       if (a) {
         a.onAuthStateChanged(user => { const el = depositEl(); if (el) el.value = user ? (user.email || '') : ''; });
-        try { const cur = a.currentUser; if (cur && depositEl()) depositEl().value = cur.email || ''; } catch (e) {}
+        try { const cur = a.currentUser; if (cur && depositEl()) depositEl().value = cur.email || ''; } catch(e){}
       }
     }, 1000);
   }
 
-  // attach account/bank listeners
+  // attach verify listeners
   const accEl = document.getElementById('withdrawAccountNumber');
   const bankEl = document.getElementById('withdrawBankSelect');
   if (accEl) {
@@ -5943,13 +5928,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (bankEl) bankEl.addEventListener('change', verifyAccount);
 });
 
-/* ---------- Expose functions to global if inline HTML uses onclick attributes ---------- */
+/* expose functions used by inline onclick attributes */
 window.handleDeposit = handleDeposit;
 window.submitWithdrawal = submitWithdrawal;
 window.verifyAccount = verifyAccount;
 window.loadBanks = loadBanks;
-
-
 
 
 
