@@ -45,7 +45,7 @@
       </div>
 
       <div>
-        <input type="email" id="email" placeholder="Email" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required />
+        <input type="email" id="email" placeholder="Email " class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required />
         <p id="emailError" class="text-red-500 text-sm mt-1 hidden"></p>
       </div>
 
@@ -182,21 +182,10 @@
     }
 
     async function queryUsernameAvailability(username) {
-  if (!username) {
-    setUsernameStatus('hidden', '');
-    return;
-  }
-
-  // Basic client-side pattern check
-  const pattern = /^[a-zA-Z0-9._]{3,20}$/;
-  if (!pattern.test(username)) {
-    setUsernameStatus(
-      'invalid',
-      'Username must be 3–20 characters long and may only include letters, numbers, periods (.), or underscores (_).'
-    );
-    return;
-  }
-}
+      if (!username) { setUsernameStatus('hidden', ''); return; }
+      // basic client-side pattern check
+      const pattern = /^[a-zA-Z0-9._]{3,20}$/;
+      if (!pattern.test(username)) { setUsernameStatus('invalid','Allowed: 3-20 chars, letters/numbers/._'); return; }
 
       setUsernameStatus('hidden','');
       // query for lowercase field 'usernameLower' (we will save this on user creation), and fallback to exact username
@@ -339,5 +328,3 @@
   </script>
 </body>
 </html>
-
-
