@@ -5221,14 +5221,8 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
 
 
-
 // NOTIFICATION
-
-
-
-// ---------- Notifications JS (replace your broken JS with this) ----------
-
-
+// ---------- Notifications JS (updated) ----------
 
 let unsubscribeNotif = null; // holds the notifications listener
 
@@ -5243,7 +5237,6 @@ async function ensureUserState(uid) {
         joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
         lastReadAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
-
       // re-read so later reads get the server timestamp value
       return await ref.get();
     }
@@ -5270,8 +5263,11 @@ async function listenForNotifications(uid) {
     .orderBy('timestamp', 'desc')
     .onSnapshot(async snapshot => {
       try {
-        // read the user's lastReadAt each time (keeps accurate after mark-as-read)
+        // read the user's state
         const stateDoc = await db.collection('notification_user_state').doc(uid).get();
+        const joinedAt = (stateDoc.exists && stateDoc.data().joinedAt)
+          ? stateDoc.data().joinedAt.toDate()
+          : new Date(); // fallback = now
         const lastReadAt = (stateDoc.exists && stateDoc.data().lastReadAt)
           ? stateDoc.data().lastReadAt.toDate()
           : new Date(0);
@@ -5286,20 +5282,24 @@ async function listenForNotifications(uid) {
 
         // Count unread and render list
         let unreadCount = 0;
-        // Build HTML for notifications list (if element exists)
         if (notifList) notifList.innerHTML = '';
 
         snapshot.forEach(doc => {
           const data = doc.data();
           const ts = data.timestamp;
           const tsDate = ts ? ts.toDate() : null;
+
+          // 🚀 show only notifications created AFTER user joined
+          if (tsDate && tsDate <= joinedAt) {
+            return; // skip old notifications
+          }
+
           const isUnread = tsDate ? (tsDate > lastReadAt) : false;
           if (isUnread) unreadCount++;
 
           // render into notifications list (notifications tab)
           if (notifList) {
             const dateStr = tsDate ? tsDate.toLocaleString() : 'Just now';
-            // Keep your style: rounded card, left blue border for emphasis
             const card = document.createElement('div');
             card.className = `bg-white rounded-xl p-4 shadow-md border-l-4 ${isUnread ? 'border-blue-400' : 'border-gray-200'} animate-fade-in`;
             card.innerHTML = `
@@ -5335,6 +5335,7 @@ async function listenForNotifications(uid) {
             banner.classList.add('hidden');
           }
         }
+
       } catch (err) {
         console.error("onSnapshot processing error:", err);
       }
@@ -5378,7 +5379,6 @@ function activateTab(tabId) {
   if (tabId === 'notifications') {
     const user = auth.currentUser;
     if (user) {
-      // mark read & ensure latest list shown
       markNotificationsAsRead(user.uid).catch(console.error);
       // loadNotifications not required because the realtime listener already populates #notificationList
     }
@@ -5392,6 +5392,7 @@ async function loadNotificationsOnce() {
     if (notifList) notifList.innerHTML = `<p class="text-gray-500 text-center">Loading...</p>`;
     const snapshot = await db.collection('notifications').orderBy('timestamp','desc').get();
     if (notifList) notifList.innerHTML = '';
+
     snapshot.forEach(doc => {
       const data = doc.data();
       const date = data.timestamp ? data.timestamp.toDate().toLocaleString() : 'Just now';
@@ -5404,6 +5405,7 @@ async function loadNotificationsOnce() {
           </div>`;
       }
     });
+
     if (notifList && snapshot.empty) notifList.innerHTML = `<p class="text-gray-400 text-center">No notifications yet.</p>`;
   } catch (err) {
     console.error("loadNotificationsOnce error:", err);
@@ -5412,23 +5414,17 @@ async function loadNotificationsOnce() {
   }
 }
 
-
-
-// Wire up click handling for the bell if element exists (keeps inline onclick safe or redundant)
+// Wire up click handling for the bell if element exists
 document.addEventListener('DOMContentLoaded', () => {
   const bell = document.getElementById('notifBell');
   if (bell) {
     bell.addEventListener('click', (e) => {
-      // default activateTab might already be called inline; call it to be safe
       activateTab('notifications');
-
-      // mark as read when user intentionally opens notifications
       const user = auth.currentUser;
       if (user) markNotificationsAsRead(user.uid).catch(console.error);
     });
   }
-
-  const closeBtn = document.getElementById('notifPopupClose'); // optional close button id
+  const closeBtn = document.getElementById('notifPopupClose');
   if (closeBtn) closeBtn.addEventListener('click', closeNotifPopup);
 });
 
@@ -5436,8 +5432,8 @@ document.addEventListener('DOMContentLoaded', () => {
 auth.onAuthStateChanged(async user => {
   if (user) {
     try {
-      await ensureUserState(user.uid);   // make sure user state doc exists and uses serverTimestamp
-      listenForNotifications(user.uid); // start realtime listener (updates dot/banner/popup/list)
+      await ensureUserState(user.uid);   // make sure user state doc exists
+      listenForNotifications(user.uid);  // start realtime listener
     } catch (err) {
       console.error("Error initializing notifications for user:", err);
     }
@@ -5449,8 +5445,6 @@ auth.onAuthStateChanged(async user => {
     }
   }
 });
-
-
 
 
 
@@ -6260,7 +6254,7 @@ try {
 
   { id:'m7', label:'2.5GB - ₦900', amount:900 },
 
-  { id:'m8', label:'3.2GB - ₦1000', amount:600 }
+  { id:'m8', label:'3.2GB - ₦1000', amount:1000 }
 
   
   ],
@@ -6557,14 +6551,7 @@ try {
 /* ====== FIRESTORE REF ====== */
 
 
-
-
-/* ===============================
-   DAILY CHECK-IN SCRIPT (single block)
-   - Do NOT scatter functions
-   - Paste this to replace the old check-in JS
-   =============================== */
-
+/* ===============================   DAILY CHECK-IN SCRIPT (single block)   - Paste to replace old check-in JS  ================================ */
 /* ====== FIRESTORE REF ====== */
 function cyclesRef(uid) {
   return db.collection('checkins').doc(uid).collection('cycles');
@@ -6580,6 +6567,7 @@ function todayStrLocal() {
   return `${y}-${m}-${day}`;
 }
 function dayDiff(startDateStr, dateStr) {
+  if (!startDateStr || !dateStr) return 0;
   const [sy, sm, sd] = startDateStr.split('-').map(Number);
   const [ty, tm, td] = dateStr.split('-').map(Number);
   const s = new Date(sy, sm - 1, sd);
@@ -6591,17 +6579,12 @@ function ordinal(n) {
 }
 
 /* ====== CARD BUILDER (2059 look) ====== */
-
 function makeCard({status='future', day=1, amountLabel='', isLast=false}) {
   const card = document.createElement('div');
-  card.className = `
-    flex flex-col items-center justify-center rounded-xl p-2
-    bg-white text-gray-800 shadow-md
-  `;
+  card.className = `    flex flex-col items-center justify-center rounded-xl p-2    bg-white text-gray-800 shadow-md  `;
   card.style.width = '60px';
   card.style.height = '80px';
   card.style.fontSize = '12px';
-
   // status styles
   if (status === 'checked') {
     card.style.background = '#dcfce7'; // light green
@@ -6616,12 +6599,10 @@ function makeCard({status='future', day=1, amountLabel='', isLast=false}) {
     card.style.background = '#f1f5f9'; // light gray
     card.style.color = '#475569';
   }
-
   // amount
   const amt = document.createElement('div');
   amt.className = 'text-xs font-bold';
   amt.textContent = amountLabel;
-
   // circle
   const circle = document.createElement('div');
   circle.style.width = '20px';
@@ -6631,7 +6612,6 @@ function makeCard({status='future', day=1, amountLabel='', isLast=false}) {
   circle.style.alignItems = 'center';
   circle.style.justifyContent = 'center';
   circle.style.margin = '4px 0';
-
   if (status === 'checked') {
     circle.style.background = '#10b981';
     circle.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17L4 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -6644,19 +6624,14 @@ function makeCard({status='future', day=1, amountLabel='', isLast=false}) {
   } else {
     circle.style.background = '#cbd5e1';
   }
-
   const dayLabel = document.createElement('div');
   dayLabel.className = 'text-xs font-medium';
   dayLabel.textContent = `Day ${day}`;
-
   card.appendChild(amt);
   card.appendChild(circle);
   card.appendChild(dayLabel);
-
   return card;
 }
-
-
 
 /* ====== RENDER CHECK-IN (single function) ====== */
 function renderCheckin(cycleDocSnap) {
@@ -6668,21 +6643,27 @@ function renderCheckin(cycleDocSnap) {
     cardsDiv.innerHTML = '';
     btn.disabled = true;
     btn.textContent = 'Loading...';
+    btn.classList.add('opacity-50', 'cursor-not-allowed');
     return;
   }
 
   const d = cycleDocSnap.data();
-  const start = d.cycleStartDate || todayStrLocal();
-  const daysArr = Array.isArray(d.days) ? d.days : Array(7).fill(false);
+  const start = d && d.cycleStartDate ? d.cycleStartDate : todayStrLocal();
+  const daysArr = Array.isArray(d.days) ? d.days.concat() : Array(7).fill(false);
   const status = d.status || 'processing';
   const today = todayStrLocal();
   const diff = dayDiff(start, today);
 
   cardsDiv.innerHTML = '';
+
   for (let i = 0; i < 7; i++) {
     let s = 'future';
-    if (i < diff) s = daysArr[i] ? 'checked' : 'missed';
-    else if (i === diff) s = daysArr[i] ? 'checked' : 'today';
+    if (i < diff) s = (daysArr[i] === true) ? 'checked' : 'missed';
+    else if (i === diff) s = (daysArr[i] === true) ? 'checked' : 'today';
+    // if cycle is not processing and diff > 6, mark appropriately (already settled)
+    if (diff > 6 && status !== 'processing') {
+      s = (daysArr[i] === true) ? 'checked' : 'missed';
+    }
     const isLast = (i === 6);
     cardsDiv.appendChild(makeCard({
       status: s,
@@ -6695,42 +6676,37 @@ function renderCheckin(cycleDocSnap) {
   // button logic: only active when within cycle (0..6), processing, and not already checked today
   const isWithinCycle = (diff >= 0 && diff <= 6 && status === 'processing');
   const alreadyCheckedToday = (diff >= 0 && diff <= 6 && daysArr[diff] === true);
-  btn.disabled = !(isWithinCycle && !alreadyCheckedToday);
+  const shouldEnable = (isWithinCycle && !alreadyCheckedToday);
+
+  btn.disabled = !shouldEnable;
   btn.classList.toggle('opacity-50', btn.disabled);
   btn.classList.toggle('cursor-not-allowed', btn.disabled);
+  btn.textContent = btn.disabled ? (status === 'processing' && alreadyCheckedToday ? 'Checked' : 'Unavailable') : 'Check In';
 
-  // bind button handler later (we set in listener)
+  // Note: button handler is wired in the snapshot listener so we avoid re-binding here repeatedly
 }
 
 /* ====== HISTORY LIST RENDER (many received cycles) ====== */
 function renderHistoryList(items) {
   const hist = document.getElementById('history-list');
+  if (!hist) return;
   hist.innerHTML = '';
   if (!items || items.length === 0) {
     hist.innerHTML = '<p class="text-gray-400 italic">No history yet</p>';
     return;
   }
-
   items.forEach(item => {
     const div = document.createElement('div');
-    div.className = `
-      p-4 rounded-2xl shadow-xl backdrop-blur-lg bg-white/6 border border-green-400/20
-      flex items-center justify-between animate-slide-in
-    `;
-    div.innerHTML = `
-      <div>
-        <div style="font-weight:700;color:#bbf7d0">₦${item.rewardAmount}</div>
-        <div style="font-size:12px;color:#94a3b8">${item.date}</div>
-      </div>
-      <div style="font-weight:700;color:#10b981">RECEIVED</div>
-    `;
+    div.className = `      p-4 rounded-2xl shadow-xl backdrop-blur-lg bg-white/6 border border-green-400/20      flex items-center justify-between animate-slide-in    `;
+    div.innerHTML = `      <div>        <div style="font-weight:700;color:#bbf7d0">₦${item.rewardAmount}</div>        <div style="font-size:12px;color:#94a3b8">${item.date}</div>      </div>      <div style="font-weight:700;color:#10b981">RECEIVED</div>    `;
     hist.appendChild(div);
   });
 }
 
 /* ====== HISTORY LISTENER ====== */
 function startHistoryListener(uid) {
-  cyclesRef(uid).orderBy('createdAt','desc')
+  if (!uid) return;
+  cyclesRef(uid).orderBy('cycleStartDate','desc')
     .onSnapshot(qs => {
       const items = [];
       qs.forEach(doc => {
@@ -6738,133 +6714,180 @@ function startHistoryListener(uid) {
         if (d.status === 'received') {
           items.push({
             rewardAmount: d.rewardAmount || 300,
-            date: d.updatedAt && d.updatedAt.toDate ? d.updatedAt.toDate().toLocaleString() : d.cycleStartDate || todayStrLocal()
+            date: d.updatedAt && d.updatedAt.toDate ? d.updatedAt.toDate().toLocaleString() : (d.cycleStartDate || todayStrLocal())
           });
         }
       });
       renderHistoryList(items);
+    }, err => {
+      console.error('History listener error:', err);
     });
 }
 
 /* ====== ENSURE CYCLE EXISTS (used on login) ====== */
 async function ensureCycleExists(uid) {
-  const snap = await cyclesRef(uid).orderBy('createdAt','desc').limit(1).get();
+  if (!uid) return;
+  // order by cycleStartDate deterministically
+  const snap = await cyclesRef(uid).orderBy('cycleStartDate','desc').limit(1).get();
   if (snap.empty) {
-    // no cycles yet -> create one starting today
-    await cyclesRef(uid).add({
-      cycleStartDate: todayStrLocal(),
+    // create one starting today using deterministic doc id so we don't create duplicates
+    const today = todayStrLocal();
+    const docRef = cyclesRef(uid).doc(today);
+    await docRef.set({
+      cycleStartDate: today,
       days: Array(7).fill(false),
       status: 'processing',
       rewardAmount: 300,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    }, { merge: false });
     return;
   }
-  const d = snap.docs[0].data();
+  const doc = snap.docs[0];
+  const d = doc.data();
   // if last cycle finished and it's been >=7 days since its start -> create new cycle for today
-  if (d.status !== 'processing' && dayDiff(d.cycleStartDate, todayStrLocal()) >= 7) {
-    await cyclesRef(uid).add({
-      cycleStartDate: todayStrLocal(),
+  const today = todayStrLocal();
+  if (d.status !== 'processing' && dayDiff(d.cycleStartDate, today) >= 7) {
+    const newDocRef = cyclesRef(uid).doc(today);
+    // set deterministically (upsert) — multiple clients writing same doc id is safe
+    await newDocRef.set({
+      cycleStartDate: today,
       days: Array(7).fill(false),
       status: 'processing',
       rewardAmount: 300,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    }, { merge: false });
   }
 }
 
 /* ====== FINALIZE CYCLE ====== */
 async function finalizeCycle(uid, cycleId) {
-  const ref = cyclesRef(uid).doc(cycleId);
-  await db.runTransaction(async t => {
-    const snap = await t.get(ref);
-    if (!snap.exists) return;
-    const d = snap.data();
-    const success = Array.isArray(d.days) && d.days.every(x => x === true);
-
-    if (success) {
-      const userRef = db.collection('users').doc(uid);
-      const userSnap = await t.get(userRef);
-      const oldBal = (userSnap.exists && userSnap.data().balance) ? userSnap.data().balance : 0;
-      const newBal = oldBal + (d.rewardAmount || 300);
-
-      t.update(userRef, { balance: newBal, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-      t.update(ref, { status: 'received', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-
-      // UI: update balance elements immediately if they exist
-      const balEl1 = document.getElementById('balance-display');
-      const balEl2 = document.getElementById('balance-amount');
-      if (balEl1) balEl1.textContent = `₦${newBal}`;
-      if (balEl2) balEl2.textContent = `₦${newBal}`;
-    } else {
-      t.update(ref, { status: 'failed', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-    }
-
-    // IMPORTANT: do NOT create next cycle here — next cycle must start at local midnight.
-  });
+  try {
+    if (!uid || !cycleId) return;
+    const ref = cyclesRef(uid).doc(cycleId);
+    await db.runTransaction(async t => {
+      const snap = await t.get(ref);
+      if (!snap.exists) return;
+      const d = snap.data();
+      const success = Array.isArray(d.days) && d.days.every(x => x === true);
+      if (success) {
+        const userRef = db.collection('users').doc(uid);
+        const userSnap = await t.get(userRef);
+        const oldBal = (userSnap.exists && userSnap.data().balance) ? userSnap.data().balance : 0;
+        const newBal = oldBal + (d.rewardAmount || 300);
+        t.update(userRef, { balance: newBal, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        t.update(ref, { status: 'received', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        // UI: update balance elements immediately if they exist
+        const balEl1 = document.getElementById('balance-display');
+        const balEl2 = document.getElementById('balance-amount');
+        if (balEl1) balEl1.textContent = `₦${newBal}`;
+        if (balEl2) balEl2.textContent = `₦${newBal}`;
+      } else {
+        t.update(ref, { status: 'failed', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      }
+      // IMPORTANT: do NOT create next cycle here — next cycle must start at local midnight.
+    });
+  } catch (err) {
+    console.error('finalizeCycle error', err);
+  }
 }
 
 /* ====== HANDLE CHECK-IN BUTTON ====== */
 async function handleCheckInPress(cycleDocSnap) {
   if (!cycleDocSnap) return;
-  const uid = firebase.auth().currentUser && firebase.auth().currentUser.uid;
-  if (!uid) return;
-  const d = cycleDocSnap.data();
-  const diff = dayDiff(d.cycleStartDate, todayStrLocal());
-  if (diff < 0 || diff > 6) return;
-  if (d.days && d.days[diff]) return;
+  try {
+    const uid = firebase.auth().currentUser && firebase.auth().currentUser.uid;
+    if (!uid) return;
+    const d = cycleDocSnap.data();
+    const diff = dayDiff(d.cycleStartDate, todayStrLocal());
+    if (diff < 0 || diff > 6) return;
+    if (d.days && d.days[diff]) return;
 
-  const arr = d.days ? [...d.days] : Array(7).fill(false);
-  arr[diff] = true;
+    // immediate UI feedback
+    const btn = document.getElementById('checkin-btn');
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add('opacity-50', 'cursor-not-allowed');
+      btn.textContent = 'Checking...';
+    }
 
-  await cyclesRef(uid).doc(cycleDocSnap.id).update({
-    days: arr,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
+    const arr = Array.isArray(d.days) ? [...d.days] : Array(7).fill(false);
+    arr[diff] = true;
 
-  // user-requested alert (you wanted alert)
-  alert('✅ Check-in Successful');
+    // update days atomically (simple update)
+    await cyclesRef(uid).doc(cycleDocSnap.id).update({
+      days: arr,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
 
-  // If last day -> finalize (award or fail)
-  if (diff === 6) {
-    await finalizeCycle(uid, cycleDocSnap.id);
+    // optional user alert
+    try { alert('✅ Check-in Successful'); } catch (e) { /* ignore alerts failing in headless */ }
+
+    // If last day -> finalize (award or fail)
+    if (diff === 6) {
+      await finalizeCycle(uid, cycleDocSnap.id);
+    }
+  } catch (err) {
+    console.error('handleCheckInPress error', err);
+    // try to re-enable button on failure so user can retry
+    const btn = document.getElementById('checkin-btn');
+    if (btn) {
+      btn.disabled = false;
+      btn.classList.remove('opacity-50', 'cursor-not-allowed');
+      btn.textContent = 'Check In';
+    }
   }
 }
 
 /* ====== Auto-create next cycle at local midnight (15s poll) ====== */
 let _autoCycleInterval = null;
+let _creatingTodayCycle = false;
 async function createNextCycleIfNeeded(uid) {
   if (!uid) return;
-  const qs = await cyclesRef(uid).orderBy('createdAt','desc').limit(1).get();
-  if (qs.empty) {
-    // create fresh
-    await cyclesRef(uid).add({
-      cycleStartDate: todayStrLocal(),
-      days: Array(7).fill(false),
-      status: 'processing',
-      rewardAmount: 300,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    return;
-  }
-  const doc = qs.docs[0];
-  const d = doc.data();
-  // if last cycle finished and at least 7 days passed since its start -> start new one today
-  if (d.status !== 'processing' && dayDiff(d.cycleStartDate, todayStrLocal()) >= 7) {
-    // ensure there's no processing cycle already to avoid duplicates
-    const proc = await cyclesRef(uid).where('status', '==', 'processing').limit(1).get();
-    if (!proc.empty) return;
-    await cyclesRef(uid).add({
-      cycleStartDate: todayStrLocal(),
-      days: Array(7).fill(false),
-      status: 'processing',
-      rewardAmount: 300,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+  if (_creatingTodayCycle) return; // small client-side guard
+  try {
+    const qs = await cyclesRef(uid).orderBy('cycleStartDate','desc').limit(1).get();
+    if (qs.empty) {
+      // create fresh with deterministic id
+      const today = todayStrLocal();
+      const docRef = cyclesRef(uid).doc(today);
+      _creatingTodayCycle = true;
+      await docRef.set({
+        cycleStartDate: today,
+        days: Array(7).fill(false),
+        status: 'processing',
+        rewardAmount: 300,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: false });
+      _creatingTodayCycle = false;
+      return;
+    }
+    const doc = qs.docs[0];
+    const d = doc.data();
+    const today = todayStrLocal();
+    // if last cycle finished and at least 7 days passed since its start -> start new one today
+    if (d.status !== 'processing' && dayDiff(d.cycleStartDate, today) >= 7) {
+      // create deterministic doc for today's date; set() with same id is idempotent across clients
+      const newDocRef = cyclesRef(uid).doc(today);
+      // final guard to avoid race: check for a processing cycle quickly
+      const proc = await cyclesRef(uid).where('status', '==', 'processing').limit(1).get();
+      if (!proc.empty) return;
+      _creatingTodayCycle = true;
+      await newDocRef.set({
+        cycleStartDate: today,
+        days: Array(7).fill(false),
+        status: 'processing',
+        rewardAmount: 300,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: false });
+      _creatingTodayCycle = false;
+    }
+  } catch (err) {
+    console.error('createNextCycleIfNeeded error', err);
+    _creatingTodayCycle = false;
   }
 }
 
@@ -6875,7 +6898,6 @@ function startCheckinListener() {
     clearInterval(_autoCycleInterval);
     _autoCycleInterval = null;
   }
-
   firebase.auth().onAuthStateChanged(async user => {
     if (!user) {
       // stop polling if logged out
@@ -6883,12 +6905,11 @@ function startCheckinListener() {
       return;
     }
     const uid = user.uid;
-
     // ensure at least one cycle exists on login
-    await ensureCycleExists(uid);
+    try { await ensureCycleExists(uid); } catch (err) { console.error('ensureCycleExists error', err); }
 
     // latest-cycle listener for UI + button
-    cyclesRef(uid).orderBy('createdAt','desc').limit(1)
+    cyclesRef(uid).orderBy('cycleStartDate','desc').limit(1)
       .onSnapshot(async qs => {
         if (qs.empty) return;
         const doc = qs.docs[0];
@@ -6903,14 +6924,16 @@ function startCheckinListener() {
             const balEl2 = document.getElementById('balance-amount');
             if (balEl1) balEl1.textContent = `₦${balance}`;
             if (balEl2) balEl2.textContent = `₦${balance}`;
-          });
+          }).catch(e => console.error('balance fetch error', e));
         }
 
-        // wire button (pass snapshot)
+        // wire button (pass snapshot). Use onclick assignment to avoid multiple listeners
         const btn = document.getElementById('checkin-btn');
         if (btn) {
           btn.onclick = () => handleCheckInPress(doc);
         }
+      }, err => {
+        console.error('latest-cycle listener error:', err);
       });
 
     // history listener for all past received cycles
@@ -6925,9 +6948,6 @@ function startCheckinListener() {
 
 /* initialize */
 startCheckinListener();
-
-
-
 
 
 
