@@ -1470,7 +1470,13 @@
 	
 <!-- 🔹 My Jobs Section -->
 <section id="myJobsSection" class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6">
-  <button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← My job tasks</button>
+	
+  <div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
+   < Back
+  </button>
+</div>
+	   
   <div class="max-w-5xl mx-auto space-y-6">
     <h2 class="text-2xl font-bold text-center text-gray-800">My Job Posts</h2>
     <div id="jobList" class="space-y-4"></div>
@@ -1496,7 +1502,14 @@
 
 ‎
 <!-- ================== AFFILIATE TASKS SECTION ================== -->
-<div id="mainAffiliateScreen" class=" hidden px-4 pt-6">
+<div id="mainAffiliateScreen" class=" px-4 pt-6">
+
+
+	<div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
+   < Back
+  </button>
+</div>
 
   <!-- Header -->
   <div class="flex items-center gap-2 mb-4">
@@ -1834,18 +1847,20 @@
   <div id="task-jobs" class="grid gap-5 px-4 pb-12"></div>  
 </div>  
 
-<!-- ================= FINISHED TASKS SCREEN ================= -->  
+<!-- ================= FINISHED TASKS SCREEN ================= --> 
+	   
 <div id="finishedTasksScreenUser" class="hidden px-4 py-8">  
 
   <!-- Header -->  
-  <div class="flex items-center justify-between mb-8">  
-    <button  
-      id="backToMainBtnUser"  
-      class="text-blue-600 font-medium flex items-center gap-1 hover:underline"  
-    >  
-      ← Back  
-    </button>  
-    <h2 class="text-xl font-bold tracking-tight">Finished Tasks</h2>  
+  <div class="flex items-center justify-between mb-8">
+	  
+    <div id="backToMainBtnUser" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
+   < Back
+  </button>
+</div>
+	   
+    <h2 class="text-xl font-bold tracking-tight">Finished Tasks</h2> 
   </div>  
 
   <!-- Stats -->  
@@ -2399,7 +2414,13 @@
 															 
 <!-- DASHBOARD: Blue Banner + Bell Icon -->
 <div id="notifications" class="tab-section hidden px-4 pt-6 pb-24 max-w-2xl mx-auto">
-  <button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Back</button>
+	
+  <div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
+   < Back
+  </button>
+</div>
+	
   <h1 class="text-1xl font-bold text-blue-700 mb-6 flex items-center gap-2">
     <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -2424,10 +2445,11 @@
 <div id="payment" class="tab-section hidden max-w-md mx-auto px-4 py-6 space-y-6">
 
   <!-- Back Button -->
-  <button onclick="activateTab('dashboard')" class="flex items-center gap-2 text-blue-600 font-semibold hover:underline">
-    ← Back to Dashboard
+  <div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
+   < Back
   </button>
-
+</div>
   <!-- ⚡ Quick Actions (Deposit & Withdraw) -->
   <div class="grid grid-cols-2 gap-3">
     <button onclick="activateTab('depositSection')" 
@@ -2504,7 +2526,13 @@
 <!-- Withdrawal Section -->
 
 <div id="withdrawFundsSection" class="tab-section hidden p-6 max-w-md mx-auto rounded-xl shadow-lg bg-white mt-8 space-y-6">
-<button onclick="activateTab('payment')" class="text-blue-500 text-lg">← Withdraw</button>
+	
+<div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('payment')" class="text-blue-600 font-bold text-lg">
+   < Back
+  </button>
+</div>
+	
   <h2 class="text-2xl font-bold text-center text-gray-800">Withdraw Funds</h2>
 
   <input id="withdrawAccountNumber" type="number" placeholder="Account Number"
@@ -2539,7 +2567,13 @@
 <!-- Deposit Section -->
 <!-- Deposit Section (drop-in) -->
 <div id="depositSection" class="tab-section hidden p-6 max-w-md mx-auto rounded-xl shadow-lg bg-white mt-8 space-y-6">
-  <button onclick="activateTab('payment')" class="text-blue-500 text-lg">← Deposit</button>
+	
+  <div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('payment')" class="text-blue-600 font-bold text-lg">
+   < Back
+  </button>
+</div>
+	
   <h2 class="text-2xl font-bold text-center text-gray-800">Deposit Funds</h2>
 
   <div>
@@ -2572,6 +2606,13 @@
 
 <!-- 📜 Transaction History Screen -->
 <div id="transactions-screen" class="tab-section hidden min-h-screen bg-gray-50">
+
+	<div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
+   < Back
+  </button>
+</div>
+	
   <!-- Header -->
   <div class="bg-white px-4 py-4 shadow-sm flex items-center justify-between">
     <h2 class="text-xl font-semibold text-gray-900">Transactions</h2>
@@ -2617,7 +2658,13 @@
 <!-- 📑 Transaction Details Screen -->
 <div id="transaction-details-screen" class="tab-section hidden min-h-screen bg-gray-50">
   <div class="bg-white px-4 py-4 shadow flex items-center justify-between">
-    <button onclick="showScreen('transactions-screen')" class="text-blue-600 font-medium">← Back</button>
+	  
+    <div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('transactions-screen')" class="text-blue-600 font-bold text-lg">
+   < Back
+  </button>
+</div>
+	   
     <h2 class="text-lg font-semibold text-gray-900">Transaction Details</h2>
   </div>
 
@@ -2646,11 +2693,12 @@
 <div id="team" class="tab-section hidden">
 
   <!-- Back button -->
-  <button onclick="activateTab('dashboard')" 
-    class="mb-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white shadow-sm border border-gray-200 text-blue-600 text-sm font-medium hover:bg-blue-50 transition">
-    ← Back
+  <div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
+   < Back
   </button>
-
+</div>
+	   
   <div class="max-w-3xl mx-auto px-4 pt-4 pb-16">
 
     <!-- 📢 Info box -->
@@ -2750,8 +2798,12 @@
 
 <div id="me" class="tab-section hidden bg-gray-50 min-h-screen">
 
-<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Me</button>
-
+<div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
+   < Back
+  </button>
+</div>
+	   
   <!-- 🔝 Profile Header -->
 <div class="relative w-24 h-24 mx-auto mt-6">
   <img id="profilePicPreview" src="profile-placeholder.png"
@@ -2821,15 +2873,7 @@
         viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
     </button>
 
-    <button onclick="activateTab('overview')" class="flex justify-between items-center w-full px-5 py-4 hover:bg-gray-50 transition">
-      <div class="flex items-center gap-3">
-        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2"
-          viewBox="0 0 24 24"><path d="M11 3v18M3 11h18"/></svg>
-        <span class="text-gray-800 font-medium">Overview</span>
-      </div>
-      <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2"
-        viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
-    </button>
+   
 
     <button onclick="activateTab('aboutus')" class="flex justify-between items-center w-full px-5 py-4 hover:bg-gray-50 transition">
       <div class="flex items-center gap-3">
@@ -3012,6 +3056,13 @@
 
 
 <div id="myProfile" class="tab-section hidden px-4 pt-8 pb-16 min-h-screen bg-gradient-to-b from-sky-50 via-white to-indigo-50">
+
+	<div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('me')" class="text-blue-600 font-bold text-lg">
+   < Back
+  </button>
+</div>
+	   
   <div class="max-w-xl mx-auto bg-white/90 backdrop-blur-xl shadow-2xl rounded-3xl p-6 space-y-6">
 
     <!-- Header -->
@@ -3125,48 +3176,6 @@
 
 
 
-<!-- 📊 OVERVIEW SECTION -->
-<div id="overview" class="tab-section hidden px-4 pt-8 pb-16 min-h-screen bg-gradient-to-br from-sky-50 via-white to-indigo-50">
-<button onclick="activateTab('me')" class="text-blue-500 text-sm">← Back</button>
-  <div class="text-center">
-    <h2 class="text-3xl font-extrabold text-blue-800">📊 Your Analytics</h2>
-    <p class="text-sm text-gray-500 mt-1">Track your weekly activity and earnings in real-time</p>
-  </div>
-
-  <!-- Summary Cards -->
-  <div class="grid grid-cols-3 gap-4 mt-6 text-center">
-    <div class="bg-white shadow-lg rounded-xl p-4">
-      <h3 class="text-xs text-gray-500">Total Earnings</h3>
-      <p class="text-lg font-bold text-green-600">₦20,000</p>
-    </div>
-    <div class="bg-white shadow-lg rounded-xl p-4">
-      <h3 class="text-xs text-gray-500">Tasks Completed</h3>
-      <p class="text-lg font-bold text-blue-600">26</p>
-    </div>
-    <div class="bg-white shadow-lg rounded-xl p-4">
-      <h3 class="text-xs text-gray-500">Referrals</h3>
-      <p class="text-lg font-bold text-purple-600">12</p>
-    </div>
-  </div>
-
-  <!-- Charts Section -->
-  <div class="mt-8 space-y-6">
-    <div class="bg-white p-4 rounded-2xl shadow-xl">
-      <h4 class="text-sm font-semibold text-blue-700 mb-2">📈 Weekly Earnings</h4>
-      <canvas id="earningsChart" height="100"></canvas>
-    </div>
-    <div class="bg-white p-4 rounded-2xl shadow-xl">
-      <h4 class="text-sm font-semibold text-purple-700 mb-2">💰 Earnings Distribution</h4>
-      <canvas id="pieChart" height="100"></canvas>
-    </div>
-    <div class="bg-white p-4 rounded-2xl shadow-xl">
-      <h4 class="text-sm font-semibold text-green-700 mb-2">📊 Task Performance</h4>
-      <canvas id="barChart" height="100"></canvas>
-    </div>
-  </div>
-</div>
-
-
 
 
 
@@ -3177,7 +3186,12 @@
 
 
 <div id="aboutus" class="tab-section hidden min-h-screen bg-gray-50">
-<button onclick="activateTab('me')" class="text-blue-500 text-sm">← About Us</button>
+	
+<div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('me')" class="text-blue-600 font-bold text-lg">
+   < Back
+  </button>
+</div>
 
   
   <!-- Title -->
@@ -3222,7 +3236,12 @@
 
 
 <div id="termsScreen" class="tab-section hidden min-h-screen bg-white flex flex-col">
-<button onclick="activateTab('aboutus')" class="text-blue-500 text-lg">← Terms & Condition</button>
+	
+<div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('aboutus')" class="text-blue-600 font-bold text-lg">
+   < Back
+  </button>
+</div>
 
   <!-- Scrollable Content -->
   <div class="overflow-y-auto px-5 py-6 space-y-4 text-sm text-gray-700 leading-relaxed">
@@ -3267,7 +3286,12 @@
 
 
 <div id="privacyScreen" class="tab-section hidden min-h-screen bg-white flex flex-col">
-<button onclick="activateTab('aboutus')" class="text-blue-500 text-lg">← Privacy Policy</button>
+	
+<div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('aboutus')" class="text-blue-600 font-bold text-lg">
+   < Back
+  </button>
+</div>
 
   
 
@@ -3309,7 +3333,13 @@
 
 
 <div id="language" class="tab-section hidden px-4 py-6 min-h-screen bg-white">
-<button onclick="activateTab('me')" class="text-blue-500 text-sm">← Back</button>
+	
+<div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('me')" class="text-blue-600 font-bold text-lg">
+   < Back
+  </button>
+</div>
+	
   <div class="flex items-center gap-3 mb-6">
     <button onclick="activateTab('me')" class="text-blue-600 text-lg font-semibold">←</button>
     <h2 class="text-xl font-bold text-blue-800">Languages</h2>
@@ -3346,11 +3376,12 @@
 
   <!-- Header -->
   <div class="flex items-center gap-3 mb-6">
-    <button onclick="switchTab('dashboard')" class="text-gray-700 text-xl">
-      ←
-    </button>
-    <h1 class="text-lg font-semibold text-gray-900">Customer Service</h1>
-  </div>
+	  
+    <div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
+   < Back
+  </button>
+</div>
 
   <!-- Intro Text -->
   <p class="text-gray-700 text-base leading-relaxed mb-6">
@@ -3428,19 +3459,26 @@
 
 
 
-<!-- ✅ Daily Check-In Screen -->  <div id="checkin-screen"   
+<!-- ✅ Daily Check-In Screen -->  
+	   <div id="checkin-screen"   
      class="tab-section hidden min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] p-6 text-white">    <!-- Header -->    <div class="flex items-center justify-between mb-8">  
     <h2 class="text-3xl font-extrabold bg-gradient-to-r from-blue-400 to-purple-500   
                text-transparent bg-clip-text drop-shadow-lg tracking-tight">  
       Daily Check-In  
-    </h2>  
-    <button onclick="activateTab('dashboard')"  
-      class="px-4 py-2 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-700   
-             text-white shadow-lg hover:scale-105 hover:shadow-blue-500/30   
-             transition transform">  
-      ← Back  
-    </button>  
-  </div>    <!-- Check-in Container -->    <div id="checkin-container" class="max-w-3xl mx-auto space-y-10">  <!-- Cards -->  
+    </h2> 
+		 
+    <div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
+   < Back
+  </button>
+</div>
+	   
+  </div>    
+	
+	<!-- Check-in Container -->    
+	<div id="checkin-container" class="max-w-3xl mx-auto space-y-10">  
+		
+		<!-- Cards -->  
 <div id="checkin-cards"
      class="grid grid-cols-7 gap-2 justify-items-center">
   <!-- Cards will be injected by JS -->
@@ -3500,9 +3538,11 @@
 <div id="aiHelpCenter" class="tab-section hidden bg-gray-50 min-h-screen flex flex-col">
 
   <!-- Back Button -->
-  <button onclick="activateTab('dashboard')" class="text-blue-600 font-medium text-sm mb-2 hover:underline transition">
-    ← Back to Support
+  <div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('contactus')" class="text-blue-600 font-bold text-lg">
+   < Back
   </button>
+</div>
 
   <!-- Header -->
   <div class="p-3 bg-white text-blue-600 font-semibold text-lg flex items-center gap-2 shadow-sm border-b border-gray-200">
@@ -3610,8 +3650,15 @@
 
 
 <!-- ====== SPIN TO WIN SECTION (copy into dashboard.html) ====== -->
-<section id="daily-spin-section" class="tab-section p-6 bg-gradient-to-b from-[#f7fbff] via-white to-[#eef6ff] rounded-2xl shadow-xl">
-  <!-- Header -->
+<section id="daily-spin-section" class="tab-section hidden p-6 bg-gradient-to-b from-[#f7fbff] via-white to-[#eef6ff] rounded-2xl shadow-xl">
+  
+	<div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
+  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
+   < Back
+  </button>
+</div>
+		
+	<!-- Header -->
   <div class="flex items-center justify-between mb-6">
     <div>
       <h2 class="text-3xl font-extrabold text-slate-800">Spin & Earn</h2>
