@@ -256,14 +256,30 @@
 
       try {
         // 1) double-check username uniqueness (important to avoid race conditions)
-        const snap = await db.collection('users').where('usernameLower','==',usernameLower).limit(1).get();
-        if (!snap.empty) {
-          alert('❌ Username already taken. Pick another.');
-          submitBtn.disabled = false;
-          submitBtn.textContent = originalText;
-          return;
-        }
+        let exists = false;
 
+// check by lowercase
+const snapLower = await db.collection('users')
+  .where('usernameLower','==',usernameLower)
+  .limit(1)
+  .get();
+if (!snapLower.empty) exists = true;
+
+// check exact match (for older records or non-normalized users)
+const snapExact = await db.collection('users')
+  .where('username','==',username)
+  .limit(1)
+  .get();
+if (!snapExact.empty) exists = true;
+
+if (exists) {
+  alert('❌ Username already taken. Please choose a different one.');
+  submitBtn.disabled = false;
+  submitBtn.textContent = originalText;
+  return;
+}
+
+        
         // 2) check phone uniqueness
         const phoneSnap = await db.collection('users').where('phone','==',phone).limit(1).get();
         if (!phoneSnap.empty) {
@@ -328,3 +344,4 @@
   </script>
 </body>
 </html>
+
