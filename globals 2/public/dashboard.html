@@ -481,11 +481,6 @@
 <!-- ✅ General Back (controlled by JS) -->
 <!-- ✅ General Back (Only visible on allowed screens) -->
 <!-- ✅ General Back -->
-<div id="backArrowBar" class="hidden p-4 flex items-center gap-2 bg-white shadow-md sticky top-0 z-10">
-  <button onclick="activateTab('dashboard')" class="text-blue-600 font-bold text-lg">
-    ← Back
-  </button>
-</div>
 
 
 	
@@ -844,13 +839,6 @@
 
 
 
-
-
-
-
-
-
-
                                                            <!-- 📱 Airtime Screen -->
 
 
@@ -1103,6 +1091,16 @@
 
 <!-- PREMIUM SECTION (non-interfering) -->
 <section id="premium-section" class="tab-section hidden">
+
+<button onclick="activateTab('dashboard')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
+
+	
   <div class="gp-container">
     <!-- HEADER -->
     <div class="gp-header">
@@ -1248,6 +1246,15 @@
 
 <!-- POST TASK SECTION (small id additions) -->
 <section id="postTaskSection" class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6">
+
+<button onclick="activateTab('dashboard')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
+	
   <button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Task Job</button>
 
   <div class="max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow-xl space-y-6">
@@ -1356,6 +1363,16 @@
 
 	
 <section id="afffiliateJobFormSection" class="tab-section hidden">
+
+
+<button onclick="activateTab('dashboard')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
+	
 <button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Affiliate Job</button>
   <div class="max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow-xl space-y-6">
     <h2 class="text-2xl font-bold text-center text-gray-800">Submit an Affiliate Campaign</h2>
@@ -1480,7 +1497,17 @@
 	
 <!-- 🔹 My Jobs Section -->
 <section id="myJobsSection" class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6">
-  <button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← My job tasks</button>
+
+	
+  <button onclick="activateTab('dashboard')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
+
+	
   <div class="max-w-5xl mx-auto space-y-6">
     <h2 class="text-2xl font-bold text-center text-gray-800">My Job Posts</h2>
     <div id="jobList" class="space-y-4"></div>
@@ -1506,8 +1533,18 @@
 
 ‎
 <!-- ================== AFFILIATE TASKS SECTION ================== -->
-<div id="mainAffiliateScreen" class=" hidden px-4 pt-6">
+<section id="myJobsSection" class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6">
 
+
+<button onclick="activateTab('dashboard')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
+
+	
   <!-- Header -->
   <div class="flex items-center gap-2 mb-4">
     <div class="w-1 h-5 bg-blue-600 rounded"></div>
@@ -1551,7 +1588,7 @@
   <div id="affiliateSection" class="tab-section grid grid-cols-2 gap-4">
     <!-- Jobs will be injected here via JS -->
   </div>
-</div>
+</section>
 
 <!-- ================== FINISHED TASKS SECTION ================== -->
 <div id="finishedTasksScreen" style="display:none" class="px-4 pt-6">
@@ -1789,7 +1826,17 @@
 	
 <!-- ================= INSTALL AND EARN ================= -->
 <!-- ================= INSTALL AND EARN ================= -->  
-<div id="taskSection" class="tab-section hidden">  
+<div id="taskSection" class="tab-section hidden"> 
+
+
+<button onclick="activateTab('dashboard')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
+	
 
   <!-- Controls for searching and filtering -->  
   <div class="w-full px-4 py-5 bg-white rounded-2xl shadow-lg mb-6 border border-gray-100">  
@@ -1887,7 +1934,7 @@
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
     </svg>
-    Back to Dashboard
+    Back
   </button>
 
   <!-- Section header -->
@@ -2059,7 +2106,7 @@
   <!-- Back Button -->
   <button onclick="activateTab('social-tasks-main')"
           class="flex items-center text-pink-600 font-semibold mb-6 hover:underline">
-    ← Back to Social Tasks
+    ← Back
   </button>
 
   <!-- Header -->
@@ -2199,7 +2246,7 @@
   <!-- Back Button -->
   <button onclick="activateTab('social-tasks-main')"
           class="flex items-center text-green-600 font-semibold mb-6 hover:underline">
-    ← Back to Social Tasks
+    ← Back
   </button>
 
   <!-- Header -->
@@ -2306,7 +2353,7 @@
   <!-- Back Button -->
   <button onclick="activateTab('social-tasks-main')"
           class="flex items-center text-blue-600 font-semibold mb-6 hover:underline">
-    ← Back to Social Tasks
+    ← Back
   </button>
 
   <!-- Header -->
@@ -2409,7 +2456,17 @@
 															 
 <!-- DASHBOARD: Blue Banner + Bell Icon -->
 <div id="notifications" class="tab-section hidden px-4 pt-6 pb-24 max-w-2xl mx-auto">
-  <button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Back</button>
+
+	
+  <button onclick="activateTab('dashboard')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
+
+	
   <h1 class="text-1xl font-bold text-blue-700 mb-6 flex items-center gap-2">
     <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -2434,8 +2491,12 @@
 <div id="payment" class="tab-section hidden max-w-md mx-auto px-4 py-6 space-y-6">
 
   <!-- Back Button -->
-  <button onclick="activateTab('dashboard')" class="flex items-center gap-2 text-blue-600 font-semibold hover:underline">
-    ← Back to Dashboard
+  <button onclick="activateTab('dashboard')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
   </button>
 
   <!-- ⚡ Quick Actions (Deposit & Withdraw) -->
@@ -2514,7 +2575,16 @@
 <!-- Withdrawal Section -->
 
 <div id="withdrawFundsSection" class="tab-section hidden p-6 max-w-md mx-auto rounded-xl shadow-lg bg-white mt-8 space-y-6">
-<button onclick="activateTab('payment')" class="text-blue-500 text-lg">← Withdraw</button>
+
+	
+	<button onclick="activateTab('payment')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
+	
   <h2 class="text-2xl font-bold text-center text-gray-800">Withdraw Funds</h2>
 
   <input id="withdrawAccountNumber" type="number" placeholder="Account Number"
@@ -2549,7 +2619,16 @@
 <!-- Deposit Section -->
 <!-- Deposit Section (drop-in) -->
 <div id="depositSection" class="tab-section hidden p-6 max-w-md mx-auto rounded-xl shadow-lg bg-white mt-8 space-y-6">
-  <button onclick="activateTab('payment')" class="text-blue-500 text-lg">← Deposit</button>
+  
+	
+	<button onclick="activateTab('payment')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
+	
   <h2 class="text-2xl font-bold text-center text-gray-800">Deposit Funds</h2>
 
   <div>
@@ -2582,6 +2661,15 @@
 
 <!-- 📜 Transaction History Screen -->
 <div id="transactions-screen" class="tab-section hidden min-h-screen bg-gray-50">
+
+<button onclick="activateTab('dashboard')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
+	
   <!-- Header -->
   <div class="bg-white px-4 py-4 shadow-sm flex items-center justify-between">
     <h2 class="text-xl font-semibold text-gray-900">Transactions</h2>
@@ -2627,7 +2715,17 @@
 <!-- 📑 Transaction Details Screen -->
 <div id="transaction-details-screen" class="tab-section hidden min-h-screen bg-gray-50">
   <div class="bg-white px-4 py-4 shadow flex items-center justify-between">
-    <button onclick="showScreen('transactions-screen')" class="text-blue-600 font-medium">← Back</button>
+
+	  
+    <button onclick="activateTab('transactions-screen')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
+
+	  
     <h2 class="text-lg font-semibold text-gray-900">Transaction Details</h2>
   </div>
 
@@ -2657,8 +2755,11 @@
 
   <!-- Back button -->
   <button onclick="activateTab('dashboard')" 
-    class="mb-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white shadow-sm border border-gray-200 text-blue-600 text-sm font-medium hover:bg-blue-50 transition">
-    ← Back
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
   </button>
 
   <div class="max-w-3xl mx-auto px-4 pt-4 pb-16">
@@ -2760,7 +2861,13 @@
 
 <div id="me" class="tab-section hidden bg-gray-50 min-h-screen">
 
-<button onclick="activateTab('dashboard')" class="text-blue-500 text-lg">← Me</button>
+ <button onclick="activateTab('dashboard')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
 
   <!-- 🔝 Profile Header -->
 <div class="relative w-24 h-24 mx-auto mt-6">
@@ -3022,7 +3129,16 @@
 
 
 <div id="myProfile" class="tab-section hidden px-4 pt-8 pb-16 min-h-screen bg-gradient-to-b from-sky-50 via-white to-indigo-50">
-  <div class="max-w-xl mx-auto bg-white/90 backdrop-blur-xl shadow-2xl rounded-3xl p-6 space-y-6">
+  
+	 <button onclick="activateTab('me')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
+	
+	<div class="max-w-xl mx-auto bg-white/90 backdrop-blur-xl shadow-2xl rounded-3xl p-6 space-y-6">
 
     <!-- Header -->
     <div class="flex items-center justify-between">
@@ -3137,8 +3253,18 @@
 
 <!-- 📊 OVERVIEW SECTION -->
 <div id="overview" class="tab-section hidden px-4 pt-8 pb-16 min-h-screen bg-gradient-to-br from-sky-50 via-white to-indigo-50">
-<button onclick="activateTab('me')" class="text-blue-500 text-sm">← Back</button>
-  <div class="text-center">
+
+	
+	<button onclick="activateTab('me')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
+ 
+	
+	<div class="text-center">
     <h2 class="text-3xl font-extrabold text-blue-800">📊 Your Analytics</h2>
     <p class="text-sm text-gray-500 mt-1">Track your weekly activity and earnings in real-time</p>
   </div>
@@ -3187,8 +3313,15 @@
 
 
 <div id="aboutus" class="tab-section hidden min-h-screen bg-gray-50">
-<button onclick="activateTab('me')" class="text-blue-500 text-sm">← About Us</button>
 
+	
+<button onclick="activateTab('me')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
   
   <!-- Title -->
   <div class="text-center mt-6">
@@ -3232,8 +3365,14 @@
 
 
 <div id="termsScreen" class="tab-section hidden min-h-screen bg-white flex flex-col">
-<button onclick="activateTab('aboutus')" class="text-blue-500 text-lg">← Terms & Condition</button>
-
+	
+<button onclick="activateTab('aboutus')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
   <!-- Scrollable Content -->
   <div class="overflow-y-auto px-5 py-6 space-y-4 text-sm text-gray-700 leading-relaxed">
     <h2 class="text-lg font-bold text-blue-800">1. Introduction</h2>
@@ -3277,8 +3416,15 @@
 
 
 <div id="privacyScreen" class="tab-section hidden min-h-screen bg-white flex flex-col">
-<button onclick="activateTab('aboutus')" class="text-blue-500 text-lg">← Privacy Policy</button>
 
+	
+<button onclick="activateTab('aboutus')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
   
 
   <!-- Scrollable Content -->
@@ -3319,8 +3465,17 @@
 
 
 <div id="language" class="tab-section hidden px-4 py-6 min-h-screen bg-white">
-<button onclick="activateTab('me')" class="text-blue-500 text-sm">← Back</button>
-  <div class="flex items-center gap-3 mb-6">
+
+	
+<button onclick="activateTab('me')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
+ 
+	<div class="flex items-center gap-3 mb-6">
     <button onclick="activateTab('me')" class="text-blue-600 text-lg font-semibold">←</button>
     <h2 class="text-xl font-bold text-blue-800">Languages</h2>
   </div>
@@ -3355,12 +3510,13 @@
 <section id="contactus" class="tab-section hidden w-full h-full bg-white flex flex-col p-4">
 
   <!-- Header -->
-  <div class="flex items-center gap-3 mb-6">
-    <button onclick="switchTab('dashboard')" class="text-gray-700 text-xl">
-      ←
-    </button>
-    <h1 class="text-lg font-semibold text-gray-900">Customer Service</h1>
-  </div>
+  <button onclick="activateTab('dashboard')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
 
   <!-- Intro Text -->
   <p class="text-gray-700 text-base leading-relaxed mb-6">
@@ -3438,19 +3594,21 @@
 
 
 
-<!-- ✅ Daily Check-In Screen -->  <div id="checkin-screen"   
-     class="tab-section hidden min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] p-6 text-white">    <!-- Header -->    <div class="flex items-center justify-between mb-8">  
-    <h2 class="text-3xl font-extrabold bg-gradient-to-r from-blue-400 to-purple-500   
-               text-transparent bg-clip-text drop-shadow-lg tracking-tight">  
-      Daily Check-In  
-    </h2>  
-    <button onclick="activateTab('dashboard')"  
-      class="px-4 py-2 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-700   
-             text-white shadow-lg hover:scale-105 hover:shadow-blue-500/30   
-             transition transform">  
-      ← Back  
-    </button>  
-  </div>    <!-- Check-in Container -->    <div id="checkin-container" class="max-w-3xl mx-auto space-y-10">  <!-- Cards -->  
+<!-- ✅ Daily Check-In Screen --> 
+		<div id="checkin-screen"   class="tab-section hidden min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] p-6 text-white">    <!-- Header -->    <div class="flex items-center justify-between mb-8">  
+   
+			<button onclick="activateTab('dashboard')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
+			
+  </div>  
+			<!-- Check-in Container -->    
+			<div id="checkin-container" class="max-w-3xl mx-auto space-y-10">  
+				<!-- Cards -->  
 <div id="checkin-cards"
      class="grid grid-cols-7 gap-2 justify-items-center">
   <!-- Cards will be injected by JS -->
@@ -3510,8 +3668,12 @@
 <div id="aiHelpCenter" class="tab-section hidden bg-gray-50 min-h-screen flex flex-col">
 
   <!-- Back Button -->
-  <button onclick="activateTab('dashboard')" class="text-blue-600 font-medium text-sm mb-2 hover:underline transition">
-    ← Back to Support
+  <button onclick="activateTab('contactus')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
   </button>
 
   <!-- Header -->
@@ -3588,7 +3750,7 @@
   <div id="chatContainer" class="fixed inset-0 bg-white flex flex-col hidden transform translate-y-full transition-transform duration-300 z-50">
     <!-- Chat Header -->
     <div class="flex items-center gap-3 p-3 bg-blue-600 text-white sticky top-0 z-10 shadow">
-  <button onclick="closeChat()" class="p-1 rounded-full bg-white/20 hover:bg-white/30">←</button>
+  <button onclick="closeChat()" class="p-1 rounded-full bg-white/20 hover:bg-white/30"> <  </button>
   <div class="flex items-center gap-2">
     <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center font-semibold text-sm">G</div>
     <div>
@@ -3621,7 +3783,16 @@
 
 <!-- ====== SPIN TO WIN SECTION (copy into dashboard.html) ====== -->
 <section id="daily-spin-section" class="tab-section p-6 bg-gradient-to-b from-[#f7fbff] via-white to-[#eef6ff] rounded-2xl shadow-xl">
-  <!-- Header -->
+  
+	<button onclick="activateTab('dashboard')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
+	
+	<!-- Header -->
   <div class="flex items-center justify-between mb-6">
     <div>
       <h2 class="text-3xl font-extrabold text-slate-800">Spin & Earn</h2>
