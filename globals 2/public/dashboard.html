@@ -4393,17 +4393,23 @@
 
 
 
-<!-- ✅ Bottom Navbar -->
+
+
+
+
+
+
+		<!-- ✅ Bottom Navbar -->
 <div id="bottomNavbar" class="fixed bottom-0 w-full z-10 bg-white border-t border-gray-200 shadow-xl">
   <nav class="flex justify-around items-center py-1 px-2 bg-white rounded-t-2xl">
 
     <!-- Dashboard -->
     <button id="nav-dashboard" onclick="activateTab('dashboard')" 
             class="relative nav-btn flex flex-col items-center text-gray-600 hover:text-blue-600 transition">
-      <!-- replace this path with your Dashboard icon SVG path -->
       <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <!-- EXAMPLE path, replace with your chosen icon -->
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10l9-7 9 7v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+        <!-- Example modern “home/dashboard” icon path — replace with your preferred one -->
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+              d="M3 12l2-2m0 0l7-7 7 7M13 5v6h6m-1 4v3a1 1 0 01-1 1h-4m-4 0H5a1 1 0 01-1-1v-3m0-4h12" />
       </svg>
       <span class="text-xs">Dashboard</span>
     </button>
@@ -4411,33 +4417,33 @@
     <!-- Transaction -->
     <button id="nav-transaction" onclick="activateTab('transactions-screen')" 
             class="relative nav-btn flex flex-col items-center text-gray-600 hover:text-blue-600 transition">
-      <!-- replace this path with your new Transaction icon -->
       <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <!-- EXAMPLE: two arrows (just placeholder) -->
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5v14"/>
+        <!-- Example “transactions / arrows / exchange” icon — replace with one you like -->
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+              d="M5 12h14M12 5l7 7-7 7" />
       </svg>
       <span class="text-xs">Transaction</span>
       <span id="txDot" class="hidden absolute top-0 right-3 w-3 h-3 bg-red-600 rounded-full animate-pulse"></span>
     </button>
 
-    <!-- Premium -->
+    <!-- Premium (Crown) -->
     <button id="nav-premium" onclick="activateTab('premium-section')" 
             class="relative nav-btn flex flex-col items-center text-gray-600 hover:text-blue-600 transition">
-      <!-- You can still have an icon if you want, or a crown icon -->
       <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <!-- EXAMPLE crown path (placeholder) -->
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 16l3-6 4 4 4-4 3 6H5z"/>
+        <!-- Example modern crown icon path — you can pick a different style -->
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 15l4-9 4 5 4-5 4 9H4z" />
       </svg>
-      <span class="text-xs">👑</span>
+      <span class="text-xs">Premium</span>
     </button>
 
     <!-- Check-In -->
     <button id="nav-checkin" onclick="activateTab('checkin-screen')" 
             class="relative nav-btn flex flex-col items-center text-gray-600 hover:text-blue-600 transition">
-      <!-- replace this with your Check-In icon -->
       <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <!-- EXAMPLE: a “check in” icon, placeholder -->
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7l4 4 4-4M8 17l4 4 4-4"/>
+        <!-- Example “check / location / tick in circle” icon — replace with your favorite -->
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+              d="M9 12l2 2 4-4M12 22a10 10 0 100-20 10 10 0 000 20z" />
       </svg>
       <span class="text-xs">Check-In</span>
     </button>
@@ -4445,23 +4451,27 @@
   </nav>
 </div>
 
-
 		<style>
 /* Add this CSS */
-.nav-btn.active svg {
-  color: #3b82f6; /* Tailwind’s blue-500 or whichever shade you want */
+./* Base nav-btn styling */
+.nav-btn {
+  position: relative;
+  color: #6b7280; /* gray-500 */
 }
 
+/* Active state */
+.nav-btn.active svg {
+  stroke: #3b82f6;  /* blue-500 */
+}
 .nav-btn.active .text-xs {
   color: #3b82f6;
 }
 
-/* Optionally: a small blue underline or glow */
 .nav-btn.active::after {
   content: "";
   position: absolute;
-  bottom: 0;
-  left: 25%;  /* adjust to center under icon */
+  bottom: 2px;
+  left: 25%;
   width: 50%;
   height: 2px;
   background-color: #3b82f6;
