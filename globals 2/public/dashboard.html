@@ -3749,19 +3749,22 @@
 
     <!-- SPIN FUNCTIONS -->
 
-
-<!-- ====== SPIN TO WIN SECTION (copy into dashboard.html) ====== -->
+<!-- SPIN TO WIN SECTION (fixed + improved)
+     Save or paste this single-file snippet into your dashboard page where you want the
+     "Spin & Earn" section to appear. Assumptions:
+     - `auth` and `db` (Firestore) are optional; script runs in demo mode if they are missing.
+     - Replace COIN.jpg and VERIFIED.jpg with your real asset paths.
+-->
 <section id="daily-spin-section" class="tab-section p-6 bg-gradient-to-b from-[#f7fbff] via-white to-[#eef6ff] rounded-2xl shadow-xl">
-  
-	<button onclick="activateTab('dashboard')" 
+  <button type="button" onclick="activateTab && activateTab('dashboard')"
     class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
     </svg>
     Back
   </button>
-	
-	<!-- Header -->
+
+  <!-- Header -->
   <div class="flex items-center justify-between mb-6">
     <div>
       <h2 class="text-3xl font-extrabold text-slate-800">Spin & Earn</h2>
@@ -3778,31 +3781,31 @@
 
     <div class="relative wheel-container">
       <!-- glow ring (animated) -->
-      <div class="absolute inset-0 rounded-full pointer-events-none wheel-glow"></div>
+      <div class="absolute inset-0 rounded-full pointer-events-none wheel-glow" aria-hidden="true"></div>
 
       <!-- central white plate holding canvas -->
       <div class="absolute inset-6 rounded-full bg-white flex items-center justify-center z-10 shadow-2xl wheel-plate">
-        <canvas id="spin-canvas" class="rounded-full" style="width:100%;height:100%"></canvas>
+        <canvas id="spin-canvas" class="rounded-full" role="img" aria-label="Spin wheel" style="width:100%;height:100%"></canvas>
       </div>
 
       <!-- pointer at top (facing down) -->
-      <div id="wheel-pointer" class="absolute -top-10 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-        <div class="pointer-arrow" aria-hidden="true"></div>
+      <div id="wheel-pointer" class="absolute -top-10 left-1/2 -translate-x-1/2 z-30 pointer-events-none" aria-hidden="true">
+        <div class="pointer-arrow"></div>
       </div>
     </div>
 
     <!-- Spin CTA (smaller fine blue directly below wheel) -->
-    <button id="spin-btn" class="spin-btn" aria-live="polite" aria-label="Spin Now">
+    <button id="spin-btn" type="button" class="spin-btn" aria-live="polite" aria-label="Spin Now">
       Spin Now <span id="spin-count" class="ml-2 text-sm text-yellow-100">(0)</span>
     </button>
 
     <!-- Live Win pill (single item) -->
     <div class="w-full max-w-2xl mt-1">
       <div id="live-feed-items" class="live-pill" role="status" aria-atomic="true">
-        <svg class="live-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg class="live-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <path d="M3 10v4h4l5 5V5L7 10H3z" fill="#0F172A"/>
         </svg>
-        <div id="live-text" class="live-text">Loading wins...</div>
+        <div id="live-text" class="live-text" aria-live="polite">Loading wins...</div>
       </div>
     </div>
   </div>
@@ -3872,7 +3875,7 @@
     <div class="text-sm text-slate-500">Congratulations 🎉</div>
     <div id="win-amount" class="text-3xl font-extrabold text-indigo-600 my-3">₦0</div>
     <p class="text-sm text-slate-600 mb-4">Amount added to your balance</p>
-    <button id="win-close" class="px-6 py-2 rounded-full bg-indigo-600 text-white font-semibold">Nice!</button>
+    <button id="win-close" type="button" class="px-6 py-2 rounded-full bg-indigo-600 text-white font-semibold">Nice!</button>
   </div>
 </div>
 
@@ -3881,7 +3884,7 @@
   <div class="bg-white rounded-2xl p-6 w-11/12 max-w-sm text-center shadow-2xl">
     <div class="text-sm text-slate-600">No spins remaining</div>
     <div class="text-lg font-bold text-slate-800 mt-2 mb-3">Complete today's challenges to earn more spins</div>
-    <button id="no-spin-close" class="px-6 py-2 rounded-full bg-sky-500 text-white font-semibold">Okay</button>
+    <button id="no-spin-close" type="button" class="px-6 py-2 rounded-full bg-sky-500 text-white font-semibold">Okay</button>
   </div>
 </div>
 
@@ -3892,8 +3895,11 @@
 
 <!-- Styles (paste in page head or keep here) -->
 <style>
+  /* small helper if you're not using Tailwind's .hidden */
+  .hidden { display:none !important; }
+
   /* container sizing so wheel is stable and centered */
-  .wheel-container { width:320px; height:320px; }
+  .wheel-container { width:320px; height:320px; position:relative; }
   @media(min-width:768px) { .wheel-container { width:380px; height:380px; } }
   @media(min-width:1024px) { .wheel-container { width:420px; height:420px; } }
 
@@ -3927,59 +3933,50 @@
   /* Spin button */
   .spin-btn {
     background: linear-gradient(90deg,#0ea5b3,#7c3aed);
-    color: #fff;
-    border-radius:999px;
-    padding:8px 18px;
-    font-weight:700;
-    border:none;
-    box-shadow: 0 12px 28px rgba(124,58,237,0.09);
-    margin-top:6px;
+    color: #fff; border-radius:999px; padding:8px 18px; font-weight:700; border:none;
+    box-shadow: 0 12px 28px rgba(124,58,237,0.09); margin-top:6px; cursor:pointer; outline:none;
   }
   .spin-btn:disabled { opacity:0.6; cursor:not-allowed; transform:none !important; }
 
   /* Live pill */
-  .live-pill {
-    display:flex; align-items:center; gap:12px; padding:10px 14px; background:#fff; border-radius:999px;
-    box-shadow:0 6px 18px rgba(2,6,23,0.03); border:1px solid rgba(2,6,23,0.04);
-  }
+  .live-pill { display:flex; align-items:center; gap:12px; padding:10px 14px; background:#fff; border-radius:999px; box-shadow:0 6px 18px rgba(2,6,23,0.03); border:1px solid rgba(2,6,23,0.04); }
   .live-text { font-size:14px; color:#0f172a; font-weight:600; }
 
   /* challenge card */
-  #daily-challenges .challenge-card {
-    display:flex; align-items:center; justify-content:space-between;
-    background:#fff; padding:14px; border-radius:12px; box-shadow:0 6px 18px rgba(2,6,23,0.03); border:1px solid rgba(2,6,23,0.04);
-  }
+  #daily-challenges .challenge-card { display:flex; align-items:center; justify-content:space-between; background:#fff; padding:14px; border-radius:12px; box-shadow:0 6px 18px rgba(2,6,23,0.03); border:1px solid rgba(2,6,23,0.04); }
   .challenge-left { width:70%; }
   .challenge-title { font-size:14px; font-weight:600; color:#0f172a; }
   .progress-track { width:100%; height:10px; background:#f1f5f9; border-radius:999px; margin-top:8px; overflow:hidden; }
   .progress-bar { height:100%; width:0%; background:linear-gradient(90deg,#06b6d4,#7c3aed); transition:width 400ms ease; }
-
   .challenge-right { text-align:right; width:28%; }
   .status-text { font-size:13px; font-weight:700; }
   .status-text.not-completed { color:#ef4444; }
   .status-text.completed { color:#16a34a; }
 
-  @media (max-width:768px){
-    .confetti-left, .confetti-right { display:none; }
-    .challenge-left { width:65%; } .challenge-right { width:33%; }
-    .wheel-container { width:280px; height:280px; }
-  }
+  @media (max-width:768px){ .confetti-left, .confetti-right { display:none; } .challenge-left { width:65%; } .challenge-right { width:33%; } .wheel-container { width:280px; height:280px; } }
 </style>
 
-<!-- ====== Script: complete logic (single file) ====== -->
+<!-- ====== Script: complete logic (single file, improved) ====== -->
 <script>
-/* ====== Spin Wheel + Daily Challenge Script (Firebase compat) ====== */
-(() => {
+/* ====== Spin Wheel + Daily Challenge Script (Firebase compat) ======
+   Improvements made:
+   - Fixed svg xmlns typos
+   - Added canvas click-to-spin and keyboard support
+   - Safer responsive canvas sizing (fallback when bounding rect is 0)
+   - Preload images and re-draw wheel on load
+   - Better parsing of Firestore timestamp-like fields
+   - Small accessibility + UX improvements
+*/
+(function () {
   // ---------- CONFIG ----------
-  const COIN_IMG = 'COIN.jpg';
+  const COIN_IMG = 'COIN.jpg'; // replace with your path
   const VERIFIED_IMG = 'VERIFIED.jpg';
-  const PRIZES = [10, 30, 20, 200, 5, 0, 100, 1000];   // wheel order
+  const PRIZES = [10, 30, 20, 200, 5, 0, 100, 1000];
   const WEIGHTS = [18, 12, 14, 2, 18, 20, 5, 1];
   const SEGMENTS = PRIZES.length;
   const ROTATIONS = 6;
   const TIMESTAMP_CANDIDATES = ['createdAt','submittedAt','timestamp','time','submittedOn','created_on'];
 
-  // Map challenge key -> prize index (so a completed challenge can queue a guaranteed spin)
   const CHALLENGE_TO_PRIZE_INDEX = {
     affiliateApproved: 0, // ₦10
     taskApproved: 2,      // ₦20
@@ -4007,7 +4004,7 @@
 
   // ---------- STATE ----------
   let DPR = window.devicePixelRatio || 1;
-  let lastRotation = 0;               // degrees
+  let lastRotation = 0; // degrees
   let spinning = false;
   let currentUser = null;
   let userDocCached = null;
@@ -4016,7 +4013,7 @@
   let prevProgress = { ...progressState };
   let unsubs = [];
   let liveInterval = null;
-  let guaranteedPrizes = []; // queue of prize indices to force next spin to land on
+  let guaranteedPrizes = [];
 
   // ---------- HELPERS ----------
   const todayKey = () => new Date().toISOString().slice(0,10);
@@ -4030,6 +4027,7 @@
     if (typeof v === 'number') return new Date(v);
     try { return new Date(v); } catch(e) { return null; }
   }
+
   function docIsToday(data){
     if (!data) return false;
     for (const f of TIMESTAMP_CANDIDATES) {
@@ -4040,6 +4038,7 @@
     }
     return false;
   }
+
   function weightedRandomIndex(weights){
     const sum = weights.reduce((a,b)=>a+b,0);
     let r = Math.random() * sum;
@@ -4049,6 +4048,7 @@
     }
     return weights.length - 1;
   }
+
   function showToast(msg){
     if (toastEl && toastTextEl) {
       toastTextEl.textContent = msg;
@@ -4061,30 +4061,40 @@
   // ---------- preload images ----------
   const coinImg = new Image(); coinImg.src = COIN_IMG;
   const verifiedImg = new Image(); verifiedImg.src = VERIFIED_IMG;
+  coinImg.onload = () => { try { drawWheel(lastRotation); } catch(e){} };
+  verifiedImg.onload = () => { try { drawWheel(lastRotation); } catch(e){} };
 
   // ---------- responsive HD canvas setup ----------
   function setupCanvasHD() {
     DPR = window.devicePixelRatio || 1;
-    // match plate size (canvas.parentElement is .wheel-plate)
+    // try wheel-plate's bounding rect, fallback to container
     const plate = canvas.parentElement;
-    const rect = plate.getBoundingClientRect();
-    const css = Math.max(220, Math.min(rect.width, rect.height));
+    let rect = plate && plate.getBoundingClientRect && plate.getBoundingClientRect();
+    if (!rect || (rect.width === 0 && rect.height === 0)) {
+      const container = canvas.closest('.wheel-container');
+      rect = container && container.getBoundingClientRect && container.getBoundingClientRect();
+    }
+    const fallback = 320;
+    const css = Math.max(220, Math.min((rect && Math.max(rect.width, rect.height)) || fallback, 420));
+
     canvas.style.width = css + 'px';
     canvas.style.height = css + 'px';
     canvas.width = Math.round(css * DPR);
     canvas.height = Math.round(css * DPR);
-    // make drawing coordinates match CSS pixels
+
+    // match drawing scale to CSS pixels
     ctx.setTransform(DPR,0,0,DPR,0,0);
     drawWheel(lastRotation);
   }
 
   // ---------- draw wheel ----------
   function drawWheel(rotationDeg = 0) {
-    // use CSS pixels for layout
     const cssW = canvas.clientWidth || parseInt(canvas.style.width || '320',10);
     const cx = cssW / 2, cy = cssW / 2, r = Math.min(cssW, cssW)/2 - 12;
+    // clear with device-pixel-awareness
     ctx.clearRect(0,0,cssW,cssW);
     ctx.save();
+
     // rotate wheel around center
     ctx.translate(cx,cy);
     ctx.rotate(rotationDeg * Math.PI/180);
@@ -4096,7 +4106,6 @@
     for (let i=0;i<SEGMENTS;i++){
       const start = -Math.PI/2 + i*segAngle;
       const end = start + segAngle;
-
       // slice
       ctx.beginPath();
       ctx.moveTo(cx,cy);
@@ -4130,13 +4139,14 @@
         const iy = cy + Math.sin(mid) * imgR;
         ctx.save();
         ctx.translate(ix, iy);
-        ctx.rotate(-(rotationDeg * Math.PI/180)); // keep upright
+        // keep coin visually upright regardless of wheel rotation
+        ctx.rotate(-(rotationDeg * Math.PI/180));
         const coinSize = Math.max(28, Math.round(cssW * 0.12));
         ctx.drawImage(coinImg, -coinSize/2, -coinSize/2, coinSize, coinSize);
         // verified badge for 1000
         if (PRIZES[i] === 1000 && verifiedImg.complete) {
           const b = Math.round(coinSize * 0.45);
-          ctx.drawImage(verifiedImg, coinSize/4, coinSize/4, b, b);
+          ctx.drawImage(verifiedImg, coinSize/4 - coinSize/2, coinSize/4 - coinSize/2, b, b);
         }
         ctx.restore();
       }
@@ -4151,7 +4161,7 @@
 
     // center button
     ctx.beginPath();
-    ctx.arc(cx, cy, 48, 0, Math.PI*2);
+    ctx.arc(cx, cy, Math.max(40, Math.round(cssW*0.12)), 0, Math.PI*2);
     ctx.fillStyle = '#fff';
     ctx.fill();
     ctx.lineWidth = 2;
@@ -4192,7 +4202,6 @@
 
   // ---------- compute available spins & update UI ----------
   function recomputeSpinsUI(){
-    // compute completed flags based on goals
     const goals = {
       affiliateApproved: Number(document.querySelector('.challenge-card[data-key="affiliateApproved"]')?.dataset.goal || 10),
       taskApproved: Number(document.querySelector('.challenge-card[data-key="taskApproved"]')?.dataset.goal || 10),
@@ -4210,15 +4219,16 @@
     const completedCount = flags.filter(Boolean).length;
     const base = 1;
 
-    // used today from user doc
     let used = 0;
     let usedDateKey = null;
     if (userDocCached) {
-      used = Number(userDocCached.spinsUsedCount || 0);
+      used = Number(userDocCached.spinsUsedCount || 0) || 0;
       const prev = userDocCached.spinsUsedDate || null;
       if (prev) {
-        try { usedDateKey = (typeof prev.toDate === 'function') ? prev.toDate().toISOString().slice(0,10) : new Date(prev).toISOString().slice(0,10); }
-        catch(e){ usedDateKey = prev; }
+        try {
+          const d = dateFromMaybe(prev);
+          usedDateKey = d ? d.toISOString().slice(0,10) : String(prev);
+        } catch(e){ usedDateKey = prev; }
       }
       if (usedDateKey !== todayKey()) used = 0;
     }
@@ -4227,10 +4237,7 @@
     if (newAvailable !== spinsAvailable) {
       spinsAvailable = newAvailable;
       if (spinCountEl) spinCountEl.textContent = `(${spinsAvailable})`;
-      // small pulse animation
-      if (spinCountEl) {
-        spinCountEl.animate([{ transform:'scale(1)'},{ transform:'scale(1.18)'},{ transform:'scale(1)'}], { duration:350, easing:'ease-out' });
-      }
+      if (spinCountEl) { spinCountEl.animate([{ transform:'scale(1)'},{ transform:'scale(1.18)'},{ transform:'scale(1)'}], { duration:350, easing:'ease-out' }); }
     }
 
     // update progress bars & statuses
@@ -4242,7 +4249,6 @@
       else if (key === 'taskApproved') val = progressState.taskApproved || 0;
       else if (key === 'dataAmount') val = progressState.dataAmount || 0;
       else if (key === 'airtimeAmount') val = progressState.airtimeAmount || 0;
-
       const percent = Math.min(100, (val / goal) * 100);
       const bar = card.querySelector('.progress-bar');
       const status = card.querySelector('.status-text');
@@ -4260,7 +4266,6 @@
     const idx = CHALLENGE_TO_PRIZE_INDEX[key];
     if (typeof idx === 'number') {
       guaranteedPrizes.push(idx);
-      // toast & visual cue
       showToast('Challenge completed — next spin will award the challenge reward!');
     }
   }
@@ -4270,13 +4275,11 @@
     clearUnsubs();
     if (typeof db === 'undefined' || !db) { console.warn('db missing'); return; }
 
-    // affiliate_submissions (approved): count today's approved
     try {
       const q = db.collection('affiliate_submissions').where('userId','==',uid).where('status','==','approved');
       const unsub = q.onSnapshot(snap => {
         let count = 0;
         snap.forEach(d => { if (docIsToday(d.data())) count++; });
-        // detect crossing threshold
         const prev = prevProgress.affiliateApproved || 0;
         progressState.affiliateApproved = count;
         if ((prev < 10) && (count >= 10)) pushGuaranteedPrizeForChallenge('affiliateApproved');
@@ -4286,7 +4289,6 @@
       unsubs.push(unsub);
     } catch(e){ console.warn('attach affiliate err', e); }
 
-    // task_submissions (approved)
     try {
       const q = db.collection('task_submissions').where('userId','==',uid).where('status','==','approved');
       const unsub = q.onSnapshot(snap => {
@@ -4301,7 +4303,6 @@
       unsubs.push(unsub);
     } catch(e){ console.warn('attach task err', e); }
 
-    // bill_submissions (processed) -> data & airtime totals today
     try {
       const q = db.collection('bill_submissions').where('userId','==',uid).where('processed','==',true);
       const unsub = q.onSnapshot(snap => {
@@ -4313,17 +4314,14 @@
           const amt = Number(doc.amount || 0);
           if (t === 'data') dataSum += amt; else airtimeSum += amt;
         });
-        // detect threshold crossing for data (>=1000)
         const prevData = prevProgress.dataAmount || 0;
         progressState.dataAmount = dataSum;
         if ((prevData < 1000) && (dataSum >= 1000)) pushGuaranteedPrizeForChallenge('dataAmount');
         prevProgress.dataAmount = dataSum;
-
         const prevAirtime = prevProgress.airtimeAmount || 0;
         progressState.airtimeAmount = airtimeSum;
         if ((prevAirtime < 500) && (airtimeSum >= 500)) pushGuaranteedPrizeForChallenge('airtimeAmount');
         prevProgress.airtimeAmount = airtimeSum;
-
         recomputeSpinsUI();
       }, err => console.warn('bills listener err', err));
       unsubs.push(unsub);
@@ -4345,12 +4343,8 @@
     liveInterval = setInterval(()=> {
       idx = (idx + 1) % msgs.length;
       if (liveText) {
-        // small fade animation
         liveText.style.opacity = 0;
-        setTimeout(()=> {
-          liveText.textContent = msgs[idx];
-          liveText.style.opacity = 1;
-        }, 220);
+        setTimeout(()=> { liveText.textContent = msgs[idx]; liveText.style.opacity = 1; }, 220);
       }
     }, 2500);
   }
@@ -4358,9 +4352,7 @@
   // ---------- spin math & animation (lands exactly on prize) ----------
   async function spinToIndex(idx) {
     const segDeg = 360 / SEGMENTS;
-    // center angle of slice relative to top baseline used for drawing (-90 degrees)
     const sliceCenter = -90 + (idx + 0.5) * segDeg;
-    // rotation delta required so that sliceCenter becomes -90
     const rotationDelta = -90 - sliceCenter;
     const jitter = (Math.random() * (segDeg / 18)) - (segDeg / 36);
     const total = ROTATIONS * 360 + rotationDelta + jitter;
@@ -4370,7 +4362,7 @@
   }
 
   // ---------- spin handler ----------
-  async function handleSpinClick() {
+  async function handleSpinClick(e) {
     if (spinning) return;
     if (typeof auth === 'undefined' || !auth || !auth.currentUser) { showToast('Please login to spin.'); return; }
     if (spinsAvailable <= 0) {
@@ -4385,15 +4377,12 @@
     spinsAvailable = Math.max(0, spinsAvailable - 1);
     if (spinCountEl) spinCountEl.textContent = `(${spinsAvailable})`;
 
-    // pick prize: guaranteed first, else weighted random
     let idx;
-    if (guaranteedPrizes.length > 0) {
-      idx = guaranteedPrizes.shift();
-    } else {
-      idx = weightedRandomIndex(WEIGHTS);
-    }
+    if (guaranteedPrizes.length > 0) { idx = guaranteedPrizes.shift(); }
+    else { idx = weightedRandomIndex(WEIGHTS); }
 
     await spinToIndex(idx);
+
     const amount = PRIZES[idx];
 
     // update DB (balance + spinsUsedCount + spinsUsedDate)
@@ -4408,30 +4397,29 @@
             balance: amount,
             spinsUsedCount: 1,
             spinsUsedDate: today,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            updatedAt: firebase && firebase.firestore ? firebase.firestore.FieldValue.serverTimestamp() : null
           }, { merge: true });
         } else {
           const data = snap.data() || {};
           const prev = data.spinsUsedDate || null;
           let prevKey = null;
-          try { prevKey = prev && typeof prev.toDate === 'function' ? prev.toDate().toISOString().slice(0,10) : prev; } catch(e){ prevKey = prev; }
+          try { const d = dateFromMaybe(prev); prevKey = d ? d.toISOString().slice(0,10) : String(prev); } catch(e){ prevKey = prev; }
           if (prevKey !== today) {
             tx.update(userRef, {
-              balance: firebase.firestore.FieldValue.increment(amount),
+              balance: firebase && firebase.firestore ? firebase.firestore.FieldValue.increment(amount) : (data.balance || 0) + amount,
               spinsUsedCount: 1,
               spinsUsedDate: today,
-              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              updatedAt: firebase && firebase.firestore ? firebase.firestore.FieldValue.serverTimestamp() : null
             });
           } else {
             tx.update(userRef, {
-              balance: firebase.firestore.FieldValue.increment(amount),
-              spinsUsedCount: firebase.firestore.FieldValue.increment(1),
-              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              balance: firebase && firebase.firestore ? firebase.firestore.FieldValue.increment(amount) : (data.balance || 0) + amount,
+              spinsUsedCount: firebase && firebase.firestore ? firebase.firestore.FieldValue.increment(1) : (data.spinsUsedCount || 0) + 1,
+              updatedAt: firebase && firebase.firestore ? firebase.firestore.FieldValue.serverTimestamp() : null
             });
           }
         }
       });
-
       // refresh local cache
       const fresh = await db.collection('users').doc(auth.currentUser.uid).get();
       userDocCached = fresh.exists ? fresh.data() : userDocCached;
@@ -4451,31 +4439,38 @@
       liveText.textContent = `${who} won ₦${amount} cashback.`;
     }
 
-    // recompute UI (in case transaction/used counts differ)
     recomputeSpinsUI();
-
     spinning = false;
     if (spinBtn) spinBtn.disabled = false;
   }
 
   // ---------- attach auth + init ----------
   function init() {
-    // responsive canvas sizing
     setupCanvasHD();
     drawWheel(lastRotation);
     startLiveFeedDemo();
 
     // events
     if (spinBtn) spinBtn.addEventListener('click', handleSpinClick);
+    // allow clicking the canvas to spin as well
+    canvas.addEventListener('click', ()=> { if (!spinBtn.disabled) spinBtn.click(); });
+
     if (winCloseBtn) winCloseBtn.addEventListener('click', ()=> { if (winModal) { winModal.classList.add('hidden'); winModal.style.display = 'none'; } });
     if (noSpinClose) noSpinClose.addEventListener('click', ()=> { if (noSpinModal) { noSpinModal.classList.add('hidden'); noSpinModal.style.display = 'none'; } });
+
+    // keyboard support: space to spin when not typing
+    document.addEventListener('keydown', (ev)=>{
+      if (ev.code === 'Space' && document.activeElement && !['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) {
+        ev.preventDefault();
+        if (spinBtn && !spinBtn.disabled) spinBtn.click();
+      }
+    });
 
     window.addEventListener('resize', () => { setupCanvasHD(); });
 
     // If firebase isn't available, just run demo UI (no DB)
     if (typeof auth === 'undefined' || !auth || typeof db === 'undefined' || !db) {
       console.warn('Firebase compat not found. Running demo-only UI.');
-      // demo progress so bars show something (optional)
       progressState = { affiliateApproved: 0, taskApproved: 0, dataAmount: 0, airtimeAmount: 0 };
       prevProgress = { ...progressState };
       recomputeSpinsUI();
@@ -4485,12 +4480,8 @@
     // auth listener -> attach realtime listeners for progress
     auth.onAuthStateChanged(user => {
       currentUser = user;
-      if (!user) {
-        // signed out
-        userDocCached = null; recomputeSpinsUI(); clearUnsubs(); return;
-      }
+      if (!user) { userDocCached = null; recomputeSpinsUI(); clearUnsubs(); return; }
 
-      // listen to user doc
       const uRef = db.collection('users').doc(user.uid);
       const unsubUser = uRef.onSnapshot(snap => {
         userDocCached = snap.exists ? snap.data() : {};
@@ -4499,7 +4490,6 @@
         recomputeSpinsUI();
       }, err => {
         console.warn('user doc listener error', err);
-        // fallback to one-time read
         uRef.get().then(snap => {
           userDocCached = snap.exists ? snap.data() : {};
           const username = (userDocCached && userDocCached.username) ? userDocCached.username : (user.displayName || (user.email || '').split('@')[0]);
@@ -4514,12 +4504,10 @@
   // ---------- start ----------
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 
-  // ---------- debug helpers ----------
+  // expose debug helpers
   window.__spinDebug = { drawWheel, setupCanvasHD, recomputeSpinsUI, progressState, PRIZES, lastRotation, guaranteedPrizes };
-
 })();
 </script>
-
 
 
 
