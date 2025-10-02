@@ -1650,9 +1650,8 @@ function closeBoxPopup() {
 const premiumRequiredSections = [
   "whatsapp-task",
   "tiktok-task",
-  "affiliate-tasks",
-  "task-nft",
-  "myJobsSection",
+  "checkin-btn",
+  "aiHelpCenter",
   "taskSection"
 ];
 
