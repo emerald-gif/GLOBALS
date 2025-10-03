@@ -734,7 +734,7 @@
     
     <!-- 🔥 High-Paying Affiliate Tasks -->
    <a href="#affiliateSection" 
-   onclick="switchTab('affiliateSection')" 
+   onclick="switchTab('jobsContainerNew')" 
    class="task-box bg-gradient-to-br from-yellow-50 via-white to-yellow-100 hover:from-yellow-100 hover:to-yellow-200 shadow-md rounded-2xl p-5 transition-all duration-300 transform hover:scale-105 relative">
   
   <div class="flex items-center space-x-3 mb-2">
@@ -1503,32 +1503,556 @@
 <!-- ================== AFFILIATE TASKS SECTION ================== -->
 
 
+<!-- ======================= AFFILIATE DASHBOARD (Hardened) ======================= -->
+<style>
+  .card-soft { box-shadow: 0 10px 22px rgba(12,36,75,0.06), 0 4px 8px rgba(12,36,75,0.04); }
+  .btn-big { box-shadow: 0 6px 14px rgba(37,99,235,0.18); border-radius: 12px; }
+  .hidden-screen { display: none; }
+  .clickable { cursor: pointer; }
+  @media (max-width: 640px) { #affiliateGridNew { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } }
+</style>
 
-<!-- AFFILIATE TASKS SECTION -->
-<section id="affiliateSection" class="tab-section hidden p-6">
-  <!-- Search bar -->
-  <div class="mb-4">
-    <input 
-      id="affiliateSearch" 
-      type="text" 
-      placeholder="Search tasks..." 
-      class="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500"
-    />
+<!-- MAIN: Affiliate list -->
+<div id="jobsContainerNew" class="tab-section hidden px-4 py-6">
+  <button onclick="activateTab('dashboard')" class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
+
+  <h2 class="mb-3 flex items-center gap-2">
+    <span class="inline-block w-1.5 h-6 rounded-full bg-blue-600"></span>
+    <span class="text-lg font-bold text-gray-800 tracking-tight">Affiliate Tasks</span>
+  </h2>
+
+  <div class="flex items-center gap-4 mb-6">
+    <div class="flex-1 relative">
+      <input id="searchTasksMainNew" type="text" placeholder="Search tasks, campaigns, titles..."
+             class="w-full px-4 py-3 pl-12 rounded-2xl border focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" />
+      <svg class="w-5 h-5 absolute left-4 top-3 text-gray-400" fill="none" stroke="currentColor" stroke-width="2"
+           viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round"
+           d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+    </div>
+
+    <button id="openFinishedTasksBtnNew"
+            class="px-4 py-3 rounded-2xl bg-white border shadow-sm hover:shadow-md text-blue-600 font-medium">
+      Finished Tasks
+    </button>
   </div>
 
-  <!-- Task grid -->
-  <div id="affiliateTasks" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-    <!-- JS will inject cards here -->
+  <section id="jobsGridSectionNew">
+    <div id="affiliateGridNew" class="grid grid-cols-2 gap-4"></div>
+  </section>
+</div>
+
+<!-- DEDICATED JOB DETAIL SCREEN -->
+<div id="jobDetailScreenNew" class="hidden-screen px-4 py-6">
+  <div class="flex items-center justify-between mb-4">
+    <button id="backToAffiliateBtn" class="text-blue-600 font-medium flex items-center gap-1 hover:underline">← Back to Affiliate Tasks</button>
+    <div id="jobDetailActions" class="flex items-center gap-2"></div>
   </div>
-</section>
+  <div id="jobDetailContent" class="space-y-4"></div>
+</div>
 
-<!-- TASK DETAIL SCREEN -->
-<section id="affiliateDetailScreen" class="hidden fixed inset-0 bg-white z-50 overflow-y-auto p-6">
-  <button id="closeAffiliateDetail" class="mb-4 text-blue-600 font-semibold">← Back</button>
-  <div id="affiliateDetailContent"></div>
-</section>
+<!-- FINISHED TASKS -->
+<div id="finishedTasksScreenNew" class="hidden-screen px-4 py-8 bg-gray-50 min-h-[60vh]">
+  <div class="flex items-center justify-between mb-6">
+    <button id="backToMainBtnNew" class="text-blue-600 font-medium flex items-center gap-1 hover:underline">← Back</button>
+    <h2 class="text-xl font-bold tracking-tight">Finished Tasks</h2>
+  </div>
 
+  <div class="relative mb-6">
+    <input id="searchFinishedTasksNew" type="text" placeholder="Search finished tasks..."
+           class="w-full px-4 py-3 pl-10 rounded-2xl border focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" />
+    <svg class="w-5 h-5 absolute left-3 top-3 text-gray-400" fill="none" stroke="currentColor" stroke-width="2"
+         viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round"
+         d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+  </div>
 
+  <div class="grid grid-cols-2 gap-4 mb-6">
+    <div class="text-center bg-yellow-50 border border-yellow-200 rounded-2xl py-4 shadow-sm">
+      <p id="pendingCountNew" class="text-3xl font-extrabold text-yellow-600">0</p>
+      <p class="text-sm text-gray-600">Pending</p>
+    </div>
+    <div class="text-center bg-green-50 border border-green-200 rounded-2xl py-4 shadow-sm">
+      <p id="approvedCountNew" class="text-3xl font-extrabold text-green-600">0</p>
+      <p class="text-sm text-gray-600">Approved</p>
+    </div>
+  </div>
+
+  <div id="finishedTasksListNew" class="grid gap-5"></div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // ======= config / env =======
+  const debug = true;
+  const db = (window.db && typeof window.db.collection === "function") ? window.db
+           : (window.firebase && firebase.firestore ? firebase.firestore() : null);
+  const auth = (window.auth && typeof window.auth.currentUser !== "undefined") ? window.auth
+           : (window.firebase && firebase.auth ? firebase.auth() : null);
+
+  if (debug) console.log("[AFFILIATE] script loaded. db:", !!db, "auth:", !!auth);
+
+  // ======= helpers =======
+  const safeText = s => String(s || "")
+    .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+  const formatNaira = n => (n == null || isNaN(n)) ? "₦0" : "₦" + Number(n).toLocaleString("en-NG");
+  const isFn = v => typeof v === "function";
+
+  function safeOnId(id, event, handler) {
+    const el = document.getElementById(id);
+    if (!el) { if (debug) console.warn(`[safeOnId] #${id} not found — skipping ${event}`); return; }
+    el.addEventListener(event, handler);
+  }
+
+  async function uploadFileHelper(file) {
+    if (!file) throw new Error("No file provided");
+    if (isFn(window.uploadToCloudinary)) return await window.uploadToCloudinary(file);
+    if (window.firebase && firebase.storage && auth && auth.currentUser) {
+      const storageRef = firebase.storage().ref();
+      const path = `affiliate_submissions/${auth.currentUser.uid}_${Date.now()}_${file.name}`;
+      const ref = storageRef.child(path);
+      await ref.put(file);
+      return await ref.getDownloadURL();
+    }
+    throw new Error("No upload helper. Add uploadToCloudinary(file) or enable firebase.storage.");
+  }
+
+  // fetch docs by ids helper
+  async function fetchDocsByIds(collectionName, ids = []) {
+    const map = {};
+    if (!ids || ids.length === 0) return map;
+    const chunks = [];
+    for (let i = 0; i < ids.length; i += 10) chunks.push(ids.slice(i, i + 10));
+    for (const ch of chunks) {
+      const snap = await db.collection(collectionName)
+                         .where(firebase.firestore.FieldPath.documentId(), "in", ch)
+                         .get();
+      snap.forEach(d => { map[d.id] = d.data(); map[d.id].id = d.id; });
+    }
+    return map;
+  }
+
+  // ======= Affiliate jobs grid =======
+  function renderAffiliateGrid(jobs = []) {
+    const grid = document.getElementById("affiliateGridNew");
+    if (!grid) { if (debug) console.warn("[AFFILIATE] #affiliateGridNew not found"); return; }
+    const frag = document.createDocumentFragment();
+
+    if (!jobs.length) {
+      const empty = document.createElement("div");
+      empty.className = "col-span-2 p-6 bg-white rounded-xl card-soft text-center";
+      empty.textContent = "No affiliate tasks right now.";
+      frag.appendChild(empty);
+    } else {
+      for (const job of jobs) {
+        const accepted = job.filledWorkers || 0;
+        const total = job.numWorkers || 0;
+        const percent = total > 0 ? Math.min(100, Math.round((accepted / total) * 100)) : 0;
+        const img = job.campaignLogoURL || job.image || "/assets/default-thumb.jpg";
+
+        const card = document.createElement("div");
+        card.className = "bg-white rounded-2xl card-soft p-3";
+        card.innerHTML = `
+          <div class="overflow-hidden rounded-xl">
+            <img src="${safeText(img)}" alt="${safeText(job.title || '')}" class="w-full h-36 object-cover rounded-xl">
+          </div>
+          <div class="mt-3">
+            <h4 class="font-semibold text-md">${safeText(job.title || '')}</h4>
+            <div class="text-sm text-gray-500 mt-1">${formatNaira(job.workerPay)}</div>
+            <div class="text-sm text-gray-500 mt-1">${accepted}/${total} workers · ${percent}%</div>
+            <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden mt-3">
+              <div style="width:${percent}%" class="h-2 rounded-full bg-blue-300 transition-all duration-300"></div>
+            </div>
+            <div class="mt-4 flex gap-2">
+              <button class="flex-1 py-2 rounded-xl bg-blue-600 text-white font-semibold view-affiliate-task-new clickable" data-id="${job.id}">
+                View Task
+              </button>
+            </div>
+          </div>
+        `;
+        frag.appendChild(card);
+      }
+    }
+
+    requestAnimationFrame(() => { grid.innerHTML = ""; grid.appendChild(frag); });
+  }
+
+  let gridUnsub = null;
+  function initAffiliateJobsListener() {
+    if (!db) { if (debug) console.warn("[AFFILIATE] initAffiliateJobsListener skipped: db missing"); return; }
+    if (gridUnsub) return;
+    try {
+      gridUnsub = db.collection("affiliateJobs").where("status", "==", "approved")
+        .onSnapshot(snap => {
+          const jobs = [];
+          snap.forEach(d => jobs.push({ id: d.id, ...d.data() }));
+          jobs.sort((a,b) => (b.postedAt?.seconds || 0) - (a.postedAt?.seconds || 0));
+          renderAffiliateGrid(jobs);
+        }, err => {
+          console.error("[AFFILIATE] affiliateJobs snapshot error:", err);
+        });
+      if (debug) console.log("[AFFILIATE] affiliateJobs listener attached");
+    } catch (err) {
+      console.error("[AFFILIATE] initAffiliateJobsListener error:", err);
+    }
+  }
+
+  // lazy-init
+  (function lazyInit() {
+    const sec = document.getElementById("jobsGridSectionNew");
+    if (!sec || typeof IntersectionObserver === "undefined") { initAffiliateJobsListener(); return; }
+    const io = new IntersectionObserver((entries, o) => {
+      for (const e of entries) if (e.isIntersecting) { initAffiliateJobsListener(); o.disconnect(); return; }
+    }, { threshold: 0.05 });
+    io.observe(sec);
+  })();
+
+  // ======= Job DETAIL screen & real-time progress =======
+  let detailSnapshotUnsub = null;
+
+  async function loadFinishedTaskSubmissionsUser() {
+    // Expose old name (keeps compatibility with other code)
+    return loadFinishedTasksNew();
+  }
+
+  async function loadFinishedTasksNew() {
+    // This function populates Finished Tasks from `affiliate_submissions` (per your request)
+    if (!auth || !auth.currentUser) {
+      const listEl = document.getElementById("finishedTasksListNew");
+      if (listEl) listEl.innerHTML = `<p class="text-center text-gray-500">Login to see your finished tasks.</p>`;
+      return;
+    }
+    const userId = auth.currentUser.uid;
+
+    // Use realtime listener so Approved statuses sync without reload
+    if (typeof loadFinishedTasksNew._unsub === "function") {
+      loadFinishedTasksNew._unsub(); loadFinishedTasksNew._unsub = null;
+    }
+    try {
+      loadFinishedTasksNew._unsub = db.collection("affiliate_submissions")
+        .where("userId", "==", userId)
+        .onSnapshot(async snap => {
+          const listEl = document.getElementById("finishedTasksListNew");
+          if (!listEl) { if (debug) console.warn("[AFFILIATE] finished list missing"); return; }
+          listEl.innerHTML = "";
+          const items = [];
+          const jobIds = new Set();
+          let pending = 0, approved = 0;
+
+          snap.forEach(d => {
+            const data = { id: d.id, ...d.data() };
+            items.push(data);
+            const s = (data.status || "").toLowerCase();
+            if (s === "approved") approved++; else pending++;
+            if (data.jobId) jobIds.add(data.jobId);
+          });
+
+          const jobMap = await fetchDocsByIds("affiliateJobs", Array.from(jobIds));
+
+          const frag = document.createDocumentFragment();
+          items.sort((a,b) => (b.postedAt?.seconds || 0) - (a.postedAt?.seconds || 0));
+          for (const it of items) {
+            const jobTitle = jobMap[it.jobId]?.title || "Affiliate Job";
+            const card = document.createElement("div");
+            card.className = "p-4 bg-white rounded-xl shadow-sm flex items-center justify-between hover:shadow-md";
+            card.innerHTML = `
+              <div>
+                <h3 class="font-semibold text-gray-900">${safeText(jobTitle)}</h3>
+                <p class="text-sm text-gray-600">${safeText(it.status || '')}</p>
+                <p class="text-xs text-gray-400">${it.postedAt?.toDate ? it.postedAt.toDate().toLocaleString() : ""}</p>
+              </div>
+              <div class="flex flex-col gap-2 items-end">
+                <button class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg view-finished-detail clickable" data-id="${it.id}">View</button>
+              </div>
+            `;
+            frag.appendChild(card);
+          }
+
+          listEl.appendChild(frag);
+          document.getElementById("pendingCountNew") && (document.getElementById("pendingCountNew").textContent = String(pending));
+          document.getElementById("approvedCountNew") && (document.getElementById("approvedCountNew").textContent = String(approved));
+        }, err => {
+          console.error("[AFFILIATE] finished onSnapshot error:", err);
+          document.getElementById("finishedTasksListNew") && (document.getElementById("finishedTasksListNew").innerHTML = `<p class="text-center text-red-500">Failed to load finished tasks.</p>`);
+        });
+      if (debug) console.log("[AFFILIATE] finished tasks listener attached");
+    } catch (err) {
+      console.error("[AFFILIATE] loadFinishedTasksNew error:", err);
+    }
+  }
+
+  // Expose old names to avoid breaking other code
+  window.loadFinishedTaskSubmissionsUser = loadFinishedTasksNew;
+  window.loadFinishedTasksNew = loadFinishedTasksNew;
+
+  async function openJobDetailScreen(jobId) {
+    if (!db) { alert("Database not ready."); return; }
+    try {
+      const doc = await db.collection("affiliateJobs").doc(jobId).get();
+      if (!doc.exists) { alert("Job not found"); return; }
+      const job = { id: doc.id, ...doc.data() };
+
+      const proofCount = Number(job.proofFileCount || 1);
+      const totalWorkers = Number(job.numWorkers || 0);
+
+      const container = document.getElementById("jobDetailContent");
+      if (!container) { if (debug) console.warn("[AFFILIATE] jobDetailContent not found"); return; }
+
+      container.innerHTML = `
+        <div class="bg-white rounded-2xl card-soft overflow-hidden">
+          <div class="relative">
+            <img src="${safeText(job.campaignLogoURL || job.image || '/assets/default-banner.jpg')}" class="w-full h-44 object-cover" />
+            <img src="${safeText(job.campaignLogoURL || job.image || '/assets/default-thumb.jpg')}" class="absolute -bottom-6 left-6 w-14 h-14 rounded-full border-4 border-white object-cover shadow" />
+          </div>
+          <div class="p-5">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="text-xl font-bold">${safeText(job.title || 'Untitled')}</h3>
+                <p class="text-sm text-gray-500">${formatNaira(job.workerPay)} · ${totalWorkers} workers</p>
+              </div>
+            </div>
+            <div class="mt-3 text-gray-700">${safeText(job.instructions || '')}</div>
+            <div class="mt-4">
+              <div class="text-sm text-gray-500">Progress</div>
+              <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden mt-2">
+                <div id="detailProgressBar" class="h-2 rounded-full bg-blue-400" style="width:0%"></div>
+              </div>
+              <div id="detailProgressText" class="text-sm text-gray-500 mt-2">0/0 (0%)</div>
+            </div>
+            <hr class="my-4"/>
+            <div>
+              <p class="text-sm text-gray-500 mb-2">Proofs required: <strong id="detailProofCount">${proofCount}</strong></p>
+              <input id="detailProofFiles" type="file" multiple accept="image/*" class="mb-2 block w-full" />
+              <textarea id="detailSubmissionNote" placeholder="Optional note..." class="w-full border rounded-md p-2 mb-2"></textarea>
+              <div class="flex gap-2">
+                <button id="detailSubmitBtn" data-job-id="${safeText(job.id)}" data-proof-count="${proofCount}" class="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold">Submit Proof</button>
+                <button id="detailCancelBtn" class="py-3 px-4 rounded-xl bg-gray-100">Cancel</button>
+              </div>
+              <p class="text-xs text-gray-400 mt-2">Submissions are reviewed by admin. Approved submissions will reflect here and in Finished Tasks.</p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // show detail screen
+      document.getElementById("jobsContainerNew")?.classList.add("hidden");
+      document.getElementById("finishedTasksScreenNew")?.classList.add("hidden");
+      document.getElementById("jobDetailScreenNew")?.classList.remove("hidden");
+
+      // realtime approved submissions count for this job
+      if (detailSnapshotUnsub) { detailSnapshotUnsub(); detailSnapshotUnsub = null; }
+      detailSnapshotUnsub = db.collection("affiliate_submissions")
+        .where("jobId", "==", job.id)
+        .where("status", "==", "approved")
+        .onSnapshot(snap => {
+          const approvedCount = snap.size;
+          const percent = totalWorkers > 0 ? Math.min(100, Math.round((approvedCount / totalWorkers) * 100)) : 0;
+          document.getElementById("detailProgressBar")?.style && (document.getElementById("detailProgressBar").style.width = percent + "%");
+          const tEl = document.getElementById("detailProgressText");
+          if (tEl) tEl.textContent = `${approvedCount}/${totalWorkers} (${percent}%)`;
+        }, err => console.error("[AFFILIATE] detail onSnapshot error:", err));
+
+    } catch (err) {
+      console.error("[AFFILIATE] openJobDetailScreen error:", err);
+      alert("Failed to open job. Check console.");
+    }
+  }
+
+  // expose alias (keeps older name compatibility)
+  window.openJobModalNew = openJobDetailScreen;
+  window.openJobDetailScreen = openJobDetailScreen;
+
+  // ======= Delegated click handler (safe) =======
+  document.addEventListener("click", async (ev) => {
+    try {
+      const target = ev.target;
+
+      // Open Finished Tasks (top button)
+      if (target.closest && target.closest("#openFinishedTasksBtnNew")) {
+        loadFinishedTasksNew();
+        document.getElementById("jobsContainerNew")?.classList.add("hidden");
+        document.getElementById("jobDetailScreenNew")?.classList.add("hidden");
+        document.getElementById("finishedTasksScreenNew")?.classList.remove("hidden");
+        return;
+      }
+
+      // Back from Finished -> Main
+      if (target.closest && target.closest("#backToMainBtnNew")) {
+        document.getElementById("finishedTasksScreenNew")?.classList.add("hidden");
+        document.getElementById("jobsContainerNew")?.classList.remove("hidden");
+        if (typeof loadFinishedTasksNew._unsub === "function") { loadFinishedTasksNew._unsub(); loadFinishedTasksNew._unsub = null; }
+        return;
+      }
+
+      // View Task on grid
+      const viewJob = target.closest && target.closest(".view-affiliate-task-new");
+      if (viewJob) {
+        const id = viewJob.dataset?.id;
+        if (id) openJobDetailScreen(id);
+        else console.warn("[AFFILIATE] view-affiliate-task-new clicked but data-id missing");
+        return;
+      }
+
+      // Back to affiliate from detail
+      if (target.closest && target.closest("#backToAffiliateBtn")) {
+        document.getElementById("jobDetailScreenNew")?.classList.add("hidden");
+        document.getElementById("jobsContainerNew")?.classList.remove("hidden");
+        if (detailSnapshotUnsub) { detailSnapshotUnsub(); detailSnapshotUnsub = null; }
+        return;
+      }
+
+      // Cancel in detail
+      if (target.closest && target.closest("#detailCancelBtn")) {
+        document.getElementById("backToAffiliateBtn")?.click();
+        return;
+      }
+
+      // Submit proof in detail
+      const submitBtn = target.closest && target.closest("#detailSubmitBtn");
+      if (submitBtn) {
+        const jobId = submitBtn.dataset?.jobId;
+        if (!jobId) { alert("Job ID missing."); return; }
+        if (!auth || !auth.currentUser) { alert("Login to submit proof."); return; }
+
+        const proofRequired = Number(submitBtn.dataset?.proofCount || 1);
+        const filesInput = document.getElementById("detailProofFiles");
+        const files = filesInput?.files || [];
+        if (files.length !== proofRequired) {
+          alert(`This job requires exactly ${proofRequired} file(s). You provided ${files.length}.`);
+          return;
+        }
+
+        // disable button and upload
+        submitBtn.disabled = true;
+        const prevTxt = submitBtn.textContent;
+        submitBtn.textContent = "Uploading...";
+
+        try {
+          const uploads = [];
+          for (let i = 0; i < files.length; i++) uploads.push(uploadFileHelper(files[i]));
+          const urls = await Promise.all(uploads);
+
+          const payload = {
+            jobId,
+            userId: auth.currentUser.uid,
+            userName: auth.currentUser.displayName || auth.currentUser.email || "",
+            postedAt: (window.firebase && firebase.firestore) ? firebase.firestore.FieldValue.serverTimestamp() : new Date(),
+            proofURLs: urls,
+            note: document.getElementById("detailSubmissionNote")?.value || "",
+            status: "on review"
+          };
+
+          if (db) await db.collection("affiliate_submissions").add(payload);
+          alert("✅ Proof submitted! It will be reviewed by admin.");
+          document.getElementById("backToAffiliateBtn")?.click();
+        } catch (err) {
+          console.error("[AFFILIATE] submit proof error:", err);
+          alert("Failed to submit proof. See console.");
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = prevTxt;
+        }
+        return;
+      }
+
+      // View finished submission detail
+      const viewFin = target.closest && target.closest(".view-finished-detail");
+      if (viewFin) {
+        const subId = viewFin.dataset?.id;
+        if (!subId) { alert("Submission id missing"); return; }
+        if (!db) { alert("Database not ready"); return; }
+        try {
+          const doc = await db.collection("affiliate_submissions").doc(subId).get();
+          if (!doc.exists) { alert("Submission not found"); return; }
+          const d = doc.data();
+          const images = (d.proofURLs || []).map(u => `<img src="${safeText(u)}" class="w-full rounded-md mb-2" />`).join("");
+          const modal = document.createElement("div");
+          modal.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4";
+          modal.innerHTML = `
+            <div class="bg-white rounded-xl shadow-lg p-4 w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <h3 class="text-lg font-bold mb-2">Submission Details</h3>
+              <p class="text-sm"><strong>Status:</strong> ${safeText(d.status || "")}</p>
+              <p class="text-sm"><strong>Note:</strong> ${safeText(d.note || "")}</p>
+              <div class="mt-3">${images || '<p class="text-sm text-gray-400">No proof images</p>'}</div>
+              <div class="mt-4 flex justify-end"><button class="closeFinishedBtn px-4 py-2 bg-blue-600 text-white rounded-lg">Close</button></div>
+            </div>
+          `;
+          document.body.appendChild(modal);
+          modal.querySelector(".closeFinishedBtn")?.addEventListener("click", () => modal.remove());
+        } catch (err) {
+          console.error("[AFFILIATE] view finished detail error:", err);
+          alert("Failed to load details");
+        }
+        return;
+      }
+
+    } catch (err) {
+      console.error("[AFFILIATE] delegated click handler error:", err);
+      if (debug) console.trace();
+    }
+  });
+
+  // ======= Search inputs (safe attach) =======
+  const sInput = document.getElementById("searchTasksMainNew");
+  if (sInput) {
+    let to = null;
+    sInput.addEventListener("input", () => {
+      clearTimeout(to);
+      to = setTimeout(() => {
+        const q = sInput.value.trim().toLowerCase();
+        const grid = document.getElementById("affiliateGridNew");
+        if (!grid) return;
+        [...grid.children].forEach(card => {
+          const txt = (card.innerText || "").toLowerCase();
+          card.style.display = txt.includes(q) ? "" : "none";
+        });
+      }, 170);
+    });
+  } else if (debug) console.warn("[AFFILIATE] searchTasksMainNew not found");
+
+  const sf = document.getElementById("searchFinishedTasksNew");
+  if (sf) {
+    sf.addEventListener("input", () => {
+      const q = sf.value.trim().toLowerCase();
+      const list = document.getElementById("finishedTasksListNew");
+      if (!list) return;
+      [...list.children].forEach(card => {
+        const txt = (card.innerText || "").toLowerCase();
+        card.style.display = txt.includes(q) ? "" : "none";
+      });
+    });
+  } else if (debug) console.warn("[AFFILIATE] searchFinishedTasksNew not found");
+
+  // ======= Start listeners =======
+  try { initAffiliateJobsListener(); if (debug) console.log("[AFFILIATE] delegated handlers installed"); }
+  catch (err) { console.error("[AFFILIATE] failed to init listeners:", err); }
+
+  // Expose some functions for debugging/compatibility
+  window._dashboardAffiliateFix = {
+    openJobDetailScreen,
+    loadFinishedTasksNew,
+    loadFinishedTaskSubmissionsUser
+  };
+
+  // Also safeOn legacy IDs that other scripts might try to bind (prevents null addEventListener elsewhere)
+  safeOnId("finishedTaskBtnUser", "click", () => {
+    // If some other script still expects this id, this handler will act as a fallback
+    loadFinishedTasksNew();
+    document.getElementById("jobsContainerNew")?.classList.add("hidden");
+    document.getElementById("jobDetailScreenNew")?.classList.add("hidden");
+    document.getElementById("finishedTasksScreenNew")?.classList.remove("hidden");
+  });
+  safeOnId("backToMainBtnUser", "click", () => {
+    document.getElementById("finishedTasksScreenNew")?.classList.add("hidden");
+    document.getElementById("jobsContainerNew")?.classList.remove("hidden");
+    if (typeof loadFinishedTasksNew._unsub === "function") { loadFinishedTasksNew._unsub(); loadFinishedTasksNew._unsub = null; }
+  });
+
+});
+</script>
 
 
 
