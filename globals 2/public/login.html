@@ -72,107 +72,256 @@
     const db = firebase.firestore(); // ✅ added Firestore
   </script>
 
+  
   <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    if (window.lucide) lucide.createIcons();
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.lucide) lucide.createIcons();
 
-    const loginForm = document.getElementById('loginForm');
-    const loginEmail = document.getElementById('loginEmail');
-    const loginPassword = document.getElementById('loginPassword');
-    const loginEmailError = document.getElementById('loginEmailError');
-    const loginPasswordError = document.getElementById('loginPasswordError');
-    const loginTogglePassword = document.getElementById('loginTogglePassword');
+  const loginForm = document.getElementById('loginForm');
+  const loginEmail = document.getElementById('loginEmail');
+  const loginPassword = document.getElementById('loginPassword');
+  const loginEmailError = document.getElementById('loginEmailError');
+  const loginPasswordError = document.getElementById('loginPasswordError');
+  const loginTogglePassword = document.getElementById('loginTogglePassword');
 
-    // input error toggle
-    loginEmail.addEventListener('input', () => {
-      loginEmailError.classList.toggle('hidden', loginEmail.validity.valid && loginEmail.value.trim() !== '');
-    });
-    loginPassword.addEventListener('input', () => {
-      loginPasswordError.classList.toggle('hidden', loginPassword.value.trim() !== '');
-    });
-
-    // eye toggle
-    loginTogglePassword.addEventListener('click', () => {
-      const showing = loginPassword.type === 'text';
-      loginPassword.type = showing ? 'password' : 'text';
-      loginTogglePassword.innerHTML = showing
-        ? '<i data-lucide="eye-off" class="w-5 h-5"></i>'
-        : '<i data-lucide="eye" class="w-5 h-5"></i>';
-      if (window.lucide) lucide.createIcons();
-    });
-
-    // submit
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      loginEmailError.classList.add('hidden');
-      loginPasswordError.classList.add('hidden');
-
-      const email = loginEmail.value.trim();
-      const password = loginPassword.value;
-
-      if (!loginEmail.validity.valid || !email) {
-        loginEmailError.classList.remove('hidden');
-        return;
-      }
-      if (!password) {
-        loginPasswordError.classList.remove('hidden');
-        return;
-      }
-
-      try {
-        const userCred = await auth.signInWithEmailAndPassword(email, password);
-        const uid = userCred.user.uid;
-
-        // ✅ check verification status from Firestore
-        const doc = await db.collection("users").doc(uid).get();
-        if (!doc.exists) {
-          alert("❌ User record not found. Please sign up again.");
-          return;
-        }
-        const data = doc.data();
-        if (!data.verified) {
-          alert("⚠️ Your account is not verified yet. Please enter the code sent to your email.");
-          window.location.href = `verify.html?uid=${uid}&email=${encodeURIComponent(data.email)}`;
-        } else {
-
-
-
-           // After login success
-const dummyForm = document.createElement('form');
-dummyForm.style.display = 'none';
-dummyForm.method = 'POST';
-
-const emailInput = document.createElement('input');
-emailInput.type = 'email';
-emailInput.name = 'email';
-emailInput.value = email;
-dummyForm.appendChild(emailInput);
-
-const passwordInput = document.createElement('input');
-passwordInput.type = 'password';
-passwordInput.name = 'password';
-passwordInput.value = password;
-dummyForm.appendChild(passwordInput);
-
-document.body.appendChild(dummyForm);
-dummyForm.submit(); // triggers browser Save Password prompt
-document.body.removeChild(dummyForm);
-
-          
-          window.location.href = 'dashboard.html';
-        }
-      } catch (err) {
-        let msg = 'Login failed. Please try again.';
-        if (err.code === 'auth/user-not-found') msg = 'No account found with this email.';
-        else if (err.code === 'auth/wrong-password') msg = 'Incorrect password. Try again.';
-        else if (err.code === 'auth/invalid-email') msg = 'Invalid email address.';
-        alert('❌ ' + msg);
-        console.error('Login failed:', err);
-      }
-    });
+  // ---------- small UX helpers (your existing logic) ----------
+  loginEmail.addEventListener('input', () => {
+    loginEmailError.classList.toggle('hidden', loginEmail.validity.valid && loginEmail.value.trim() !== '');
   });
-  </script>
+  loginPassword.addEventListener('input', () => {
+    loginPasswordError.classList.toggle('hidden', loginPassword.value.trim() !== '');
+  });
+
+  loginTogglePassword.addEventListener('click', () => {
+    const showing = loginPassword.type === 'text';
+    loginPassword.type = showing ? 'password' : 'text';
+    loginTogglePassword.innerHTML = showing
+      ? '<i data-lucide="eye-off" class="w-5 h-5"></i>'
+      : '<i data-lucide="eye" class="w-5 h-5"></i>';
+    if (window.lucide) lucide.createIcons();
+  });
+
+  // ---------- sign-in wrapper (centralized) ----------
+  async function handleSignIn(email, password, { allowSavePrompt = true } = {}) {
+    // optional: set Firebase persistence so user stays logged-in across tabs/reloads
+    try {
+      await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    } catch (err) {
+      // non-fatal: some browsers may fail; proceed anyway
+      console.warn('Failed to set persistence:', err);
+    }
+
+    try {
+      const userCred = await auth.signInWithEmailAndPassword(email, password);
+      const uid = userCred.user.uid;
+
+      const doc = await db.collection("users").doc(uid).get();
+      if (!doc.exists) {
+        alert("❌ User record not found. Please sign up again.");
+        return;
+      }
+      const data = doc.data();
+      if (!data.verified) {
+        alert("⚠️ Your account is not verified yet. Please enter the code sent to your email.");
+        window.location.href = `verify.html?uid=${uid}&email=${encodeURIComponent(data.email)}`;
+        return;
+      }
+
+      // if allowed, prompt user to save their credential (only if not already saved)
+      if (allowSavePrompt && !(await checkSavedCredential(email))) {
+        const choice = await showSavePrompt(email, password);
+        if (choice === 'save') {
+          await saveCredential(email, password);
+        }
+      }
+
+      // after processing, go to dashboard
+      window.location.href = 'dashboard.html';
+    } catch (err) {
+      let msg = 'Login failed. Please try again.';
+      if (err.code === 'auth/user-not-found') msg = 'No account found with this email.';
+      else if (err.code === 'auth/wrong-password') msg = 'Incorrect password. Try again.';
+      else if (err.code === 'auth/invalid-email') msg = 'Invalid email address.';
+      alert('❌ ' + msg);
+      console.error('Login failed:', err);
+    }
+  }
+
+  // ---------- form submit ----------
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    loginEmailError.classList.add('hidden');
+    loginPasswordError.classList.add('hidden');
+
+    const email = loginEmail.value.trim();
+    const password = loginPassword.value;
+
+    if (!loginEmail.validity.valid || !email) {
+      loginEmailError.classList.remove('hidden');
+      return;
+    }
+    if (!password) {
+      loginPasswordError.classList.remove('hidden');
+      return;
+    }
+
+    // call centralized handler; allow save prompt
+    await handleSignIn(email, password, { allowSavePrompt: true });
+  });
+
+  // ---------- credential helpers ----------
+  async function checkSavedCredential(email) {
+    // try Credential Management API first
+    try {
+      if (navigator.credentials && navigator.credentials.get) {
+        // 'optional' avoids forcing mediation UI
+        const cred = await navigator.credentials.get({ password: true, mediation: 'optional' });
+        if (cred && cred.id === email) return true;
+      }
+    } catch (e) {
+      console.warn('checkSavedCredential navigator error', e);
+    }
+    // fallback: check localStorage saved entry
+    const stored = localStorage.getItem('globals_saved_cred');
+    if (!stored) return false;
+    try {
+      const obj = JSON.parse(stored);
+      return obj && obj.email === email;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function saveCredential(email, password) {
+    // Preferred: Credential Management API -> stores in browser's password manager
+    try {
+      if (navigator.credentials && navigator.credentials.store && navigator.credentials.create) {
+        // create a PasswordCredential-like object (supported syntax)
+        const cred = await navigator.credentials.create({ password: { id: email, password, name: 'Globals' } });
+        if (cred) {
+          await navigator.credentials.store(cred);
+          return true;
+        }
+      }
+    } catch (e) {
+      console.warn('navigator.credentials.store failed:', e);
+    }
+
+    // FALLBACK (INSECURE): obfuscate with base64 in localStorage (only for demo/testing).
+    // DO NOT USE THIS IN PRODUCTION — localStorage is readable by scripts on the page.
+    try {
+      const payload = {
+        email,
+        passwordB64: btoa(unescape(encodeURIComponent(password))),
+        savedAt: Date.now()
+      };
+      localStorage.setItem('globals_saved_cred', JSON.stringify(payload));
+      return true;
+    } catch (e) {
+      console.error('Fallback save failed', e);
+      return false;
+    }
+  }
+
+  async function getSavedCredential() {
+    // try Credential Management API to fetch password (if user permits)
+    try {
+      if (navigator.credentials && navigator.credentials.get) {
+        const cred = await navigator.credentials.get({ password: true, mediation: 'optional' });
+        if (cred && cred.password) {
+          return { email: cred.id, password: cred.password };
+        }
+      }
+    } catch (e) {
+      console.warn('navigator.credentials.get failed', e);
+    }
+
+    // fallback to localStorage (insecure)
+    const stored = localStorage.getItem('globals_saved_cred');
+    if (!stored) return null;
+    try {
+      const obj = JSON.parse(stored);
+      return { email: obj.email, password: decodeURIComponent(escape(atob(obj.passwordB64))) };
+    } catch (e) {
+      console.warn('failed to parse fallback saved cred', e);
+      return null;
+    }
+  }
+
+  // ---------- save prompt UI (returns 'save'|'no'|'skip') ----------
+  function showSavePrompt(email, password) {
+    return new Promise((resolve) => {
+      const banner = document.createElement('div');
+      banner.className = 'fixed top-6 left-1/2 transform -translate-x-1/2 z-50 p-4 rounded-xl shadow-lg bg-white flex items-center space-x-3';
+      banner.style.minWidth = '320px';
+      banner.innerHTML = `
+        <div class="flex-1">
+          <div class="font-semibold text-sm">Save password for <span class="text-blue-600">${email}</span>?</div>
+          <div class="text-xs text-gray-500">So you can quickly login next time.</div>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button id="savePwdBtn" class="px-3 py-1 rounded-md bg-blue-600 text-white text-sm">Save</button>
+          <button id="noSaveBtn" class="px-3 py-1 rounded-md border border-gray-200 text-sm">Not now</button>
+        </div>
+      `;
+      document.body.appendChild(banner);
+      if (window.lucide) lucide.createIcons();
+
+      const saveBtn = banner.querySelector('#savePwdBtn');
+      const noBtn = banner.querySelector('#noSaveBtn');
+
+      const cleanup = (result) => {
+        try { banner.remove(); } catch(e) {}
+        resolve(result);
+      };
+
+      saveBtn.addEventListener('click', async () => {
+        await saveCredential(email, password);
+        cleanup('save');
+      });
+      noBtn.addEventListener('click', () => cleanup('no'));
+
+      // auto-close (skip) after 8s if user doesn't act
+      setTimeout(() => cleanup('skip'), 8000);
+    });
+  }
+
+  // ---------- quick-login drawer on page load ----------
+  (async function initQuickLogin() {
+    const saved = await getSavedCredential();
+    if (!saved) return;
+
+    const drawer = document.createElement('div');
+    drawer.className = 'fixed bottom-4 right-4 z-50 w-80 p-3 bg-white rounded-xl shadow-lg';
+    drawer.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-sm font-medium">Quick login as</div>
+          <div class="text-sm text-gray-700">${saved.email}</div>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button id="quickLoginBtn" class="px-3 py-1 rounded-md bg-blue-600 text-white text-sm">Login</button>
+          <button id="dismissQuick" class="px-2 py-1 text-sm">✕</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(drawer);
+
+    const quickLoginBtn = drawer.querySelector('#quickLoginBtn');
+    const dismissBtn = drawer.querySelector('#dismissQuick');
+
+    dismissBtn.addEventListener('click', () => drawer.remove());
+    quickLoginBtn.addEventListener('click', async () => {
+      quickLoginBtn.disabled = true;
+      quickLoginBtn.textContent = 'Logging in...';
+      await handleSignIn(saved.email, saved.password, { allowSavePrompt: false });
+    });
+  })();
+
+}); // DOMContentLoaded end
+</script>
 </body>
 </html>
+
 
 
