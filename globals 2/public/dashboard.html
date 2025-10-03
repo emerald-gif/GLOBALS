@@ -1504,20 +1504,16 @@
 
 
 
-<!-- DASHBOARD: Affiliate Section (NO SWIPER) + Finished Tasks + Modal -->
-<!-- Put this inside your dashboard.html where your task section should live. -->
-<!-- Assumes firebase is initialized already (firebase, firebase.auth(), firebase.firestore(), firebase.storage() if available). -->
-<style>
-  /* small styles to complement Tailwind (if you use Tailwind keep these) */
-  .card-soft { box-shadow: 0 10px 22px rgba(12,36,75,0.06), 0 4px 8px rgba(12,36,75,0.04); }
-  .btn-big { box-shadow: 0 6px 14px rgba(37,99,235,0.18); border-radius: 12px; }
-  #jobDetailModalNew { display: none; }
-  #jobDetailModalNew.show { display: flex; }
-  @media (max-width: 640px) { #affiliateGridNew { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } }
-</style>
+<!-- ===== DASHBOARD: Search + Finished button + Jobs Grid (NO SWIPER) ===== -->
+<div id="jobsContainerNew" class="tab-section hidden px-4 py-6">
 
-<!-- MAIN container -->
-<div id="jobsContainerNew" class="px-4 py-6">
+	<button onclick="activateTab('dashboard')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
 
   <!-- Top row: search + finished tasks button -->
   <div class="flex items-center gap-4 mb-6">
@@ -1543,8 +1539,8 @@
   </section>
 </div>
 
-<!-- Job Detail Modal (user view & submit proof) -->
-<div id="jobDetailModalNew" class="fixed inset-0 z-50 items-center justify-center bg-black/40">
+<!-- ===== Job Detail Modal (NEW) ===== -->
+<div id="jobDetailModalNew" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
   <div class="w-[94%] max-w-2xl bg-white rounded-2xl overflow-hidden">
     <div class="relative">
       <img id="modalBannerImgNew" src="" class="w-full h-44 object-cover" />
@@ -1589,7 +1585,7 @@
   </div>
 </div>
 
-<!-- Finished Tasks Screen -->
+<!-- ===== Finished Tasks Screen (NEW unique IDs) ===== -->
 <div id="finishedTasksScreenNew" class="hidden px-4 py-8 bg-gray-50 min-h-[60vh]">
   <div class="flex items-center justify-between mb-6">
     <button id="backToMainBtnNew" class="text-blue-600 font-medium flex items-center gap-1 hover:underline">← Back</button>
@@ -1621,386 +1617,440 @@
   <div id="finishedTasksListNew" class="grid gap-5"></div>
 </div>
 
-<script>
-(() => {
-  // === Globals & helpers ===
-  const db = window.db || (window.firebase && firebase.firestore());
-  const auth = window.auth || (window.firebase && firebase.auth());
-  if (!db || !auth) {
-    console.warn("Firebase (db/auth) not found. Ensure Firebase is initialized before this script.");
-  }
 
-  function escapeHtml(s="") {
-    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
-  }
-  function formatNaira(n) {
-    if (n == null || isNaN(n)) return "₦0";
-    return "₦" + Number(n).toLocaleString("en-NG");
-  }
+		
+<style>
+		
+/* Search / Google-like input */
+#searchTasksMainNew, #searchFinishedTasksNew {
+  border-radius: 14px;
+}
 
-  // file upload helper: prefer existing uploadToCloudinary; fallback to Firebase Storage if available
-  async function uploadFileHelper(file) {
-    if (typeof window.uploadToCloudinary === "function") {
-      return await window.uploadToCloudinary(file);
-    }
-    if (window.firebase && firebase.storage) {
-      const storageRef = firebase.storage().ref();
-      const path = `affiliate_submissions/${auth.currentUser.uid}_${Date.now()}_${file.name}`;
-      const ref = storageRef.child(path);
-      await ref.put(file);
-      return await ref.getDownloadURL();
-    }
-    throw new Error("No upload helper found. Add uploadToCloudinary(file) or enable firebase.storage.");
-  }
+/* Card soft shadow */
+.card-soft {
+  box-shadow: 0 10px 22px rgba(12,36,75,0.06), 0 4px 8px rgba(12,36,75,0.04);
+}
 
-  /* Render affiliate grid (2-per-row) */
-  function renderAffiliateGridNew(jobs) {
-    const grid = document.getElementById("affiliateGridNew");
-    if (!grid) return;
-    const frag = document.createDocumentFragment();
+/* Large View button look */
+.btn-big {
+  box-shadow: 0 6px 14px rgba(37,99,235,0.18);
+  border-radius: 12px;
+}
 
-    if (!jobs.length) {
-      const empty = document.createElement("div");
-      empty.className = "col-span-2 p-6 bg-white rounded-xl card-soft text-center";
-      empty.textContent = "No affiliate tasks right now.";
-      frag.appendChild(empty);
-    } else {
-      for (const job of jobs) {
-        const accepted = job.filledWorkers || 0;
-        const total = job.numWorkers || 0;
-        const percent = total > 0 ? Math.min(100, Math.round((accepted / total) * 100)) : 0;
-        const img = job.campaignLogoURL || job.image || "/assets/default-thumb.jpg";
+/* modal overlay and visibility helper */
+#jobDetailModalNew { display: none; }
+#jobDetailModalNew.show { display: flex; }
 
-        const card = document.createElement("div");
-        card.className = "bg-white rounded-2xl card-soft p-3";
-        card.innerHTML = `
-          <div class="overflow-hidden rounded-xl">
-            <img src="${escapeHtml(img)}" alt="${escapeHtml(job.title)}" class="w-full h-36 object-cover rounded-xl">
-          </div>
-          <div class="mt-3">
-            <h4 class="font-semibold text-md">${escapeHtml(job.title)}</h4>
-            <div class="text-sm text-gray-500 mt-1">${formatNaira(job.workerPay)}</div>
-            <div class="text-sm text-gray-500 mt-1">${accepted}/${total} workers · ${percent}%</div>
-            <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden mt-3">
-              <div style="width:${percent}%;" class="h-2 rounded-full bg-blue-300 transition-all duration-300"></div>
-            </div>
-            <button class="mt-4 w-full py-3 rounded-xl bg-blue-600 text-white font-semibold view-affiliate-task-new btn-big"
-                    data-id="${job.id}">
-              View Task
-            </button>
-          </div>
-        `;
-        frag.appendChild(card);
-      }
-    }
+/* Responsive: make it 2 columns on small screens like your screenshot */
+@media (max-width: 640px) {
+  #affiliateGridNew { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+}
 
-    requestAnimationFrame(() => {
-      grid.innerHTML = "";
-      grid.appendChild(frag);
-    });
-  }
+/* Finished button style */
+#openFinishedTasksBtnNew { min-width: 140px; }
 
-  // Listener: approved affiliateJobs (reads filledWorkers)
-  let gridListenerUnsub = null;
-  function initAffiliateJobsListenerNew() {
-    if (!db) return;
-    if (gridListenerUnsub) return; // already listening
-    gridListenerUnsub = db.collection("affiliateJobs").where("status", "==", "approved")
-      .onSnapshot(snapshot => {
-        const jobs = [];
-        snapshot.forEach(doc => {
-          const d = doc.data(); d.id = doc.id; jobs.push(d);
-        });
-        jobs.sort((a,b) => (b.postedAt?.seconds || 0) - (a.postedAt?.seconds || 0));
-        renderAffiliateGridNew(jobs);
-      }, err => console.error("affiliateJobs listener error:", err));
-  }
 
-  // IntersectionObserver lazy-init for grid
-  (function observeJobsGridNew(){
-    const sec = document.getElementById("jobsGridSectionNew");
-    if (!sec) { initAffiliateJobsListenerNew(); return; }
-    const obs = new IntersectionObserver((entries, o) => {
-      for (const en of entries) {
-        if (en.isIntersecting) {
-          initAffiliateJobsListenerNew();
-          o.disconnect();
-          return;
-        }
-      }
-    }, { root: null, threshold: 0.05 });
-    obs.observe(sec);
-  })();
+	</style>
 
-  // Search on top (debounced)
-  const searchInputNew = document.getElementById("searchTasksMainNew");
-  if (searchInputNew) {
-    let searchTimeout = null;
-    searchInputNew.addEventListener("input", () => {
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(() => {
-        const q = searchInputNew.value.trim().toLowerCase();
-        const grid = document.getElementById("affiliateGridNew");
-        if (!grid) return;
-        [...grid.children].forEach(card => {
-          card.style.display = card.innerText.toLowerCase().includes(q) ? "" : "none";
-        });
-      }, 170);
-    });
-  }
 
-  // OPEN JOB modal
-  async function openJobModalNew(jobId) {
-    try {
-      const doc = await db.collection("affiliateJobs").doc(jobId).get();
-      if (!doc.exists) return alert("Job not found");
-      const job = { id: doc.id, ...doc.data() };
+		
+ <script>
+/* ====== Dashboard (NO SWIPER) — NEW ids ====== */
 
-      document.getElementById("modalBannerImgNew").src = job.campaignLogoURL || job.image || "/assets/default-banner.jpg";
-      document.getElementById("modalSmallAvatarNew").src = job.campaignLogoURL || job.image || "/assets/default-thumb.jpg";
-      document.getElementById("modalJobTitleNew").textContent = job.title || "Untitled";
-      document.getElementById("modalMetaNew").textContent = `${formatNaira(job.workerPay)} · ${job.numWorkers || 0} workers`;
-      document.getElementById("modalInstructionsNew").textContent = job.instructions || "";
+/* Ensure db & auth references */
+const dbNew = window.db || (window.firebase && firebase.firestore());
+const authNew = window.auth || (window.firebase && firebase.auth());
+if (!dbNew || !authNew) console.warn("Firebase (db/auth) not found - ensure firebase is initialized before this script.");
+
+/* Helpers */
+function escapeHtml(s = "") {
+  return String(s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+function formatNaira(n) {
+  if (n == null || isNaN(n)) return "₦0";
+  return "₦" + Number(n).toLocaleString("en-NG");
+}
+
+/* State & flags */
+let dashboardListenersInitializedNew = false;
+
+/* ---------- Render functions ---------- */
+
+function renderAffiliateGridNew(jobs) {
+  const grid = document.getElementById("affiliateGridNew");
+  if (!grid) return;
+  const frag = document.createDocumentFragment();
+
+  if (!jobs.length) {
+    const empty = document.createElement("div");
+    empty.className = "col-span-2 p-6 bg-white rounded-xl card-soft text-center";
+    empty.textContent = "No affiliate tasks right now.";
+    frag.appendChild(empty);
+  } else {
+    for (const job of jobs) {
       const accepted = job.filledWorkers || 0;
       const total = job.numWorkers || 0;
       const percent = total > 0 ? Math.min(100, Math.round((accepted / total) * 100)) : 0;
-      document.getElementById("modalProgressBarNew").style.width = percent + "%";
-      document.getElementById("modalProgressTextNew").textContent = `${accepted}/${total} · ${percent}%`;
-      document.getElementById("modalProofReqNew").textContent = `Proofs required: ${job.proofFileCount || 1}`;
+      const img = job.campaignLogoURL || job.image || "/assets/default-thumb.jpg";
 
-      document.getElementById("submitProofBtnNew").dataset.jobId = job.id;
-
-      document.getElementById("jobDetailModalNew").classList.add("show");
-    } catch (err) {
-      console.error("openJobModalNew err:", err);
-      alert("Failed to open job.");
+      const card = document.createElement("div");
+      card.className = "bg-white rounded-2xl card-soft p-3";
+      card.innerHTML = `
+        <div class="overflow-hidden rounded-xl">
+          <img src="${escapeHtml(img)}" alt="${escapeHtml(job.title)}" class="w-full h-36 object-cover rounded-xl">
+        </div>
+        <div class="mt-3">
+          <h4 class="font-semibold text-md">${escapeHtml(job.title)}</h4>
+          <div class="text-sm text-gray-500 mt-1">${formatNaira(job.workerPay)}</div>
+          <div class="text-sm text-gray-500 mt-1">${accepted}/${total} workers · ${percent}%</div>
+          <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden mt-3">
+            <div style="width:${percent}%;" class="h-2 rounded-full bg-blue-300 transition-all duration-300"></div>
+          </div>
+          <button class="mt-4 w-full py-3 rounded-xl bg-blue-600 text-white font-semibold view-affiliate-task-new btn-big"
+                  data-id="${job.id}">
+            View Task
+          </button>
+        </div>
+      `;
+      frag.appendChild(card);
     }
   }
 
-  // delegated click for view buttons
-  document.addEventListener("click", (e) => {
-    const btn = e.target.closest(".view-affiliate-task-new");
-    if (btn) {
-      openJobModalNew(btn.dataset.id);
+  requestAnimationFrame(() => {
+    grid.innerHTML = "";
+    grid.appendChild(frag);
+  });
+}
+
+/* ---------- Listeners (init once when grid visible) ---------- */
+function initDashboardListenersNew() {
+  if (dashboardListenersInitializedNew) return;
+  dashboardListenersInitializedNew = true;
+
+  // Listen only to approved affiliateJobs and read filledWorkers for progress
+  dbNew.collection("affiliateJobs").where("status", "==", "approved")
+    .onSnapshot(snapshot => {
+      const jobs = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        data.id = doc.id;
+        jobs.push(data);
+      });
+      // sort newest first
+      jobs.sort((a,b) => (b.postedAt?.seconds || 0) - (a.postedAt?.seconds || 0));
+      renderAffiliateGridNew(jobs);
+    }, err => console.error("affiliateJobs listener error:", err));
+}
+
+/* Lazy-init when the jobs grid section becomes visible (prevent heavy listeners on other pages) */
+(function observeJobsGridNew() {
+  const sec = document.getElementById("jobsGridSectionNew");
+  if (!sec) { initDashboardListenersNew(); return; }
+  const obs = new IntersectionObserver((entries, o) => {
+    for (const en of entries) {
+      if (en.isIntersecting) {
+        initDashboardListenersNew();
+        o.disconnect();
+        return;
+      }
     }
+  }, { root: null, threshold: 0.05 });
+  obs.observe(sec);
+})();
+
+/* ---------- Search bar logic (top Google-like) ---------- */
+const searchInputNew = document.getElementById("searchTasksMainNew");
+if (searchInputNew) {
+  let searchTimeoutNew = null;
+  searchInputNew.addEventListener("input", () => {
+    clearTimeout(searchTimeoutNew);
+    searchTimeoutNew = setTimeout(() => {
+      const q = searchInputNew.value.trim().toLowerCase();
+      // simple client-side filter by card text (fast)
+      const grid = document.getElementById("affiliateGridNew");
+      if (!grid) return;
+      [...grid.children].forEach(card => {
+        card.style.display = card.innerText.toLowerCase().includes(q) ? "" : "none";
+      });
+    }, 180); // debounce
   });
+}
 
-  // modal close
-  document.getElementById("modalCloseBtnNew")?.addEventListener("click", () => {
-    document.getElementById("jobDetailModalNew").classList.remove("show");
-  });
-  document.getElementById("closeModalBtnNew")?.addEventListener("click", () => {
-    document.getElementById("jobDetailModalNew").classList.remove("show");
-  });
+/* ---------- View Task modal (open) ---------- */
+async function openJobModalNew(jobId, isAffiliate = true) {
+  try {
+    const doc = await dbNew.collection(isAffiliate ? "affiliateJobs" : "adminJobs").doc(jobId).get();
+    if (!doc.exists) return alert("Job not found");
+    const job = { id: doc.id, ...doc.data() };
 
-  // submit proof
-  document.getElementById("submitProofBtnNew")?.addEventListener("click", async (ev) => {
-    const btn = ev.currentTarget;
-    const jobId = btn.dataset.jobId;
-    const filesInput = document.getElementById("submissionFilesNew");
-    const files = filesInput?.files || [];
+    document.getElementById("modalBannerImgNew").src = job.campaignLogoURL || job.image || "/assets/default-banner.jpg";
+    document.getElementById("modalSmallAvatarNew").src = job.campaignLogoURL || job.image || "/assets/default-thumb.jpg";
+    document.getElementById("modalJobTitleNew").textContent = job.title || "Untitled";
+    document.getElementById("modalMetaNew").textContent = `${formatNaira(job.workerPay)} · ${job.numWorkers || 0} workers`;
+    document.getElementById("modalInstructionsNew").textContent = job.instructions || "";
+    const accepted = job.filledWorkers || 0;
+    const total = job.numWorkers || 0;
+    const percent = total > 0 ? Math.min(100, Math.round((accepted / total) * 100)) : 0;
+    document.getElementById("modalProgressBarNew").style.width = percent + "%";
+    document.getElementById("modalProgressTextNew").textContent = `${accepted}/${total} · ${percent}%`;
+    document.getElementById("modalProofReqNew").textContent = `Proofs required: ${job.proofFileCount || 1}`;
 
-    if (!auth.currentUser) return alert("You must be logged in to submit proof.");
-    if (!jobId) return alert("Job not selected.");
-    if (!files.length) return alert("Attach at least one proof file.");
+    // attach current job id to submit button via dataset
+    document.getElementById("submitProofBtnNew").dataset.jobId = job.id;
 
-    // check upload helper
-    if (typeof uploadFileHelper !== "function") {
-      return alert("File upload helper missing.");
-    }
+    // show modal
+    document.getElementById("jobDetailModalNew").classList.add("show");
+  } catch (err) {
+    console.error("openJobModalNew err:", err);
+    alert("Failed to open job.");
+  }
+}
 
-    btn.disabled = true;
-    const old = btn.textContent;
-    btn.textContent = "Uploading...";
+/* Close modal */
+document.getElementById("modalCloseBtnNew")?.addEventListener("click", () => {
+  document.getElementById("jobDetailModalNew").classList.remove("show");
+});
+document.getElementById("closeModalBtnNew")?.addEventListener("click", () => {
+  document.getElementById("jobDetailModalNew").classList.remove("show");
+});
 
-    try {
-      const uploads = [];
-      for (let i = 0; i < files.length; i++) uploads.push(uploadFileHelper(files[i]));
-      const urls = await Promise.all(uploads);
+/* Delegated clicks for View Task buttons */
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".view-affiliate-task-new");
+  if (btn) {
+    const id = btn.dataset.id;
+    openJobModalNew(id, true);
+  }
+});
 
-      const submission = {
-        jobId,
-        userId: auth.currentUser.uid,
-        userName: auth.currentUser.displayName || auth.currentUser.email || "",
-        postedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        proofURLs: urls,
-        note: document.getElementById("submissionNoteNew").value || "",
-        status: "pending"
-      };
+/* ---------- Submit proof flow (creates affiliate_submissions doc) ---------- */
+document.getElementById("submitProofBtnNew")?.addEventListener("click", async (ev) => {
+  const btn = ev.currentTarget;
+  const jobId = btn.dataset.jobId;
+  const filesInput = document.getElementById("submissionFilesNew");
+  const files = filesInput?.files || [];
 
-      await db.collection("affiliate_submissions").add(submission);
-      alert("✅ Proof submitted! It will be reviewed by admin.");
-      document.getElementById("jobDetailModalNew").classList.remove("show");
-    } catch (err) {
-      console.error("submit proof err:", err);
-      alert("Failed to submit proof.");
-    } finally {
-      btn.disabled = false;
-      btn.textContent = old;
-    }
-  });
+  if (!authNew.currentUser) return alert("You must be logged in to submit proof.");
+  if (!jobId) return alert("Job not selected.");
+  if (!files.length) return alert("Attach at least one proof file.");
 
-  // FINISHED tasks screen open/close
-  document.getElementById("openFinishedTasksBtnNew")?.addEventListener("click", () => {
-    document.getElementById("jobsContainerNew")?.classList.add("hidden");
-    document.getElementById("finishedTasksScreenNew")?.classList.remove("hidden");
-    loadFinishedTasksNew();
-  });
-  document.getElementById("backToMainBtnNew")?.addEventListener("click", () => {
-    document.getElementById("finishedTasksScreenNew")?.classList.add("hidden");
-    document.getElementById("jobsContainerNew")?.classList.remove("hidden");
-  });
-
-  // helper to fetch docs by ids in chunks
-  async function fetchDocsByIds(collectionName, ids) {
-    const map = {};
-    if (!ids || !ids.length) return map;
-    const chunks = [];
-    for (let i = 0; i < ids.length; i += 10) chunks.push(ids.slice(i, i + 10));
-    for (const ch of chunks) {
-      const snap = await db.collection(collectionName).where(firebase.firestore.FieldPath.documentId(), "in", ch).get();
-      snap.forEach(d => { map[d.id] = d.data(); map[d.id].id = d.id; });
-    }
-    return map;
+  // ensure uploadToCloudinary exists
+  if (typeof window.uploadToCloudinary !== "function") {
+    return alert("uploadToCloudinary(file) helper not found. Add your file upload helper or adapt this code to use Firebase Storage.");
   }
 
-  // load finished tasks (task_submissions + affiliate_submissions for current user)
-  async function loadFinishedTasksNew() {
-    const listEl = document.getElementById("finishedTasksListNew");
-    const pendingCountEl = document.getElementById("pendingCountNew");
-    const approvedCountEl = document.getElementById("approvedCountNew");
+  // disable
+  btn.disabled = true;
+  const oldTxt = btn.textContent;
+  btn.textContent = "Uploading...";
 
-    if (!auth.currentUser) {
-      listEl.innerHTML = `<p class="text-center text-gray-500">Login to see your finished tasks.</p>`;
+  try {
+    // upload all files
+    const uploadPromises = [];
+    for (let i = 0; i < files.length; i++) uploadPromises.push(window.uploadToCloudinary(files[i]));
+    const urls = await Promise.all(uploadPromises);
+
+    // create submission doc
+    const submission = {
+      jobId,
+      userId: authNew.currentUser.uid,
+      userName: authNew.currentUser.displayName || authNew.currentUser.email || "",
+      postedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      proofURLs: urls,
+      note: document.getElementById("submissionNoteNew").value || "",
+      status: "pending"
+    };
+
+    await dbNew.collection("affiliate_submissions").add(submission);
+    alert("✅ Proof submitted! It will be reviewed by admin.");
+    document.getElementById("jobDetailModalNew").classList.remove("show");
+  } catch (err) {
+    console.error("submit proof err:", err);
+    alert("Failed to submit proof. Try again.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldTxt;
+  }
+});
+
+/* ---------- Finished Tasks flow (side button opens finished screen) ---------- */
+document.getElementById("openFinishedTasksBtnNew")?.addEventListener("click", () => {
+  document.getElementById("jobsContainerNew")?.classList.add("hidden");
+  document.getElementById("finishedTasksScreenNew")?.classList.remove("hidden");
+  loadFinishedTasksNew();
+});
+document.getElementById("backToMainBtnNew")?.addEventListener("click", () => {
+  document.getElementById("finishedTasksScreenNew")?.classList.add("hidden");
+  document.getElementById("jobsContainerNew")?.classList.remove("hidden");
+});
+
+/* Utility: chunked fetch helper for docs by id (collection + array of ids) */
+async function fetchDocsByIds(collectionName, ids) {
+  const map = {};
+  if (!ids || !ids.length) return map;
+  const chunks = [];
+  for (let i = 0; i < ids.length; i += 10) chunks.push(ids.slice(i, i + 10));
+  for (const ch of chunks) {
+    const snap = await dbNew.collection(collectionName).where(firebase.firestore.FieldPath.documentId(), "in", ch).get();
+    snap.forEach(d => { map[d.id] = d.data(); map[d.id].id = d.id; });
+  }
+  return map;
+}
+
+/* Load finished tasks for current user (both task_submissions and affiliate_submissions) */
+async function loadFinishedTasksNew() {
+  const listEl = document.getElementById("finishedTasksListNew");
+  const pendingCountEl = document.getElementById("pendingCountNew");
+  const approvedCountEl = document.getElementById("approvedCountNew");
+
+  if (!authNew.currentUser) {
+    listEl.innerHTML = `<p class="text-center text-gray-500">Login to see your finished tasks.</p>`;
+    return;
+  }
+  const userId = authNew.currentUser.uid;
+
+  try {
+    // fetch both collections in parallel
+    const [taskSnap, affSnap] = await Promise.all([
+      dbNew.collection("task_submissions").where("userId", "==", userId).get(),
+      dbNew.collection("affiliate_submissions").where("userId", "==", userId).get()
+    ]);
+
+    const tasks = taskSnap.docs.map(d => ({ id: d.id, ...d.data(), _type: "task" }));
+    const affs = affSnap.docs.map(d => ({ id: d.id, ...d.data(), _type: "affiliate" }));
+
+    const combined = tasks.concat(affs);
+    if (!combined.length) {
+      listEl.innerHTML = `<p class="text-center text-gray-400">You have no finished tasks yet.</p>`;
+      pendingCountEl.textContent = "0";
+      approvedCountEl.textContent = "0";
       return;
     }
 
-    const userId = auth.currentUser.uid;
-    try {
-      const [taskSnap, affSnap] = await Promise.all([
-        db.collection("task_submissions").where("userId", "==", userId).get(),
-        db.collection("affiliate_submissions").where("userId", "==", userId).get()
-      ]);
+    // gather job ids to fetch titles
+    const taskJobIds = [...new Set(tasks.map(t => t.taskId).filter(Boolean))];
+    const affJobIds = [...new Set(affs.map(a => a.jobId).filter(Boolean))];
 
-      const tasks = taskSnap.docs.map(d => ({ id: d.id, ...d.data(), _type: "task" }));
-      const affs = affSnap.docs.map(d => ({ id: d.id, ...d.data(), _type: "affiliate" }));
-      const combined = tasks.concat(affs);
-      if (!combined.length) {
-        listEl.innerHTML = `<p class="text-center text-gray-400">You have no finished tasks yet.</p>`;
-        pendingCountEl.textContent = "0";
-        approvedCountEl.textContent = "0";
-        return;
-      }
+    const [taskJobsMap, affJobsMap] = await Promise.all([
+      fetchDocsByIds("tasks", taskJobIds),
+      fetchDocsByIds("affiliateJobs", affJobIds)
+    ]);
 
-      const taskJobIds = [...new Set(tasks.map(t => t.taskId).filter(Boolean))];
-      const affJobIds = [...new Set(affs.map(a => a.jobId).filter(Boolean))];
+    // sort by postedAt / submittedAt descending
+    combined.sort((a,b) => {
+      const tA = a.postedAt?.seconds ? a.postedAt.seconds : (a.submittedAt?.seconds || 0);
+      const tB = b.postedAt?.seconds ? b.postedAt.seconds : (b.submittedAt?.seconds || 0);
+      return tB - tA;
+    });
 
-      const [taskJobsMap, affJobsMap] = await Promise.all([
-        fetchDocsByIds("tasks", taskJobIds),
-        fetchDocsByIds("affiliateJobs", affJobIds)
-      ]);
+    // render
+    const frag = document.createDocumentFragment();
+    let pending = 0, approved = 0;
+    for (const item of combined) {
+      const status = (item.status || "").toLowerCase();
+      if (status === "pending" || status === "on review") pending++;
+      if (status === "approved" || status === "accepted") approved++;
 
-      combined.sort((a,b) => {
-        const tA = a.postedAt?.seconds || a.submittedAt?.seconds || 0;
-        const tB = b.postedAt?.seconds || b.submittedAt?.seconds || 0;
-        return tB - tA;
-      });
+      let jobTitle = "Untitled";
+      if (item._type === "task" && item.taskId) jobTitle = (taskJobsMap[item.taskId]?.title || "Untitled Task");
+      if (item._type === "affiliate" && item.jobId) jobTitle = (affJobsMap[item.jobId]?.title || "Untitled Affiliate Job");
 
-      const frag = document.createDocumentFragment();
-      let pending = 0, approved = 0;
-
-      for (const item of combined) {
-        const status = (item.status || "").toLowerCase();
-        if (status === "pending" || status === "on review") pending++;
-        if (status === "approved" || status === "accepted") approved++;
-
-        let jobTitle = "Untitled";
-        if (item._type === "task" && item.taskId) jobTitle = (taskJobsMap[item.taskId]?.title || "Untitled Task");
-        if (item._type === "affiliate" && item.jobId) jobTitle = (affJobsMap[item.jobId]?.title || "Untitled Affiliate Job");
-
-        const card = document.createElement("div");
-        card.className = "p-4 bg-white rounded-xl shadow-sm flex items-center justify-between hover:shadow-md transition";
-        card.innerHTML = `
-          <div>
-            <h3 class="font-semibold text-gray-900">${escapeHtml(jobTitle)}</h3>
-            <p class="text-sm text-gray-600">${item._type === "affiliate" ? "Affiliate" : "Task"} • Earn: ₦${item.workerEarn || item.amount || 0}</p>
-            <p class="text-xs text-gray-400">${item.submittedAt?.toDate?.().toLocaleString?.() || ""}</p>
-            <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded ${
-              (status === "approved" || status === "accepted") ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
-            }">${escapeHtml(item.status || "")}</span>
-          </div>
-          <button class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg details-btn-finished" data-id="${item.id}" data-type="${item._type}">
-            Details
-          </button>
-        `;
-        frag.appendChild(card);
-      }
-
-      listEl.innerHTML = "";
-      listEl.appendChild(frag);
-      pendingCountEl.textContent = String(pending);
-      approvedCountEl.textContent = String(approved);
-
-      listEl.querySelectorAll(".details-btn-finished").forEach(btn => {
-        btn.addEventListener("click", async () => {
-          const id = btn.dataset.id;
-          const type = btn.dataset.type;
-          if (type === "task") {
-            const doc = await db.collection("task_submissions").doc(id).get();
-            if (!doc.exists) return alert("Not found");
-            const data = doc.data();
-            const jobTitle = taskJobsMap[data.taskId]?.title || "Untitled Task";
-            showSimpleDetailsModal(jobTitle, data, data.proofImage || "");
-          } else {
-            const doc = await db.collection("affiliate_submissions").doc(id).get();
-            if (!doc.exists) return alert("Not found");
-            const data = doc.data();
-            const jobTitle = affJobsMap[data.jobId]?.title || "Untitled Affiliate Job";
-            showSimpleDetailsModal(jobTitle, data, (data.proofURLs && data.proofURLs[0]) || "");
-          }
-        });
-      });
-
-      // search inside finished screen
-      const sf = document.getElementById("searchFinishedTasksNew");
-      if (sf) {
-        sf.addEventListener("input", () => {
-          const q = sf.value.trim().toLowerCase();
-          [...listEl.children].forEach(card => {
-            card.style.display = card.innerText.toLowerCase().includes(q) ? "" : "none";
-          });
-        });
-      }
-    } catch (err) {
-      console.error("loadFinishedTasksNew err:", err);
-      listEl.innerHTML = `<p class="text-center text-red-500">Failed to load finished tasks.</p>`;
+      const card = document.createElement("div");
+      card.className = "p-4 bg-white rounded-xl shadow-sm flex items-center justify-between hover:shadow-md transition";
+      card.innerHTML = `
+        <div>
+          <h3 class="font-semibold text-gray-900">${escapeHtml(jobTitle)}</h3>
+          <p class="text-sm text-gray-600">${item._type === "affiliate" ? "Affiliate" : "Task"} • Earn: ₦${item.workerEarn || item.amount || 0}</p>
+          <p class="text-xs text-gray-400">${item.submittedAt?.toDate?.().toLocaleString?.() || ""}</p>
+          <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded ${
+            (status === "approved" || status === "accepted") ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+          }">${escapeHtml(item.status || "")}</span>
+        </div>
+        <button class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg details-btn-finished" data-id="${item.id}" data-type="${item._type}">
+          Details
+        </button>
+      `;
+      frag.appendChild(card);
     }
+
+    listEl.innerHTML = "";
+    listEl.appendChild(frag);
+    pendingCountEl.textContent = String(pending);
+    approvedCountEl.textContent = String(approved);
+
+    // wire details buttons
+    listEl.querySelectorAll(".details-btn-finished").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.id;
+        const type = btn.dataset.type;
+        if (type === "task") {
+          const doc = await dbNew.collection("task_submissions").doc(id).get();
+          if (!doc.exists) return alert("Not found");
+          const data = doc.data();
+          // simple modal: reuse browser alert or create modal
+          const jobTitle = taskJobsMap[data.taskId]?.title || "Untitled Task";
+          const proof = data.proofImage || (data.proofURLs && data.proofURLs[0]) || "";
+          showSimpleDetailsModal(jobTitle, data, proof);
+        } else {
+          const doc = await dbNew.collection("affiliate_submissions").doc(id).get();
+          if (!doc.exists) return alert("Not found");
+          const data = doc.data();
+          const jobTitle = affJobsMap[data.jobId]?.title || "Untitled Affiliate Job";
+          const proof = data.proofURLs ? data.proofURLs[0] : "";
+          showSimpleDetailsModal(jobTitle, data, proof);
+        }
+      });
+    });
+
+    // search inside finished screen
+    const sf = document.getElementById("searchFinishedTasksNew");
+    if (sf) {
+      sf.addEventListener("input", () => {
+        const q = sf.value.trim().toLowerCase();
+        [...listEl.children].forEach(card => {
+          card.style.display = card.innerText.toLowerCase().includes(q) ? "" : "none";
+        });
+      });
+    }
+
+  } catch (err) {
+    console.error("loadFinishedTasksNew err:", err);
+    listEl.innerHTML = `<p class="text-center text-red-500">Failed to load finished tasks.</p>`;
   }
+}
 
-  // simple modal renderer for finished details
-  function showSimpleDetailsModal(title, data, proofUrl) {
-    const modal = document.createElement("div");
-    modal.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50";
-    modal.innerHTML = `
-      <div class="bg-white rounded-xl shadow-lg p-6 w-96 max-h-[90vh] overflow-y-auto">
-        <h2 class="text-lg font-bold mb-3">${escapeHtml(title)}</h2>
-        <p class="text-sm"><strong>Status:</strong> ${escapeHtml(data.status || "")}</p>
-        <p class="text-sm"><strong>Earn:</strong> ₦${data.workerEarn || data.amount || 0}</p>
-        <p class="text-sm"><strong>Submitted:</strong> ${data.submittedAt?.toDate?.().toLocaleString?.() || "—"}</p>
-        ${proofUrl ? `<div class="mt-3"><img src="${escapeHtml(proofUrl)}" class="rounded-lg border w-full" /></div>` : ""}
-        <div class="mt-4 flex justify-end"><button class="closeModalFinished px-4 py-2 bg-blue-600 text-white rounded-lg">Close</button></div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-    modal.querySelector(".closeModalFinished").addEventListener("click", () => modal.remove());
-  }
+/* small modal for finished details */
+function showSimpleDetailsModal(title, data, proofUrl) {
+  const modal = document.createElement("div");
+  modal.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50";
+  modal.innerHTML = `
+    <div class="bg-white rounded-xl shadow-lg p-6 w-96 max-h-[90vh] overflow-y-auto">
+      <h2 class="text-lg font-bold mb-3">${escapeHtml(title)}</h2>
+      <p class="text-sm"><strong>Status:</strong> ${escapeHtml(data.status || "")}</p>
+      <p class="text-sm"><strong>Earn:</strong> ₦${data.workerEarn || data.amount || 0}</p>
+      <p class="text-sm"><strong>Submitted:</strong> ${data.submittedAt?.toDate?.().toLocaleString?.() || "—"}</p>
+      ${proofUrl ? `<div class="mt-3"><img src="${escapeHtml(proofUrl)}" class="rounded-lg border w-full" /></div>` : ""}
+      <div class="mt-4 flex justify-end"><button class="closeModalFinished px-4 py-2 bg-blue-600 text-white rounded-lg">Close</button></div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.querySelector(".closeModalFinished").addEventListener("click", () => modal.remove());
+}
 
-  // expose some functions for debugging if needed
-  window._dashboardAffiliateNew = { openJobModal: openJobModalNew, loadFinished: loadFinishedTasksNew };
-
+/* Initialize: make sure finished button is visible and grid loads lazily */
+(() => {
+  // nothing else to do: the IntersectionObserver above will init listeners for the grid
 })();
-</script>
- 
+
+  </script>
+
+	  
+
+		
+
 
 		
 
