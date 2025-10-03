@@ -24,25 +24,29 @@
     <h2 class="text-2xl font-bold text-center text-blue-800 mb-6">Welcome Back 👋</h2>
 
     <form id="loginForm" class="space-y-4">
-      <div>
-        <input id="loginEmail" type="email" placeholder="Email" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500" required>
-        <p id="loginEmailError" class="error-text hidden">Please enter a valid email</p>
-      </div>
+  <div>
+    <input id="loginEmail" name="email" type="email" placeholder="Email" 
+           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500" 
+           required autocomplete="username">
+    <p id="loginEmailError" class="error-text hidden">Please enter a valid email</p>
+  </div>
 
-      <div class="relative">
-        <input id="loginPassword" type="password" placeholder="Password" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500" required>
-        <button type="button" id="loginTogglePassword" class="absolute inset-y-0 right-3 flex items-center text-gray-500" aria-label="toggle password">
-          <i data-lucide="eye-off" class="w-5 h-5"></i>
-        </button>
-        <p id="loginPasswordError" class="error-text hidden">Password cannot be empty</p>
-      </div>
+  <div class="relative">
+    <input id="loginPassword" name="password" type="password" placeholder="Password" 
+           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500" 
+           required autocomplete="current-password">
+    <button type="button" id="loginTogglePassword" class="absolute inset-y-0 right-3 flex items-center text-gray-500" aria-label="toggle password">
+      <i data-lucide="eye-off" class="w-5 h-5"></i>
+    </button>
+    <p id="loginPasswordError" class="error-text hidden">Password cannot be empty</p>
+  </div>
 
-      <div class="text-right">
-        <a href="forgot-password.html" class="text-sm text-blue-600 hover:underline">Forgot password?</a>
-      </div>
+  <div class="text-right">
+    <a href="forgot-password.html" class="text-sm text-blue-600 hover:underline">Forgot password?</a>
+  </div>
 
-      <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold text-lg">Login</button>
-    </form>
+  <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold text-lg">Login</button>
+</form>
 
     <p class="mt-4 text-center text-sm text-gray-600">
       Don’t have an account? <a href="signup.html" class="text-blue-600 hover:underline font-medium">Register here</a>
@@ -145,3 +149,4 @@
   </script>
 </body>
 </html>
+
