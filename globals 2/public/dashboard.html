@@ -1597,7 +1597,11 @@
 
 <script>
 (() => {
-  
+
+const db = window.db || (window.firebase && firebase.firestore && firebase.firestore());
+  const auth = window.auth || (window.firebase && firebase.auth && firebase.auth());
+
+	
   function formatNaira(n) {
     if (n == null || isNaN(n)) return "₦0";
     return "₦" + Number(n).toLocaleString("en-NG");
