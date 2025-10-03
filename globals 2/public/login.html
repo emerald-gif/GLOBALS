@@ -134,6 +134,31 @@
           alert("⚠️ Your account is not verified yet. Please enter the code sent to your email.");
           window.location.href = `verify.html?uid=${uid}&email=${encodeURIComponent(data.email)}`;
         } else {
+
+
+
+           // After login success
+const dummyForm = document.createElement('form');
+dummyForm.style.display = 'none';
+dummyForm.method = 'POST';
+
+const emailInput = document.createElement('input');
+emailInput.type = 'email';
+emailInput.name = 'email';
+emailInput.value = email;
+dummyForm.appendChild(emailInput);
+
+const passwordInput = document.createElement('input');
+passwordInput.type = 'password';
+passwordInput.name = 'password';
+passwordInput.value = password;
+dummyForm.appendChild(passwordInput);
+
+document.body.appendChild(dummyForm);
+dummyForm.submit(); // triggers browser Save Password prompt
+document.body.removeChild(dummyForm);
+
+          
           window.location.href = 'dashboard.html';
         }
       } catch (err) {
@@ -149,4 +174,5 @@
   </script>
 </body>
 </html>
+
 
