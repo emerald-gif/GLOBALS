@@ -23,29 +23,56 @@
 
     <h2 class="text-2xl font-bold text-center text-blue-800 mb-6">Welcome Back 👋</h2>
 
-    <form id="loginForm" class="space-y-4">
+    <form id="loginForm" class="space-y-4" method="POST" action="/login">
+  
+  <!-- Email / Username -->
   <div>
-    <input id="loginEmail" name="email" type="email" placeholder="Email" 
-           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500" 
-           required autocomplete="username">
+    <input 
+      id="loginEmail" 
+      name="username" 
+      type="email" 
+      autocomplete="username" 
+      placeholder="Email" 
+      class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500" 
+      required
+    >
     <p id="loginEmailError" class="error-text hidden">Please enter a valid email</p>
   </div>
-
+  
+  <!-- Password -->
   <div class="relative">
-    <input id="loginPassword" name="password" type="password" placeholder="Password" 
-           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500" 
-           required autocomplete="current-password">
-    <button type="button" id="loginTogglePassword" class="absolute inset-y-0 right-3 flex items-center text-gray-500" aria-label="toggle password">
+    <input 
+      id="loginPassword" 
+      name="password" 
+      type="password" 
+      autocomplete="current-password" 
+      placeholder="Password" 
+      class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500" 
+      required
+    >
+    <button 
+      type="button" 
+      id="loginTogglePassword" 
+      class="absolute inset-y-0 right-3 flex items-center text-gray-500" 
+      aria-label="toggle password"
+    >
       <i data-lucide="eye-off" class="w-5 h-5"></i>
     </button>
     <p id="loginPasswordError" class="error-text hidden">Password cannot be empty</p>
   </div>
 
+  <!-- Forgot Password -->
   <div class="text-right">
     <a href="forgot-password.html" class="text-sm text-blue-600 hover:underline">Forgot password?</a>
   </div>
 
-  <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold text-lg">Login</button>
+  <!-- Submit -->
+  <button 
+    type="submit" 
+    class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold text-lg"
+  >
+    Login
+  </button>
 </form>
 
     <p class="mt-4 text-center text-sm text-gray-600">
@@ -73,7 +100,9 @@
   </script>
 
   
-  <script>
+  
+
+<script>
 document.addEventListener('DOMContentLoaded', () => {
   if (window.lucide) lucide.createIcons();
 
@@ -84,14 +113,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginPasswordError = document.getElementById('loginPasswordError');
   const loginTogglePassword = document.getElementById('loginTogglePassword');
 
-  // ---------- small UX helpers (your existing logic) ----------
+  // same small UX helpers
   loginEmail.addEventListener('input', () => {
     loginEmailError.classList.toggle('hidden', loginEmail.validity.valid && loginEmail.value.trim() !== '');
   });
   loginPassword.addEventListener('input', () => {
     loginPasswordError.classList.toggle('hidden', loginPassword.value.trim() !== '');
   });
-
   loginTogglePassword.addEventListener('click', () => {
     const showing = loginPassword.type === 'text';
     loginPassword.type = showing ? 'password' : 'text';
@@ -101,41 +129,42 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.lucide) lucide.createIcons();
   });
 
-  // ---------- sign-in wrapper (centralized) ----------
-  async function handleSignIn(email, password, { allowSavePrompt = true } = {}) {
-    // optional: set Firebase persistence so user stays logged-in across tabs/reloads
+  // centralized sign-in logic (uses firebase)
+  async function handleSignIn(email, password, { allowStoreCredential = true } = {}) {
     try {
       await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-    } catch (err) {
-      // non-fatal: some browsers may fail; proceed anyway
-      console.warn('Failed to set persistence:', err);
-    }
+    } catch (e) { console.warn('persistence:', e); }
 
     try {
       const userCred = await auth.signInWithEmailAndPassword(email, password);
       const uid = userCred.user.uid;
-
       const doc = await db.collection("users").doc(uid).get();
-      if (!doc.exists) {
-        alert("❌ User record not found. Please sign up again.");
-        return;
-      }
+      if (!doc.exists) { alert('❌ User record not found.'); return; }
       const data = doc.data();
       if (!data.verified) {
-        alert("⚠️ Your account is not verified yet. Please enter the code sent to your email.");
         window.location.href = `verify.html?uid=${uid}&email=${encodeURIComponent(data.email)}`;
         return;
       }
 
-      // if allowed, prompt user to save their credential (only if not already saved)
-      if (allowSavePrompt && !(await checkSavedCredential(email))) {
-        const choice = await showSavePrompt(email, password);
-        if (choice === 'save') {
-          await saveCredential(email, password);
+      // store credential in browser password manager (prompt user to save)
+      if (allowStoreCredential && navigator.credentials && navigator.credentials.store) {
+        try {
+          // PasswordCredential constructor is supported by some browsers; navigator.credentials.create can be used
+          const credData = new PasswordCredential({ id: email, password });
+          await navigator.credentials.store(credData);
+          // In many browsers, calling store() triggers the "Save password?" snackbar.
+        } catch (err) {
+          // fallback: try create + store
+          try {
+            const cred = await navigator.credentials.create({ password: { id: email, password } });
+            if (cred) await navigator.credentials.store(cred);
+          } catch (e) {
+            console.warn('credential store fallback failed', e);
+          }
         }
       }
 
-      // after processing, go to dashboard
+      // successful -> go to dashboard
       window.location.href = 'dashboard.html';
     } catch (err) {
       let msg = 'Login failed. Please try again.';
@@ -147,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ---------- form submit ----------
+  // normal form submit
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     loginEmailError.classList.add('hidden');
@@ -157,171 +186,49 @@ document.addEventListener('DOMContentLoaded', () => {
     const password = loginPassword.value;
 
     if (!loginEmail.validity.valid || !email) {
-      loginEmailError.classList.remove('hidden');
-      return;
+      loginEmailError.classList.remove('hidden'); return;
     }
     if (!password) {
-      loginPasswordError.classList.remove('hidden');
-      return;
+      loginPasswordError.classList.remove('hidden'); return;
     }
 
-    // call centralized handler; allow save prompt
-    await handleSignIn(email, password, { allowSavePrompt: true });
+    await handleSignIn(email, password, { allowStoreCredential: true });
   });
 
-  // ---------- credential helpers ----------
-  async function checkSavedCredential(email) {
-    // try Credential Management API first
+  // ====== Use the Credential Management API to get saved password and show the chooser/drawer ======
+  async function tryAutoChooseCredential() {
+    if (!navigator.credentials || !navigator.credentials.get) return null;
     try {
-      if (navigator.credentials && navigator.credentials.get) {
-        // 'optional' avoids forcing mediation UI
-        const cred = await navigator.credentials.get({ password: true, mediation: 'optional' });
-        if (cred && cred.id === email) return true;
+      // mediation: 'optional' allows the browser to show the credential chooser UI (the drawer)
+      const cred = await navigator.credentials.get({ password: true, mediation: 'optional' });
+      // cred can be null if user dismisses the chooser or browser has nothing to show
+      if (!cred) return null;
+
+      // PasswordCredential gives us id (username) and password
+      // On Chrome/Android the chooser you screenshot will be used when this resolves
+      if (cred.type === 'password' || cred.password) {
+        // If you want to auto-fill the fields:
+        loginEmail.value = cred.id || loginEmail.value;
+        loginPassword.value = cred.password || '';
+        // Option: automatically submit (be mindful of UX / consent). I show a small lightweight confirmation:
+        await handleSignIn(cred.id, cred.password, { allowStoreCredential: false });
+        return cred;
       }
     } catch (e) {
-      console.warn('checkSavedCredential navigator error', e);
-    }
-    // fallback: check localStorage saved entry
-    const stored = localStorage.getItem('globals_saved_cred');
-    if (!stored) return false;
-    try {
-      const obj = JSON.parse(stored);
-      return obj && obj.email === email;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  async function saveCredential(email, password) {
-    // Preferred: Credential Management API -> stores in browser's password manager
-    try {
-      if (navigator.credentials && navigator.credentials.store && navigator.credentials.create) {
-        // create a PasswordCredential-like object (supported syntax)
-        const cred = await navigator.credentials.create({ password: { id: email, password, name: 'Globals' } });
-        if (cred) {
-          await navigator.credentials.store(cred);
-          return true;
-        }
-      }
-    } catch (e) {
-      console.warn('navigator.credentials.store failed:', e);
-    }
-
-    // FALLBACK (INSECURE): obfuscate with base64 in localStorage (only for demo/testing).
-    // DO NOT USE THIS IN PRODUCTION — localStorage is readable by scripts on the page.
-    try {
-      const payload = {
-        email,
-        passwordB64: btoa(unescape(encodeURIComponent(password))),
-        savedAt: Date.now()
-      };
-      localStorage.setItem('globals_saved_cred', JSON.stringify(payload));
-      return true;
-    } catch (e) {
-      console.error('Fallback save failed', e);
-      return false;
-    }
-  }
-
-  async function getSavedCredential() {
-    // try Credential Management API to fetch password (if user permits)
-    try {
-      if (navigator.credentials && navigator.credentials.get) {
-        const cred = await navigator.credentials.get({ password: true, mediation: 'optional' });
-        if (cred && cred.password) {
-          return { email: cred.id, password: cred.password };
-        }
-      }
-    } catch (e) {
-      console.warn('navigator.credentials.get failed', e);
-    }
-
-    // fallback to localStorage (insecure)
-    const stored = localStorage.getItem('globals_saved_cred');
-    if (!stored) return null;
-    try {
-      const obj = JSON.parse(stored);
-      return { email: obj.email, password: decodeURIComponent(escape(atob(obj.passwordB64))) };
-    } catch (e) {
-      console.warn('failed to parse fallback saved cred', e);
+      console.warn('navigator.credentials.get error', e);
       return null;
     }
   }
 
-  // ---------- save prompt UI (returns 'save'|'no'|'skip') ----------
-  function showSavePrompt(email, password) {
-    return new Promise((resolve) => {
-      const banner = document.createElement('div');
-      banner.className = 'fixed top-6 left-1/2 transform -translate-x-1/2 z-50 p-4 rounded-xl shadow-lg bg-white flex items-center space-x-3';
-      banner.style.minWidth = '320px';
-      banner.innerHTML = `
-        <div class="flex-1">
-          <div class="font-semibold text-sm">Save password for <span class="text-blue-600">${email}</span>?</div>
-          <div class="text-xs text-gray-500">So you can quickly login next time.</div>
-        </div>
-        <div class="flex items-center space-x-2">
-          <button id="savePwdBtn" class="px-3 py-1 rounded-md bg-blue-600 text-white text-sm">Save</button>
-          <button id="noSaveBtn" class="px-3 py-1 rounded-md border border-gray-200 text-sm">Not now</button>
-        </div>
-      `;
-      document.body.appendChild(banner);
-      if (window.lucide) lucide.createIcons();
-
-      const saveBtn = banner.querySelector('#savePwdBtn');
-      const noBtn = banner.querySelector('#noSaveBtn');
-
-      const cleanup = (result) => {
-        try { banner.remove(); } catch(e) {}
-        resolve(result);
-      };
-
-      saveBtn.addEventListener('click', async () => {
-        await saveCredential(email, password);
-        cleanup('save');
-      });
-      noBtn.addEventListener('click', () => cleanup('no'));
-
-      // auto-close (skip) after 8s if user doesn't act
-      setTimeout(() => cleanup('skip'), 8000);
-    });
-  }
-
-  // ---------- quick-login drawer on page load ----------
-  (async function initQuickLogin() {
-    const saved = await getSavedCredential();
-    if (!saved) return;
-
-    const drawer = document.createElement('div');
-    drawer.className = 'fixed bottom-4 right-4 z-50 w-80 p-3 bg-white rounded-xl shadow-lg';
-    drawer.innerHTML = `
-      <div class="flex items-center justify-between">
-        <div>
-          <div class="text-sm font-medium">Quick login as</div>
-          <div class="text-sm text-gray-700">${saved.email}</div>
-        </div>
-        <div class="flex items-center space-x-2">
-          <button id="quickLoginBtn" class="px-3 py-1 rounded-md bg-blue-600 text-white text-sm">Login</button>
-          <button id="dismissQuick" class="px-2 py-1 text-sm">✕</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(drawer);
-
-    const quickLoginBtn = drawer.querySelector('#quickLoginBtn');
-    const dismissBtn = drawer.querySelector('#dismissQuick');
-
-    dismissBtn.addEventListener('click', () => drawer.remove());
-    quickLoginBtn.addEventListener('click', async () => {
-      quickLoginBtn.disabled = true;
-      quickLoginBtn.textContent = 'Logging in...';
-      await handleSignIn(saved.email, saved.password, { allowSavePrompt: false });
-    });
-  })();
+  // run on load so user sees the browser chooser if available
+  tryAutoChooseCredential();
 
 }); // DOMContentLoaded end
 </script>
+
 </body>
 </html>
+
 
 
 
