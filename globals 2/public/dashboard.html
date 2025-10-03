@@ -1504,12 +1504,13 @@
 
 
 
-<!-- Affiliate Section — no swiper. Dedicated Detail Screen, proofFileCount enforced, live progress, finished tasks from affiliate_submissions only -->
+<!-- Affiliate section: grid + dedicated detail screen + finished tasks (fully activated) -->
 <style>
   .card-soft { box-shadow: 0 10px 22px rgba(12,36,75,0.06), 0 4px 8px rgba(12,36,75,0.04); }
   .btn-big { box-shadow: 0 6px 14px rgba(37,99,235,0.18); border-radius: 12px; }
   .hidden-screen { display: none; }
   .visible-screen { display: block; }
+  .clickable { cursor: pointer; }
   @media (max-width: 640px) {
     #affiliateGridNew { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   }
@@ -1517,6 +1518,7 @@
 
 <!-- MAIN container (Affiliate list) -->
 <div id="jobsContainerNew" class="tab-section hidden px-4 py-6">
+
 
 <button onclick="activateTab('dashboard')" 
     class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
@@ -1555,13 +1557,12 @@
   </section>
 </div>
 
-<!-- DEDICATED JOB DETAIL SCREEN (replaces modal) -->
+<!-- DEDICATED JOB DETAIL SCREEN -->
 <div id="jobDetailScreenNew" class="hidden-screen px-4 py-6">
   <div class="flex items-center justify-between mb-4">
     <button id="backToAffiliateBtn" class="text-blue-600 font-medium flex items-center gap-1 hover:underline">← Back to Affiliate Tasks</button>
     <div id="jobDetailActions" class="flex items-center gap-2"></div>
   </div>
-
   <div id="jobDetailContent" class="space-y-4"></div>
 </div>
 
@@ -1596,14 +1597,20 @@
 
 <script>
 (() => {
-  // --- config / globals ---
- 
+  // ---------------------------
+  // Globals & helpers
+  // ---------------------------
+  const db = window.db || (window.firebase && firebase.firestore && firebase.firestore());
+  const auth = window.auth || (window.firebase && firebase.auth && firebase.auth());
+
+  function escapeHtml(s = "") {
+    return String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+  }
   function formatNaira(n) {
     if (n == null || isNaN(n)) return "₦0";
     return "₦" + Number(n).toLocaleString("en-NG");
   }
 
-  // upload helper: prefer global uploadToCloudinary(file) else firebase.storage
   async function uploadFileHelper(file) {
     if (!file) throw new Error("No file provided");
     if (typeof window.uploadToCloudinary === "function") {
@@ -1620,7 +1627,9 @@
     throw new Error("No upload helper available. Add uploadToCloudinary(file) or enable firebase.storage.");
   }
 
-  // --- Rendering / grid ---
+  // ---------------------------
+  // Affiliate grid
+  // ---------------------------
   function renderAffiliateGridNew(jobs = []) {
     const grid = document.getElementById("affiliateGridNew");
     if (!grid) return;
@@ -1642,17 +1651,17 @@
         card.className = "bg-white rounded-2xl card-soft p-3";
         card.innerHTML = `
           <div class="overflow-hidden rounded-xl">
-            <img src="${escapeHtml(img)}" alt="${escapeHtml(job.title || "")}" class="w-full h-36 object-cover rounded-xl">
+            <img src="${escapeHtml(img)}" alt="${escapeHtml(job.title || '')}" class="w-full h-36 object-cover rounded-xl">
           </div>
           <div class="mt-3">
-            <h4 class="font-semibold text-md">${escapeHtml(job.title || "")}</h4>
+            <h4 class="font-semibold text-md">${escapeHtml(job.title || '')}</h4>
             <div class="text-sm text-gray-500 mt-1">${formatNaira(job.workerPay)}</div>
             <div class="text-sm text-gray-500 mt-1">${accepted}/${total} workers · ${percent}%</div>
             <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden mt-3">
               <div style="width:${percent}%" class="h-2 rounded-full bg-blue-300 transition-all duration-300"></div>
             </div>
             <div class="mt-4 flex gap-2">
-              <button class="flex-1 py-2 rounded-xl bg-blue-600 text-white font-semibold view-affiliate-task-new" data-id="${job.id}">
+              <button class="flex-1 py-2 rounded-xl bg-blue-600 text-white font-semibold view-affiliate-task-new clickable" data-id="${job.id}">
                 View Task
               </button>
             </div>
@@ -1661,28 +1670,30 @@
         frag.appendChild(card);
       }
     }
+
     requestAnimationFrame(() => {
       grid.innerHTML = "";
       grid.appendChild(frag);
     });
   }
 
-  // --- Jobs listener (approved jobs show in grid) ---
+  // ---------------------------
+  // Jobs listener (approved jobs shown in grid)
+  // ---------------------------
   let gridListenerUnsub = null;
   function initAffiliateJobsListenerNew() {
     if (!db) return;
-    if (gridListenerUnsub) return; // already listening
+    if (gridListenerUnsub) return;
     gridListenerUnsub = db.collection("affiliateJobs").where("status", "==", "approved")
       .onSnapshot(snapshot => {
         const jobs = [];
         snapshot.forEach(doc => jobs.push({ id: doc.id, ...doc.data() }));
-        // sort newest first
         jobs.sort((a, b) => (b.postedAt?.seconds || 0) - (a.postedAt?.seconds || 0));
         renderAffiliateGridNew(jobs);
       }, err => console.error("affiliateJobs listener error:", err));
   }
 
-  // initialize jobs listener once grid is in viewport (lazy)
+  // lazy-init the grid listener
   (function observeJobsGridNew() {
     const sec = document.getElementById("jobsGridSectionNew");
     if (!sec) { initAffiliateJobsListenerNew(); return; }
@@ -1698,7 +1709,9 @@
     obs.observe(sec);
   })();
 
-  // --- Search (debounced) ---
+  // ---------------------------
+  // Search filter (grid)
+  // ---------------------------
   const searchInputNew = document.getElementById("searchTasksMainNew");
   if (searchInputNew) {
     let searchTimeout = null;
@@ -1715,15 +1728,16 @@
     });
   }
 
-  // --- DETAIL SCREEN (replaces modal): live progress from affiliate_submissions ---
-  let detailSubUnsub = null; // listener for approved submissions of current job
+  // ---------------------------
+  // DETAIL SCREEN (View Task) — live progress from affiliate_submissions
+  // ---------------------------
+  let detailSubUnsub = null;
   async function openJobDetailScreenNew(jobId) {
+    if (!db) return alert("Database not ready");
     try {
       const doc = await db.collection("affiliateJobs").doc(jobId).get();
       if (!doc.exists) { alert("Job not found"); return; }
       const job = { id: doc.id, ...doc.data() };
-
-      // render content
       const detailContent = document.getElementById("jobDetailContent");
       const proofCount = Number(job.proofFileCount || 1);
       const totalWorkers = Number(job.numWorkers || 0);
@@ -1734,16 +1748,14 @@
             <img src="${escapeHtml(job.campaignLogoURL || job.image || '/assets/default-banner.jpg')}" class="w-full h-44 object-cover">
             <img src="${escapeHtml(job.campaignLogoURL || job.image || '/assets/default-thumb.jpg')}" class="absolute -bottom-6 left-6 w-14 h-14 rounded-full border-4 border-white object-cover shadow">
           </div>
-
           <div class="p-5">
             <div class="flex justify-between items-start">
               <div>
-                <h3 class="text-xl font-bold">${escapeHtml(job.title || "Untitled")}</h3>
+                <h3 class="text-xl font-bold">${escapeHtml(job.title || 'Untitled')}</h3>
                 <p class="text-sm text-gray-500">${formatNaira(job.workerPay)} · ${totalWorkers} workers</p>
               </div>
             </div>
-
-            <div class="mt-3 text-gray-700">${escapeHtml(job.instructions || "")}</div>
+            <div class="mt-3 text-gray-700">${escapeHtml(job.instructions || '')}</div>
 
             <div class="mt-4">
               <div class="text-sm text-gray-500">Progress</div>
@@ -1769,15 +1781,15 @@
         </div>
       `;
 
-      // show screen
+      // show screens
       document.getElementById("jobsContainerNew").classList.add("hidden");
       document.getElementById("finishedTasksScreenNew").classList.add("hidden");
       document.getElementById("jobDetailScreenNew").classList.remove("hidden");
 
-      // detach previous detail listener if exists
+      // detach previous detail listener
       if (detailSubUnsub) { detailSubUnsub(); detailSubUnsub = null; }
 
-      // attach live snapshot to approved submissions for this job
+      // attach live snapshot for approved submissions for this job
       detailSubUnsub = db.collection("affiliate_submissions")
         .where("jobId", "==", job.id)
         .where("status", "==", "approved")
@@ -1820,7 +1832,7 @@
 
           await db.collection("affiliate_submissions").add(payload);
           alert("✅ Proof submitted! It will be reviewed by admin.");
-          // return to list
+          // go back to list
           document.getElementById("backToAffiliateBtn").click();
         } catch (err) {
           console.error("submit proof error:", err);
@@ -1831,10 +1843,7 @@
         }
       };
 
-      // Cancel/back inside detail
-      document.getElementById("detailCancelBtnNew").onclick = () => {
-        document.getElementById("backToAffiliateBtn").click();
-      };
+      document.getElementById("detailCancelBtnNew").onclick = () => document.getElementById("backToAffiliateBtn").click();
 
     } catch (err) {
       console.error("openJobDetailScreenNew error:", err);
@@ -1842,15 +1851,14 @@
     }
   }
 
-  // ensure we detach detail listener when leaving detail screen
+  // back/navigation from detail -> grid (cleanup)
   document.getElementById("backToAffiliateBtn").addEventListener("click", () => {
     document.getElementById("jobDetailScreenNew").classList.add("hidden");
     document.getElementById("jobsContainerNew").classList.remove("hidden");
-    // detach detail subscription
     if (detailSubUnsub) { detailSubUnsub(); detailSubUnsub = null; }
   });
 
-  // delegated click to open detail (from grid)
+  // delegated click to open detail
   document.addEventListener("click", (e) => {
     const btn = e.target.closest(".view-affiliate-task-new");
     if (btn) {
@@ -1859,19 +1867,22 @@
     }
   });
 
-  // --- FINISHED TASKS (affiliate_submissions only) ---
+  // ---------------------------
+  // FINISHED TASKS (affiliate_submissions only)
+  // ---------------------------
   let finishedTasksUnsub = null;
   function openFinishedTasksScreenNew() {
-    if (!auth.currentUser) { alert("Login to see finished tasks."); return; }
+    if (!auth.currentUser) { alert("Login to see your finished tasks."); return; }
+
     // show finished screen
     document.getElementById("jobsContainerNew").classList.add("hidden");
     document.getElementById("jobDetailScreenNew").classList.add("hidden");
     document.getElementById("finishedTasksScreenNew").classList.remove("hidden");
 
-    // detach prior listener
+    // detach previous listener
     if (finishedTasksUnsub) { finishedTasksUnsub(); finishedTasksUnsub = null; }
 
-    // attach real-time listener to user's affiliate_submissions
+    // real-time listener on user's affiliate_submissions
     finishedTasksUnsub = db.collection("affiliate_submissions")
       .where("userId", "==", auth.currentUser.uid)
       .onSnapshot(async snap => {
@@ -1883,12 +1894,12 @@
         snap.forEach(doc => {
           const d = { id: doc.id, ...doc.data() };
           items.push(d);
-          if ((d.status || "").toLowerCase() === "approved") approved++;
-          else pending++;
+          const s = (d.status || "").toLowerCase();
+          if (s === "approved") approved++; else pending++;
           if (d.jobId) jobIds.add(d.jobId);
         });
 
-        // fetch job titles for display (in chunks)
+        // fetch job titles
         const jobMap = {};
         const ids = Array.from(jobIds);
         for (let i = 0; i < ids.length; i += 10) {
@@ -1897,7 +1908,7 @@
           q.forEach(doc => jobMap[doc.id] = doc.data());
         }
 
-        // render list
+        // render items
         const frag = document.createDocumentFragment();
         items.sort((a,b) => (b.postedAt?.seconds || 0) - (a.postedAt?.seconds || 0));
         for (const it of items) {
@@ -1911,7 +1922,7 @@
               <p class="text-xs text-gray-400">${it.postedAt?.toDate ? it.postedAt.toDate().toLocaleString() : ""}</p>
             </div>
             <div class="flex flex-col gap-2 items-end">
-              <button class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg view-finished-detail" data-id="${it.id}">View</button>
+              <button class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg view-finished-detail clickable" data-id="${it.id}">View</button>
             </div>
           `;
           frag.appendChild(card);
@@ -1926,15 +1937,14 @@
       });
   }
 
-  // close finished tasks
+  // back from finished to main
   document.getElementById("backToMainBtnNew").addEventListener("click", () => {
     document.getElementById("finishedTasksScreenNew").classList.add("hidden");
     document.getElementById("jobsContainerNew").classList.remove("hidden");
-    // detach finished listener
     if (finishedTasksUnsub) { finishedTasksUnsub(); finishedTasksUnsub = null; }
   });
 
-  // view finished detail (small modal)
+  // view finished detail modal
   document.addEventListener("click", (e) => {
     const btn = e.target.closest(".view-finished-detail");
     if (!btn) return;
@@ -1953,9 +1963,7 @@
             <p class="text-sm"><strong>Status:</strong> ${escapeHtml(d.status || "")}</p>
             <p class="text-sm"><strong>Note:</strong> ${escapeHtml(d.note || "")}</p>
             <div class="mt-3">${proofImgs || '<p class="text-sm text-gray-400">No proof images</p>'}</div>
-            <div class="mt-4 flex justify-end">
-              <button class="closeFinishedDetail px-4 py-2 bg-blue-600 text-white rounded-lg">Close</button>
-            </div>
+            <div class="mt-4 flex justify-end"><button class="closeFinishedDetail px-4 py-2 bg-blue-600 text-white rounded-lg">Close</button></div>
           </div>
         `;
         document.body.appendChild(modal);
@@ -1967,13 +1975,26 @@
     })();
   });
 
-  // open finished tasks button
+  // search finished tasks filtering
+  const sf = document.getElementById("searchFinishedTasksNew");
+  if (sf) {
+    sf.addEventListener("input", () => {
+      const q = sf.value.trim().toLowerCase();
+      const listEl = document.getElementById("finishedTasksListNew");
+      if (!listEl) return;
+      [...listEl.children].forEach(card => {
+        card.style.display = card.innerText.toLowerCase().includes(q) ? "" : "none";
+      });
+    });
+  }
+
+  // open finished tasks button wired
   document.getElementById("openFinishedTasksBtnNew").addEventListener("click", openFinishedTasksScreenNew);
 
-  // --- Initialize ---
+  // initialize grid listener
   initAffiliateJobsListenerNew();
 
-  // expose for debug/other usage
+  // expose for debugging
   window._dashboardAffiliateNew = {
     openJobDetailScreenNew,
     openFinishedTasksScreenNew,
@@ -1982,110 +2003,6 @@
 
 })();
 </script>
-
-
-
-		
-	
-	
-<!-- ================= INSTALL AND EARN ================= -->
-<!-- ================= INSTALL AND EARN ================= -->  
-<div id="taskSection" class="tab-section hidden"> 
-
-
-<button onclick="activateTab('dashboard')" 
-    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-    </svg>
-    Back
-  </button>
-	
-
-  <!-- Controls for searching and filtering -->  
-  <div class="w-full px-4 py-5 bg-white rounded-2xl shadow-lg mb-6 border border-gray-100">  
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">  
-
-      <!-- Search Input -->  
-      <div class="relative w-full sm:w-1/2">  
-        <input  
-          type="text"  
-          id="taskSearch"  
-          placeholder="🔍 Search tasks by name or category..."  
-          class="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-full bg-gray-50 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 placeholder-gray-400 text-sm"  
-        />  
-        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">  
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">  
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1110.5 3a7.5 7.5 0 016.15 13.65z" />  
-          </svg>  
-        </span>  
-      </div>  
-
-      <!-- Category & Finished Button -->  
-      <div class="flex items-center gap-3 sm:gap-4">  
-        <select  
-          id="taskCategoryFilter"  
-          class="px-4 py-2 border border-gray-200 rounded-xl text-sm shadow-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 transition"  
-        >  
-          <option value="">All Categories</option>  
-          <option>WhatsApp</option>
-		  <option>Telegram</option>
-          <option>Instagram</option>
-		  <option>Tiktok</option>
-          <option>App</option>  
-          <option>YouTube</option>  
-          <option>Facebook</option>  
-          <option>Twitter</option>  
-          <option>Website</option>  
-          <option>Vote</option>  
-          <option>Music Player</option>  
-        </select>  
-
-        <button  
-          id="finishedTaskBtnUser"  
-          class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white px-5 py-2 rounded-xl text-sm font-medium shadow-md transition-all duration-300"  
-        >  
-          ✅ Finished Tasks  
-        </button>  
-      </div>  
-    </div>  
-  </div>  
-
-  <!-- Tasks container -->  
-  <div id="task-jobs" class="grid gap-5 px-4 pb-12"></div>  
-</div>  
-
-<!-- ================= FINISHED TASKS SCREEN ================= -->  
-<div id="finishedTasksScreenUser" class="hidden px-4 py-8">  
-
-  <!-- Header -->  
-  <div class="flex items-center justify-between mb-8">  
-    <button  
-      id="backToMainBtnUser"  
-      class="text-blue-600 font-medium flex items-center gap-1 hover:underline"  
-    >  
-      ← Back  
-    </button>  
-    <h2 class="text-xl font-bold tracking-tight">Finished Tasks</h2>  
-  </div>  
-
-  <!-- Stats -->  
-  <div class="grid grid-cols-2 gap-4 mb-8">  
-    <div class="text-center bg-yellow-50 border border-yellow-200 rounded-2xl py-4 shadow-sm">  
-      <p id="pendingCountUser" class="text-3xl font-extrabold text-yellow-600">0</p>  
-      <p class="text-sm text-gray-600">Pending Tasks</p>  
-    </div>  
-    <div class="text-center bg-green-50 border border-green-200 rounded-2xl py-4 shadow-sm">  
-      <p id="approvedCountUser" class="text-3xl font-extrabold text-green-600">0</p>  
-      <p class="text-sm text-gray-600">Approved Tasks</p>  
-    </div>  
-  </div>  
-
-  <!-- Finished tasks list -->  
-  <div id="finishedTasksListUser" class="grid gap-5"></div>  
-</div>
-
-
 
 
 
