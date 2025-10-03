@@ -2283,15 +2283,7 @@ async function showTaskSubmissionDetailsUser(submissionId) {
 
 
 
-/* --------- Helpers --------- */
-function escapeHtml(str = "") {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+
 function formatNaira(n) {
   if (n == null) return "₦0";
   return "₦" + Number(n).toLocaleString("en-NG");
