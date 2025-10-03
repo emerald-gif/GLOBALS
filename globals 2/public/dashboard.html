@@ -1504,23 +1504,22 @@
 
 
 
-<!-- Affiliate section: grid + dedicated detail screen + finished tasks (fully activated) -->
+		<!-- AFFILIATE: Grid + Dedicated Detail Screen + Finished Tasks (Fully Functional) -->
 <style>
   .card-soft { box-shadow: 0 10px 22px rgba(12,36,75,0.06), 0 4px 8px rgba(12,36,75,0.04); }
   .btn-big { box-shadow: 0 6px 14px rgba(37,99,235,0.18); border-radius: 12px; }
   .hidden-screen { display: none; }
-  .visible-screen { display: block; }
   .clickable { cursor: pointer; }
   @media (max-width: 640px) {
     #affiliateGridNew { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   }
 </style>
 
-<!-- MAIN container (Affiliate list) -->
+<!-- MAIN: Affiliate list -->
 <div id="jobsContainerNew" class="tab-section hidden px-4 py-6">
 
 
-<button onclick="activateTab('dashboard')" 
+ <button onclick="activateTab('dashboard')" 
     class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -1533,7 +1532,6 @@
     <span class="text-lg font-bold text-gray-800 tracking-tight">Affiliate Tasks</span>
   </h2>
 
-  <!-- Top row: search + finished tasks button -->
   <div class="flex items-center gap-4 mb-6">
     <div class="flex-1 relative">
       <input id="searchTasksMainNew" type="text" placeholder="Search tasks, campaigns, titles..."
@@ -1549,11 +1547,8 @@
     </button>
   </div>
 
-  <!-- Jobs grid (2-per-row) -->
   <section id="jobsGridSectionNew">
-    <div id="affiliateGridNew" class="grid grid-cols-2 gap-4">
-      <!-- cards inserted here dynamically -->
-    </div>
+    <div id="affiliateGridNew" class="grid grid-cols-2 gap-4"></div>
   </section>
 </div>
 
@@ -1566,7 +1561,7 @@
   <div id="jobDetailContent" class="space-y-4"></div>
 </div>
 
-<!-- FINISHED TASKS (affiliate_submissions only) -->
+<!-- FINISHED TASKS -->
 <div id="finishedTasksScreenNew" class="hidden-screen px-4 py-8 bg-gray-50 min-h-[60vh]">
   <div class="flex items-center justify-between mb-6">
     <button id="backToMainBtnNew" class="text-blue-600 font-medium flex items-center gap-1 hover:underline">← Back</button>
@@ -1596,37 +1591,47 @@
 </div>
 
 <script>
-(() => {
+document.addEventListener("DOMContentLoaded", () => {
+  // ---------- firebase & auth ----------
+  const db = (window.db && typeof window.db.collection === 'function') ? window.db :
+             (window.firebase && window.firebase.firestore ? firebase.firestore() : null);
+  const auth = (window.auth && typeof window.auth.currentUser !== 'undefined') ? window.auth :
+               (window.firebase && window.firebase.auth ? firebase.auth() : null);
 
-const db = window.db || (window.firebase && firebase.firestore && firebase.firestore());
-  const auth = window.auth || (window.firebase && firebase.auth && firebase.auth());
+  if (!db || !auth) {
+    console.warn("dashboard-affiliate: `db` or `auth` not available. Ensure firebase is initialized and `firebase.firestore()` / `firebase.auth()` are ready.");
+    // we continue but many features will not function; guard checks below handle this.
+  }
 
-	
+  // ---------- helpers ----------
+  function safeText(s = "") {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
   function formatNaira(n) {
     if (n == null || isNaN(n)) return "₦0";
     return "₦" + Number(n).toLocaleString("en-NG");
   }
-
   async function uploadFileHelper(file) {
-    if (!file) throw new Error("No file provided");
+    if (!file) throw new Error("No file to upload");
     if (typeof window.uploadToCloudinary === "function") {
       return await window.uploadToCloudinary(file);
     }
-    if (window.firebase && firebase.storage) {
-      if (!auth.currentUser) throw new Error("Not authenticated for firebase.storage upload");
+    if (window.firebase && firebase.storage && auth && auth.currentUser) {
       const storageRef = firebase.storage().ref();
       const path = `affiliate_submissions/${auth.currentUser.uid}_${Date.now()}_${file.name}`;
       const ref = storageRef.child(path);
       await ref.put(file);
       return await ref.getDownloadURL();
     }
-    throw new Error("No upload helper available. Add uploadToCloudinary(file) or enable firebase.storage.");
+    throw new Error("No upload helper: provide uploadToCloudinary(file) or enable firebase.storage.");
   }
 
-  // ---------------------------
-  // Affiliate grid
-  // ---------------------------
-  function renderAffiliateGridNew(jobs = []) {
+  // ---------- grid rendering ----------
+  function renderAffiliateGrid(jobs = []) {
     const grid = document.getElementById("affiliateGridNew");
     if (!grid) return;
     const frag = document.createDocumentFragment();
@@ -1637,8 +1642,8 @@ const db = window.db || (window.firebase && firebase.firestore && firebase.fires
       empty.textContent = "No affiliate tasks right now.";
       frag.appendChild(empty);
     } else {
-      for (const job of jobs) {
-        const accepted = job.filledWorkers || 0;
+      jobs.forEach(job => {
+        const accepted = job.filledWorkers || 0; // quick display; detail screen uses live counts
         const total = job.numWorkers || 0;
         const percent = total > 0 ? Math.min(100, Math.round((accepted / total) * 100)) : 0;
         const img = job.campaignLogoURL || job.image || "/assets/default-thumb.jpg";
@@ -1647,10 +1652,10 @@ const db = window.db || (window.firebase && firebase.firestore && firebase.fires
         card.className = "bg-white rounded-2xl card-soft p-3";
         card.innerHTML = `
           <div class="overflow-hidden rounded-xl">
-            <img src="${escapeHtml(img)}" alt="${escapeHtml(job.title || '')}" class="w-full h-36 object-cover rounded-xl">
+            <img src="${safeText(img)}" alt="${safeText(job.title || '')}" class="w-full h-36 object-cover rounded-xl">
           </div>
           <div class="mt-3">
-            <h4 class="font-semibold text-md">${escapeHtml(job.title || '')}</h4>
+            <h4 class="font-semibold text-md">${safeText(job.title || '')}</h4>
             <div class="text-sm text-gray-500 mt-1">${formatNaira(job.workerPay)}</div>
             <div class="text-sm text-gray-500 mt-1">${accepted}/${total} workers · ${percent}%</div>
             <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden mt-3">
@@ -1664,7 +1669,7 @@ const db = window.db || (window.firebase && firebase.firestore && firebase.fires
           </div>
         `;
         frag.appendChild(card);
-      }
+      });
     }
 
     requestAnimationFrame(() => {
@@ -1673,30 +1678,33 @@ const db = window.db || (window.firebase && firebase.firestore && firebase.fires
     });
   }
 
-  // ---------------------------
-  // Jobs listener (approved jobs shown in grid)
-  // ---------------------------
+  // ---------- jobs listener (approved jobs) ----------
   let gridListenerUnsub = null;
-  function initAffiliateJobsListenerNew() {
+  function initAffiliateJobsListener() {
     if (!db) return;
     if (gridListenerUnsub) return;
-    gridListenerUnsub = db.collection("affiliateJobs").where("status", "==", "approved")
-      .onSnapshot(snapshot => {
-        const jobs = [];
-        snapshot.forEach(doc => jobs.push({ id: doc.id, ...doc.data() }));
-        jobs.sort((a, b) => (b.postedAt?.seconds || 0) - (a.postedAt?.seconds || 0));
-        renderAffiliateGridNew(jobs);
-      }, err => console.error("affiliateJobs listener error:", err));
+    try {
+      gridListenerUnsub = db.collection("affiliateJobs").where("status", "==", "approved")
+        .onSnapshot(snapshot => {
+          const jobs = [];
+          snapshot.forEach(doc => jobs.push({ id: doc.id, ...doc.data() }));
+          jobs.sort((a,b) => (b.postedAt?.seconds || 0) - (a.postedAt?.seconds || 0));
+          renderAffiliateGrid(jobs);
+        }, err => console.error("affiliateJobs onSnapshot error:", err));
+    } catch (err) {
+      console.error("initAffiliateJobsListener error:", err);
+    }
   }
 
-  // lazy-init the grid listener
-  (function observeJobsGridNew() {
+  // lazy-init using IntersectionObserver if available
+  (function lazyInitJobs() {
     const sec = document.getElementById("jobsGridSectionNew");
-    if (!sec) { initAffiliateJobsListenerNew(); return; }
+    if (!sec) { initAffiliateJobsListener(); return; }
+    if (!("IntersectionObserver" in window)) { initAffiliateJobsListener(); return; }
     const obs = new IntersectionObserver((entries, o) => {
       for (const en of entries) {
         if (en.isIntersecting) {
-          initAffiliateJobsListenerNew();
+          initAffiliateJobsListener();
           o.disconnect();
           return;
         }
@@ -1705,71 +1713,69 @@ const db = window.db || (window.firebase && firebase.firestore && firebase.fires
     obs.observe(sec);
   })();
 
-  // ---------------------------
-  // Search filter (grid)
-  // ---------------------------
-  const searchInputNew = document.getElementById("searchTasksMainNew");
-  if (searchInputNew) {
-    let searchTimeout = null;
-    searchInputNew.addEventListener("input", () => {
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(() => {
-        const q = searchInputNew.value.trim().toLowerCase();
+  // ---------- search filter for grid ----------
+  const searchInput = document.getElementById("searchTasksMainNew");
+  if (searchInput) {
+    let t = null;
+    searchInput.addEventListener("input", () => {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        const q = searchInput.value.trim().toLowerCase();
         const grid = document.getElementById("affiliateGridNew");
         if (!grid) return;
         [...grid.children].forEach(card => {
           card.style.display = card.innerText.toLowerCase().includes(q) ? "" : "none";
         });
-      }, 170);
+      }, 180);
     });
   }
 
-  // ---------------------------
-  // DETAIL SCREEN (View Task) — live progress from affiliate_submissions
-  // ---------------------------
-  let detailSubUnsub = null;
-  async function openJobDetailScreenNew(jobId) {
-    if (!db) return alert("Database not ready");
+  // ---------- job detail screen (View Task) ----------
+  let detailListenerUnsub = null;
+  async function openJobDetail(jobId) {
+    if (!db) { alert("Database not ready"); return; }
     try {
       const doc = await db.collection("affiliateJobs").doc(jobId).get();
       if (!doc.exists) { alert("Job not found"); return; }
       const job = { id: doc.id, ...doc.data() };
-      const detailContent = document.getElementById("jobDetailContent");
       const proofCount = Number(job.proofFileCount || 1);
       const totalWorkers = Number(job.numWorkers || 0);
 
-      detailContent.innerHTML = `
+      const container = document.getElementById("jobDetailContent");
+      container.innerHTML = `
         <div class="bg-white rounded-2xl card-soft overflow-hidden">
           <div class="relative">
-            <img src="${escapeHtml(job.campaignLogoURL || job.image || '/assets/default-banner.jpg')}" class="w-full h-44 object-cover">
-            <img src="${escapeHtml(job.campaignLogoURL || job.image || '/assets/default-thumb.jpg')}" class="absolute -bottom-6 left-6 w-14 h-14 rounded-full border-4 border-white object-cover shadow">
+            <img src="${safeText(job.campaignLogoURL || job.image || '/assets/default-banner.jpg')}" class="w-full h-44 object-cover">
+            <img src="${safeText(job.campaignLogoURL || job.image || '/assets/default-thumb.jpg')}" class="absolute -bottom-6 left-6 w-14 h-14 rounded-full border-4 border-white object-cover shadow">
           </div>
+
           <div class="p-5">
             <div class="flex justify-between items-start">
               <div>
-                <h3 class="text-xl font-bold">${escapeHtml(job.title || 'Untitled')}</h3>
+                <h3 class="text-xl font-bold">${safeText(job.title || 'Untitled')}</h3>
                 <p class="text-sm text-gray-500">${formatNaira(job.workerPay)} · ${totalWorkers} workers</p>
               </div>
             </div>
-            <div class="mt-3 text-gray-700">${escapeHtml(job.instructions || '')}</div>
+
+            <div class="mt-3 text-gray-700">${safeText(job.instructions || '')}</div>
 
             <div class="mt-4">
               <div class="text-sm text-gray-500">Progress</div>
               <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden mt-2">
-                <div id="detailProgressBarNew" class="h-2 rounded-full bg-blue-400" style="width:0%"></div>
+                <div id="detailProgressBar" class="h-2 rounded-full bg-blue-400" style="width:0%"></div>
               </div>
-              <div id="detailProgressTextNew" class="text-sm text-gray-500 mt-2">0/0 (0%)</div>
+              <div id="detailProgressText" class="text-sm text-gray-500 mt-2">0/0 (0%)</div>
             </div>
 
             <hr class="my-4">
 
             <div>
               <p class="text-sm text-gray-500 mb-2">Proofs required: <strong>${proofCount}</strong></p>
-              <input id="detailProofFilesNew" type="file" multiple accept="image/*" class="mb-2 block w-full" />
-              <textarea id="detailSubmissionNoteNew" placeholder="Optional note..." class="w-full border rounded-md p-2 mb-2"></textarea>
+              <input id="detailProofFiles" type="file" multiple accept="image/*" class="mb-2 block w-full" />
+              <textarea id="detailSubmissionNote" placeholder="Optional note..." class="w-full border rounded-md p-2 mb-2"></textarea>
               <div class="flex gap-2">
-                <button id="detailSubmitProofBtnNew" class="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold">Submit Proof</button>
-                <button id="detailCancelBtnNew" class="py-3 px-4 rounded-xl bg-gray-100">Cancel</button>
+                <button id="detailSubmitBtn" class="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold">Submit Proof</button>
+                <button id="detailCancelBtn" class="py-3 px-4 rounded-xl bg-gray-100">Cancel</button>
               </div>
               <p class="text-xs text-gray-400 mt-2">Submissions are reviewed by admin. Approved submissions will reflect here and in your finished tasks.</p>
             </div>
@@ -1782,153 +1788,156 @@ const db = window.db || (window.firebase && firebase.firestore && firebase.fires
       document.getElementById("finishedTasksScreenNew").classList.add("hidden");
       document.getElementById("jobDetailScreenNew").classList.remove("hidden");
 
-      // detach previous detail listener
-      if (detailSubUnsub) { detailSubUnsub(); detailSubUnsub = null; }
+      // cleanup previous listener
+      if (detailListenerUnsub) { detailListenerUnsub(); detailListenerUnsub = null; }
 
-      // attach live snapshot for approved submissions for this job
-      detailSubUnsub = db.collection("affiliate_submissions")
-        .where("jobId", "==", job.id)
-        .where("status", "==", "approved")
-        .onSnapshot(snap => {
-          const approvedCount = snap.size;
-          const percent = totalWorkers > 0 ? Math.min(100, Math.round((approvedCount / totalWorkers) * 100)) : 0;
-          const bar = document.getElementById("detailProgressBarNew");
-          const text = document.getElementById("detailProgressTextNew");
-          if (bar) bar.style.width = percent + "%";
-          if (text) text.textContent = `${approvedCount}/${totalWorkers} (${percent}%)`;
-        }, err => console.error("detail submissions listener error:", err));
+      // live approved submissions count for this job (progress)
+      if (db) {
+        detailListenerUnsub = db.collection("affiliate_submissions")
+          .where("jobId", "==", job.id)
+          .where("status", "==", "approved")
+          .onSnapshot(snapshot => {
+            const approvedCount = snapshot.size;
+            const percent = totalWorkers > 0 ? Math.min(100, Math.round((approvedCount / totalWorkers) * 100)) : 0;
+            const bar = document.getElementById("detailProgressBar");
+            const text = document.getElementById("detailProgressText");
+            if (bar) bar.style.width = percent + "%";
+            if (text) text.textContent = `${approvedCount}/${totalWorkers} (${percent}%)`;
+          }, err => console.error("detail onSnapshot error:", err));
+      }
 
-      // Submit handler
-      document.getElementById("detailSubmitProofBtnNew").onclick = async () => {
-        if (!auth.currentUser) { alert("You must be logged in to submit proof."); return; }
-        const files = document.getElementById("detailProofFilesNew").files || [];
+      // submit handler
+      document.getElementById("detailSubmitBtn").onclick = async () => {
+        if (!auth || !auth.currentUser) { alert("You must be logged in to submit proof."); return; }
+        const files = (document.getElementById("detailProofFiles").files || []);
         if (files.length !== proofCount) {
-          return alert(`This job requires exactly ${proofCount} proof file(s). You selected ${files.length}.`);
+          alert(`This job requires exactly ${proofCount} proof file(s). You selected ${files.length}.`);
+          return;
         }
 
-        const btn = document.getElementById("detailSubmitProofBtnNew");
+        const btn = document.getElementById("detailSubmitBtn");
         btn.disabled = true;
-        const prevTxt = btn.textContent;
+        const prev = btn.textContent;
         btn.textContent = "Uploading...";
 
         try {
           const uploads = [];
-          for (let i = 0; i < files.length; i++) uploads.push(uploadFileHelper(files[i]));
+          for (let i=0;i<files.length;i++) uploads.push(uploadFileHelper(files[i]));
           const urls = await Promise.all(uploads);
 
           const payload = {
             jobId: job.id,
             userId: auth.currentUser.uid,
             userName: auth.currentUser.displayName || auth.currentUser.email || "",
-            postedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            postedAt: (window.firebase && firebase.firestore) ? firebase.firestore.FieldValue.serverTimestamp() : new Date(),
             proofURLs: urls,
-            note: document.getElementById("detailSubmissionNoteNew").value || "",
+            note: document.getElementById("detailSubmissionNote").value || "",
             status: "pending"
           };
 
-          await db.collection("affiliate_submissions").add(payload);
+          if (db) await db.collection("affiliate_submissions").add(payload);
           alert("✅ Proof submitted! It will be reviewed by admin.");
-          // go back to list
+          // go back
           document.getElementById("backToAffiliateBtn").click();
         } catch (err) {
-          console.error("submit proof error:", err);
-          alert("❌ Failed to submit proof. Try again.");
+          console.error("submit error:", err);
+          alert("❌ Failed to submit proof. See console.");
         } finally {
           btn.disabled = false;
-          btn.textContent = prevTxt;
+          btn.textContent = prev;
         }
       };
 
-      document.getElementById("detailCancelBtnNew").onclick = () => document.getElementById("backToAffiliateBtn").click();
+      // cancel/back inside detail
+      document.getElementById("detailCancelBtn").onclick = () => document.getElementById("backToAffiliateBtn").click();
 
     } catch (err) {
-      console.error("openJobDetailScreenNew error:", err);
-      alert("Failed to open job detail.");
+      console.error("openJobDetail error:", err);
+      alert("Failed to open job detail. Check console.");
     }
   }
 
-  // back/navigation from detail -> grid (cleanup)
+  // go back from detail -> grid (clean listener)
   document.getElementById("backToAffiliateBtn").addEventListener("click", () => {
     document.getElementById("jobDetailScreenNew").classList.add("hidden");
     document.getElementById("jobsContainerNew").classList.remove("hidden");
-    if (detailSubUnsub) { detailSubUnsub(); detailSubUnsub = null; }
+    if (detailListenerUnsub) { detailListenerUnsub(); detailListenerUnsub = null; }
   });
 
-  // delegated click to open detail
+  // delegate clicks for View Task
   document.addEventListener("click", (e) => {
-    const btn = e.target.closest(".view-affiliate-task-new");
-    if (btn) {
-      const id = btn.dataset.id;
-      openJobDetailScreenNew(id);
+    const b = e.target.closest(".view-affiliate-task-new");
+    if (b) {
+      const id = b.dataset.id;
+      if (id) openJobDetail(id);
     }
   });
 
-  // ---------------------------
-  // FINISHED TASKS (affiliate_submissions only)
-  // ---------------------------
-  let finishedTasksUnsub = null;
-  function openFinishedTasksScreenNew() {
-    if (!auth.currentUser) { alert("Login to see your finished tasks."); return; }
+  // ---------- FINISHED TASKS (affiliate_submissions only) ----------
+  let finishedUnsub = null;
+  function openFinishedTasksScreen() {
+    if (!auth || !auth.currentUser) { alert("Login to see your finished tasks."); return; }
 
-    // show finished screen
     document.getElementById("jobsContainerNew").classList.add("hidden");
     document.getElementById("jobDetailScreenNew").classList.add("hidden");
     document.getElementById("finishedTasksScreenNew").classList.remove("hidden");
 
-    // detach previous listener
-    if (finishedTasksUnsub) { finishedTasksUnsub(); finishedTasksUnsub = null; }
+    if (finishedUnsub) { finishedUnsub(); finishedUnsub = null; }
 
-    // real-time listener on user's affiliate_submissions
-    finishedTasksUnsub = db.collection("affiliate_submissions")
+    finishedUnsub = db.collection("affiliate_submissions")
       .where("userId", "==", auth.currentUser.uid)
       .onSnapshot(async snap => {
-        const listEl = document.getElementById("finishedTasksListNew");
-        listEl.innerHTML = "";
-        let pending = 0, approved = 0;
-        const jobIds = new Set();
-        const items = [];
-        snap.forEach(doc => {
-          const d = { id: doc.id, ...doc.data() };
-          items.push(d);
-          const s = (d.status || "").toLowerCase();
-          if (s === "approved") approved++; else pending++;
-          if (d.jobId) jobIds.add(d.jobId);
-        });
+        try {
+          const listEl = document.getElementById("finishedTasksListNew");
+          listEl.innerHTML = "";
+          let pending = 0, approved = 0;
+          const jobIds = new Set();
+          const items = [];
+          snap.forEach(doc => {
+            const d = { id: doc.id, ...doc.data() };
+            items.push(d);
+            const s = (d.status || "").toLowerCase();
+            if (s === "approved") approved++; else pending++;
+            if (d.jobId) jobIds.add(d.jobId);
+          });
 
-        // fetch job titles
-        const jobMap = {};
-        const ids = Array.from(jobIds);
-        for (let i = 0; i < ids.length; i += 10) {
-          const chunk = ids.slice(i, i + 10);
-          const q = await db.collection("affiliateJobs").where(firebase.firestore.FieldPath.documentId(), "in", chunk).get();
-          q.forEach(doc => jobMap[doc.id] = doc.data());
+          // fetch job titles in chunks
+          const jobMap = {};
+          const ids = Array.from(jobIds);
+          for (let i=0; i<ids.length; i+=10) {
+            const chunk = ids.slice(i, i+10);
+            const q = await db.collection("affiliateJobs").where(firebase.firestore.FieldPath.documentId(), "in", chunk).get();
+            q.forEach(d => jobMap[d.id] = d.data());
+          }
+
+          // render
+          const frag = document.createDocumentFragment();
+          items.sort((a,b) => (b.postedAt?.seconds || 0) - (a.postedAt?.seconds || 0));
+          for (const it of items) {
+            const jobTitle = jobMap[it.jobId]?.title || "Affiliate Job";
+            const card = document.createElement("div");
+            card.className = "p-4 bg-white rounded-xl shadow-sm flex items-center justify-between hover:shadow-md";
+            card.innerHTML = `
+              <div>
+                <h3 class="font-semibold text-gray-900">${safeText(jobTitle)}</h3>
+                <p class="text-sm text-gray-600">${safeText(it.status || "")}</p>
+                <p class="text-xs text-gray-400">${it.postedAt?.toDate ? it.postedAt.toDate().toLocaleString() : ""}</p>
+              </div>
+              <div class="flex flex-col gap-2 items-end">
+                <button class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg view-finished-detail clickable" data-id="${it.id}">View</button>
+              </div>
+            `;
+            frag.appendChild(card);
+          }
+          listEl.appendChild(frag);
+          document.getElementById("pendingCountNew").textContent = String(pending);
+          document.getElementById("approvedCountNew").textContent = String(approved);
+        } catch (err) {
+          console.error("openFinishedTasks processing error:", err);
+          document.getElementById("finishedTasksListNew").innerHTML = `<p class="text-center text-red-500">Failed to load finished tasks.</p>`;
         }
-
-        // render items
-        const frag = document.createDocumentFragment();
-        items.sort((a,b) => (b.postedAt?.seconds || 0) - (a.postedAt?.seconds || 0));
-        for (const it of items) {
-          const jobTitle = jobMap[it.jobId]?.title || "Affiliate Job";
-          const card = document.createElement("div");
-          card.className = "p-4 bg-white rounded-xl shadow-sm flex items-center justify-between hover:shadow-md";
-          card.innerHTML = `
-            <div>
-              <h3 class="font-semibold text-gray-900">${escapeHtml(jobTitle)}</h3>
-              <p class="text-sm text-gray-600">${escapeHtml(it.status || "")}</p>
-              <p class="text-xs text-gray-400">${it.postedAt?.toDate ? it.postedAt.toDate().toLocaleString() : ""}</p>
-            </div>
-            <div class="flex flex-col gap-2 items-end">
-              <button class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg view-finished-detail clickable" data-id="${it.id}">View</button>
-            </div>
-          `;
-          frag.appendChild(card);
-        }
-
-        listEl.appendChild(frag);
-        document.getElementById("pendingCountNew").textContent = String(pending);
-        document.getElementById("approvedCountNew").textContent = String(approved);
       }, err => {
-        console.error("finished tasks listener error:", err);
+        console.error("finished onSnapshot error:", err);
         document.getElementById("finishedTasksListNew").innerHTML = `<p class="text-center text-red-500">Failed to load finished tasks.</p>`;
       });
   }
@@ -1937,14 +1946,14 @@ const db = window.db || (window.firebase && firebase.firestore && firebase.fires
   document.getElementById("backToMainBtnNew").addEventListener("click", () => {
     document.getElementById("finishedTasksScreenNew").classList.add("hidden");
     document.getElementById("jobsContainerNew").classList.remove("hidden");
-    if (finishedTasksUnsub) { finishedTasksUnsub(); finishedTasksUnsub = null; }
+    if (finishedUnsub) { finishedUnsub(); finishedUnsub = null; }
   });
 
   // view finished detail modal
   document.addEventListener("click", (e) => {
-    const btn = e.target.closest(".view-finished-detail");
-    if (!btn) return;
-    const id = btn.dataset.id;
+    const b = e.target.closest(".view-finished-detail");
+    if (!b) return;
+    const id = b.dataset.id;
     (async () => {
       try {
         const doc = await db.collection("affiliate_submissions").doc(id).get();
@@ -1952,26 +1961,26 @@ const db = window.db || (window.firebase && firebase.firestore && firebase.fires
         const d = doc.data();
         const modal = document.createElement("div");
         modal.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4";
-        const proofImgs = (d.proofURLs || []).map(u => `<img src="${escapeHtml(u)}" class="w-full rounded-md mb-2" />`).join("");
+        const images = (d.proofURLs || []).map(u => `<img src="${safeText(u)}" class="w-full rounded-md mb-2" />`).join("");
         modal.innerHTML = `
           <div class="bg-white rounded-xl shadow-lg p-4 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <h3 class="text-lg font-bold mb-2">Submission Details</h3>
-            <p class="text-sm"><strong>Status:</strong> ${escapeHtml(d.status || "")}</p>
-            <p class="text-sm"><strong>Note:</strong> ${escapeHtml(d.note || "")}</p>
-            <div class="mt-3">${proofImgs || '<p class="text-sm text-gray-400">No proof images</p>'}</div>
-            <div class="mt-4 flex justify-end"><button class="closeFinishedDetail px-4 py-2 bg-blue-600 text-white rounded-lg">Close</button></div>
+            <p class="text-sm"><strong>Status:</strong> ${safeText(d.status || "")}</p>
+            <p class="text-sm"><strong>Note:</strong> ${safeText(d.note || "")}</p>
+            <div class="mt-3">${images || '<p class="text-sm text-gray-400">No proof images</p>'}</div>
+            <div class="mt-4 flex justify-end"><button class="closeFinishedBtn px-4 py-2 bg-blue-600 text-white rounded-lg">Close</button></div>
           </div>
         `;
         document.body.appendChild(modal);
-        modal.querySelector(".closeFinishedDetail").addEventListener("click", () => modal.remove());
+        modal.querySelector(".closeFinishedBtn").addEventListener("click", () => modal.remove());
       } catch (err) {
-        console.error("failed to open finished detail", err);
+        console.error("view finished detail error:", err);
         alert("Failed to load details.");
       }
     })();
   });
 
-  // search finished tasks filtering
+  // search finished tasks
   const sf = document.getElementById("searchFinishedTasksNew");
   if (sf) {
     sf.addEventListener("input", () => {
@@ -1984,21 +1993,25 @@ const db = window.db || (window.firebase && firebase.firestore && firebase.fires
     });
   }
 
-  // open finished tasks button wired
-  document.getElementById("openFinishedTasksBtnNew").addEventListener("click", openFinishedTasksScreenNew);
+  // open finished tasks button
+  document.getElementById("openFinishedTasksBtnNew").addEventListener("click", openFinishedTasksScreen);
 
-  // initialize grid listener
-  initAffiliateJobsListenerNew();
+  // initialize
+  initAffiliateJobsListener();
 
   // expose for debugging
-  window._dashboardAffiliateNew = {
-    openJobDetailScreenNew,
-    openFinishedTasksScreenNew,
-    renderAffiliateGridNew
+  window._dashboardAffiliate = {
+    openJobDetail,
+    openFinishedTasksScreen
   };
 
-})();
+}); // DOMContentLoaded
 </script>
+
+
+
+		
+
 
 
 
