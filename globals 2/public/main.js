@@ -1781,13 +1781,13 @@ firebase.auth().onAuthStateChanged((user) => {
 	
 	//INSTALL AND EARN FUNCTION 
 
-
-
-
 // ---------- Helpers ----------
 const escapeHtml = s => String(s || '')
-  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
 
 function generateProofUploadFields(count) {
   let html = '';
@@ -1811,7 +1811,6 @@ function waitForAuthReady(timeout = 4000) {
       done = true;
       resolve(firebase.auth().currentUser || null);
     }, timeout);
-
     const unsub = firebase.auth().onAuthStateChanged(user => {
       if (done) return;
       done = true;
@@ -1834,46 +1833,34 @@ async function showTaskDetails(jobId, jobData) {
   fullScreen.className = "fixed inset-0 bg-white z-50 overflow-y-auto p-6";
 
   const proofCount = jobData.proofFileCount || 1;
-  const safeTitle = escapeHtml(jobData.title);
+  const safeTitle = escapeHtml(jobData.title || 'Untitled Task');
   const safeCategory = escapeHtml(jobData.category || '');
   const safeSub = escapeHtml(jobData.subCategory || '');
   const safeDesc = escapeHtml(jobData.description || 'No description provided');
   const safeProofText = escapeHtml(jobData.proof || 'Provide the necessary screenshot or details.');
+  const screenshot = jobData.screenshotURL || 'https://via.placeholder.com/400';
 
-  // Initial UI (we’ll replace proof area later if already submitted)
   fullScreen.innerHTML = `
     <div class="max-w-2xl mx-auto space-y-6">
       <button id="closeTaskBtn" class="text-blue-600 font-bold text-sm underline">← Back to Tasks</button>
-
       <h1 class="text-2xl font-bold text-gray-800">${safeTitle}</h1>
       <p class="text-sm text-gray-500">${safeCategory} • ${safeSub}</p>
-
-      <img src="${jobData.screenshotURL || 'https://via.placeholder.com/400'}"
-        alt="Task Preview"
-        class="w-full h-64 object-cover rounded-xl border"
-      />
-
+      <img src="${escapeHtml(screenshot)}" alt="Task Preview" class="w-full h-64 object-cover rounded-xl border" />
       <div>
         <h2 class="text-lg font-semibold text-gray-800 mb-2">Task Description</h2>
         <p class="text-gray-700 text-sm whitespace-pre-line">${safeDesc}</p>
       </div>
-
       <div>
         <h2 class="text-lg font-semibold text-gray-800 mb-2">Proof Required</h2>
         <p class="text-sm text-gray-700">${safeProofText}</p>
       </div>
-
       <div id="proofSection" class="mt-6">
         <h2 class="text-lg font-bold text-gray-800 mb-4">Proof</h2>
         <div id="proofFields">${generateProofUploadFields(proofCount)}</div>
         <input id="proofTextInput" type="text" placeholder="Enter email/username used (if needed)"
-          class="w-full p-2 border border-gray-300 rounded-lg text-sm mt-2"
-        />
-
+          class="w-full p-2 border border-gray-300 rounded-lg text-sm mt-2" />
         <div class="flex items-center gap-3 mt-4">
-          <button id="submitTaskBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
-            Submit Task
-          </button>
+          <button id="submitTaskBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">Submit Task</button>
           <div id="submitStatus" class="text-sm text-gray-600"></div>
         </div>
       </div>
@@ -1882,53 +1869,52 @@ async function showTaskDetails(jobId, jobData) {
 
   document.body.appendChild(fullScreen);
 
-  // close
-  fullScreen.querySelector("#closeTaskBtn").addEventListener("click", () => fullScreen.remove());
+  // safe close button
+  fullScreen.querySelector("#closeTaskBtn")?.addEventListener("click", () => fullScreen.remove());
 
-  // ✅ Check if already submitted by this user
+  // Check if already submitted by this user
   const user = await waitForAuthReady();
   if (user) {
-    const snap = await firebase.firestore()
-      .collection("task_submissions")
-      .where("taskId", "==", jobId)
-      .where("userId", "==", user.uid)
-      .limit(1)
-      .get();
+    try {
+      const snap = await firebase.firestore()
+        .collection("task_submissions")
+        .where("taskId", "==", jobId)
+        .where("userId", "==", user.uid)
+        .limit(1)
+        .get();
 
-    if (!snap.empty) {
-      const sub = snap.docs[0].data();
-
-      // Replace proofSection with submitted proof
-      const proofSection = fullScreen.querySelector("#proofSection");
-      proofSection.innerHTML = `
-        <h2 class="text-lg font-bold text-gray-800 mb-4">Your Submission</h2>
-        <p class="text-sm text-gray-700 mb-2"><strong>Submitted Text:</strong> ${escapeHtml(sub.proofText || "—")}</p>
-        <div class="grid grid-cols-2 gap-2">
-          ${(sub.proofImages || []).map(url => `
-            <img src="${url}" class="w-full h-32 object-cover rounded-lg border" />
-          `).join("")}
-        </div>
-        <p class="mt-3 text-green-600 font-semibold">✅ Submitted</p>
-      `;
-    } else {
-      // attach submit handler only if not submitted yet
-      attachSubmitHandler(fullScreen, jobId, jobData);
+      if (!snap.empty) {
+        const sub = snap.docs[0].data();
+        const proofSection = fullScreen.querySelector("#proofSection");
+        proofSection.innerHTML = `
+          <h2 class="text-lg font-bold text-gray-800 mb-4">Your Submission</h2>
+          <p class="text-sm text-gray-700 mb-2"><strong>Submitted Text:</strong> ${escapeHtml(sub.proofText || "—")}</p>
+          <div class="grid grid-cols-2 gap-2">
+            ${(sub.proofImages || []).map(url => `<img src="${escapeHtml(url)}" class="w-full h-32 object-cover rounded-lg border" />`).join('')}
+          </div>
+          <p class="mt-3 text-green-600 font-semibold">✅ Submitted</p>
+        `;
+        return;
+      }
+    } catch (e) {
+      console.error("Error checking previous submission:", e);
+      // continue and allow submission attempt if check fails
     }
-  } else {
-    attachSubmitHandler(fullScreen, jobId, jobData); // allow guest to try, will block later
   }
-}
 
+  // allow submission (guest will be blocked at submit time)
+  attachSubmitHandler(fullScreen, jobId, jobData);
+}
 
 // 🔗 Extracted submit handler
 function attachSubmitHandler(fullScreen, jobId, jobData) {
   const submitBtn = fullScreen.querySelector("#submitTaskBtn");
   const status = fullScreen.querySelector("#submitStatus");
+  if (!submitBtn) return;
 
   submitBtn.addEventListener("click", async () => {
     submitBtn.disabled = true;
     status.textContent = "Checking auth...";
-
     try {
       const user = await waitForAuthReady();
       if (!user) {
@@ -1938,7 +1924,6 @@ function attachSubmitHandler(fullScreen, jobId, jobData) {
         return;
       }
 
-      // collect text + files
       const proofText = fullScreen.querySelector("#proofTextInput")?.value.trim() || "";
       const fileInputs = fullScreen.querySelectorAll('input[type="file"]');
       const uploadedFiles = [];
@@ -1948,7 +1933,7 @@ function attachSubmitHandler(fullScreen, jobId, jobData) {
         const file = fEl.files[0];
         if (file) {
           status.textContent = `Uploading ${i + 1}/${fileInputs.length}...`;
-          const url = await uploadToCloudinary(file);
+          const url = await uploadToCloudinary(file); // assumes this function exists
           uploadedFiles.push(url);
           status.textContent = `Uploaded ${uploadedFiles.length}/${fileInputs.length}`;
         }
@@ -1962,7 +1947,6 @@ function attachSubmitHandler(fullScreen, jobId, jobData) {
       }
 
       status.textContent = "Saving submission...";
-
       const submissionData = {
         taskId: jobId,
         userId: user.uid,
@@ -1974,9 +1958,9 @@ function attachSubmitHandler(fullScreen, jobId, jobData) {
       };
 
       await firebase.firestore().collection("task_submissions").add(submissionData);
-
       alert("✅ Task submitted for review!");
       fullScreen.remove();
+
     } catch (err) {
       console.error("Submit error:", err);
       alert("❗ Failed to submit task: " + (err?.message || err));
@@ -1986,8 +1970,6 @@ function attachSubmitHandler(fullScreen, jobId, jobData) {
   });
 }
 
-
-		  
 // ---------- Card rendering + live feed ----------
 function createTaskCard(jobId, jobData) {
   const taskContainer = document.getElementById("task-jobs");
@@ -1997,10 +1979,7 @@ function createTaskCard(jobId, jobData) {
   }
 
   const card = document.createElement("div");
-  card.className = `
-    flex gap-4 p-4 rounded-2xl shadow-md border border-gray-200 bg-white
-    hover:shadow-lg transition duration-300 mb-4 items-center
-  `;
+  card.className = 'flex gap-4 p-4 rounded-2xl shadow-md border border-gray-200 bg-white hover:shadow-lg transition duration-300 mb-4 items-center';
 
   const image = document.createElement("img");
   image.src = jobData.screenshotURL || "https://via.placeholder.com/80";
@@ -2024,10 +2003,9 @@ function createTaskCard(jobId, jobData) {
 
   const rate = document.createElement("p");
   rate.className = "text-xs text-gray-500";
-  rate.textContent = `Progress: loading...`;
+  rate.textContent = "Progress: loading...";
 
   const total = jobData.numWorkers || 0;
-
   firebase.firestore()
     .collection("task_submissions")
     .where("taskId", "==", jobId)
@@ -2044,10 +2022,7 @@ function createTaskCard(jobId, jobData) {
 
   const button = document.createElement("button");
   button.textContent = "View Task";
-  button.className = `
-    mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2
-    rounded-lg shadow-sm transition
-  `;
+  button.className = "mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2 rounded-lg shadow-sm transition";
   button.addEventListener("click", () => showTaskDetails(jobId, jobData));
 
   content.appendChild(title);
@@ -2058,7 +2033,6 @@ function createTaskCard(jobId, jobData) {
 
   card.appendChild(image);
   card.appendChild(content);
-
   taskContainer.appendChild(card);
 }
 
@@ -2082,21 +2056,20 @@ firebase.firestore().collection("tasks")
     });
 
     function renderTasks() {
-  const keyword = (searchInput && searchInput.value) ? searchInput.value.toLowerCase() : "";
-  const selectedCategoryRaw = (filterSelect && filterSelect.value) ? filterSelect.value : "";
-  const selectedCategory = selectedCategoryRaw.toString().trim().toLowerCase();
+      const keyword = (searchInput && searchInput.value) ? searchInput.value.toLowerCase() : "";
+      const selectedCategoryRaw = (filterSelect && filterSelect.value) ? filterSelect.value : "";
+      const selectedCategory = selectedCategoryRaw.toString().trim().toLowerCase();
+      taskContainer.innerHTML = "";
 
-  taskContainer.innerHTML = "";
-
-  tasks
-    .filter(task => {
-      const taskCategory = (task.category || "").toString().trim().toLowerCase();
-      const matchesCategory = selectedCategory === "" || taskCategory === selectedCategory;
-      const matchesSearch = (task.title || "").toLowerCase().includes(keyword);
-      return matchesCategory && matchesSearch;
-    })
-    .forEach(task => createTaskCard(task.id, task));
-}
+      tasks
+        .filter(task => {
+          const taskCategory = (task.category || "").toString().trim().toLowerCase();
+          const matchesCategory = selectedCategory === "" || taskCategory === selectedCategory;
+          const matchesSearch = (task.title || "").toLowerCase().includes(keyword);
+          return matchesCategory && matchesSearch;
+        })
+        .forEach(task => createTaskCard(task.id, task));
+    }
 
     if (searchInput) searchInput.addEventListener("input", renderTasks);
     if (filterSelect) filterSelect.addEventListener("change", renderTasks);
@@ -2106,28 +2079,26 @@ firebase.firestore().collection("tasks")
     console.error("Failed to listen to tasks collection:", err);
   });
 
-
-
-
-
-
-
-
-
 // ================= Finished Task Submissions Logic =================
 
-// Open finished tasks screen
-document.getElementById("finishedTaskBtnUser").addEventListener("click", () => {
-  document.getElementById("taskSection").classList.add("hidden");
-  document.getElementById("finishedTasksScreenUser").classList.remove("hidden");
-  loadFinishedTaskSubmissionsUser();
-});
+// Open finished tasks screen (safe)
+const finishedBtn = document.getElementById("finishedTaskBtnUser");
+if (finishedBtn) {
+  finishedBtn.addEventListener("click", () => {
+    document.getElementById("taskSection")?.classList.add("hidden");
+    document.getElementById("finishedTasksScreenUser")?.classList.remove("hidden");
+    loadFinishedTaskSubmissionsUser();
+  });
+}
 
-// Back button
-document.getElementById("backToMainBtnUser").addEventListener("click", () => {
-  document.getElementById("finishedTasksScreenUser").classList.add("hidden");
-  document.getElementById("taskSection").classList.remove("hidden");
-});
+// Back button (safe)
+const backBtn = document.getElementById("backToMainBtnUser");
+if (backBtn) {
+  backBtn.addEventListener("click", () => {
+    document.getElementById("finishedTasksScreenUser")?.classList.add("hidden");
+    document.getElementById("taskSection")?.classList.remove("hidden");
+  });
+}
 
 // Load finished task submissions
 async function loadFinishedTaskSubmissionsUser() {
@@ -2135,7 +2106,13 @@ async function loadFinishedTaskSubmissionsUser() {
   const pendingCountEl = document.getElementById("pendingCountUser");
   const approvedCountEl = document.getElementById("approvedCountUser");
 
-  const userId = firebase.auth().currentUser?.uid;
+  if (!listEl || !pendingCountEl || !approvedCountEl) {
+    console.error("Finished tasks UI elements missing.");
+    return;
+  }
+
+  const user = await waitForAuthReady();
+  const userId = user?.uid;
   if (!userId) return;
 
   try {
@@ -2164,45 +2141,29 @@ async function loadFinishedTaskSubmissionsUser() {
       if (data.status === "on review") pending++;
       if (data.status === "approved") approved++;
 
-      // ✅ use taskId (not jobId)
       let jobTitle = "Untitled Task";
       if (data.taskId) {
-        const jobDoc = await firebase.firestore()
-          .collection("tasks")
-          .doc(data.taskId)
-          .get();
-        if (jobDoc.exists) {
-          jobTitle = jobDoc.data().title || "Untitled Task";
-        }
+        const jobDoc = await firebase.firestore().collection("tasks").doc(data.taskId).get();
+        if (jobDoc.exists) jobTitle = jobDoc.data().title || jobTitle;
       }
 
       const card = document.createElement("div");
       card.className = "p-4 bg-white shadow rounded-xl flex items-center justify-between";
-
       card.innerHTML = `
         <div>
-          <h3 class="font-semibold text-gray-900">${jobTitle}</h3>
-          <p class="text-sm text-gray-600">Earn: ₦${data.workerEarn || 0}</p>
-          <p class="text-xs text-gray-400">${data.submittedAt?.toDate().toLocaleString() || ""}</p>
-          <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded ${
-            data.status === "approved"
-              ? "bg-green-100 text-green-700"
-              : "bg-yellow-100 text-yellow-700"
-          }">${data.status}</span>
+          <h3 class="font-semibold text-gray-900">${escapeHtml(jobTitle)}</h3>
+          <p class="text-sm text-gray-600">Earn: ₦${escapeHtml(String(data.workerEarn || 0))}</p>
+          <p class="text-xs text-gray-400">${escapeHtml(String(data.submittedAt?.toDate?.()?.toLocaleString?.() || ""))}</p>
+          <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded ${data.status === "approved" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}">${escapeHtml(data.status || "")}</span>
         </div>
-        <button
-          class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg details-btn-user"
-          data-id="${data.id}"
-        >
-          Details
-        </button>
+        <button class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg details-btn-user" data-id="${escapeHtml(data.id)}">Details</button>
       `;
       listEl.appendChild(card);
     }
 
     // Update counters
-    pendingCountEl.textContent = pending;
-    approvedCountEl.textContent = approved;
+    pendingCountEl.textContent = String(pending);
+    approvedCountEl.textContent = String(approved);
 
     // Attach details button events
     listEl.querySelectorAll(".details-btn-user").forEach(btn => {
@@ -2220,21 +2181,13 @@ async function loadFinishedTaskSubmissionsUser() {
 // Show task submission details
 async function showTaskSubmissionDetailsUser(submissionId) {
   try {
-    const subDoc = await firebase.firestore()
-      .collection("task_submissions")
-      .doc(submissionId)
-      .get();
-
+    const subDoc = await firebase.firestore().collection("task_submissions").doc(submissionId).get();
     if (!subDoc.exists) return;
     const data = subDoc.data();
 
-    // ✅ use taskId (not jobId)
     let jobData = {};
     if (data.taskId) {
-      const jobDoc = await firebase.firestore()
-        .collection("tasks")
-        .doc(data.taskId)
-        .get();
+      const jobDoc = await firebase.firestore().collection("tasks").doc(data.taskId).get();
       if (jobDoc.exists) jobData = jobDoc.data();
     }
 
@@ -2246,20 +2199,12 @@ async function showTaskSubmissionDetailsUser(submissionId) {
     modal.innerHTML = `
       <div class="bg-white rounded-xl shadow-lg p-6 w-96 max-h-[90vh] overflow-y-auto">
         <h2 class="text-lg font-bold mb-3">Submission Details</h2>
-        
-        <p class="text-sm"><strong>Job Title:</strong> ${jobTitle}</p>
-        <p class="text-sm"><strong>Status:</strong> ${data.status}</p>
-        <p class="text-sm"><strong>Earned:</strong> ₦${data.workerEarn || 0}</p>
-        <p class="text-sm"><strong>Submitted At:</strong> ${data.submittedAt?.toDate().toLocaleString() || "—"}</p>
-        <p class="text-sm"><strong>Extra Proof:</strong> ${data.extraProof || "—"}</p>
-
-        ${proofImage ? `
-          <div class="mt-3">
-            <p class="text-sm font-medium text-gray-700 mb-1">Uploaded Proof:</p>
-            <img src="${proofImage}" alt="Proof" class="rounded-lg border w-full">
-          </div>
-        ` : ""}
-
+        <p class="text-sm"><strong>Job Title:</strong> ${escapeHtml(jobTitle)}</p>
+        <p class="text-sm"><strong>Status:</strong> ${escapeHtml(data.status || '')}</p>
+        <p class="text-sm"><strong>Earned:</strong> ₦${escapeHtml(String(data.workerEarn || 0))}</p>
+        <p class="text-sm"><strong>Submitted At:</strong> ${escapeHtml(String(data.submittedAt?.toDate?.()?.toLocaleString?.() || "—"))}</p>
+        <p class="text-sm"><strong>Extra Proof:</strong> ${escapeHtml(data.extraProof || "—")}</p>
+        ${proofImage ? `<div class="mt-3"><p class="text-sm font-medium text-gray-700 mb-1">Uploaded Proof:</p><img src="${escapeHtml(proofImage)}" alt="Proof" class="rounded-lg border w-full"></div>` : ""}
         <div class="mt-4 flex justify-end">
           <button class="closeModalUser px-4 py-2 bg-blue-600 text-white rounded-lg">Close</button>
         </div>
@@ -2267,12 +2212,14 @@ async function showTaskSubmissionDetailsUser(submissionId) {
     `;
 
     document.body.appendChild(modal);
-    modal.querySelector(".closeModalUser").addEventListener("click", () => modal.remove());
+    modal.querySelector(".closeModalUser")?.addEventListener("click", () => modal.remove());
 
   } catch (err) {
     console.error("Error showing task submission details:", err);
   }
 }
+
+
 
 
 
