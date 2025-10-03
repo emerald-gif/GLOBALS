@@ -1657,18 +1657,7 @@
  <script>
 /* ====== Dashboard (NO SWIPER) — NEW ids ====== */
 
-/* Ensure db & auth references */
-const dbNew = window.db || (window.firebase && firebase.firestore());
-const authNew = window.auth || (window.firebase && firebase.auth());
-if (!dbNew || !authNew) console.warn("Firebase (db/auth) not found - ensure firebase is initialized before this script.");
 
-/* Helpers */
-function escapeHtml(s = "") {
-  return String(s)
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;").replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
 function formatNaira(n) {
   if (n == null || isNaN(n)) return "₦0";
   return "₦" + Number(n).toLocaleString("en-NG");
