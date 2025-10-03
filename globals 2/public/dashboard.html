@@ -1597,15 +1597,7 @@
 
 <script>
 (() => {
-  // ---------------------------
-  // Globals & helpers
-  // ---------------------------
-  const db = window.db || (window.firebase && firebase.firestore && firebase.firestore());
-  const auth = window.auth || (window.firebase && firebase.auth && firebase.auth());
-
-  function escapeHtml(s = "") {
-    return String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
-  }
+  
   function formatNaira(n) {
     if (n == null || isNaN(n)) return "₦0";
     return "₦" + Number(n).toLocaleString("en-NG");
