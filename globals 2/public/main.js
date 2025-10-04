@@ -3444,12 +3444,7 @@ function showTapSection(tab) {
 
     
 
-
-
-/* ---------- DROP-IN: Profile + Navbar/Bottom-nav fixes ---------- */
-
-const FALLBACK_AVATAR = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="100%" height="100%" fill="%23eef2f7"/><circle cx="60" cy="44" r="28" fill="%23cbd5e1"/><rect x="15" y="80" width="90" height="20" fill="%23cbd5e1"/></svg>';
-
+// ---------- NAV HELPERS (drop-in replacement) ----------
 function getNavElems() {
   return {
     topNavbar: document.getElementById('topNavbar'),
@@ -3458,32 +3453,35 @@ function getNavElems() {
   };
 }
 
-/* Centralized navbar visibility:
-   - top shows ONLY for 'dashboard'
-   - bottom shows ONLY when the active tab is in bottomTabs
-*/
+/**
+ * Show topNavbar ONLY when tabId === 'dashboard'.
+ * Use classList (Tailwind .hidden) and remove any inline display leftover.
+ */
 function updateNavbarVisibility(tabId) {
   const { topNavbar, bottomNavbar, backArrowBar } = getNavElems();
   const showTop = tabId === 'dashboard';
-  const bottomTabs = ['dashboard', 'games', 'transaction'];
-  const showBottom = bottomTabs.includes(tabId);
 
   if (topNavbar) {
     topNavbar.classList.toggle('hidden', !showTop);
-    topNavbar.style.removeProperty('display'); // remove any inline display that might fight the class
+    // remove inline style if present so future toggles rely on class only
+    topNavbar.style.removeProperty('display');
   }
+
+  // Keep bottom navbar visible by default (adjust if you want different behavior)
   if (bottomNavbar) {
-    bottomNavbar.classList.toggle('hidden', !showBottom);
+    bottomNavbar.classList.remove('hidden');
     bottomNavbar.style.removeProperty('display');
   }
+
   if (backArrowBar) {
     backArrowBar.classList.toggle('hidden', showTop);
   }
 
+  // track current tab
   window.currentActiveTab = tabId;
 }
 
-/* Make sure switchTab keeps single source of truth for nav visibility */
+// ---------- REPLACED: switchTab ----------
 window.switchTab = function(tabId) {
   const sections = document.querySelectorAll('.tab-section');
   sections.forEach(section => section.classList.add('hidden'));
@@ -3494,109 +3492,186 @@ window.switchTab = function(tabId) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // decide bottom/back visibility using the same logic as updateNavbarVisibility
+  // keep previous "nav tabs" logic if you need special bottom/back behavior
+  const showNavTabs = ['dashboard', 'games', 'transaction'];
+  const { bottomNavbar, backArrowBar } = getNavElems();
+
+  if (showNavTabs.includes(tabId)) {
+    if (bottomNavbar) bottomNavbar.classList.remove('hidden');
+    if (backArrowBar) backArrowBar.classList.add('hidden');
+  } else {
+    if (bottomNavbar) bottomNavbar.classList.remove('hidden'); // I kept bottom visible for all screens
+    if (backArrowBar) backArrowBar.classList.remove('hidden');
+  }
+
+  // single source of truth for topNav visibility
   updateNavbarVisibility(tabId);
 };
 
-/* activateTab should not directly set inline styles — let updateNavbarVisibility handle it */
+// ---------- REPLACED: activateTab ----------
 window.activateTab = function(tabId) {
-  // visual active state for nav buttons
+  // show the section + perform internal logic
+  switchTab(tabId);
+
+  // Update navbar active states visually
   const allNavBtns = document.querySelectorAll('.nav-btn');
   allNavBtns.forEach(btn => btn.classList.remove('active-nav'));
 
   const activeBtn = document.getElementById(`nav-${tabId}`);
   if (activeBtn) activeBtn.classList.add('active-nav');
 
-  // switch the content and let updateNavbarVisibility run through switchTab
-  switchTab(tabId);
+  // DON'T fiddle with topNavbar.style.display here — updateNavbarVisibility already handled it.
 };
 
-/* Robust profile updater that targets multiple selectors so sidebar, header, settings forms, etc. all update */
-function updateProfileUI({ fullName, email, profilePic }) {
-  // name fields: elements with data-user-fullname OR common ids/classes
-  const nameEls = document.querySelectorAll('[data-user-fullname], #userFullName, .user-fullname, #sidebarUserFullName');
-  nameEls.forEach(el => { el.textContent = fullName || 'No Name'; });
+// ---------- REPLACED: closeSidebar ----------
+function closeSidebar(fromLink = false) {
+  const sidebar = document.getElementById("sidebar");
+  const hamburgerIcon = document.getElementById("hamburgerIcon");
+  const bottomNavbar = document.getElementById('bottomNavbar') || document.getElementById('bottomNav');
 
-  // email fields
-  const emailEls = document.querySelectorAll('[data-user-email], #userEmail, .user-email, #sidebarUserEmail');
-  emailEls.forEach(el => { el.textContent = email || ''; });
+  sidebar.classList.add("-translate-x-full");
+  if (hamburgerIcon) hamburgerIcon.classList.remove("rotate-90");
+  const blurOverlay = document.getElementById("blurOverlay");
+  if (blurOverlay) blurOverlay.classList.add("hidden");
 
-  // image/avatar fields (either <img> or block elements with background image)
-  const imgEls = document.querySelectorAll('[data-user-pic], #userAvatar, .user-avatar, #sidebarAvatar');
-  imgEls.forEach(el => {
-    const src = profilePic || FALLBACK_AVATAR;
-    if (el.tagName && el.tagName.toLowerCase() === 'img') {
-      el.src = src;
-      el.alt = fullName || 'Avatar';
-    } else {
-      el.style.backgroundImage = `url("${src}")`;
-      el.style.backgroundSize = 'cover';
-      el.style.backgroundPosition = 'center';
-    }
-  });
+  // only clear z-index helper classes — do NOT change visibility here
+  const topNavbar = document.getElementById("topNavbar");
+  if (topNavbar) topNavbar.classList.remove("z-10");
+  if (bottomNavbar) bottomNavbar.classList.remove("z-10");
 
-  // also fill inputs if present
-  const inputEls = document.querySelectorAll('input[data-user-fullname], input#userFullNameInput');
-  inputEls.forEach(i => i.value = fullName || '');
+  // Note: do NOT call topNavbar.classList.add('hidden') here — visibility is managed in switchTab/updateNavbarVisibility
 }
 
-/* onAuthStateChanged — wait for DOM if needed, then fetch Firestore user doc and populate UI */
-firebase.auth().onAuthStateChanged((user) => {
-  const runUpdate = async () => {
-    if (user) {
-      try {
-        const docSnap = await firebase.firestore().collection('users').doc(user.uid).get();
-        const data = (docSnap && docSnap.exists) ? docSnap.data() : {};
-        const fullName = data?.fullName || user.displayName || 'No Name';
-        const email = data?.email || user.email || '';
-        const profilePic = data?.profilePic || user.photoURL || FALLBACK_AVATAR;
+// ---------- REPLACED: hamburger toggle (uses same ID names) ----------
+const hamburgerBtn = document.getElementById("hamburgerBtn");
+const sidebar = document.getElementById("sidebar");
+const hamburgerIcon = document.getElementById("hamburgerIcon");
+const blurOverlay = document.getElementById("blurOverlay") || (() => {
+  const el = document.createElement("div");
+  el.id = "blurOverlay";
+  el.className = "fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-40 hidden";
+  document.body.appendChild(el);
+  return el;
+})();
 
-        updateProfileUI({ fullName, email, profilePic });
-      } catch (err) {
-        console.error('Error fetching user data:', err);
-        updateProfileUI({ fullName: user?.displayName || 'Guest', email: user?.email || '', profilePic: FALLBACK_AVATAR });
-      }
+if (hamburgerBtn) {
+  hamburgerBtn.addEventListener("click", () => {
+    const isOpening = sidebar.classList.contains("-translate-x-full");
+
+    sidebar.classList.toggle("-translate-x-full");
+    hamburgerIcon.classList.toggle("rotate-90");
+    blurOverlay.classList.toggle("hidden");
+
+    const { topNavbar, bottomNavbar } = getNavElems();
+    if (isOpening) {
+      // opening the sidebar: push navbars behind (z-index only)
+      if (topNavbar) topNavbar.classList.add("z-10");
+      if (bottomNavbar) bottomNavbar.classList.add("z-10");
     } else {
-      // logged out state
-      updateProfileUI({ fullName: 'Guest', email: '', profilePic: FALLBACK_AVATAR });
+      // closing: remove z-index; don't change visibility
+      if (topNavbar && !topNavbar.classList.contains("hidden")) topNavbar.classList.remove("z-10");
+      if (bottomNavbar) bottomNavbar.classList.remove("z-10");
     }
-  };
+  });
+}
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', runUpdate, { once: true });
-  } else {
-    runUpdate();
+// Close sidebar when clicking outside (preserve original logic but ensure overlay check)
+document.addEventListener("click", (event) => {
+  const sidebar = document.getElementById("sidebar");
+  const hamburgerBtn = document.getElementById("hamburgerBtn");
+  const blurOverlay = document.getElementById("blurOverlay");
+  if (!sidebar || !hamburgerBtn || !blurOverlay) return;
+
+  const isClickInsideSidebar = sidebar.contains(event.target);
+  const isClickOnHamburger = hamburgerBtn.contains(event.target);
+  const isClickOnOverlay = blurOverlay.contains(event.target);
+
+  // close only when clicked the overlay (outside)
+  if (!isClickInsideSidebar && !isClickOnHamburger && isClickOnOverlay) {
+    closeSidebar();
   }
 });
 
-/* Keep bottom navbar responsive to clicks on its buttons (delegated). When a bottom-nav button is clicked,
-   activateTab() is invoked and updateNavbarVisibility will keep bottom visible for bottom-tabs. */
-(function attachBottomNavHandler() {
-  const bottomNavbar = document.getElementById('bottomNavbar') || document.getElementById('bottomNav');
-  if (!bottomNavbar) return;
+// ---------- ENHANCED: sidebar link clicks (auto-switch if link uses data-target or href="#tab") ----------
+const _sidebar = document.getElementById("sidebar");
+if (_sidebar) {
+  const sidebarLinks = _sidebar.querySelectorAll("a");
+  sidebarLinks.forEach((link) => {
+    link.addEventListener("click", (e) => {
+      const href = link.getAttribute('href') || '';
+      const dataTarget = link.dataset.target;
+      const target = dataTarget || (href.startsWith('#') ? href.slice(1) : null);
 
-  bottomNavbar.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-target], a[href^="#"], .nav-btn, button');
-    if (!btn) return;
+      // If the link is an internal anchor like href="#settings" or has data-target, route via activateTab
+      if (target) {
+        e.preventDefault();
+        activateTab(target);
+      }
 
-    // extract target: prefer data-target, else href #tab, else nav-<tab> id
-    let target = btn.dataset?.target || (btn.getAttribute ? btn.getAttribute('href')?.replace('#', '') : null);
-    if (!target && btn.id && btn.id.startsWith('nav-')) target = btn.id.replace('nav-', '');
-
-    if (target) {
-      activateTab(target);
-      // ensure the bottom nav remains visible after click (activateTab -> updateNavbarVisibility will keep it visible if target is bottom-tab)
-      bottomNavbar.classList.remove('hidden');
-    }
+      closeSidebar(true);
+    });
   });
-})();
+}
 
-/* initialize navbar visibility on load */
+// ---------- initialize properly on page load ----------
 document.addEventListener('DOMContentLoaded', () => {
   const initial = window.currentActiveTab || 'dashboard';
   updateNavbarVisibility(initial);
 });
 
+
+
+
+// ---------- SIDEBAR USER INFO POPULATION ----------
+function loadSidebarUserInfo() {
+  firebase.auth().onAuthStateChanged(async (user) => {
+    if (!user) {
+      console.warn("No user logged in.");
+      return;
+    }
+
+    try {
+      const userRef = firebase.firestore().collection("users").doc(user.uid);
+      const snap = await userRef.get();
+      if (!snap.exists) {
+        console.warn("User doc not found for", user.uid);
+        return;
+      }
+
+      const data = snap.data();
+      const fullname = data.fullname || "No Name";
+      const email = data.email || user.email || "No Email";
+
+      // initials from fullname
+      const initials = fullname
+        .split(" ")
+        .map(n => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+
+      // inject into DOM
+      document.getElementById("sidebarFullname").textContent = fullname;
+      document.getElementById("sidebarEmail").textContent = email;
+      document.getElementById("sidebarInitials").textContent = initials;
+
+    } catch (err) {
+      console.error("Error fetching user profile:", err);
+    }
+  });
+}
+
+// call once on load
+document.addEventListener("DOMContentLoaded", loadSidebarUserInfo);
+
+
+
+
+
+
+
+
+  
 
 
 
