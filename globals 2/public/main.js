@@ -1251,35 +1251,26 @@ function goToPinSetup() {
 
   // main recompute (updates success ui)
   function updateSuccessUI(state) {
-    // state: { approvedSubmissionsCount, isPremium, social: {tiktok, whatsapp, telegram} }
-    state = state || {};
-    const approvedCount = state.approvedSubmissionsCount || 0;
-    const isPremium = !!state.isPremium;
-    const social = state.social || { tiktok: 0, whatsapp: 0, telegram: 0 };
+  const approvedCount = state.approvedSubmissionsCount || 0;
+  const isPremium = !!state.isPremium;
+  const social = state.social || { tiktok: 0, whatsapp: 0, telegram: 0 };
 
-    // Conditions
-    const condA = approvedCount >= 200;
-    const condB = isPremium;
-    const condC = (social.tiktok >= 1 && social.whatsapp >= 1 && social.telegram >= 1);
+  const condA = approvedCount >= 200;
+  const condB = isPremium;
+  const condC = (social.tiktok >= 1 && social.whatsapp >= 1 && social.telegram >= 1);
 
-    const met = (condA?1:0) + (condB?1:0) + (condC?1:0);
-    const percent = Math.round((met / 3) * 100);
+  const met = (condA?1:0) + (condB?1:0) + (condC?1:0);
+  const percent = Math.round((met / 3) * 100);
 
-    // update circle (old pattern uses 94 as max)
-    const ring = $('successRing');
-    if (ring) {
-      const dash = Math.max(0, Math.min(100, percent)) / 100 * 94;
-      ring.setAttribute('stroke-dasharray', `${dash} 100`);
-    }
-    setText('successPercent', `${percent}%`);
-    setText('checkA', `${Math.min(approvedCount, 999999).toLocaleString()} approved`);
-    setText('checkB', condB ? 'Yes' : 'No');
-    setText('checkC', condC ? 'Yes' : 'No');
-
-    // also color the checklist quickly
-    const cB = $('checkB'); if (cB) cB.className = condB ? 'font-semibold text-green-600' : 'font-semibold text-red-600';
-    const cC = $('checkC'); if (cC) cC.className = condC ? 'font-semibold text-green-600' : 'font-semibold text-red-600';
+  // update circle
+  const ring = document.getElementById('successRing');
+  if (ring) {
+    const dash = Math.max(0, Math.min(100, percent)) / 100 * 94;
+    ring.setAttribute('stroke-dasharray', `${dash} 100`);
   }
+  const sp = document.getElementById('successPercent');
+  if (sp) sp.innerText = `${percent}%`;
+}
 
   // utility: small animator for numeric KPIs (lightweight)
   function animateKPI(el, newVal, opts = {}) {
