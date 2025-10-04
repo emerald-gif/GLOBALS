@@ -3483,29 +3483,29 @@ function updateNavbarVisibility(tabId) {
 
 // ---------- REPLACED: switchTab ----------
 window.switchTab = function(tabId) {
-  const sections = document.querySelectorAll('.tab-section');
-  sections.forEach(section => section.classList.add('hidden'));
+  // hide all
+  document.querySelectorAll('.tab-section').forEach(sec => sec.classList.add('hidden'));
 
-  const activeSection = document.getElementById(tabId);
-  if (activeSection) {
-    activeSection.classList.remove('hidden');
+  // show active
+  const active = document.getElementById(tabId);
+  if (active) {
+    active.classList.remove('hidden');
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // keep previous "nav tabs" logic if you need special bottom/back behavior
-  const showNavTabs = ['dashboard', 'games', 'transaction'];
-  const { bottomNavbar, backArrowBar } = getNavElems();
+  const bottomNav = document.getElementById('bottomNavbar');
+  const backArrow = document.getElementById('backArrowBar');
 
-  if (showNavTabs.includes(tabId)) {
-    if (bottomNavbar) bottomNavbar.classList.remove('hidden');
-    if (backArrowBar) backArrowBar.classList.add('hidden');
+  // ✅ show bottom nav ONLY for these tabs
+  const allowedTabs = ['dashboard','games','transactions-screen','checkin-section'];
+
+  if (allowedTabs.includes(tabId)) {
+    bottomNav.classList.remove('hidden');
+    backArrow.classList.add('hidden');
   } else {
-    if (bottomNavbar) bottomNavbar.classList.remove('hidden'); // I kept bottom visible for all screens
-    if (backArrowBar) backArrowBar.classList.remove('hidden');
+    bottomNav.classList.add('hidden');
+    backArrow.classList.remove('hidden');
   }
-
-  // single source of truth for topNav visibility
-  updateNavbarVisibility(tabId);
 };
 
 // ---------- REPLACED: activateTab ----------
@@ -3623,49 +3623,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ---------- SIDEBAR USER INFO POPULATION ----------
-function loadSidebarUserInfo() {
-  firebase.auth().onAuthStateChanged(async (user) => {
-    if (!user) {
-      console.warn("No user logged in.");
-      return;
-    }
+// ✅ Load user info into sidebar
+firebase.auth().onAuthStateChanged(async (user) => {
+  if (!user) {
+    document.getElementById("userFullName").innerText = "Guest";
+    document.getElementById("userEmail").innerText = "";
+    document.getElementById("profilePicPreview").src = "profile-placeholder.png";
+    return;
+  }
 
-    try {
-      const userRef = firebase.firestore().collection("users").doc(user.uid);
-      const snap = await userRef.get();
-      if (!snap.exists) {
-        console.warn("User doc not found for", user.uid);
-        return;
-      }
+  try {
+    const userDoc = await firebase.firestore().collection("users").doc(user.uid).get();
+    const data = userDoc.exists ? userDoc.data() : {};
 
-      const data = snap.data();
-      const fullname = data.fullname || "No Name";
-      const email = data.email || user.email || "No Email";
+    const fullname = data.fullname || data.fullName || user.displayName || "No Name";
+    const email = data.email || user.email || "No Email";
+    const profilePic = data.profilePic || user.photoURL || "profile-placeholder.png";
 
-      // initials from fullname
-      const initials = fullname
-        .split(" ")
-        .map(n => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
+    document.getElementById("userFullName").innerText = fullname;
+    document.getElementById("userEmail").innerText = email;
+    document.getElementById("profilePicPreview").src = profilePic;
 
-      // inject into DOM
-      document.getElementById("sidebarFullname").textContent = fullname;
-      document.getElementById("sidebarEmail").textContent = email;
-      document.getElementById("sidebarInitials").textContent = initials;
-
-    } catch (err) {
-      console.error("Error fetching user profile:", err);
-    }
-  });
-}
-
-// call once on load
-document.addEventListener("DOMContentLoaded", loadSidebarUserInfo);
-
-
-
+  } catch (err) {
+    console.error("❌ Sidebar fetch error:", err);
+    document.getElementById("userFullName").innerText = "Guest";
+    document.getElementById("userEmail").innerText = "";
+    document.getElementById("profilePicPreview").src = "profile-placeholder.png";
+  }
+});
 
 
 
