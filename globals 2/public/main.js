@@ -1212,266 +1212,371 @@ function goToPinSetup() {
 
 
 /* ========== Overview (upgraded, hooked to your transactionsCache & user doc) ========== */
-/* ====== Overview — event-driven, fingerprinted, robust ====== */
+
+/* ======= Overview (Realtime KPIs + Success Rate) =======
+   Replace old Overview/chart code with this block.
+   Relies on collections: users, affiliateJobs, tasks,
+   task_submissions, affiliate_submissions, TiktokInstagram, Whatsapp, Telegram.
+================================================================= */
 (function () {
-  if (typeof Chart === 'undefined' || typeof firebase === 'undefined') {
-    console.warn('Overview: Chart.js or firebase not available');
+  if (!window.firebase) {
+    console.warn('Overview: Firebase not ready');
     return;
   }
+  const db = firebase.firestore();
 
   // DOM helpers
   const $ = id => document.getElementById(id);
-  const elTotal = $('kpiTotalEarnings');
-  const elTasks = $('kpiTasksDone');
-  const elRef = $('kpiReferrals');
-  const elConv = $('kpiConversion');
-  const elConvRing = $('conversionRing');
-  const rangeLabel = $('rangeLabel');
-  const txCountEl = $('overviewTxCount');
-  const lastUpdateEl = $('overviewLastUpdate');
-  const topCategoriesEl = $('topCategories');
-
-  const ctxMain = $('overviewEarningsChart')?.getContext('2d');
-  const ctxPie = $('overviewPieChart')?.getContext('2d');
-  const ctxSparkE = $('sparkEarnings')?.getContext('2d');
-  const ctxSparkT = $('sparkTasks')?.getContext('2d');
-  const ctxSparkR = $('sparkReferrals')?.getContext('2d');
-
-  let mainChart = null, pieChart = null, sparkE = null, sparkT = null, sparkR = null;
-  let lastChartFingerprint = '';
-
-  // Use existing parseTimestamp/formatAmount if available
-  const safeParseTimestamp = (v) => {
-    try { return (typeof parseTimestamp === 'function') ? parseTimestamp(v) : new Date(v); } catch (e) { return new Date(v); }
+  const fmtNaira = (n) => {
+    try { if (typeof window.fmtNaira === 'function') return window.fmtNaira(n); } catch (e) {}
+    const v = Number(n || 0);
+    return '₦' + v.toLocaleString();
   };
-  const safeFormatAmount = (n) => {
-    try { return (typeof formatAmount === 'function') ? formatAmount(n) : ('₦' + Number(n||0).toFixed(2)); } catch (e) { return '₦' + Number(n||0).toFixed(2); }
-  };
+  const setText = (id, txt) => { const el = $(id); if (el) el.innerText = txt; };
 
-  // small animator for numeric KPIs
-  function animateNumber(el, to, opts = {}) {
+  // state & unsub map
+  const unsubs = {};
+  let currentUserUid = null;
+  let currentUsername = null;
+  let currentIsPremium = false;
+
+  // social task prices (as you specified)
+  const SOCIAL_PRICES = { tiktok: 2000, whatsapp: 300, telegram: 300 };
+
+  // helper to unsubscribe safely
+  function safeUnsub(key) {
+    try { if (unsubs[key]) { unsubs[key](); } } catch (e) {}
+    unsubs[key] = null;
+  }
+
+  // main recompute (updates success ui)
+  function updateSuccessUI(state) {
+    // state: { approvedSubmissionsCount, isPremium, social: {tiktok, whatsapp, telegram} }
+    state = state || {};
+    const approvedCount = state.approvedSubmissionsCount || 0;
+    const isPremium = !!state.isPremium;
+    const social = state.social || { tiktok: 0, whatsapp: 0, telegram: 0 };
+
+    // Conditions
+    const condA = approvedCount >= 200;
+    const condB = isPremium;
+    const condC = (social.tiktok >= 1 && social.whatsapp >= 1 && social.telegram >= 1);
+
+    const met = (condA?1:0) + (condB?1:0) + (condC?1:0);
+    const percent = Math.round((met / 3) * 100);
+
+    // update circle (old pattern uses 94 as max)
+    const ring = $('successRing');
+    if (ring) {
+      const dash = Math.max(0, Math.min(100, percent)) / 100 * 94;
+      ring.setAttribute('stroke-dasharray', `${dash} 100`);
+    }
+    setText('successPercent', `${percent}%`);
+    setText('checkA', `${Math.min(approvedCount, 999999).toLocaleString()} approved`);
+    setText('checkB', condB ? 'Yes' : 'No');
+    setText('checkC', condC ? 'Yes' : 'No');
+
+    // also color the checklist quickly
+    const cB = $('checkB'); if (cB) cB.className = condB ? 'font-semibold text-green-600' : 'font-semibold text-red-600';
+    const cC = $('checkC'); if (cC) cC.className = condC ? 'font-semibold text-green-600' : 'font-semibold text-red-600';
+  }
+
+  // utility: small animator for numeric KPIs (lightweight)
+  function animateKPI(el, newVal, opts = {}) {
     if (!el) return;
-    const isCurrency = !!opts.currency;
-    const start = Number(el.dataset._num || 0);
-    const end = Number(to || 0);
-    const dur = opts.duration || 600;
+    const duration = opts.duration || 400;
+    const start = Number(el.dataset._num || el.innerText.replace(/[₦,\s]/g,'') || 0);
+    const end = Number(newVal || 0);
+    el.dataset._num = start;
     const t0 = performance.now();
     function step(t) {
-      const p = Math.min(1, (t - t0) / dur);
+      const p = Math.min(1, (t - t0) / duration);
       const cur = Math.round(start + (end - start) * p);
       el.dataset._num = cur;
-      el.innerText = isCurrency ? safeFormatAmount(cur) : cur.toLocaleString();
+      el.innerText = opts.currency ? fmtNaira(cur) : cur.toLocaleString();
       if (p < 1) requestAnimationFrame(step);
     }
     requestAnimationFrame(step);
   }
 
-  function getAmountFromTx(tx) {
-    if (!tx) return 0;
-    const keys = ['amount','amt','value','total'];
-    for (const k of keys) {
-      if (typeof tx[k] !== 'undefined' && !isNaN(Number(tx[k]))) return Number(tx[k]);
-    }
-    if (tx.meta && !isNaN(Number(tx.meta.amount))) return Number(tx.meta.amount);
-    return 0;
-  }
+  // update all KPI DOM fields from aggregated counters
+  function renderKPIs(agg) {
+    // agg keys: balance, jobsTotal, jobsApproved, jobsRejected, jobsOnreview
+    // tasksTotal, tasksApproved, tasksRejected, tasksOnreview
+    // referralsTotal, referralsPremium
+    // social counts + paid
+    // approvedSubmissionsCount (for success)
+    agg = agg || {};
 
-  function deriveCategory(tx) {
-    const s = ((tx.category || tx.type || tx.source || tx.taskType || '') + '').toLowerCase();
-    if (/affiliate/.test(s)) return 'Affiliate';
-    if (/install|app|mobile|apk/.test(s)) return 'App Tasks';
-    if (/login|streak/.test(s)) return 'Login Streak';
-    if (/video|watch|tiktok|short/.test(s)) return 'Videos';
-    if (/sale|purchase|order/.test(s)) return 'Sales';
-    if (/nft/.test(s)) return 'NFT';
-    if (/deposit|withdraw|transfer/.test(s)) return 'Payments';
-    return 'Other';
-  }
-
-  function groupByLastNDays(txList, days) {
-    const now = new Date();
-    const out = [];
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(now.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      out.push({ dateKey: key, date: d, label: d.toLocaleDateString(undefined, { weekday: 'short' }), sum: 0, count: 0 });
+    // Balance
+    const balEl = $('kpiBalance');
+    if (balEl) {
+      animateKPI(balEl, agg.balance || 0, { currency: true, duration: 700 });
     }
-    txList.forEach(tx => {
-      const ts = safeParseTimestamp(tx.timestamp || tx.createdAt || tx.time || tx.created_at || Date.now());
-      if (!ts) return;
-      const key = ts.toISOString().slice(0, 10);
-      const item = out.find(o => o.dateKey === key);
-      if (item) {
-        item.sum += getAmountFromTx(tx);
-        item.count += 1;
-      }
+
+    // Jobs
+    setText('kpiJobsTotal', (agg.jobsTotal || 0).toLocaleString());
+    setText('kpiJobsApproved', (agg.jobsApproved || 0).toLocaleString());
+    setText('kpiJobsRejected', (agg.jobsRejected || 0).toLocaleString());
+    setText('kpiJobsOnreview', (agg.jobsOnreview || 0).toLocaleString());
+
+    // Tasks
+    setText('kpiTasksTotal', (agg.tasksTotal || 0).toLocaleString());
+    setText('kpiTasksApproved', (agg.tasksApproved || 0).toLocaleString());
+    setText('kpiTasksRejected', (agg.tasksRejected || 0).toLocaleString());
+    setText('kpiTasksOnreview', (agg.tasksOnreview || 0).toLocaleString());
+
+    // Referrals
+    setText('kpiReferralsTotal', (agg.referralsTotal || 0).toLocaleString());
+    setText('kpiReferralsTotalSmall', (agg.referralsTotal || 0).toLocaleString());
+    setText('kpiReferralsPremium', (agg.referralsPremium || 0).toLocaleString());
+
+    // Social tasks
+    setText('socialTiktokCount', (agg.socialTiktok || 0).toLocaleString());
+    setText('socialWhatsappCount', (agg.socialWhatsapp || 0).toLocaleString());
+    setText('socialTelegramCount', (agg.socialTelegram || 0).toLocaleString());
+
+    setText('socialTiktokPaid', fmtNaira((agg.socialTiktok || 0) * SOCIAL_PRICES.tiktok));
+    setText('socialWhatsappPaid', fmtNaira((agg.socialWhatsapp || 0) * SOCIAL_PRICES.whatsapp));
+    setText('socialTelegramPaid', fmtNaira((agg.socialTelegram || 0) * SOCIAL_PRICES.telegram));
+
+    setText('socialTotalPaid', fmtNaira(((agg.socialTiktok || 0) * SOCIAL_PRICES.tiktok) + ((agg.socialWhatsapp || 0) * SOCIAL_PRICES.whatsapp) + ((agg.socialTelegram || 0) * SOCIAL_PRICES.telegram)));
+
+    // success
+    updateSuccessUI({
+      approvedSubmissionsCount: agg.tasksApproved || 0,
+      isPremium: agg.isPremium || false,
+      social: { tiktok: agg.socialTiktok || 0, whatsapp: agg.socialWhatsapp || 0, telegram: agg.socialTelegram || 0 }
     });
-    return out;
   }
 
-  function drawMainChart(labels, values) {
-    if (!ctxMain) return;
-    const cfg = {
-      type: 'line',
-      data: { labels, datasets: [{ label: '₦ earned', data: values, borderWidth: 2, borderColor: '#6366f1', tension: 0.35, fill: true, backgroundColor: ctxMain.createLinearGradient ? (() => { const g=ctxMain.createLinearGradient(0,0,0,200); g.addColorStop(0,'rgba(99,102,241,0.18)'); g.addColorStop(1,'rgba(99,102,241,0.02)'); return g; })() : 'rgba(99,102,241,0.12)' }] },
-      options: { responsive: true, maintainAspectRatio: false, animation: { duration: 400 }, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => '₦' + Number(v).toLocaleString() } }, x: { grid: { display: false } } } }
-    };
-    if (mainChart) mainChart.destroy();
-    mainChart = new Chart(ctxMain, cfg);
+  // state aggregator
+  const AGG = {
+    balance: 0,
+    jobsTotal: 0, jobsApproved: 0, jobsRejected: 0, jobsOnreview: 0,
+    tasksTotal: 0, tasksApproved: 0, tasksRejected: 0, tasksOnreview: 0,
+    referralsTotal: 0, referralsPremium: 0,
+    socialTiktok: 0, socialWhatsapp: 0, socialTelegram: 0,
+    isPremium: false
+  };
+
+  // ---------- LISTENERS per collection ----------
+  function attachUserDocListener(uid) {
+    safeUnsub('userDoc');
+    try {
+      const ref = db.collection('users').doc(uid);
+      unsubs.userDoc = ref.onSnapshot(doc => {
+        if (!doc.exists) return;
+        const d = doc.data() || {};
+        AGG.balance = Number(d.balance || 0);
+        AGG.isPremium = !!d.is_Premium;
+        currentIsPremium = AGG.isPremium;
+
+        // username used to find referrals (if available)
+        const newUsername = d.username || d.name || null;
+        if (newUsername && newUsername !== currentUsername) {
+          currentUsername = newUsername;
+          attachReferralsListener(newUsername);
+        } else if (!newUsername) {
+          // fallback: check users where referrer == uid too (someone might have stored uid instead)
+          attachReferralsListenerFallback(uid);
+        }
+
+        renderKPIs(AGG);
+      }, err => console.warn('userDoc onSnapshot err', err));
+    } catch (e) { console.warn('attachUserDocListener failed', e); }
   }
 
-  function drawPie(labels, values) {
-    if (!ctxPie) return;
-    const cfg = { type: 'pie', data: { labels, datasets: [{ data: values, backgroundColor: ['#10b981','#8b5cf6','#3b82f6','#f97316','#60a5fa'] }] }, options: { responsive: true, plugins: { legend: { position: 'bottom' } }, animation: { duration: 300 } } };
-    if (pieChart) pieChart.destroy();
-    pieChart = new Chart(ctxPie, cfg);
+  function attachReferralsListener(username) {
+    safeUnsub('referrals');
+    if (!username) return;
+    try {
+      const q = db.collection('users').where('referrer', '==', username);
+      unsubs.referrals = q.onSnapshot(snap => {
+        AGG.referralsTotal = snap.size || 0;
+        AGG.referralsPremium = snap.docs.filter(d => !!d.data().is_Premium).length;
+        renderKPIs(AGG);
+      }, err => console.warn('referrals listener err', err));
+    } catch (e) { console.warn('attachReferralsListener err', e); }
   }
 
-  function drawSpark(ctx, arr) {
-    if (!ctx) return null;
-    const cfg = { type: 'line', data: { labels: arr.map((_,i)=>i), datasets: [{ data: arr, borderWidth: 1.5, borderColor: '#3b82f6', tension: 0.3, fill: false, pointRadius: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } }, animation: { duration: 250 } } };
-    try { return new Chart(ctx, cfg); } catch (e) { console.warn('spark draw failed', e); return null; }
+  // fallback: users who set referrer == uid (rare, but safe)
+  function attachReferralsListenerFallback(uid) {
+    safeUnsub('referrals');
+    try {
+      const q = db.collection('users').where('referrer', '==', uid);
+      unsubs.referrals = q.onSnapshot(snap => {
+        AGG.referralsTotal = snap.size || 0;
+        AGG.referralsPremium = snap.docs.filter(d => !!d.data().is_Premium).length;
+        renderKPIs(AGG);
+      }, err => console.warn('referrals fallback err', err));
+    } catch (e) { console.warn('attachReferralsListenerFallback err', e); }
   }
 
-  // recompute and update UI (only redraw charts if data fingerprint changed)
-  function recompute(txList) {
-    const txs = Array.isArray(txList) ? txList.slice() : [];
+  // jobs posted by user (affiliateJobs + tasks)
+  function attachJobsListeners(uid) {
+    safeUnsub('affJobs'); safeUnsub('taskJobs');
+    try {
+      unsubs.affJobs = db.collection('affiliateJobs').where('postedBy.uid', '==', uid).onSnapshot(snap => {
+        const docs = snap.docs.map(d => d.data() || {});
+        const approved = docs.filter(d => (d.status || '').toLowerCase() === 'approved').length;
+        const rejected = docs.filter(d => (d.status || '').toLowerCase() === 'rejected').length;
+        const onreview = snap.size - approved - rejected;
+        AGG.jobsApproved_aff = approved;
+        AGG.jobsRejected_aff = rejected;
+        AGG.jobsOnreview_aff = onreview;
+        recomputeJobsTotals();
+      }, err => console.warn('affiliateJobs listener', err));
+    } catch (e) { console.warn('attach affJobs err', e); }
 
-    const totalEarnings = Math.round(txs.reduce((s,t)=> s + getAmountFromTx(t), 0));
-    const txCount = txs.length;
-    const grouped = groupByLastNDays(txs, Number(selectedRangeDays || 7));
-    const labels = grouped.map(g=>g.label);
-    const values = grouped.map(g=>Math.round(g.sum));
-
-    // buckets
-    const buckets = {};
-    txs.forEach(t => { const c = deriveCategory(t); buckets[c] = (buckets[c] || 0) + getAmountFromTx(t); });
-
-    // top categories
-    const counts = {};
-    txs.forEach(t => { const c = deriveCategory(t); counts[c] = (counts[c] || 0) + 1; });
-    const top = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);
-
-    // tasks & referrals heuristics
-    const tasksCompleted = txs.filter(t => /task|complete|job|install|video|affiliate/i.test((t.type||'') + ' ' + (t.category||''))).length;
-    const referrals = txs.filter(t => /referr|refer/i.test((t.type||'') + ' ' + (t.category||'') + ' ' + JSON.stringify(t))).length;
-
-    const conversionPct = txs.length ? Math.round((tasksCompleted / Math.max(1, txs.length)) * 100) : 0;
-
-    // KPIs (animate)
-    animateNumber(elTotal, totalEarnings, { currency: true });
-    animateNumber(elTasks, tasksCompleted, {});
-    animateNumber(elRef, referrals, {});
-    elConv && (elConv.innerText = conversionPct + '%');
-    if (elConvRing) {
-      const pct = Math.max(0, Math.min(100, conversionPct));
-      elConvRing.setAttribute('stroke-dasharray', `${(pct/100)*94} 100`);
-    }
-    if (txCountEl) txCountEl.innerText = txCount;
-    if (lastUpdateEl) lastUpdateEl.innerText = new Date().toLocaleString();
-
-    // chart fingerprint
-    const chartFingerprint = JSON.stringify({labels, values, buckets});
-    if (chartFingerprint !== lastChartFingerprint) {
-      lastChartFingerprint = chartFingerprint;
-      // main chart
-      drawMainChart(labels, values);
-      // pie
-      const pieLabels = Object.keys(buckets).filter(k => buckets[k] > 0);
-      const pieValues = pieLabels.map(k => Math.round(buckets[k]));
-      if (pieLabels.length) {
-        drawPie(pieLabels, pieValues);
-      } else {
-        // no real data -> show single 'No data' slice
-        drawPie(['No data'], [1]);
-      }
-
-      // spark mini charts
-      const sparkData = grouped.slice(-7).map(g => Math.round(g.sum));
-      if (sparkE) { try { sparkE.destroy(); } catch(e){}; sparkE = null; }
-      sparkE = drawSpark(ctxSparkE, sparkData);
-      if (sparkT) { try { sparkT.destroy(); } catch(e){}; sparkT = null; }
-      sparkT = drawSpark(ctxSparkT, Array(7).fill(0).map(()=>Math.floor(Math.random()*4)));
-      if (sparkR) { try { sparkR.destroy(); } catch(e){}; sparkR = null; }
-      sparkR = drawSpark(ctxSparkR, Array(7).fill(0).map(()=>Math.floor(Math.random()*2)));
-    } else {
-      // fingerprint same -> only update KPIs & counts (no redraw)
-    }
-
-    // top categories UI
-    if (topCategoriesEl) {
-      if (!top.length) {
-        topCategoriesEl.innerHTML = `<div class="text-sm text-gray-500">No activity yet</div>`;
-      } else {
-        topCategoriesEl.innerHTML = top.map(([name,cnt]) => {
-          const amt = buckets[name] || 0;
-          return `<div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-indigo-400"></div><div>${name}</div></div>
-                    <div class="text-sm text-gray-600">${cnt} tx · ${safeFormatAmount(amt)}</div>
-                  </div>`;
-        }).join('');
-      }
-    }
+    try {
+      unsubs.taskJobs = db.collection('tasks').where('postedBy.uid', '==', uid).onSnapshot(snap => {
+        const docs = snap.docs.map(d => d.data() || {});
+        const approved = docs.filter(d => (d.status || '').toLowerCase() === 'approved').length;
+        const rejected = docs.filter(d => (d.status || '').toLowerCase() === 'rejected').length;
+        const onreview = snap.size - approved - rejected;
+        AGG.jobsApproved_task = approved;
+        AGG.jobsRejected_task = rejected;
+        AGG.jobsOnreview_task = onreview;
+        recomputeJobsTotals();
+      }, err => console.warn('tasks (posted) listener', err));
+    } catch (e) { console.warn('attach taskJobs err', e); }
   }
 
-  // CSV export
-  function exportCsv(list) {
-    const arr = Array.isArray(list) ? list : [];
-    const rows = [['id','type','category','amount','status','timestamp','note']];
-    arr.forEach(t => {
-      const ts = (t.timestamp && (t.timestamp.toDate ? t.timestamp.toDate().toISOString() : new Date(t.timestamp).toISOString())) || (t.createdAt && (t.createdAt.toDate ? t.createdAt.toDate().toISOString() : new Date(t.createdAt).toISOString())) || '';
-      rows.push([t.id||'', (t.type||''), (t.category||''), getAmountFromTx(t), (t.status||''), ts, (t.note||'')]);
-    });
-    const csv = rows.map(r => r.map(c => `"${(''+c).replace(/"/g,'""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type:'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `globals_overview_${Date.now()}.csv`; a.click();
-    URL.revokeObjectURL(url);
+  function recomputeJobsTotals() {
+    const affTotal = (AGG.jobsApproved_aff || 0) + (AGG.jobsRejected_aff || 0) + (AGG.jobsOnreview_aff || 0);
+    const taskTotal = (AGG.jobsApproved_task || 0) + (AGG.jobsRejected_task || 0) + (AGG.jobsOnreview_task || 0);
+    AGG.jobsTotal = affTotal + taskTotal;
+    AGG.jobsApproved = (AGG.jobsApproved_aff || 0) + (AGG.jobsApproved_task || 0);
+    AGG.jobsRejected = (AGG.jobsRejected_aff || 0) + (AGG.jobsRejected_task || 0);
+    AGG.jobsOnreview = (AGG.jobsOnreview_aff || 0) + (AGG.jobsOnreview_task || 0);
+    renderKPIs(AGG);
   }
 
-  // UI wiring: range buttons
-  let selectedRangeDays = 7;
-  document.querySelectorAll('#overviewRange .range-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#overviewRange .range-btn').forEach(b => b.classList.remove('bg-indigo-50','text-indigo-700'));
-      btn.classList.add('bg-indigo-50','text-indigo-700');
-      selectedRangeDays = Number(btn.dataset.range || 7);
-      if (rangeLabel) rangeLabel.innerText = selectedRangeDays + ' days';
-      // recompute using current cache
-      recompute(window.transactionsCache || []);
-    });
-  });
-  document.querySelector('#overviewRange .range-btn[data-range="7"]')?.classList.add('bg-indigo-50','text-indigo-700');
+  // task submissions by user (task_submissions + affiliate_submissions)
+  function attachTaskSubmissionListeners(uid) {
+    safeUnsub('taskSub'); safeUnsub('affSub');
 
-  $('overviewRefreshBtn')?.addEventListener('click', () => recompute(window.transactionsCache || []));
-  $('exportOverviewCsv')?.addEventListener('click', () => exportCsv(window.transactionsCache || []));
+    try {
+      unsubs.taskSub = db.collection('task_submissions').where('userId', '==', uid).onSnapshot(snap => {
+        const docs = snap.docs.map(d => d.data() || {});
+        const approved = docs.filter(d => (d.status || '').toLowerCase() === 'approved').length;
+        const rejected = docs.filter(d => (d.status || '').toLowerCase() === 'rejected').length;
+        const onreview = snap.size - approved - rejected;
+        AGG.tasks_task_sub_total = snap.size;
+        AGG.tasks_task_sub_approved = approved;
+        AGG.tasks_task_sub_rejected = rejected;
+        AGG.tasks_task_sub_onreview = onreview;
+        recomputeTasksTotals();
+      }, err => console.warn('task_submissions listener', err));
+    } catch (e) { console.warn('attach task_sub err', e); }
 
-  // Event-driven updates: listen to the transaction dispatch added earlier
-  window.addEventListener('transactions-updated', (e) => {
-    try { recompute(Array.isArray(e.detail) ? e.detail : (window.transactionsCache || [])); } catch (err) { console.error('overview recompute error', err); }
-  });
+    try {
+      unsubs.affSub = db.collection('affiliate_submissions').where('userId', '==', uid).onSnapshot(snap => {
+        const docs = snap.docs.map(d => d.data() || {});
+        const approved = docs.filter(d => (d.status || '').toLowerCase() === 'approved').length;
+        const rejected = docs.filter(d => (d.status || '').toLowerCase() === 'rejected').length;
+        const onreview = snap.size - approved - rejected;
+        AGG.tasks_aff_sub_total = snap.size;
+        AGG.tasks_aff_sub_approved = approved;
+        AGG.tasks_aff_sub_rejected = rejected;
+        AGG.tasks_aff_sub_onreview = onreview;
+        recomputeTasksTotals();
+      }, err => console.warn('affiliate_submissions listener', err));
+    } catch (e) { console.warn('attach affiliate_sub err', e); }
+  }
 
-  // Also once user doc changes (if you store aggregated fields), surface them
+  function recomputeTasksTotals() {
+    AGG.tasksTotal = (AGG.tasks_task_sub_total || 0) + (AGG.tasks_aff_sub_total || 0);
+    AGG.tasksApproved = (AGG.tasks_task_sub_approved || 0) + (AGG.tasks_aff_sub_approved || 0);
+    AGG.tasksRejected = (AGG.tasks_task_sub_rejected || 0) + (AGG.tasks_aff_sub_rejected || 0);
+    AGG.tasksOnreview = (AGG.tasks_task_sub_onreview || 0) + (AGG.tasks_aff_sub_onreview || 0);
+    renderKPIs(AGG);
+  }
+
+  // Social tasks — these are saved per-user with doc id = uid in your code
+  function attachSocialListeners(uid) {
+    safeUnsub('tiktokDoc'); safeUnsub('whatsappDoc'); safeUnsub('telegramDoc');
+
+    try {
+      unsubs.tiktokDoc = db.collection('TiktokInstagram').doc(uid).onSnapshot(doc => {
+        AGG.socialTiktok = (doc.exists && (doc.data().status || '').toLowerCase() === 'approved') ? 1 : 0;
+        renderKPIs(AGG);
+      }, err => console.warn('TiktokInstagram onSnapshot', err));
+    } catch (e) { console.warn('attach tiktok err', e); }
+
+    try {
+      unsubs.whatsappDoc = db.collection('Whatsapp').doc(uid).onSnapshot(doc => {
+        AGG.socialWhatsapp = (doc.exists && (doc.data().status || '').toLowerCase() === 'approved') ? 1 : 0;
+        renderKPIs(AGG);
+      }, err => console.warn('Whatsapp onSnapshot', err));
+    } catch (e) { console.warn('attach whatsapp err', e); }
+
+    try {
+      unsubs.telegramDoc = db.collection('Telegram').doc(uid).onSnapshot(doc => {
+        AGG.socialTelegram = (doc.exists && (doc.data().status || '').toLowerCase() === 'approved') ? 1 : 0;
+        renderKPIs(AGG);
+      }, err => console.warn('Telegram onSnapshot', err));
+    } catch (e) { console.warn('attach telegram err', e); }
+  }
+
+  // call this to detach everything (on sign-out)
+  function detachAll() {
+    ['userDoc','referrals','affJobs','taskJobs','taskSub','affSub','tiktokDoc','whatsappDoc','telegramDoc'].forEach(k => safeUnsub(k));
+  }
+
+  // Auth hook: start listeners when user signs in
   firebase.auth().onAuthStateChanged(user => {
-    if (!user) return;
-    const ref = firebase.firestore().collection('users').doc(user.uid);
-    ref.onSnapshot(doc => {
-      const d = doc.exists ? doc.data() : null;
-      if (!d) return;
-      if (typeof d.totalEarnings !== 'undefined') animateNumber(elTotal, Number(d.totalEarnings), { currency: true });
-      if (typeof d.tasksCompleted !== 'undefined') animateNumber(elTasks, Number(d.tasksCompleted));
-      if (typeof d.referralsCount !== 'undefined') animateNumber(elRef, Number(d.referralsCount));
-      if (typeof d.conversionPct !== 'undefined') {
-        elConv && (elConv.innerText = `${Math.round(Number(d.conversionPct||0))}%`);
-        const pct = Math.max(0, Math.min(100, Number(d.conversionPct||0))); elConvRing && elConvRing.setAttribute('stroke-dasharray', `${(pct/100)*94} 100`);
-      }
-    }, console.error);
+    if (!user) {
+      detachAll();
+      currentUserUid = null;
+      currentUsername = null;
+      // reset UI to zeros
+      renderKPIs({
+        balance: 0, jobsTotal:0, jobsApproved:0, jobsRejected:0, jobsOnreview:0,
+        tasksTotal:0, tasksApproved:0, tasksRejected:0, tasksOnreview:0,
+        referralsTotal:0, referralsPremium:0,
+        socialTiktok:0, socialWhatsapp:0, socialTelegram:0,
+        isPremium:false
+      });
+      return;
+    }
+
+    currentUserUid = user.uid;
+    // attach user doc listener which will trigger referrals setting once username resolved
+    attachUserDocListener(user.uid);
+
+    // attach jobs listeners
+    attachJobsListeners(user.uid);
+
+    // attach task submission listeners
+    attachTaskSubmissionListeners(user.uid);
+
+    // attach social doc listeners
+    attachSocialListeners(user.uid);
   });
 
-  // initial run if transactionsCache already has data
-  setTimeout(()=>recompute(window.transactionsCache || []), 100);
+  // manual refresh button (re-reads caches by re-attaching listeners quickly)
+  const refreshBtn = $('overviewRefreshBtn');
+  if (refreshBtn) refreshBtn.addEventListener('click', () => {
+    if (!currentUserUid) return;
+    // simply reattach listeners to force a fresh snapshot read
+    attachUserDocListener(currentUserUid);
+    attachJobsListeners(currentUserUid);
+    attachTaskSubmissionListeners(currentUserUid);
+    attachSocialListeners(currentUserUid);
+  });
+
+  // initial render (in case DOM ready)
+  renderKPIs(AGG);
 })();
+
+
+
+
+
+
+
 
 
                                                             // GLOBALS CHAT ASSISTANT LOGIC
