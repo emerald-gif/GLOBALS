@@ -3441,181 +3441,222 @@ function showTapSection(tab) {
 
 
 // ---------- NAV HELPERS (drop-in replacement) ----------
-function getNavElems() {
-  return {
-    topNavbar: document.getElementById('topNavbar'),
-    bottomNavbar: document.getElementById('bottomNavbar') || document.getElementById('bottomNav'),
-    backArrowBar: document.getElementById('backArrowBar') || document.getElementById('backArrow')
-  };
-}
-
-/**
- * Show topNavbar ONLY when tabId === 'dashboard'.
- * Use classList (Tailwind .hidden) and remove any inline display leftover.
- */
-function updateNavbarVisibility(tabId) {
-  const { topNavbar, bottomNavbar, backArrowBar } = getNavElems();
-  const showTop = tabId === 'dashboard';
-
-  if (topNavbar) {
-    topNavbar.classList.toggle('hidden', !showTop);
-    // remove inline style if present so future toggles rely on class only
-    topNavbar.style.removeProperty('display');
-  }
-
-  // Keep bottom navbar visible by default (adjust if you want different behavior)
-  if (bottomNavbar) {
-    bottomNavbar.classList.remove('hidden');
-    bottomNavbar.style.removeProperty('display');
-  }
-
-  if (backArrowBar) {
-    backArrowBar.classList.toggle('hidden', showTop);
-  }
-
-  // track current tab
-  window.currentActiveTab = tabId;
-}
-
-// ---------- REPLACED: switchTab ----------
-window.switchTab = function(tabId) {
-  const sections = document.querySelectorAll('.tab-section');
-  sections.forEach(section => section.classList.add('hidden'));
-
-  const activeSection = document.getElementById(tabId);
-  if (activeSection) {
-    activeSection.classList.remove('hidden');
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  // keep previous "nav tabs" logic if you need special bottom/back behavior
-  const showNavTabs = ['dashboard', 'games', 'transaction'];
-  const { bottomNavbar, backArrowBar } = getNavElems();
-
-  if (showNavTabs.includes(tabId)) {
-    if (bottomNavbar) bottomNavbar.classList.remove('hidden');
-    if (backArrowBar) backArrowBar.classList.add('hidden');
-  } else {
-    if (bottomNavbar) bottomNavbar.classList.remove('hidden'); // I kept bottom visible for all screens
-    if (backArrowBar) backArrowBar.classList.remove('hidden');
-  }
-
-  // single source of truth for topNav visibility
-  updateNavbarVisibility(tabId);
-};
-
-// ---------- REPLACED: activateTab ----------
-window.activateTab = function(tabId) {
-  // show the section + perform internal logic
-  switchTab(tabId);
-
-  // Update navbar active states visually
-  const allNavBtns = document.querySelectorAll('.nav-btn');
-  allNavBtns.forEach(btn => btn.classList.remove('active-nav'));
-
-  const activeBtn = document.getElementById(`nav-${tabId}`);
-  if (activeBtn) activeBtn.classList.add('active-nav');
-
-  // DON'T fiddle with topNavbar.style.display here — updateNavbarVisibility already handled it.
-};
-
-// ---------- REPLACED: closeSidebar ----------
-function closeSidebar(fromLink = false) {
+// ---- Unified navigation + sidebar + profile updater (replace your existing section) ----
+(() => {
+  // ======== Cached DOM ========
+  const topNavbar = document.getElementById("topNavbar");
+  const bottomNavbar = document.getElementById("bottomNavbar"); // keep this id consistent in HTML
+  const backArrowBar = document.getElementById("backArrowBar");
+  const hamburgerBtn = document.getElementById("hamburgerBtn");
   const sidebar = document.getElementById("sidebar");
   const hamburgerIcon = document.getElementById("hamburgerIcon");
-  const bottomNavbar = document.getElementById('bottomNavbar') || document.getElementById('bottomNav');
 
-  sidebar.classList.add("-translate-x-full");
-  if (hamburgerIcon) hamburgerIcon.classList.remove("rotate-90");
-  const blurOverlay = document.getElementById("blurOverlay");
-  if (blurOverlay) blurOverlay.classList.add("hidden");
+  // create overlay once
+  let blurOverlay = document.getElementById("blurOverlay");
+  if (!blurOverlay) {
+    blurOverlay = document.createElement("div");
+    blurOverlay.id = "blurOverlay";
+    blurOverlay.className = "fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-40 hidden";
+    document.body.appendChild(blurOverlay);
+  }
 
-  // only clear z-index helper classes — do NOT change visibility here
-  const topNavbar = document.getElementById("topNavbar");
-  if (topNavbar) topNavbar.classList.remove("z-10");
-  if (bottomNavbar) bottomNavbar.classList.remove("z-10");
+  // Tabs that should show the bottom nav (and hide back arrow)
+  const NAV_BOTTOM_TABS = ["dashboard", "games", "transaction"];
 
-  // Note: do NOT call topNavbar.classList.add('hidden') here — visibility is managed in switchTab/updateNavbarVisibility
-}
+  // ======== Helper: update active nav button ========
+  function updateNavbarActiveState(tabId) {
+    document.querySelectorAll(".nav-btn").forEach(btn => btn.classList.remove("active-nav"));
+    const activeBtn = document.getElementById(`nav-${tabId}`);
+    if (activeBtn) activeBtn.classList.add("active-nav");
+  }
 
-// ---------- REPLACED: hamburger toggle (uses same ID names) ----------
-const hamburgerBtn = document.getElementById("hamburgerBtn");
-const sidebar = document.getElementById("sidebar");
-const hamburgerIcon = document.getElementById("hamburgerIcon");
-const blurOverlay = document.getElementById("blurOverlay") || (() => {
-  const el = document.createElement("div");
-  el.id = "blurOverlay";
-  el.className = "fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-40 hidden";
-  document.body.appendChild(el);
-  return el;
-})();
+  // ======== switchTab: SINGLE source-of-truth for screen + nav visibility ========
+  window.switchTab = function (tabId) {
+    // hide all sections
+    document.querySelectorAll(".tab-section").forEach(s => s.classList.add("hidden"));
 
-if (hamburgerBtn) {
-  hamburgerBtn.addEventListener("click", () => {
-    const isOpening = sidebar.classList.contains("-translate-x-full");
+    // show the requested section
+    const activeSection = document.getElementById(tabId);
+    if (activeSection) {
+      activeSection.classList.remove("hidden");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
 
-    sidebar.classList.toggle("-translate-x-full");
-    hamburgerIcon.classList.toggle("rotate-90");
-    blurOverlay.classList.toggle("hidden");
+    // active nav visuals
+    updateNavbarActiveState(tabId);
 
-    const { topNavbar, bottomNavbar } = getNavElems();
-    if (isOpening) {
-      // opening the sidebar: push navbars behind (z-index only)
-      if (topNavbar) topNavbar.classList.add("z-10");
-      if (bottomNavbar) bottomNavbar.classList.add("z-10");
+    // bottom nav visibility (only for specific tabs)
+    if (NAV_BOTTOM_TABS.includes(tabId)) {
+      bottomNavbar?.classList.remove("hidden");
+      backArrowBar?.classList.add("hidden");
     } else {
-      // closing: remove z-index; don't change visibility
-      if (topNavbar && !topNavbar.classList.contains("hidden")) topNavbar.classList.remove("z-10");
-      if (bottomNavbar) bottomNavbar.classList.remove("z-10");
+      bottomNavbar?.classList.add("hidden");
+      backArrowBar?.classList.remove("hidden");
+    }
+
+    // top navbar: ONLY show on dashboard
+    if (tabId === "dashboard") {
+      topNavbar?.classList.remove("hidden");
+    } else {
+      topNavbar?.classList.add("hidden");
+    }
+  };
+
+  // ======== activateTab: uses switchTab as single source of truth ========
+  window.activateTab = function (tabId) {
+    // switch the screen and navbars
+    switchTab(tabId);
+
+    // if sidebar open, close it
+    if (sidebar && !sidebar.classList.contains("-translate-x-full")) {
+      closeSidebar();
+    }
+  };
+
+  // ======== Sidebar open/close ========
+  function closeSidebar() {
+    sidebar?.classList.add("-translate-x-full");
+    hamburgerIcon?.classList.remove("rotate-90");
+    blurOverlay.classList.add("hidden");
+
+    // restore any z-index changes used while opening
+    topNavbar?.classList.remove("z-50", "z-10");
+    bottomNavbar?.classList.remove("z-50", "z-10");
+  }
+
+  function openSidebar() {
+    sidebar?.classList.remove("-translate-x-full");
+    hamburgerIcon?.classList.add("rotate-90");
+    blurOverlay.classList.remove("hidden");
+
+    // push navbars behind sidebar if needed
+    topNavbar?.classList.add("z-50");
+    bottomNavbar?.classList.add("z-50");
+  }
+
+  // safe event binding
+  if (hamburgerBtn) {
+    hamburgerBtn.addEventListener("click", () => {
+      const isOpening = sidebar.classList.contains("-translate-x-full");
+      if (isOpening) openSidebar();
+      else closeSidebar();
+    });
+  }
+
+  // close when overlay clicked
+  blurOverlay.addEventListener("click", closeSidebar);
+
+  // close when clicking outside sidebar (but not when interacting with the sidebar or hamburger)
+  document.addEventListener("click", (ev) => {
+    if (!sidebar || !hamburgerBtn) return;
+    const target = ev.target;
+    if (!sidebar.contains(target) && !hamburgerBtn.contains(target) && !blurOverlay.contains(target)) {
+      // user clicked outside — close sidebar quietly
+      closeSidebar();
     }
   });
-}
 
-// Close sidebar when clicking outside (preserve original logic but ensure overlay check)
-document.addEventListener("click", (event) => {
-  const sidebar = document.getElementById("sidebar");
-  const hamburgerBtn = document.getElementById("hamburgerBtn");
-  const blurOverlay = document.getElementById("blurOverlay");
-  if (!sidebar || !hamburgerBtn || !blurOverlay) return;
-
-  const isClickInsideSidebar = sidebar.contains(event.target);
-  const isClickOnHamburger = hamburgerBtn.contains(event.target);
-  const isClickOnOverlay = blurOverlay.contains(event.target);
-
-  // close only when clicked the overlay (outside)
-  if (!isClickInsideSidebar && !isClickOnHamburger && isClickOnOverlay) {
-    closeSidebar();
-  }
-});
-
-// ---------- ENHANCED: sidebar link clicks (auto-switch if link uses data-target or href="#tab") ----------
-const _sidebar = document.getElementById("sidebar");
-if (_sidebar) {
-  const sidebarLinks = _sidebar.querySelectorAll("a");
-  sidebarLinks.forEach((link) => {
-    link.addEventListener("click", (e) => {
-      const href = link.getAttribute('href') || '';
-      const dataTarget = link.dataset.target;
-      const target = dataTarget || (href.startsWith('#') ? href.slice(1) : null);
-
-      // If the link is an internal anchor like href="#settings" or has data-target, route via activateTab
-      if (target) {
+  // ======== Sidebar links: expect either data-tab or href="#tabId" ========
+  if (sidebar) {
+    const sidebarLinks = sidebar.querySelectorAll("a");
+    sidebarLinks.forEach(link => {
+      link.addEventListener("click", (e) => {
         e.preventDefault();
-        activateTab(target);
-      }
-
-      closeSidebar(true);
+        // first attempt dataset.tab, fallback to href hash
+        const tab = link.dataset?.tab || (link.getAttribute("href") || "").replace(/^#/, "");
+        if (tab) {
+          activateTab(tab); // switch to tab (switchTab will set top/bottom nav correctly)
+        } else {
+          // no tab found: just close the sidebar
+          closeSidebar();
+        }
+      });
     });
+  }
+
+  // ======== Withdraw tab switching (fixed selectors) ========
+  window.switchWithdrawTab = function (tab) {
+    document.querySelectorAll(".withdraw-tab").forEach(t => t.classList.add("hidden"));
+    const target = document.getElementById(`withdraw-${tab}`);
+    if (target) target.classList.remove("hidden");
+
+    document.querySelectorAll(".withdraw-tab-btn").forEach(btn => btn.classList.remove("active"));
+    // Prefer data attribute on buttons: data-withdraw-tab="normal"
+    const activeBtn = document.querySelector(`.withdraw-tab-btn[data-withdraw-tab="${tab}"]`) ||
+                      document.querySelector(`.withdraw-tab-btn[onclick*="${tab}"]`);
+    if (activeBtn) activeBtn.classList.add("active");
+  };
+
+  // ======== Swiper Init (unchanged) ========
+  document.addEventListener("DOMContentLoaded", function () {
+    // Withdraw swiper
+    if (typeof Swiper !== "undefined") {
+      new Swiper('.tab-swiper', {
+        slidesPerView: 3,
+        spaceBetween: 10,
+        freeMode: true,
+        grabCursor: true,
+      });
+
+      // Settings swiper
+      new Swiper('.settings-swiper', {
+        loop: true,
+        pagination: {
+          el: '.swiper-pagination',
+          clickable: true,
+        },
+        autoplay: {
+          delay: 5000,
+          disableOnInteraction: false,
+        },
+      });
+    }
   });
-}
 
-// ---------- initialize properly on page load ----------
-document.addEventListener('DOMContentLoaded', () => {
-  const initial = window.currentActiveTab || 'dashboard';
-  updateNavbarVisibility(initial);
-});
+  // ======== Profile update helpers (keeps updates targeted & consistent) ========
+  function updateAllProfilePreviews(url) {
+    // updates <img data-profile-pic> or any element with class profile-pic-img
+    document.querySelectorAll('img[data-profile-pic], .profile-pic-img').forEach(el => {
+      if (el.tagName === "IMG") el.src = url;
+      else el.style.backgroundImage = `url(${url})`;
+    });
+  }
+  function updateAllNames(fullName) {
+    document.querySelectorAll('[data-user-fullname], .userFullName').forEach(el => el.innerText = fullName || "No Name");
+  }
+  function updateAllEmails(email) {
+    document.querySelectorAll('[data-user-email], .userEmail').forEach(el => el.innerText = email || "");
+  }
 
+  // ======== Firebase auth -> populate profile (single consistent updater) ========
+  firebase.auth().onAuthStateChanged(async (user) => {
+    if (user) {
+      try {
+        const doc = await firebase.firestore().collection("users").doc(user.uid).get();
+        const data = doc.exists ? doc.data() : {};
+        const profilePic = data.profilePic || user.photoURL || placeholderPic;
+        updateAllProfilePreviews(profilePic);
 
+        const fullName = data.fullName || user.displayName || "No Name";
+        updateAllNames(fullName);
+
+        const email = data.email || user.email || "";
+        updateAllEmails(email);
+      } catch (err) {
+        console.error("❌ Error fetching user data:", err);
+        updateAllProfilePreviews(placeholderPic);
+        updateAllNames("Guest");
+        updateAllEmails("");
+      }
+    } else {
+      // logged out
+      updateAllProfilePreviews(placeholderPic);
+      updateAllNames("Guest");
+      updateAllEmails("");
+    }
+  });
+
+})();
 
 
 
