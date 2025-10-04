@@ -3437,81 +3437,47 @@ function showTapSection(tab) {
 
                                                                                     // Active Tab
 															  
-window.activateTab = function(tabId) {
-  switchTab(tabId); // Show the right screen content
-
-  // 🔵 Update navbar active states visually
-  const allNavBtns = document.querySelectorAll('.nav-btn');
-  allNavBtns.forEach(btn => btn.classList.remove('active-nav'));
-
-  const activeBtn = document.getElementById(`nav-${tabId}`);
-  if (activeBtn) activeBtn.classList.add('active-nav');
-
-  // 🧭 Show/hide top/bottom navbars and back arrow
-  const topNavbar = document.getElementById("topNavbar");
-  const bottomNav = document.getElementById("bottomNav");
-  const backArrowBar = document.getElementById("backArrowBar");
-
-  const showFullNav = tabId === "dashboard";
-
-  if (showFullNav) {
-    topNavbar.style.display = "flex";
-    bottomNav.style.display = "flex";
-    backArrowBar.classList.add("hidden");
-  } else {
-    topNavbar.style.display = "none";
-    bottomNav.style.display = "flex"; // keep bottom nav visible for all tabs
-    backArrowBar.classList.remove("hidden");
-  }
-};
 
 
 
-
-
-
-// 💸 Switch between Withdraw Tabs
-function switchWithdrawTab(tab) {
-  const tabs = document.querySelectorAll('.withdraw-tab');
-  const buttons = document.querySelectorAll('.withdraw-tab-btn');
-  tabs.forEach(t => t.classList.add('hidden'));
-  document.getElementById(`withdraw-${tab}`).classList.remove('hidden');
-  buttons.forEach(btn => btn.classList.remove('active'));
-  document.querySelector(`.withdraw-tab-btn[onclick*="${tab}"]`).classList.add('active');
+// ---------- NAV HELPERS (drop-in replacement) ----------
+function getNavElems() {
+  return {
+    topNavbar: document.getElementById('topNavbar'),
+    bottomNavbar: document.getElementById('bottomNavbar') || document.getElementById('bottomNav'),
+    backArrowBar: document.getElementById('backArrowBar') || document.getElementById('backArrow')
+  };
 }
 
-// 🚀 Swiper Init
-document.addEventListener("DOMContentLoaded", function () {
-  // Withdraw swiper
-  new Swiper('.tab-swiper', {
-    slidesPerView: 3,
-    spaceBetween: 10,
-    freeMode: true,
-    grabCursor: true,
-  });
+/**
+ * Show topNavbar ONLY when tabId === 'dashboard'.
+ * Use classList (Tailwind .hidden) and remove any inline display leftover.
+ */
+function updateNavbarVisibility(tabId) {
+  const { topNavbar, bottomNavbar, backArrowBar } = getNavElems();
+  const showTop = tabId === 'dashboard';
 
-  // Settings swiper
-  new Swiper('.settings-swiper', {
-    loop: true,
-    pagination: {
-      el: '.swiper-pagination',
-      clickable: true,
-    },
-    autoplay: {
-      delay: 5000,
-      disableOnInteraction: false,
-    },
-  });
-});
+  if (topNavbar) {
+    topNavbar.classList.toggle('hidden', !showTop);
+    // remove inline style if present so future toggles rely on class only
+    topNavbar.style.removeProperty('display');
+  }
 
+  // Keep bottom navbar visible by default (adjust if you want different behavior)
+  if (bottomNavbar) {
+    bottomNavbar.classList.remove('hidden');
+    bottomNavbar.style.removeProperty('display');
+  }
 
+  if (backArrowBar) {
+    backArrowBar.classList.toggle('hidden', showTop);
+  }
 
+  // track current tab
+  window.currentActiveTab = tabId;
+}
 
-
-
-
-                                                                         // 📺 Tab Switching Function (General)
-
+// ---------- REPLACED: switchTab ----------
 window.switchTab = function(tabId) {
   const sections = document.querySelectorAll('.tab-section');
   sections.forEach(section => section.classList.add('hidden'));
@@ -3522,133 +3488,137 @@ window.switchTab = function(tabId) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // Handle bottom nav and back arrow
-  const bottomNav = document.getElementById('bottomNavbar');
-  const backArrow = document.getElementById('backArrowBar');
-
-  const showNavTabs = ['dashboard','games',  'transaction' ];
+  // keep previous "nav tabs" logic if you need special bottom/back behavior
+  const showNavTabs = ['dashboard', 'games', 'transaction'];
+  const { bottomNavbar, backArrowBar } = getNavElems();
 
   if (showNavTabs.includes(tabId)) {
-    bottomNav.classList.remove('hidden');
-    backArrow.classList.add('hidden');
+    if (bottomNavbar) bottomNavbar.classList.remove('hidden');
+    if (backArrowBar) backArrowBar.classList.add('hidden');
   } else {
-    bottomNav.classList.add('hidden');
-    backArrow.classList.remove('hidden');
+    if (bottomNavbar) bottomNavbar.classList.remove('hidden'); // I kept bottom visible for all screens
+    if (backArrowBar) backArrowBar.classList.remove('hidden');
   }
+
+  // single source of truth for topNav visibility
+  updateNavbarVisibility(tabId);
 };
 
-   
+// ---------- REPLACED: activateTab ----------
+window.activateTab = function(tabId) {
+  // show the section + perform internal logic
+  switchTab(tabId);
 
+  // Update navbar active states visually
+  const allNavBtns = document.querySelectorAll('.nav-btn');
+  allNavBtns.forEach(btn => btn.classList.remove('active-nav'));
 
+  const activeBtn = document.getElementById(`nav-${tabId}`);
+  if (activeBtn) activeBtn.classList.add('active-nav');
 
-                                                                                 //SIDEBAR FUNCTION
-																				 
+  // DON'T fiddle with topNavbar.style.display here — updateNavbarVisibility already handled it.
+};
 
+// ---------- REPLACED: closeSidebar ----------
+function closeSidebar(fromLink = false) {
+  const sidebar = document.getElementById("sidebar");
+  const hamburgerIcon = document.getElementById("hamburgerIcon");
+  const bottomNavbar = document.getElementById('bottomNavbar') || document.getElementById('bottomNav');
+
+  sidebar.classList.add("-translate-x-full");
+  if (hamburgerIcon) hamburgerIcon.classList.remove("rotate-90");
+  const blurOverlay = document.getElementById("blurOverlay");
+  if (blurOverlay) blurOverlay.classList.add("hidden");
+
+  // only clear z-index helper classes — do NOT change visibility here
+  const topNavbar = document.getElementById("topNavbar");
+  if (topNavbar) topNavbar.classList.remove("z-10");
+  if (bottomNavbar) bottomNavbar.classList.remove("z-10");
+
+  // Note: do NOT call topNavbar.classList.add('hidden') here — visibility is managed in switchTab/updateNavbarVisibility
+}
+
+// ---------- REPLACED: hamburger toggle (uses same ID names) ----------
 const hamburgerBtn = document.getElementById("hamburgerBtn");
 const sidebar = document.getElementById("sidebar");
 const hamburgerIcon = document.getElementById("hamburgerIcon");
-const topNavbar = document.getElementById("topNavbar");
-const bottomNavbar = document.getElementById("bottomNavbar");
+const blurOverlay = document.getElementById("blurOverlay") || (() => {
+  const el = document.createElement("div");
+  el.id = "blurOverlay";
+  el.className = "fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-40 hidden";
+  document.body.appendChild(el);
+  return el;
+})();
 
-// Create overlay blur background
-let blurOverlay = document.createElement("div");
-blurOverlay.id = "blurOverlay";
-blurOverlay.className = "fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-40 hidden";
-document.body.appendChild(blurOverlay);
+if (hamburgerBtn) {
+  hamburgerBtn.addEventListener("click", () => {
+    const isOpening = sidebar.classList.contains("-translate-x-full");
 
-// Toggle sidebar on hamburger click
-hamburgerBtn.addEventListener("click", () => {
-  const isOpening = sidebar.classList.contains("-translate-x-full");
+    sidebar.classList.toggle("-translate-x-full");
+    hamburgerIcon.classList.toggle("rotate-90");
+    blurOverlay.classList.toggle("hidden");
 
-  sidebar.classList.toggle("-translate-x-full");
-  hamburgerIcon.classList.toggle("rotate-90");
-  blurOverlay.classList.toggle("hidden");
-
-  if (isOpening) {
-    // Sidebar is opening, push navbars behind
-    topNavbar?.classList.add("z-10");
-    bottomNavbar?.classList.add("z-10");
-  } else {
-    // Sidebar is closing, restore navbars if needed
-    if (!topNavbar.classList.contains("hidden")) {
-      topNavbar?.classList.remove("z-10");
+    const { topNavbar, bottomNavbar } = getNavElems();
+    if (isOpening) {
+      // opening the sidebar: push navbars behind (z-index only)
+      if (topNavbar) topNavbar.classList.add("z-10");
+      if (bottomNavbar) bottomNavbar.classList.add("z-10");
+    } else {
+      // closing: remove z-index; don't change visibility
+      if (topNavbar && !topNavbar.classList.contains("hidden")) topNavbar.classList.remove("z-10");
+      if (bottomNavbar) bottomNavbar.classList.remove("z-10");
     }
-    bottomNavbar?.classList.remove("z-10");
-  }
-});
+  });
+}
 
-// Close sidebar when clicking outside
+// Close sidebar when clicking outside (preserve original logic but ensure overlay check)
 document.addEventListener("click", (event) => {
+  const sidebar = document.getElementById("sidebar");
+  const hamburgerBtn = document.getElementById("hamburgerBtn");
+  const blurOverlay = document.getElementById("blurOverlay");
+  if (!sidebar || !hamburgerBtn || !blurOverlay) return;
+
   const isClickInsideSidebar = sidebar.contains(event.target);
   const isClickOnHamburger = hamburgerBtn.contains(event.target);
   const isClickOnOverlay = blurOverlay.contains(event.target);
 
+  // close only when clicked the overlay (outside)
   if (!isClickInsideSidebar && !isClickOnHamburger && isClickOnOverlay) {
     closeSidebar();
   }
 });
 
-// Close sidebar & hide top navbar permanently on link click
-const sidebarLinks = sidebar.querySelectorAll("a");
-sidebarLinks.forEach((link) => {
-  link.addEventListener("click", () => {
-    closeSidebar(true); // true = coming from sidebar content
+// ---------- ENHANCED: sidebar link clicks (auto-switch if link uses data-target or href="#tab") ----------
+const _sidebar = document.getElementById("sidebar");
+if (_sidebar) {
+  const sidebarLinks = _sidebar.querySelectorAll("a");
+  sidebarLinks.forEach((link) => {
+    link.addEventListener("click", (e) => {
+      const href = link.getAttribute('href') || '';
+      const dataTarget = link.dataset.target;
+      const target = dataTarget || (href.startsWith('#') ? href.slice(1) : null);
+
+      // If the link is an internal anchor like href="#settings" or has data-target, route via activateTab
+      if (target) {
+        e.preventDefault();
+        activateTab(target);
+      }
+
+      closeSidebar(true);
+    });
   });
-});
-
-function closeSidebar(fromLink = false) {
-  sidebar.classList.add("-translate-x-full");
-  hamburgerIcon.classList.remove("rotate-90");
-  blurOverlay.classList.add("hidden");
-
-  topNavbar?.classList.remove("z-10");
-  bottomNavbar?.classList.remove("z-10");
-
-  if (fromLink) {
-    // Hide topNavbar permanently
-    topNavbar?.classList.add("hidden");
-    topNavbar?.classList.remove("z-10");
-  }
 }
 
-
-
-// ✅ Auto-fetch profile data on login
-firebase.auth().onAuthStateChanged(async (user) => {
-  if (user) {
-    try {
-      const doc = await firebase.firestore().collection("users").doc(user.uid).get();
-
-      // Profile Pic
-      if (doc.exists && doc.data().profilePic) {
-        updateAllProfilePreviews(doc.data().profilePic);
-      } else {
-        updateAllProfilePreviews(placeholderPic);
-      }
-
-      // Full Name
-      if (doc.exists && doc.data().fullName) {
-        document.getElementById("userFullName").innerText = doc.data().fullName;
-      } else {
-        document.getElementById("userFullName").innerText = user.displayName || "No Name";
-      }
-
-      // Email
-      document.getElementById("userEmail").innerText = user.email || "No Email";
-
-    } catch (err) {
-      console.error("❌ Error fetching user data:", err);
-      updateAllProfilePreviews(placeholderPic);
-      document.getElementById("userFullName").innerText = "Guest";
-      document.getElementById("userEmail").innerText = "";
-    }
-  } else {
-    // Logged out
-    updateAllProfilePreviews(placeholderPic);
-    document.getElementById("userFullName").innerText = "Guest";
-    document.getElementById("userEmail").innerText = "";
-  }
+// ---------- initialize properly on page load ----------
+document.addEventListener('DOMContentLoaded', () => {
+  const initial = window.currentActiveTab || 'dashboard';
+  updateNavbarVisibility(initial);
 });
+
+
+
+
+
 
 
 
