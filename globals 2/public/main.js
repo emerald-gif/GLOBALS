@@ -3441,222 +3441,162 @@ function showTapSection(tab) {
 
 
 // ---------- NAV HELPERS (drop-in replacement) ----------
-// ---- Unified navigation + sidebar + profile updater (replace your existing section) ----
-(() => {
-  // ======== Cached DOM ========
-  const topNavbar = document.getElementById("topNavbar");
-  const bottomNavbar = document.getElementById("bottomNavbar"); // keep this id consistent in HTML
-  const backArrowBar = document.getElementById("backArrowBar");
-  const hamburgerBtn = document.getElementById("hamburgerBtn");
-  const sidebar = document.getElementById("sidebar");
-  const hamburgerIcon = document.getElementById("hamburgerIcon");
 
-  // create overlay once
-  let blurOverlay = document.getElementById("blurOverlay");
-  if (!blurOverlay) {
-    blurOverlay = document.createElement("div");
-    blurOverlay.id = "blurOverlay";
-    blurOverlay.className = "fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-40 hidden";
-    document.body.appendChild(blurOverlay);
-  }
+    
 
-  // Tabs that should show the bottom nav (and hide back arrow)
-  const NAV_BOTTOM_TABS = ["dashboard", "games", "transaction"];
 
-  // ======== Helper: update active nav button ========
-  function updateNavbarActiveState(tabId) {
-    document.querySelectorAll(".nav-btn").forEach(btn => btn.classList.remove("active-nav"));
-    const activeBtn = document.getElementById(`nav-${tabId}`);
-    if (activeBtn) activeBtn.classList.add("active-nav");
-  }
 
-  // ======== switchTab: SINGLE source-of-truth for screen + nav visibility ========
-  window.switchTab = function (tabId) {
-    // hide all sections
-    document.querySelectorAll(".tab-section").forEach(s => s.classList.add("hidden"));
+/* ---------- DROP-IN: Profile + Navbar/Bottom-nav fixes ---------- */
 
-    // show the requested section
-    const activeSection = document.getElementById(tabId);
-    if (activeSection) {
-      activeSection.classList.remove("hidden");
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
+const FALLBACK_AVATAR = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="100%" height="100%" fill="%23eef2f7"/><circle cx="60" cy="44" r="28" fill="%23cbd5e1"/><rect x="15" y="80" width="90" height="20" fill="%23cbd5e1"/></svg>';
 
-    // active nav visuals
-    updateNavbarActiveState(tabId);
-
-    // bottom nav visibility (only for specific tabs)
-    if (NAV_BOTTOM_TABS.includes(tabId)) {
-      bottomNavbar?.classList.remove("hidden");
-      backArrowBar?.classList.add("hidden");
-    } else {
-      bottomNavbar?.classList.add("hidden");
-      backArrowBar?.classList.remove("hidden");
-    }
-
-    // top navbar: ONLY show on dashboard
-    if (tabId === "dashboard") {
-      topNavbar?.classList.remove("hidden");
-    } else {
-      topNavbar?.classList.add("hidden");
-    }
+function getNavElems() {
+  return {
+    topNavbar: document.getElementById('topNavbar'),
+    bottomNavbar: document.getElementById('bottomNavbar') || document.getElementById('bottomNav'),
+    backArrowBar: document.getElementById('backArrowBar') || document.getElementById('backArrow')
   };
+}
 
-  // ======== activateTab: uses switchTab as single source of truth ========
-  window.activateTab = function (tabId) {
-    // switch the screen and navbars
-    switchTab(tabId);
+/* Centralized navbar visibility:
+   - top shows ONLY for 'dashboard'
+   - bottom shows ONLY when the active tab is in bottomTabs
+*/
+function updateNavbarVisibility(tabId) {
+  const { topNavbar, bottomNavbar, backArrowBar } = getNavElems();
+  const showTop = tabId === 'dashboard';
+  const bottomTabs = ['dashboard', 'games', 'transaction'];
+  const showBottom = bottomTabs.includes(tabId);
 
-    // if sidebar open, close it
-    if (sidebar && !sidebar.classList.contains("-translate-x-full")) {
-      closeSidebar();
-    }
-  };
-
-  // ======== Sidebar open/close ========
-  function closeSidebar() {
-    sidebar?.classList.add("-translate-x-full");
-    hamburgerIcon?.classList.remove("rotate-90");
-    blurOverlay.classList.add("hidden");
-
-    // restore any z-index changes used while opening
-    topNavbar?.classList.remove("z-50", "z-10");
-    bottomNavbar?.classList.remove("z-50", "z-10");
+  if (topNavbar) {
+    topNavbar.classList.toggle('hidden', !showTop);
+    topNavbar.style.removeProperty('display'); // remove any inline display that might fight the class
+  }
+  if (bottomNavbar) {
+    bottomNavbar.classList.toggle('hidden', !showBottom);
+    bottomNavbar.style.removeProperty('display');
+  }
+  if (backArrowBar) {
+    backArrowBar.classList.toggle('hidden', showTop);
   }
 
-  function openSidebar() {
-    sidebar?.classList.remove("-translate-x-full");
-    hamburgerIcon?.classList.add("rotate-90");
-    blurOverlay.classList.remove("hidden");
+  window.currentActiveTab = tabId;
+}
 
-    // push navbars behind sidebar if needed
-    topNavbar?.classList.add("z-50");
-    bottomNavbar?.classList.add("z-50");
+/* Make sure switchTab keeps single source of truth for nav visibility */
+window.switchTab = function(tabId) {
+  const sections = document.querySelectorAll('.tab-section');
+  sections.forEach(section => section.classList.add('hidden'));
+
+  const activeSection = document.getElementById(tabId);
+  if (activeSection) {
+    activeSection.classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // safe event binding
-  if (hamburgerBtn) {
-    hamburgerBtn.addEventListener("click", () => {
-      const isOpening = sidebar.classList.contains("-translate-x-full");
-      if (isOpening) openSidebar();
-      else closeSidebar();
-    });
-  }
+  // decide bottom/back visibility using the same logic as updateNavbarVisibility
+  updateNavbarVisibility(tabId);
+};
 
-  // close when overlay clicked
-  blurOverlay.addEventListener("click", closeSidebar);
+/* activateTab should not directly set inline styles — let updateNavbarVisibility handle it */
+window.activateTab = function(tabId) {
+  // visual active state for nav buttons
+  const allNavBtns = document.querySelectorAll('.nav-btn');
+  allNavBtns.forEach(btn => btn.classList.remove('active-nav'));
 
-  // close when clicking outside sidebar (but not when interacting with the sidebar or hamburger)
-  document.addEventListener("click", (ev) => {
-    if (!sidebar || !hamburgerBtn) return;
-    const target = ev.target;
-    if (!sidebar.contains(target) && !hamburgerBtn.contains(target) && !blurOverlay.contains(target)) {
-      // user clicked outside — close sidebar quietly
-      closeSidebar();
+  const activeBtn = document.getElementById(`nav-${tabId}`);
+  if (activeBtn) activeBtn.classList.add('active-nav');
+
+  // switch the content and let updateNavbarVisibility run through switchTab
+  switchTab(tabId);
+};
+
+/* Robust profile updater that targets multiple selectors so sidebar, header, settings forms, etc. all update */
+function updateProfileUI({ fullName, email, profilePic }) {
+  // name fields: elements with data-user-fullname OR common ids/classes
+  const nameEls = document.querySelectorAll('[data-user-fullname], #userFullName, .user-fullname, #sidebarUserFullName');
+  nameEls.forEach(el => { el.textContent = fullName || 'No Name'; });
+
+  // email fields
+  const emailEls = document.querySelectorAll('[data-user-email], #userEmail, .user-email, #sidebarUserEmail');
+  emailEls.forEach(el => { el.textContent = email || ''; });
+
+  // image/avatar fields (either <img> or block elements with background image)
+  const imgEls = document.querySelectorAll('[data-user-pic], #userAvatar, .user-avatar, #sidebarAvatar');
+  imgEls.forEach(el => {
+    const src = profilePic || FALLBACK_AVATAR;
+    if (el.tagName && el.tagName.toLowerCase() === 'img') {
+      el.src = src;
+      el.alt = fullName || 'Avatar';
+    } else {
+      el.style.backgroundImage = `url("${src}")`;
+      el.style.backgroundSize = 'cover';
+      el.style.backgroundPosition = 'center';
     }
   });
 
-  // ======== Sidebar links: expect either data-tab or href="#tabId" ========
-  if (sidebar) {
-    const sidebarLinks = sidebar.querySelectorAll("a");
-    sidebarLinks.forEach(link => {
-      link.addEventListener("click", (e) => {
-        e.preventDefault();
-        // first attempt dataset.tab, fallback to href hash
-        const tab = link.dataset?.tab || (link.getAttribute("href") || "").replace(/^#/, "");
-        if (tab) {
-          activateTab(tab); // switch to tab (switchTab will set top/bottom nav correctly)
-        } else {
-          // no tab found: just close the sidebar
-          closeSidebar();
-        }
-      });
-    });
-  }
+  // also fill inputs if present
+  const inputEls = document.querySelectorAll('input[data-user-fullname], input#userFullNameInput');
+  inputEls.forEach(i => i.value = fullName || '');
+}
 
-  // ======== Withdraw tab switching (fixed selectors) ========
-  window.switchWithdrawTab = function (tab) {
-    document.querySelectorAll(".withdraw-tab").forEach(t => t.classList.add("hidden"));
-    const target = document.getElementById(`withdraw-${tab}`);
-    if (target) target.classList.remove("hidden");
-
-    document.querySelectorAll(".withdraw-tab-btn").forEach(btn => btn.classList.remove("active"));
-    // Prefer data attribute on buttons: data-withdraw-tab="normal"
-    const activeBtn = document.querySelector(`.withdraw-tab-btn[data-withdraw-tab="${tab}"]`) ||
-                      document.querySelector(`.withdraw-tab-btn[onclick*="${tab}"]`);
-    if (activeBtn) activeBtn.classList.add("active");
-  };
-
-  // ======== Swiper Init (unchanged) ========
-  document.addEventListener("DOMContentLoaded", function () {
-    // Withdraw swiper
-    if (typeof Swiper !== "undefined") {
-      new Swiper('.tab-swiper', {
-        slidesPerView: 3,
-        spaceBetween: 10,
-        freeMode: true,
-        grabCursor: true,
-      });
-
-      // Settings swiper
-      new Swiper('.settings-swiper', {
-        loop: true,
-        pagination: {
-          el: '.swiper-pagination',
-          clickable: true,
-        },
-        autoplay: {
-          delay: 5000,
-          disableOnInteraction: false,
-        },
-      });
-    }
-  });
-
-  // ======== Profile update helpers (keeps updates targeted & consistent) ========
-  function updateAllProfilePreviews(url) {
-    // updates <img data-profile-pic> or any element with class profile-pic-img
-    document.querySelectorAll('img[data-profile-pic], .profile-pic-img').forEach(el => {
-      if (el.tagName === "IMG") el.src = url;
-      else el.style.backgroundImage = `url(${url})`;
-    });
-  }
-  function updateAllNames(fullName) {
-    document.querySelectorAll('[data-user-fullname], .userFullName').forEach(el => el.innerText = fullName || "No Name");
-  }
-  function updateAllEmails(email) {
-    document.querySelectorAll('[data-user-email], .userEmail').forEach(el => el.innerText = email || "");
-  }
-
-  // ======== Firebase auth -> populate profile (single consistent updater) ========
-  firebase.auth().onAuthStateChanged(async (user) => {
+/* onAuthStateChanged — wait for DOM if needed, then fetch Firestore user doc and populate UI */
+firebase.auth().onAuthStateChanged((user) => {
+  const runUpdate = async () => {
     if (user) {
       try {
-        const doc = await firebase.firestore().collection("users").doc(user.uid).get();
-        const data = doc.exists ? doc.data() : {};
-        const profilePic = data.profilePic || user.photoURL || placeholderPic;
-        updateAllProfilePreviews(profilePic);
+        const docSnap = await firebase.firestore().collection('users').doc(user.uid).get();
+        const data = (docSnap && docSnap.exists) ? docSnap.data() : {};
+        const fullName = data?.fullName || user.displayName || 'No Name';
+        const email = data?.email || user.email || '';
+        const profilePic = data?.profilePic || user.photoURL || FALLBACK_AVATAR;
 
-        const fullName = data.fullName || user.displayName || "No Name";
-        updateAllNames(fullName);
-
-        const email = data.email || user.email || "";
-        updateAllEmails(email);
+        updateProfileUI({ fullName, email, profilePic });
       } catch (err) {
-        console.error("❌ Error fetching user data:", err);
-        updateAllProfilePreviews(placeholderPic);
-        updateAllNames("Guest");
-        updateAllEmails("");
+        console.error('Error fetching user data:', err);
+        updateProfileUI({ fullName: user?.displayName || 'Guest', email: user?.email || '', profilePic: FALLBACK_AVATAR });
       }
     } else {
-      // logged out
-      updateAllProfilePreviews(placeholderPic);
-      updateAllNames("Guest");
-      updateAllEmails("");
+      // logged out state
+      updateProfileUI({ fullName: 'Guest', email: '', profilePic: FALLBACK_AVATAR });
+    }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', runUpdate, { once: true });
+  } else {
+    runUpdate();
+  }
+});
+
+/* Keep bottom navbar responsive to clicks on its buttons (delegated). When a bottom-nav button is clicked,
+   activateTab() is invoked and updateNavbarVisibility will keep bottom visible for bottom-tabs. */
+(function attachBottomNavHandler() {
+  const bottomNavbar = document.getElementById('bottomNavbar') || document.getElementById('bottomNav');
+  if (!bottomNavbar) return;
+
+  bottomNavbar.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-target], a[href^="#"], .nav-btn, button');
+    if (!btn) return;
+
+    // extract target: prefer data-target, else href #tab, else nav-<tab> id
+    let target = btn.dataset?.target || (btn.getAttribute ? btn.getAttribute('href')?.replace('#', '') : null);
+    if (!target && btn.id && btn.id.startsWith('nav-')) target = btn.id.replace('nav-', '');
+
+    if (target) {
+      activateTab(target);
+      // ensure the bottom nav remains visible after click (activateTab -> updateNavbarVisibility will keep it visible if target is bottom-tab)
+      bottomNavbar.classList.remove('hidden');
     }
   });
-
 })();
+
+/* initialize navbar visibility on load */
+document.addEventListener('DOMContentLoaded', () => {
+  const initial = window.currentActiveTab || 'dashboard';
+  updateNavbarVisibility(initial);
+});
+
 
 
 
