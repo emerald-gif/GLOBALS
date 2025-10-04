@@ -1211,66 +1211,273 @@ function goToPinSetup() {
                                                                  //OVERVIEW SECTION (ME SECTION) FUNCTION
 
 
-
-
-document.addEventListener("DOMContentLoaded", function () {
-  // Show charts only when Overview tab is active
-  if (document.getElementById("overview")) {
-
-    // 📈 Line Chart
-    new Chart(document.getElementById("earningsChart"), {
-      type: "line",
-      data: {
-        labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-        datasets: [{
-          label: "₦ Earned",
-          data: [1200, 1500, 800, 1900, 2200, 1700, 2000],
-          borderColor: "#3b82f6",
-          backgroundColor: "rgba(59,130,246,0.1)",
-          tension: 0.3,
-          fill: true
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true } }
-      }
-    });
-
-    // 🥧 Pie Chart
-    new Chart(document.getElementById("pieChart"), {
-      type: "pie",
-      data: {
-        labels: ["Normal", "Sales", "NFT"],
-        datasets: [{
-          data: [8200, 5500, 2300],
-          backgroundColor: ["#10b981", "#8b5cf6", "#3b82f6"]
-        }]
-      },
-      options: { responsive: true }
-    });
-
-    // 📊 Bar Chart
-    new Chart(document.getElementById("barChart"), {
-      type: "bar",
-      data: {
-        labels: ["App Tasks", "Affiliate", "Login Streak", "Videos"],
-        datasets: [{
-          label: "Completed Tasks",
-          data: [10, 5, 7, 4],
-          backgroundColor: "#6366f1"
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true } }
-      }
-    });
+/* ========== Overview (upgraded, hooked to your transactionsCache & user doc) ========== */
+(function () {
+  if (typeof Chart === 'undefined' || typeof firebase === 'undefined') {
+    console.warn('Overview: Chart.js or firebase not available');
+    return;
   }
-});
 
+  // helpers to access DOM (safe)
+  const $ = id => document.getElementById(id);
+
+  // KPI elements (must match the HTML above)
+  const elTotal = $('kpiTotalEarnings');
+  const elTasks = $('kpiTasksDone');
+  const elRef = $('kpiReferrals');
+  const elConv = $('kpiConversion');
+  const elConvRing = $('conversionRing');
+  const elRangeLabel = $('rangeLabel');
+  const elTxCount = $('overviewTxCount');
+  const elLastUpdate = $('overviewLastUpdate');
+  const elTopCats = $('topCategories');
+
+  // canvases
+  const ctxMain = $('overviewEarningsChart')?.getContext('2d');
+  const ctxPie = $('overviewPieChart')?.getContext('2d');
+  const ctxSparkE = $('sparkEarnings')?.getContext('2d');
+  const ctxSparkT = $('sparkTasks')?.getContext('2d');
+  const ctxSparkR = $('sparkReferrals')?.getContext('2d');
+
+  // chart refs
+  let mainChart = null, pieChart = null, sparkE = null, sparkT = null, sparkR = null;
+
+  // config
+  let rangeDays = 7;
+  let lastFingerprint = null;
+
+  // use existing helpers from your main.js if present
+  // parseTimestamp(val) and formatAmount(amount) are defined in your file. If not, the functions below will handle formatting.
+  function safeParseTimestamp(v){ try { return (typeof parseTimestamp === 'function') ? parseTimestamp(v) : new Date(v); } catch(e){ return new Date(v); } }
+  function safeFormatAmount(n){ try { return (typeof formatAmount === 'function') ? formatAmount(n) : ('₦' + Number(n||0).toFixed(2)); } catch(e){ return '₦' + Number(n||0).toFixed(2); } }
+
+  // animate numbers (works for currency or plain ints)
+  function animateNumber(el, to, opts = {}) {
+    if (!el) return;
+    const isCurrency = !!opts.currency;
+    const start = Number(el.dataset._num || 0);
+    const end = Number(to || 0);
+    const dur = opts.duration || 600;
+    const startTime = performance.now();
+    function step(now) {
+      const t = Math.min(1, (now - startTime) / dur);
+      const cur = Math.round(start + (end - start) * t);
+      el.dataset._num = cur;
+      el.innerText = isCurrency ? safeFormatAmount(cur) : cur.toLocaleString();
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  // amount getter from tx (matches your transaction docs keys)
+  function getAmountFromTx(tx) {
+    if (!tx) return 0;
+    const keys = ['amount','amt','value','total'];
+    for (const k of keys) {
+      if (typeof tx[k] !== 'undefined' && !isNaN(Number(tx[k]))) return Number(tx[k]);
+    }
+    // fallback: check nested meta
+    if (tx.meta && !isNaN(Number(tx.meta.amount))) return Number(tx.meta.amount);
+    return 0;
+  }
+
+  // category derivation (keeps same categories you use elsewhere)
+  function deriveCategory(tx) {
+    const s = ((tx.category || tx.type || tx.source || tx.taskType || '') + '').toLowerCase();
+    if (/affiliate/.test(s)) return 'Affiliate';
+    if (/install|app|mobile|apk/.test(s)) return 'App Tasks';
+    if (/login|streak/.test(s)) return 'Login Streak';
+    if (/video|watch|tiktok|short/.test(s)) return 'Videos';
+    if (/sale|purchase|order/.test(s)) return 'Sales';
+    if (/nft/.test(s)) return 'NFT';
+    if (/deposit|withdraw|transfer/.test(s)) return 'Payments';
+    return 'Other';
+  }
+
+  // group transactions for last N days (returns array of {label,sum,count,dateKey})
+  function groupByLastNDays(list, days) {
+    const now = new Date();
+    const out = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      const key = d.toISOString().slice(0,10);
+      out.push({ dateKey: key, date: d, label: d.toLocaleDateString(undefined,{weekday:'short'}), sum: 0, count: 0 });
+    }
+    list.forEach(tx => {
+      const ts = safeParseTimestamp(tx.timestamp || tx.createdAt || tx.time || tx.created_at || Date.now());
+      const key = ts.toISOString().slice(0,10);
+      const bucket = out.find(o => o.dateKey === key);
+      if (bucket) { bucket.sum += getAmountFromTx(tx); bucket.count += 1; }
+    });
+    return out;
+  }
+
+  // chart draw helpers (Chart.js)
+  function drawMain(labels, values) {
+    if (!ctxMain) return;
+    const cfg = {
+      type: 'line',
+      data: { labels, datasets:[{ label:'₦ earned', data: values, borderWidth:2, borderColor:'#6366f1', tension:0.35, fill:true, backgroundColor: ctxMain.createLinearGradient ? (()=>{ const g=ctxMain.createLinearGradient(0,0,0,200); g.addColorStop(0,'rgba(99,102,241,0.18)'); g.addColorStop(1,'rgba(99,102,241,0.02)'); return g; })() : 'rgba(99,102,241,0.12)' }] },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{ beginAtZero:true, ticks:{ callback: v => '₦' + Number(v).toLocaleString() } }, x:{ grid:{display:false} } } }
+    };
+    if (mainChart) mainChart.destroy();
+    mainChart = new Chart(ctxMain, cfg);
+  }
+
+  function drawPie(labels, values) {
+    if (!ctxPie) return;
+    const cfg = { type:'pie', data:{ labels, datasets:[{ data: values, backgroundColor:['#10b981','#8b5cf6','#3b82f6','#f97316','#60a5fa'] }] }, options:{ responsive:true, plugins:{ legend:{ position:'bottom', labels:{ boxWidth:10 } } } } };
+    if (pieChart) pieChart.destroy();
+    pieChart = new Chart(ctxPie, cfg);
+  }
+
+  function drawSpark(ctx, arr) {
+    if (!ctx) return null;
+    const cfg = { type:'line', data:{ labels: arr.map((_,i)=>i), datasets:[{ data:arr, borderWidth:1.5, borderColor:'#3b82f6', tension:0.3, fill:false, pointRadius:0 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ display:false }, y:{ display:false } } } };
+    return new Chart(ctx, cfg);
+  }
+
+  // recompute UI from transactionsCache (your existing global)
+  function recompute(list) {
+    const txs = Array.isArray(list) ? list.slice() : [];
+    // totals
+    const total = txs.reduce((s,t)=>s + getAmountFromTx(t), 0);
+    const txCount = txs.length;
+
+    // group & labels
+    const grouped = groupByLastNDays(txs, rangeDays);
+    const labels = grouped.map(g=>g.label);
+    const values = grouped.map(g=>Math.round(g.sum));
+
+    // category buckets
+    const buckets = {};
+    txs.forEach(t => { const c = deriveCategory(t); buckets[c] = (buckets[c]||0) + getAmountFromTx(t); });
+
+    // top categories by count
+    const counts = {};
+    txs.forEach(t => { const c = deriveCategory(t); counts[c] = (counts[c]||0) + 1; });
+    const top = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+    // tasks heuristic
+    const tasksCompleted = txs.filter(t => /task|complete|job|install|video|affiliate/i.test((t.type||'') + ' ' + (t.category||''))).length;
+
+    // referrals heuristic
+    const referrals = txs.filter(t => /referr|refer/i.test((t.type||'') + ' ' + (t.category||'') + ' ' + JSON.stringify(t))).length;
+
+    // conversion % heuristic (tasks per tx)
+    const conversionPct = txs.length ? Math.round((tasksCompleted / Math.max(1, txs.length)) * 100) : 0;
+
+    // update DOM with animations
+    animateNumber(elTotal, Math.round(total), { currency:true });
+    animateNumber(elTasks, tasksCompleted, {});
+    animateNumber(elRef, referrals, {});
+    elConv.innerText = `${conversionPct}%`;
+    const dash = Math.max(0, Math.min(100, conversionPct)) / 100 * 94;
+    elConvRing && elConvRing.setAttribute('stroke-dasharray', `${dash} 100`);
+
+    if (elTxCount) elTxCount.innerText = txCount;
+    if (elLastUpdate) elLastUpdate.innerText = new Date().toLocaleString();
+
+    // charts
+    drawMain(labels, values);
+    const pieLabels = Object.keys(buckets).filter(k => buckets[k] > 0);
+    const pieValues = pieLabels.map(k => Math.round(buckets[k]));
+    if (pieLabels.length) drawPie(pieLabels, pieValues);
+    else drawPie(['Normal','Sales','NFT'], [0,0,0]);
+
+    // sparks (last N)
+    const sparkData = grouped.slice(-7).map(g => Math.round(g.sum));
+    sparkE && (sparkE.destroy(), sparkE = null); sparkE = drawSpark(ctxSparkE, sparkData);
+    sparkT && (sparkT.destroy(), sparkT = null); sparkT = drawSpark(ctxSparkT, (Array(7).fill(0).map((_,i) => Math.max(0, Math.round(Math.random()*4)))));
+    sparkR && (sparkR.destroy(), sparkR = null); sparkR = drawSpark(ctxSparkR, (Array(7).fill(0).map((_,i) => Math.max(0, Math.round(Math.random()*2)))));
+
+    // top categories list
+    if (elTopCats) {
+      elTopCats.innerHTML = top.map(([name,cnt]) => {
+        const amt = buckets[name] || 0;
+        return `<div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-indigo-400"></div><div>${name}</div></div>
+                  <div class="text-sm text-gray-600">${cnt} tx · ${safeFormatAmount(amt)}</div>
+                </div>`;
+      }).join('');
+    }
+  }
+
+  // CSV export
+  function exportCsv(list) {
+    const arr = Array.isArray(list) ? list : [];
+    const rows = [['id','type','category','amount','status','timestamp','note']];
+    arr.forEach(t => {
+      const ts = (t.timestamp && (t.timestamp.toDate ? t.timestamp.toDate().toISOString() : new Date(t.timestamp).toISOString())) || (t.createdAt && (t.createdAt.toDate ? t.createdAt.toDate().toISOString() : new Date(t.createdAt).toISOString())) || '';
+      rows.push([t.id||'', (t.type||''), (t.category||''), getAmountFromTx(t), (t.status||''), ts, (t.note||'')]);
+    });
+    const csv = rows.map(r => r.map(c => `"${(''+c).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type:'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `globals_overview_${Date.now()}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // UI wiring: range buttons
+  document.querySelectorAll('#overviewRange .range-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#overviewRange .range-btn').forEach(b => b.classList.remove('bg-indigo-50','text-indigo-700'));
+      btn.classList.add('bg-indigo-50','text-indigo-700');
+      rangeDays = Number(btn.dataset.range || 7);
+      elRangeLabel && (elRangeLabel.innerText = rangeDays + ' days');
+      recompute(window.transactionsCache || []);
+    });
+  });
+  // default select 7d style
+  document.querySelector('#overviewRange .range-btn[data-range="7"]')?.classList.add('bg-indigo-50','text-indigo-700');
+
+  // Refresh & Export
+  $('overviewRefreshBtn')?.addEventListener('click', () => recompute(window.transactionsCache || []));
+  $('exportOverviewCsv')?.addEventListener('click', () => exportCsv(window.transactionsCache || []));
+
+  // Ensure transactions listener is running (your existing function)
+  try { if (typeof window.initTransactionsForCurrentUser === 'function') window.initTransactionsForCurrentUser(); } catch(e){}
+
+  // Light polling that reacts when your transactionsCache changes (uses your real cache)
+  function fingerprint(arr) {
+    if (!Array.isArray(arr)) return '0';
+    if (!arr.length) return '0';
+    const newest = arr[0].timestamp || arr[0].createdAt || arr[0].time || '';
+    return arr.length + '|' + (newest && (newest.seconds || newest) || '') ;
+  }
+
+  setInterval(() => {
+    try {
+      const txs = Array.isArray(window.transactionsCache) ? window.transactionsCache : [];
+      const fp = fingerprint(txs);
+      if (fp !== lastFingerprint) {
+        lastFingerprint = fp;
+        recompute(txs);
+      }
+    } catch (e) { console.error('Overview poll error', e); }
+  }, 1100);
+
+  // also listen to users/{uid} doc for aggregated fields (if you store them)
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) return;
+    const ref = firebase.firestore().collection('users').doc(user.uid);
+    ref.onSnapshot(doc => {
+      const d = doc.exists ? doc.data() : null;
+      if (!d) return;
+      if (typeof d.totalEarnings !== 'undefined') animateNumber(elTotal, Number(d.totalEarnings), { currency:true });
+      if (typeof d.tasksCompleted !== 'undefined') animateNumber(elTasks, Number(d.tasksCompleted));
+      if (typeof d.referralsCount !== 'undefined') animateNumber(elRef, Number(d.referralsCount));
+      if (typeof d.conversionPct !== 'undefined') {
+        elConv.innerText = `${Math.round(Number(d.conversionPct||0))}%`;
+        const pct = Math.max(0, Math.min(100, Number(d.conversionPct||0))); elConvRing.setAttribute('stroke-dasharray', `${(pct/100)*94} 100`);
+      }
+    }, console.error);
+  });
+
+  // initial run (if transactionsCache already populated)
+  recompute(window.transactionsCache || []);
+})();
 
 
 
