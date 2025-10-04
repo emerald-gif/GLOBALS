@@ -3444,7 +3444,7 @@ function showTapSection(tab) {
 
     
 
-// ---------- NAV HELPERS (drop-in replacement) ----------
+// ---------- NAV HELPERS ----------
 function getNavElems() {
   return {
     topNavbar: document.getElementById('topNavbar'),
@@ -3454,95 +3454,84 @@ function getNavElems() {
 }
 
 /**
- * Show topNavbar ONLY when tabId === 'dashboard'.
- * Use classList (Tailwind .hidden) and remove any inline display leftover.
+ * Top nav only on dashboard
  */
 function updateNavbarVisibility(tabId) {
-  const { topNavbar, bottomNavbar, backArrowBar } = getNavElems();
+  const { topNavbar, backArrowBar } = getNavElems();
   const showTop = tabId === 'dashboard';
 
   if (topNavbar) {
     topNavbar.classList.toggle('hidden', !showTop);
-    // remove inline style if present so future toggles rely on class only
     topNavbar.style.removeProperty('display');
   }
-
-  // Keep bottom navbar visible by default (adjust if you want different behavior)
-  if (bottomNavbar) {
-    bottomNavbar.classList.remove('hidden');
-    bottomNavbar.style.removeProperty('display');
-  }
-
   if (backArrowBar) {
     backArrowBar.classList.toggle('hidden', showTop);
   }
 
-  // track current tab
   window.currentActiveTab = tabId;
 }
 
-// ---------- REPLACED: switchTab ----------
+// ---------- switchTab ----------
 window.switchTab = function(tabId) {
-  // hide all
+  // hide all tab sections
   document.querySelectorAll('.tab-section').forEach(sec => sec.classList.add('hidden'));
 
-  // show active
+  // show active section
   const active = document.getElementById(tabId);
   if (active) {
     active.classList.remove('hidden');
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  const bottomNav = document.getElementById('bottomNavbar');
-  const backArrow = document.getElementById('backArrowBar');
+  const bottomNav = document.getElementById('bottomNavbar') || document.getElementById('bottomNav');
+  const backArrow = document.getElementById('backArrowBar') || document.getElementById('backArrow');
 
-  // ✅ show bottom nav ONLY for these tabs
-  const allowedTabs = ['dashboard','games','transactions-screen','checkin-section'];
+  // tabs where bottom nav should appear
+  const allowedTabs = ['dashboard','games','transactions-screen','checkin-section','team'];
 
-  if (allowedTabs.includes(tabId)) {
-    bottomNav.classList.remove('hidden');
-    backArrow.classList.add('hidden');
-  } else {
-    bottomNav.classList.add('hidden');
-    backArrow.classList.remove('hidden');
+  if (bottomNav) {
+    if (allowedTabs.includes(tabId)) bottomNav.classList.remove('hidden');
+    else bottomNav.classList.add('hidden');
   }
+
+  if (backArrow) {
+    if (allowedTabs.includes(tabId)) backArrow.classList.add('hidden');
+    else backArrow.classList.remove('hidden');
+  }
+
+  // keep top nav consistent
+  updateNavbarVisibility(tabId);
 };
 
-// ---------- REPLACED: activateTab ----------
+// ---------- activateTab ----------
 window.activateTab = function(tabId) {
-  // show the section + perform internal logic
   switchTab(tabId);
 
-  // Update navbar active states visually
+  // highlight nav-btn
   const allNavBtns = document.querySelectorAll('.nav-btn');
   allNavBtns.forEach(btn => btn.classList.remove('active-nav'));
 
   const activeBtn = document.getElementById(`nav-${tabId}`);
   if (activeBtn) activeBtn.classList.add('active-nav');
-
-  // DON'T fiddle with topNavbar.style.display here — updateNavbarVisibility already handled it.
 };
 
-// ---------- REPLACED: closeSidebar ----------
+// ---------- Sidebar close ----------
 function closeSidebar(fromLink = false) {
   const sidebar = document.getElementById("sidebar");
   const hamburgerIcon = document.getElementById("hamburgerIcon");
   const bottomNavbar = document.getElementById('bottomNavbar') || document.getElementById('bottomNav');
 
-  sidebar.classList.add("-translate-x-full");
+  if (sidebar) sidebar.classList.add("-translate-x-full");
   if (hamburgerIcon) hamburgerIcon.classList.remove("rotate-90");
   const blurOverlay = document.getElementById("blurOverlay");
   if (blurOverlay) blurOverlay.classList.add("hidden");
 
-  // only clear z-index helper classes — do NOT change visibility here
   const topNavbar = document.getElementById("topNavbar");
   if (topNavbar) topNavbar.classList.remove("z-10");
   if (bottomNavbar) bottomNavbar.classList.remove("z-10");
-
-  // Note: do NOT call topNavbar.classList.add('hidden') here — visibility is managed in switchTab/updateNavbarVisibility
 }
 
-// ---------- REPLACED: hamburger toggle (uses same ID names) ----------
+// ---------- Hamburger toggle ----------
 const hamburgerBtn = document.getElementById("hamburgerBtn");
 const sidebar = document.getElementById("sidebar");
 const hamburgerIcon = document.getElementById("hamburgerIcon");
@@ -3564,66 +3553,53 @@ if (hamburgerBtn) {
 
     const { topNavbar, bottomNavbar } = getNavElems();
     if (isOpening) {
-      // opening the sidebar: push navbars behind (z-index only)
       if (topNavbar) topNavbar.classList.add("z-10");
       if (bottomNavbar) bottomNavbar.classList.add("z-10");
     } else {
-      // closing: remove z-index; don't change visibility
       if (topNavbar && !topNavbar.classList.contains("hidden")) topNavbar.classList.remove("z-10");
       if (bottomNavbar) bottomNavbar.classList.remove("z-10");
     }
   });
 }
 
-// Close sidebar when clicking outside (preserve original logic but ensure overlay check)
+// ---------- Close sidebar when clicking overlay ----------
 document.addEventListener("click", (event) => {
-  const sidebar = document.getElementById("sidebar");
-  const hamburgerBtn = document.getElementById("hamburgerBtn");
-  const blurOverlay = document.getElementById("blurOverlay");
   if (!sidebar || !hamburgerBtn || !blurOverlay) return;
 
   const isClickInsideSidebar = sidebar.contains(event.target);
   const isClickOnHamburger = hamburgerBtn.contains(event.target);
   const isClickOnOverlay = blurOverlay.contains(event.target);
 
-  // close only when clicked the overlay (outside)
   if (!isClickInsideSidebar && !isClickOnHamburger && isClickOnOverlay) {
     closeSidebar();
   }
 });
 
-// ---------- ENHANCED: sidebar link clicks (auto-switch if link uses data-target or href="#tab") ----------
-const _sidebar = document.getElementById("sidebar");
-if (_sidebar) {
-  const sidebarLinks = _sidebar.querySelectorAll("a");
+// ---------- Sidebar link clicks ----------
+if (sidebar) {
+  const sidebarLinks = sidebar.querySelectorAll("a");
   sidebarLinks.forEach((link) => {
     link.addEventListener("click", (e) => {
       const href = link.getAttribute('href') || '';
       const dataTarget = link.dataset.target;
       const target = dataTarget || (href.startsWith('#') ? href.slice(1) : null);
 
-      // If the link is an internal anchor like href="#settings" or has data-target, route via activateTab
       if (target) {
         e.preventDefault();
         activateTab(target);
       }
-
       closeSidebar(true);
     });
   });
 }
 
-// ---------- initialize properly on page load ----------
+// ---------- Initialize ----------
 document.addEventListener('DOMContentLoaded', () => {
   const initial = window.currentActiveTab || 'dashboard';
-  updateNavbarVisibility(initial);
+  switchTab(initial);
 });
 
-
-
-
-// ---------- SIDEBAR USER INFO POPULATION ----------
-// ✅ Load user info into sidebar
+// ---------- SIDEBAR USER INFO ----------
 firebase.auth().onAuthStateChanged(async (user) => {
   if (!user) {
     document.getElementById("userFullName").innerText = "Guest";
@@ -3643,7 +3619,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
     document.getElementById("userFullName").innerText = fullname;
     document.getElementById("userEmail").innerText = email;
     document.getElementById("profilePicPreview").src = profilePic;
-
   } catch (err) {
     console.error("❌ Sidebar fetch error:", err);
     document.getElementById("userFullName").innerText = "Guest";
@@ -3651,7 +3626,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
     document.getElementById("profilePicPreview").src = "profile-placeholder.png";
   }
 });
-
 
 
 
