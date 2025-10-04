@@ -384,96 +384,104 @@
 <!-- 📱 Fintech Sidebar (2025 UI/UX) -->
 
 
-<div id="sidebar" class="fixed top-0 left-0 w-64 h-full bg-gradient-to-b from-white to-gray-50 border-r border-gray-200 shadow-xl transform -translate-x-full transition-transform duration-300 z-50 flex flex-col">    
-  <!-- 🔵 Profile Section -->    
-  <div class="p-6 border-b flex flex-col items-center text-center">    
-    <div class="relative w-20 h-20">    
-      <img id="profilePicPreview" src="profile-placeholder.png" class="w-20 h-20 rounded-full border-2 border-blue-500 object-cover shadow-sm" />    
-    </div>    
-    <div class="mt-3">    
-      <div id="userFullName" class="font-bold text-lg text-gray-800">Loading...</div>    
-      <div id="userEmail" class="text-sm text-gray-500">@loading</div>    
-    </div>    
-  </div>    
+<!-- ===== Sidebar 2025 Modern Google-Style ===== -->
+<div id="sidebar" class="fixed top-0 left-0 w-72 h-full bg-white border-r border-gray-100 shadow-lg transform -translate-x-full transition-transform duration-300 z-50 flex flex-col">
 
-  <!-- 🔗 Navigation Links -->    
-  <ul class="flex-1 p-4 space-y-1 overflow-y-auto">    
-    <li>    
-      <a href="#" onclick="switchTab('me'); activeTab(this)" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition font-medium">    
-        <i data-lucide="user-circle" class="w-5 h-5 text-blue-500"></i>    
-        <span>My Profile</span>    
-      </a>    
-    </li>    
+  <!-- 🔵 Profile Section -->
+  <div class="p-6 border-b border-gray-100 flex flex-col items-center text-center bg-gradient-to-b from-blue-50 to-white">
+    <div class="relative w-24 h-24">
+      <img id="profilePicPreview" src="profile-placeholder.png" 
+           class="w-24 h-24 rounded-2xl border-4 border-blue-500/20 object-cover shadow-md" />
+    </div>
+    <div class="mt-4">
+      <div id="userFullName" class="font-bold text-xl text-gray-900">Loading...</div>
+      <div id="userEmail" class="text-sm text-gray-500">@loading</div>
+    </div>
+  </div>
 
-    <li>    
-      <a href="#" onclick="switchTab('postTaskSection'); activeTab(this)" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-700 hover:bg-green-50 hover:text-green-600 transition font-medium">    
-        <i data-lucide="briefcase" class="w-5 h-5 text-green-500"></i>    
-        <span>Post Task Job</span>    
-      </a>    
-    </li>    
+  <!-- 🔗 Navigation Links -->
+  <ul class="flex-1 px-4 py-5 space-y-2 overflow-y-auto">
+    <li>
+      <a href="#" onclick="switchTab('me'); activeTab(this)" 
+         class="flex items-center gap-3 px-4 py-3 rounded-2xl text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 shadow-sm hover:shadow-md">
+        <i data-lucide="user-circle" class="w-6 h-6 text-blue-500"></i>
+        <span>My Profile</span>
+      </a>
+    </li>
 
-    <li>    
-      <a href="#" onclick="switchTab('afffiliateJobFormSection'); activeTab(this)" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition font-medium">    
-        <i data-lucide="link" class="w-5 h-5 text-purple-500"></i>    
-        <span>Post Affiliate Job</span>    
-      </a>    
-    </li>    
+    <li>
+      <a href="#" onclick="switchTab('postTaskSection'); activeTab(this)" 
+         class="flex items-center gap-3 px-4 py-3 rounded-2xl text-gray-700 font-medium hover:bg-green-50 hover:text-green-600 transition-all duration-200 shadow-sm hover:shadow-md">
+        <i data-lucide="briefcase" class="w-6 h-6 text-green-500"></i>
+        <span>Post Task Job</span>
+      </a>
+    </li>
 
-    <li>    
-      <a href="#" onclick="switchTab('payment'); activeTab(this)" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-700 hover:bg-yellow-50 hover:text-yellow-600 transition font-medium">    
-        <i data-lucide="credit-card" class="w-5 h-5 text-yellow-500"></i>    
-        <span>Payments</span>    
-      </a>    
-    </li>    
+    <li>
+      <a href="#" onclick="switchTab('afffiliateJobFormSection'); activeTab(this)" 
+         class="flex items-center gap-3 px-4 py-3 rounded-2xl text-gray-700 font-medium hover:bg-purple-50 hover:text-purple-600 transition-all duration-200 shadow-sm hover:shadow-md">
+        <i data-lucide="link" class="w-6 h-6 text-purple-500"></i>
+        <span>Post Affiliate Job</span>
+      </a>
+    </li>
 
-    <li>    
-      <a href="#" onclick="switchTab('social-tasks-main'); activeTab(this)" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition font-medium">    
-        <i data-lucide="list-checks" class="w-5 h-5 text-indigo-500"></i>    
-        <span>Social Tasks</span>    
-      </a>    
-    </li>    
+    <li>
+      <a href="#" onclick="switchTab('payment'); activeTab(this)" 
+         class="flex items-center gap-3 px-4 py-3 rounded-2xl text-gray-700 font-medium hover:bg-yellow-50 hover:text-yellow-600 transition-all duration-200 shadow-sm hover:shadow-md">
+        <i data-lucide="credit-card" class="w-6 h-6 text-yellow-500"></i>
+        <span>Payments</span>
+      </a>
+    </li>
 
-    <li>    
-      <a href="#" onclick="switchTab('myJobsSection'); activeTab(this)" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-700 hover:bg-teal-50 hover:text-teal-600 transition font-medium">    
-        <i data-lucide="clipboard-list" class="w-5 h-5 text-teal-500"></i>    
-        <span>My Jobs</span>    
-      </a>    
-    </li>    
+    <li>
+      <a href="#" onclick="switchTab('social-tasks-main'); activeTab(this)" 
+         class="flex items-center gap-3 px-4 py-3 rounded-2xl text-gray-700 font-medium hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200 shadow-sm hover:shadow-md">
+        <i data-lucide="list-checks" class="w-6 h-6 text-indigo-500"></i>
+        <span>Social Tasks</span>
+      </a>
+    </li>
 
-    <!-- 🚪 Logout -->    
-    <li>    
-      <a href="#" onclick="logoutUser()" class="flex items-center gap-3 px-3 py-3 rounded-xl text-red-600 hover:bg-red-50 transition font-medium">    
-        <i data-lucide="log-out" class="w-5 h-5 text-red-500"></i>    
-        <span>Logout</span>    
-      </a>    
-    </li>    
-  </ul>    
+    <li>
+      <a href="#" onclick="switchTab('myJobsSection'); activeTab(this)" 
+         class="flex items-center gap-3 px-4 py-3 rounded-2xl text-gray-700 font-medium hover:bg-teal-50 hover:text-teal-600 transition-all duration-200 shadow-sm hover:shadow-md">
+        <i data-lucide="clipboard-list" class="w-6 h-6 text-teal-500"></i>
+        <span>My Jobs</span>
+      </a>
+    </li>
 
-  <!-- 👫 Refer a Friend -->    
-  <a href="#team" onclick="switchTab('team'); activeTab(this)" class="block mx-3 my-2">    
-    <div class="flex items-center p-3 rounded-2xl bg-white shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer">    
-      <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-inner">    
-        <i data-lucide="users" class="w-5 h-5"></i>    
-      </div>    
-      <div class="ml-3 flex flex-col">    
-        <span class="text-sm font-semibold text-blue-600">Refer a friend</span>    
-        <span class="text-xs text-gray-500">invite and earn</span>    
-      </div>    
-    </div>    
-  </a>    
+    <!-- 🚪 Logout -->
+    <li>
+      <a href="#" onclick="logoutUser()" 
+         class="flex items-center gap-3 px-4 py-3 rounded-2xl text-red-600 font-medium hover:bg-red-50 transition-all duration-200 shadow-sm hover:shadow-md">
+        <i data-lucide="log-out" class="w-6 h-6 text-red-500"></i>
+        <span>Logout</span>
+      </a>
+    </li>
+  </ul>
 
-  <!-- 📌 Footer with Social Icons -->    
-  <div class="text-center py-4 border-t flex justify-center gap-5">    
-    <img src="INSTAGRAM.jpg" alt="Instagram" class="w-6 h-6 cursor-pointer hover:scale-110 transition" />    
-    <img src="TIKTOK.jpg" alt="TikTok" class="w-6 h-6 cursor-pointer hover:scale-110 transition" />    
-    <img src="FACEBOOK.jpg" alt="Facebook" class="w-6 h-6 cursor-pointer hover:scale-110 transition" />    
-  </div>    
-</div>  
+  <!-- 👫 Refer a Friend -->
+  <a href="#team" onclick="switchTab('team'); activeTab(this)" class="mx-4 mb-4">
+    <div class="flex items-center p-4 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md hover:shadow-lg transition cursor-pointer">
+      <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-white/20">
+        <i data-lucide="users" class="w-6 h-6"></i>
+      </div>
+      <div class="ml-3 flex flex-col">
+        <span class="text-sm font-semibold">Refer a friend</span>
+        <span class="text-xs opacity-80">Invite & earn</span>
+      </div>
+    </div>
+  </a>
 
-<!-- ✅ Lucide Icons -->  
+  <!-- 📌 Footer Socials -->
+  <div class="text-center py-4 border-t border-gray-100 flex justify-center gap-6 bg-gray-50">
+    <img src="INSTAGRAM.jpg" alt="Instagram" class="w-6 h-6 cursor-pointer hover:scale-110 transition" />
+    <img src="TIKTOK.jpg" alt="TikTok" class="w-6 h-6 cursor-pointer hover:scale-110 transition" />
+    <img src="FACEBOOK.jpg" alt="Facebook" class="w-6 h-6 cursor-pointer hover:scale-110 transition" />
+  </div>
+</div>
+
+<!-- ✅ Lucide Icons -->
 <script src="https://unpkg.com/lucide@latest"></script>
-
-
 
 		
 <!-- ✅ General Back -->
