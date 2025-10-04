@@ -385,66 +385,73 @@
 
 
 <!-- ===== Sidebar 2025 Modern Google-Style ===== -->
-<div id="sidebar" class="fixed top-0 left-0 w-72 h-full bg-white border-r border-gray-100 shadow-lg transform -translate-x-full transition-transform duration-300 z-50 flex flex-col">
+<div id="sidebar" class="fixed top-0 left-0 w-72 h-full bg-white border-r border-gray-100 shadow-lg 
+                        transform -translate-x-full transition-transform duration-300 z-50 flex flex-col">
 
   <!-- 🔵 Profile Section -->
-  <div class="p-6 border-b border-gray-100 flex flex-col items-center text-center bg-gradient-to-b from-blue-50 to-white">
-    <div class="relative w-24 h-24">
+  <div class="p-5 border-b border-gray-100 flex flex-col items-center text-center bg-gradient-to-b from-blue-50 to-white">
+    <div class="relative w-16 h-16"> <!-- smaller size -->
       <img id="profilePicPreview" src="profile-placeholder.png" 
-           class="w-24 h-24 rounded-2xl border-4 border-blue-500/20 object-cover shadow-md" />
+           class="w-16 h-16 rounded-xl border-2 border-blue-500/20 object-cover shadow-sm" />
     </div>
-    <div class="mt-4">
-      <div id="userFullName" class="font-bold text-xl text-gray-900">Loading...</div>
-      <div id="userEmail" class="text-sm text-gray-500">@loading</div>
+    <div class="mt-3">
+      <div id="userFullName" class="font-semibold text-lg text-gray-900">Loading...</div>
+      <div id="userEmail" class="text-xs text-gray-500">@loading</div>
     </div>
   </div>
 
   <!-- 🔗 Navigation Links -->
-  <ul class="flex-1 px-4 py-5 space-y-2 overflow-y-auto">
+  <ul class="flex-1 px-4 py-5 space-y-2 overflow-y-auto text-sm">
     <li>
       <a href="#" onclick="switchTab('me'); activeTab(this)" 
-         class="flex items-center gap-3 px-4 py-3 rounded-2xl text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 shadow-sm hover:shadow-md">
-        <i data-lucide="user-circle" class="w-6 h-6 text-blue-500"></i>
+         class="flex items-center gap-3 px-3 py-2 rounded-xl text-gray-700 font-medium 
+                hover:bg-blue-50 hover:text-blue-600 transition-all duration-200">
+        <i data-lucide="user-circle" class="w-5 h-5 text-blue-500"></i>
         <span>My Profile</span>
       </a>
     </li>
 
     <li>
       <a href="#" onclick="switchTab('postTaskSection'); activeTab(this)" 
-         class="flex items-center gap-3 px-4 py-3 rounded-2xl text-gray-700 font-medium hover:bg-green-50 hover:text-green-600 transition-all duration-200 shadow-sm hover:shadow-md">
-        <i data-lucide="briefcase" class="w-6 h-6 text-green-500"></i>
+         class="flex items-center gap-3 px-3 py-2 rounded-xl text-gray-700 font-medium 
+                hover:bg-green-50 hover:text-green-600 transition-all duration-200">
+        <i data-lucide="briefcase" class="w-5 h-5 text-green-500"></i>
         <span>Post Task Job</span>
       </a>
     </li>
 
     <li>
       <a href="#" onclick="switchTab('afffiliateJobFormSection'); activeTab(this)" 
-         class="flex items-center gap-3 px-4 py-3 rounded-2xl text-gray-700 font-medium hover:bg-purple-50 hover:text-purple-600 transition-all duration-200 shadow-sm hover:shadow-md">
-        <i data-lucide="link" class="w-6 h-6 text-purple-500"></i>
+         class="flex items-center gap-3 px-3 py-2 rounded-xl text-gray-700 font-medium 
+                hover:bg-purple-50 hover:text-purple-600 transition-all duration-200">
+        <i data-lucide="link" class="w-5 h-5 text-purple-500"></i>
         <span>Post Affiliate Job</span>
       </a>
     </li>
 
     <li>
       <a href="#" onclick="switchTab('payment'); activeTab(this)" 
-         class="flex items-center gap-3 px-4 py-3 rounded-2xl text-gray-700 font-medium hover:bg-yellow-50 hover:text-yellow-600 transition-all duration-200 shadow-sm hover:shadow-md">
-        <i data-lucide="credit-card" class="w-6 h-6 text-yellow-500"></i>
+         class="flex items-center gap-3 px-3 py-2 rounded-xl text-gray-700 font-medium 
+                hover:bg-yellow-50 hover:text-yellow-600 transition-all duration-200">
+        <i data-lucide="credit-card" class="w-5 h-5 text-yellow-500"></i>
         <span>Payments</span>
       </a>
     </li>
 
     <li>
       <a href="#" onclick="switchTab('social-tasks-main'); activeTab(this)" 
-         class="flex items-center gap-3 px-4 py-3 rounded-2xl text-gray-700 font-medium hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200 shadow-sm hover:shadow-md">
-        <i data-lucide="list-checks" class="w-6 h-6 text-indigo-500"></i>
+         class="flex items-center gap-3 px-3 py-2 rounded-xl text-gray-700 font-medium 
+                hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200">
+        <i data-lucide="list-checks" class="w-5 h-5 text-indigo-500"></i>
         <span>Social Tasks</span>
       </a>
     </li>
 
     <li>
       <a href="#" onclick="switchTab('myJobsSection'); activeTab(this)" 
-         class="flex items-center gap-3 px-4 py-3 rounded-2xl text-gray-700 font-medium hover:bg-teal-50 hover:text-teal-600 transition-all duration-200 shadow-sm hover:shadow-md">
-        <i data-lucide="clipboard-list" class="w-6 h-6 text-teal-500"></i>
+         class="flex items-center gap-3 px-3 py-2 rounded-xl text-gray-700 font-medium 
+                hover:bg-teal-50 hover:text-teal-600 transition-all duration-200">
+        <i data-lucide="clipboard-list" class="w-5 h-5 text-teal-500"></i>
         <span>My Jobs</span>
       </a>
     </li>
@@ -452,38 +459,37 @@
     <!-- 🚪 Logout -->
     <li>
       <a href="#" onclick="logoutUser()" 
-         class="flex items-center gap-3 px-4 py-3 rounded-2xl text-red-600 font-medium hover:bg-red-50 transition-all duration-200 shadow-sm hover:shadow-md">
-        <i data-lucide="log-out" class="w-6 h-6 text-red-500"></i>
+         class="flex items-center gap-3 px-3 py-2 rounded-xl text-red-600 font-medium hover:bg-red-50 transition-all duration-200">
+        <i data-lucide="log-out" class="w-5 h-5 text-red-500"></i>
         <span>Logout</span>
       </a>
     </li>
   </ul>
 
   <!-- 👫 Refer a Friend -->
-  <a href="#team" onclick="switchTab('team'); activeTab(this)" class="mx-4 mb-4">
-    <div class="flex items-center p-4 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md hover:shadow-lg transition cursor-pointer">
-      <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-white/20">
-        <i data-lucide="users" class="w-6 h-6"></i>
+  <a href="#team" onclick="switchTab('team'); activeTab(this)" class="mx-4 mb-4 block">
+    <div class="flex items-center p-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white 
+                shadow-sm hover:shadow-md transition cursor-pointer">
+      <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-white/20">
+        <i data-lucide="users" class="w-5 h-5"></i>
       </div>
-      <div class="ml-3 flex flex-col">
-        <span class="text-sm font-semibold">Refer a friend</span>
+      <div class="ml-2 flex flex-col">
+        <span class="text-sm font-medium">Refer a friend</span>
         <span class="text-xs opacity-80">Invite & earn</span>
       </div>
     </div>
   </a>
 
   <!-- 📌 Footer Socials -->
-  <div class="text-center py-4 border-t border-gray-100 flex justify-center gap-6 bg-gray-50">
-    <img src="INSTAGRAM.jpg" alt="Instagram" class="w-6 h-6 cursor-pointer hover:scale-110 transition" />
-    <img src="TIKTOK.jpg" alt="TikTok" class="w-6 h-6 cursor-pointer hover:scale-110 transition" />
-    <img src="FACEBOOK.jpg" alt="Facebook" class="w-6 h-6 cursor-pointer hover:scale-110 transition" />
+  <div class="text-center py-3 border-t border-gray-100 flex justify-center gap-5 bg-gray-50">
+    <img src="INSTAGRAM.jpg" alt="Instagram" class="w-5 h-5 cursor-pointer hover:scale-110 transition" />
+    <img src="TIKTOK.jpg" alt="TikTok" class="w-5 h-5 cursor-pointer hover:scale-110 transition" />
+    <img src="FACEBOOK.jpg" alt="Facebook" class="w-5 h-5 cursor-pointer hover:scale-110 transition" />
   </div>
 </div>
 
 <!-- ✅ Lucide Icons -->
 <script src="https://unpkg.com/lucide@latest"></script>
-
-		
 <!-- ✅ General Back -->
 
 
@@ -495,35 +501,39 @@
   <!-- ✨ Upgraded Earnings Carousel (2025 Fintech Design) -->
   <div class="w-full max-w-xs mx-auto mt-1 space-y-2 relative">
 
-    <!-- 🚀 Earnings Swiper -->
-    <div class="swiper earnings-swiper relative z-10 rounded-3xl shadow-2xl overflow-hidden bg-gradient-to-br from-indigo-900 via-indigo-800 to-indigo-700 p-1">
-      <div class="swiper-wrapper">
+  <!-- 🚀 Earnings Swiper -->
+  <div class="swiper earnings-swiper relative z-10 rounded-2xl shadow-md overflow-hidden 
+              bg-gradient-to-br from-indigo-200 via-indigo-300 to-indigo-400 p-1">
+    <div class="swiper-wrapper">
 
-        <!-- 💰 Slide: Balance -->
-        <div class="swiper-slide h-28 rounded-3xl bg-indigo-950/70 backdrop-blur-lg p-5 flex flex-col justify-between text-indigo-50 shadow-inner ring-1 ring-indigo-700 relative">
+      <!-- 💰 Slide: Balance -->
+      <div class="swiper-slide h-28 rounded-2xl bg-white flex flex-col justify-between 
+                  p-5 text-gray-900 shadow-sm ring-1 ring-gray-200 relative">
 
-          <!-- 🔘 Circular Plus Button -->
-          <button onclick="switchTab('depositSection')"
-            class="absolute top-3 right-3 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center shadow-lg hover:scale-105 transition-transform duration-300">
-            <span class="text-white text-xl font-bold">+</span>
-          </button>
+        <!-- 🔘 Circular Plus Button -->
+        <button onclick="switchTab('depositSection')"
+          class="absolute top-3 right-3 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 
+                 flex items-center justify-center shadow hover:scale-105 transition-transform duration-200">
+          <span class="text-white text-xl font-bold">+</span>
+        </button>
 
-          <!-- Balance Info -->
-          <div>
-            <h3 class="text-sm font-medium opacity-80 tracking-wide">Balance</h3>
-            <p id="balance" class="text-2xl font-extrabold mt-1 tracking-tight">₦0</p>
-          </div>
-
-          <!-- Earn More Button -->
-          <button onclick="switchTab('affiliate-tasks')"
-            class="self-start mt-2 bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-xs font-bold py-1.5 px-4 rounded-full transition-all duration-300 shadow-md">
-            Earn More
-          </button>
+        <!-- Balance Info -->
+        <div>
+          <h3 class="text-xs font-medium text-gray-500 tracking-wide">Balance</h3>
+          <p id="balance" class="text-2xl font-bold mt-1 tracking-tight">₦0</p>
         </div>
 
+        <!-- Earn More Button -->
+        <button onclick="switchTab('affiliate-tasks')"
+          class="self-start mt-2 bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-xs font-semibold 
+                 py-1.5 px-4 rounded-full transition-all duration-300 shadow-sm">
+          Earn More
+        </button>
       </div>
+
     </div>
   </div>
+</div>
 
 
 
@@ -531,30 +541,28 @@
 
 
 <!-- 🌟 Premium Upgrade Card -->
-<div class="px-4"> <!-- add padding wrapper -->
-  <div class="w-full mt-3 rounded-2xl bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 
-              flex items-center justify-between px-5 py-3 shadow-md ring-1 ring-yellow-400/60">
+<div class="px-4">
+  <div class="w-full mt-3 rounded-2xl bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 
+              flex items-center justify-between px-5 py-4 shadow-lg ring-1 ring-yellow-300/40">
 
     <!-- Left Icon + Text -->
-    <div class="flex items-center space-x-3">
+    <div class="flex items-center gap-3">
       <!-- Premium Icon -->
-      <div class="w-10 h-10 flex items-center justify-center bg-white/30 rounded-xl shadow-inner">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-yellow-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4l2.5 7h7l-5.5 4 2.5 7-6-4.5-6 4.5 2.5-7-5.5-4h7z"/>
-        </svg>
+      <div class="w-11 h-11 flex items-center justify-center bg-white shadow-sm rounded-xl">
+        <span class="text-2xl">👑</span>
       </div>
 
       <!-- Text -->
       <div>
-        <h3 class="text-sm font-bold text-yellow-900">Go Premium 👑</h3>
-        <p class="text-xs text-yellow-800/80 font-medium">Unlock exclusive pinned tasks</p>
+        <h3 class="text-base font-semibold text-gray-900">Go Premium</h3>
+        <p class="text-xs text-gray-700/80">Unlock exclusive pinned tasks</p>
       </div>
     </div>
 
     <!-- Right Arrow -->
     <button onclick="activateTab('premium-section')" 
-            class="w-9 h-9 flex items-center justify-center bg-white rounded-full shadow hover:scale-110 
-                   transition-transform duration-300">
+            class="w-9 h-9 flex items-center justify-center bg-white rounded-full shadow hover:bg-yellow-100 
+                   hover:scale-105 transition-transform duration-300">
       <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
       </svg>
@@ -1491,37 +1499,136 @@
 
 	
 <!-- 🔹 My Jobs Section -->
-<section id="myJobsSection" class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6">
+<!-- ✅ My Jobs Section -->
+<section id="myJobsSection" 
+  class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6 bg-gradient-to-br from-[#f9fafb] via-white to-[#f1f5f9]">
 
-	
+  <!-- Back Button -->
   <button onclick="activateTab('dashboard')" 
-    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    class="flex items-center gap-2 text-gray-600 hover:text-gray-800 font-medium transition mb-6">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
     </svg>
     Back
   </button>
 
-	
+  <!-- Job List -->
   <div class="max-w-5xl mx-auto space-y-6">
-    <h2 class="text-2xl font-bold text-center text-gray-800">My Job Posts</h2>
-    <div id="jobList" class="space-y-4"></div>
+    <h2 class="text-2xl font-extrabold text-center text-gray-800 tracking-tight">My Job Posts</h2>
+    
+    <!-- Dynamic job list -->
+    <div id="jobList" class="space-y-4">
+      <!-- Jobs will be injected by JS -->
+    </div>
   </div>
 </section>
 
-<!-- 🔹 Job Details Screen -->
-<section id="jobDetailsSection" class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6">
+
+<!-- ✅ Job Details Section -->
+<section id="jobDetailsSection" 
+  class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6 bg-gradient-to-br from-[#f9fafb] via-white to-[#f1f5f9]">
+
   <div class="max-w-3xl mx-auto space-y-6">
-    <button onclick="goBackToJobs()" class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium">
-      ← Back to My Jobs
+    <!-- Back Button -->
+    <button onclick="goBackToJobs()" 
+      class="flex items-center gap-2 text-gray-600 hover:text-gray-800 font-medium transition">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      Back to My Jobs
     </button>
-    <div id="jobDetailsContent" class="bg-white rounded-2xl shadow-md p-6 space-y-4">
+
+    <!-- Job Content -->
+    <div id="jobDetailsContent" 
+      class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 space-y-6 animate-fadeUp">
       <!-- Dynamic job details go here -->
     </div>
   </div>
 </section>
 
 
+<!-- ✅ Styles -->
+<style>
+/* Subtle fadeUp animation */
+@keyframes fadeUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-fadeUp { animation: fadeUp 0.5s ease-out forwards; }
+
+/* Job Card styling (Google-style) */
+.job-card {
+  background: #fff;
+  border: 1px solid #f1f5f9;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+.job-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(59,130,246,0.15);
+}
+
+/* Job Title */
+.job-card .job-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Job Meta (date, type, pay, etc.) */
+.job-card .job-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #64748b;
+}
+.job-card .job-meta span {
+  background: #f1f5f9;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+/* Job Details Headline */
+#jobDetailsContent h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* Action Buttons */
+.job-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+.job-action-btn.primary {
+  background: linear-gradient(90deg,#3b82f6,#6366f1);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(59,130,246,0.25);
+}
+.job-action-btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59,130,246,0.35);
+}
+.job-action-btn.secondary {
+  background: #f1f5f9;
+  color: #475569;
+}
+.job-action-btn.secondary:hover {
+  background: #e2e8f0;
+}
+</style>
 
                         
 <!-- ================== AFFILIATE TASKS SECTION ================== -->
@@ -3850,57 +3957,117 @@
 
 
 
+<!-- ✅ Daily Check-In Screen -->
+<div id="checkin-screen" class="tab-section hidden min-h-screen bg-gradient-to-br from-[#f9fafb] via-[#ffffff] to-[#f1f5f9] p-6">
+  
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <button onclick="activateTab('dashboard')" 
+      class="flex items-center gap-2 text-gray-600 hover:text-gray-800 font-medium transition">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" 
+           viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+              d="M15 19l-7-7 7-7" />
+      </svg>
+      Back
+    </button>
+    <h2 class="text-2xl font-extrabold text-gray-800">Daily Check-In</h2>
+  </div>
 
-<!-- ✅ Daily Check-In Screen --> 
-		<div id="checkin-screen"   class="tab-section hidden min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] p-6 text-white">    <!-- Header -->    <div class="flex items-center justify-between mb-8">  
-   
-			<button onclick="activateTab('dashboard')" 
-    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-    </svg>
-    Back
-  </button>
-			
-  </div>  
-			<!-- Check-in Container -->    
-			<div id="checkin-container" class="max-w-3xl mx-auto space-y-10">  
-				<!-- Cards -->  
-<div id="checkin-cards"
-     class="grid grid-cols-7 gap-2 justify-items-center">
-  <!-- Cards will be injected by JS -->
+  <!-- Check-in Container -->
+  <div id="checkin-container" class="max-w-4xl mx-auto space-y-10">
+    
+    <!-- Calendar Cards -->
+    <div id="checkin-cards" 
+         class="grid grid-cols-7 gap-3 justify-items-center">
+      <!-- Cards will be injected by JS -->
+    </div>
+
+    <!-- Check-in Button -->
+    <div class="text-center">
+      <button id="checkin-btn"
+        class="px-8 py-3 rounded-xl relative overflow-hidden font-semibold shadow-lg
+               bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-600 
+               hover:scale-[1.03] hover:shadow-indigo-500/20 transition transform">
+        <span class="relative z-10 text-white flex items-center gap-2">
+          🚀 Check In
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <!-- History Section -->
+  <div id="checkin-history" class="mt-12 max-w-2xl mx-auto">
+    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600" fill="none" 
+           viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+              d="M5 13l4 4L19 7" />
+      </svg>
+      Reward History
+    </h3>
+    <div id="history-list" class="space-y-3 text-sm text-gray-600">
+      <!-- Rewards injected here -->
+    </div>
+  </div>
 </div>
 
-<!-- Check-in Button -->  
-<div class="text-center">  
-  <button id="checkin-btn"  
-    class="px-10 py-4 rounded-2xl relative overflow-hidden font-semibold shadow-xl  
-           bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-600  
-           hover:scale-105 hover:shadow-purple-500/30 transition transform  
-           before:absolute before:inset-0 before:bg-white/10   
-           before:rounded-2xl before:animate-pulse">  
-    <span class="relative z-10">🚀 Check In</span>  
-  </button>  
-</div>
+<style>
+/* ✅ Calendar Day Card */
+#checkin-cards .day-card {
+  width: 48px;
+  height: 58px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: white;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+#checkin-cards .day-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 20px rgba(37,99,235,0.15);
+}
 
-  </div>    <!-- History Section -->    <div id="checkin-history" class="mt-12 max-w-2xl mx-auto">  
-    <h3 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500   
-               text-transparent bg-clip-text mb-4">  
-      Reward History  
-    </h3>  
-    <div id="history-list" class="space-y-4 text-sm"></div>  
-  </div>  
-</div>  <style>  
-/* Futuristic entry animation */  
-@keyframes slide-in {  
-  from { transform: translateY(20px); opacity: 0; }  
-  to { transform: translateY(0); opacity: 1; }  
-}  
-.animate-slide-in { animation: slide-in 0.6s ease-out forwards; }  
+/* ✅ Checked-in Day */
+#checkin-cards .day-card.checked {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(99,102,241,0.25);
+  position: relative;
+}
+#checkin-cards .day-card.checked::after {
+  content: "✓";
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 12px;
+  font-weight: bold;
+  color: white;
+}
+
+/* ✅ Today Highlight */
+#checkin-cards .day-card.today {
+  border: 2px solid #3b82f6;
+  font-weight: 700;
+}
+
+/* ✅ Entry animation */
+@keyframes fadeUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+#checkin-screen {
+  animation: fadeUp 0.6s ease-out;
+}
 </style>
-
-
-
 
 
 
@@ -4040,53 +4207,56 @@
 
 
 <!-- ====== SPIN TO WIN SECTION (copy into dashboard.html) ====== -->
-<section id="daily-spin-section" class="tab-section hidden p-6 bg-gradient-to-b from-[#f7fbff] via-white to-[#eef6ff] rounded-2xl shadow-xl">
  
-<button onclick="activateTab('dashboard')"
-    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+
+<section id="daily-spin-section" class="tab-section hidden p-6 bg-gradient-to-b from-[#f8fbff] via-white to-[#eef6ff] rounded-3xl shadow-2xl border border-slate-100">
+ 
+  <!-- Back Button -->
+  <button onclick="activateTab('dashboard')"
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-6 transition">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
     </svg>
     Back
   </button>
 
-<!-- Header -->
-  <div class="flex items-center justify-between mb-6">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-8">
     <div>
-      <h2 class="text-3xl font-extrabold text-slate-800">Spin & Earn</h2>
-      <p class="text-sm text-slate-500 mt-1">Try your luck daily. Complete today's challenges to unlock extra spins.</p>
+      <h2 class="text-3xl font-extrabold text-slate-900">🎡 Spin & Earn</h2>
+      <p class="text-sm text-slate-500 mt-1">Try your luck daily. Complete challenges to unlock extra spins and win rewards instantly.</p>
     </div>
-    <div class="text-right text-xs text-slate-400">Free spin resets daily</div>
+    <div class="text-right text-xs text-slate-400">⏳ Spins reset every 24 hours</div>
   </div>
 
   <!-- Wheel stage -->
-  <div class="flex flex-col items-center gap-4 relative">
-    <!-- decorative confetti-like elements (subtle) -->
+  <div class="flex flex-col items-center gap-5 relative">
+    <!-- subtle confetti -->
     <div class="absolute left-[-20px] top-1/3 -translate-y-1/2 text-2xl pointer-events-none confetti-left">🎉</div>
     <div class="absolute right-[-20px] top-2/3 -translate-y-1/2 text-2xl pointer-events-none confetti-right">✨</div>
 
     <div class="relative wheel-container">
-      <!-- glow ring (animated) -->
+      <!-- glow ring -->
       <div class="absolute inset-0 rounded-full pointer-events-none wheel-glow"></div>
 
-      <!-- central white plate holding canvas -->
+      <!-- wheel plate -->
       <div class="absolute inset-6 rounded-full bg-white flex items-center justify-center z-10 shadow-2xl wheel-plate">
         <canvas id="spin-canvas" class="rounded-full" style="width:100%;height:100%"></canvas>
       </div>
 
-      <!-- pointer at top (facing down) -->
+      <!-- pointer -->
       <div id="wheel-pointer" class="absolute -top-10 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
         <div class="pointer-arrow" aria-hidden="true"></div>
       </div>
     </div>
 
-    <!-- Spin CTA (smaller fine blue directly below wheel) -->
-    <button id="spin-btn" class="spin-btn" aria-live="polite" aria-label="Spin Now">
+    <!-- Spin CTA -->
+    <button id="spin-btn" class="spin-btn mt-3" aria-live="polite" aria-label="Spin Now">
       Spin Now <span id="spin-count" class="ml-2 text-sm text-yellow-100">(0)</span>
     </button>
 
-    <!-- Live Win pill (single item) -->
-    <div class="w-full max-w-2xl mt-1">
+    <!-- Live Win pill -->
+    <div class="w-full max-w-2xl mt-2">
       <div id="live-feed-items" class="live-pill" role="status" aria-atomic="true">
         <svg class="live-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M3 10v4h4l5 5V5L7 10H3z" fill="#0F172A"/>
@@ -4097,24 +4267,29 @@
   </div>
 
   <!-- Rules -->
-  <div class="mt-6 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-    <h4 class="font-semibold text-slate-800">Rules</h4>
-    <p class="text-sm text-slate-500 mt-2">You receive one free spin every 24 hours. Complete today's challenges to earn extra spins. Rewards are credited instantly to your balance.</p>
+  <div class="mt-8 bg-white p-5 rounded-2xl shadow-md border border-slate-100">
+    <h4 class="font-semibold text-slate-800 mb-3">📜 Rules</h4>
+    <ol class="list-decimal list-inside space-y-2 text-sm text-slate-600">
+      <li>You receive <span class="font-semibold text-indigo-600">2 free spins</span> every 24 hours.</li>
+      <li>Complete daily challenges to unlock extra spins.</li>
+      <li>You must complete at least <span class="font-semibold text-indigo-600">2 challenges</span> to unlock bonus spins.</li>
+      <li>Rewards are instantly credited to your balance once you win.</li>
+      <li>Unused spins will not carry over to the next day.</li>
+    </ol>
   </div>
 
   <!-- Daily Challenges -->
-  <div class="mt-6">
-    <div class="flex items-center justify-between">
-      <h3 class="text-lg font-bold text-slate-800">Daily Challenges</h3>
-      <div class="text-sm text-slate-500">Complete tasks today to increase your spins</div>
+  <div class="mt-8">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-lg font-bold text-slate-800">🔥 Daily Challenges</h3>
+      <div class="text-sm text-slate-500">Complete tasks to earn extra spins</div>
     </div>
 
     <div id="daily-challenges" class="mt-4 space-y-3">
-      <!-- data-goal used in JS; no "a/b/c" labels and no reward text -->
       <div class="challenge-card" data-key="affiliateApproved" data-goal="10">
         <div class="challenge-left">
           <div class="challenge-title">Finish 10 affiliate campaigns</div>
-          <div class="progress-track"><div class="progress-bar" style="width:0%"></div></div>
+          <div class="progress-track"><div class="progress-bar"></div></div>
         </div>
         <div class="challenge-right">
           <div class="status-text not-completed">Not completed</div>
@@ -4124,7 +4299,7 @@
       <div class="challenge-card" data-key="taskApproved" data-goal="10">
         <div class="challenge-left">
           <div class="challenge-title">Complete 10 standard tasks</div>
-          <div class="progress-track"><div class="progress-bar" style="width:0%"></div></div>
+          <div class="progress-track"><div class="progress-bar"></div></div>
         </div>
         <div class="challenge-right">
           <div class="status-text not-completed">Not completed</div>
@@ -4134,7 +4309,7 @@
       <div class="challenge-card" data-key="dataAmount" data-goal="1000">
         <div class="challenge-left">
           <div class="challenge-title">Purchase mobile data worth ₦1,000+ (today)</div>
-          <div class="progress-track"><div class="progress-bar" style="width:0%"></div></div>
+          <div class="progress-track"><div class="progress-bar"></div></div>
         </div>
         <div class="challenge-right">
           <div class="status-text not-completed">Not completed</div>
@@ -4144,7 +4319,7 @@
       <div class="challenge-card" data-key="airtimeAmount" data-goal="500">
         <div class="challenge-left">
           <div class="challenge-title">Purchase airtime worth ₦500+ (today)</div>
-          <div class="progress-track"><div class="progress-bar" style="width:0%"></div></div>
+          <div class="progress-track"><div class="progress-bar"></div></div>
         </div>
         <div class="challenge-right">
           <div class="status-text not-completed">Not completed</div>
@@ -4154,107 +4329,10 @@
   </div>
 </section>
 
-<!-- Win Modal -->
-<div id="win-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
-  <div class="bg-white rounded-2xl p-6 w-11/12 max-w-sm text-center shadow-2xl">
-    <img id="win-verified" src="VERIFIED.jpg" alt="verified" class="w-12 h-12 mx-auto mb-3 hidden">
-    <div class="text-sm text-slate-500">Congratulations 🎉</div>
-    <div id="win-amount" class="text-3xl font-extrabold text-indigo-600 my-3">₦0</div>
-    <p class="text-sm text-slate-600 mb-4">Amount added to your balance</p>
-    <button id="win-close" class="px-6 py-2 rounded-full bg-indigo-600 text-white font-semibold">Nice!</button>
-  </div>
-</div>
 
-<!-- No-spins Modal -->
-<div id="no-spin-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
-  <div class="bg-white rounded-2xl p-6 w-11/12 max-w-sm text-center shadow-2xl">
-    <div class="text-sm text-slate-600">No spins remaining</div>
-    <div class="text-lg font-bold text-slate-800 mt-2 mb-3">Complete today's challenges to earn more spins</div>
-    <button id="no-spin-close" class="px-6 py-2 rounded-full bg-sky-500 text-white font-semibold">Okay</button>
-  </div>
-</div>
 
-<!-- Toast fallback -->
-<div id="spin-toast" style="display:none; position:fixed; right:20px; bottom:20px; background:white; border-radius:8px; padding:10px; box-shadow:0 6px 18px rgba(2,6,23,0.08);">
-  <div id="spin-toast-text" style="font-size:13px;color:#0f172a;"></div>
-</div>
 
-<!-- Styles (paste in page head or keep here) -->
-<style>
-  /* container sizing so wheel is stable and centered */
-  .wheel-container { width:320px; height:320px; }
-  @media(min-width:768px) { .wheel-container { width:380px; height:380px; } }
-  @media(min-width:1024px) { .wheel-container { width:420px; height:420px; } }
-
-  /* glow ring */
-  .wheel-glow {
-    border-radius:999px; pointer-events:none; position:absolute; inset:0;
-    background: conic-gradient(from 0deg, rgba(6,182,212,0.22), rgba(124,58,237,0.22), rgba(255,214,102,0.12));
-    filter: blur(12px) saturate(1.1);
-    animation: spinGlow 10s linear infinite; transform-origin:center;
-    z-index:6;
-  }
-  @keyframes spinGlow { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-
-  /* confetti small motion */
-  .confetti-left, .confetti-right { opacity:0.95; transform-origin:center; animation: floaty 4s ease-in-out infinite; font-size:20px; z-index:2; }
-  @keyframes floaty { 0% { transform: translateY(0) } 50% { transform: translateY(8px) } 100% { transform: translateY(0) } }
-
-  /* pointer arrow (at top, tip points down) */
-  .pointer-arrow {
-    width:0; height:0;
-    border-left:18px solid transparent;
-    border-right:18px solid transparent;
-    border-bottom:32px solid #4f46e5;
-    filter: drop-shadow(0 6px 10px rgba(2,6,23,0.12));
-    border-radius:3px 3px 0 0;
-    animation: pointerBounce 1600ms infinite;
-    z-index:40;
-  }
-  @keyframes pointerBounce { 0%{ transform: translateY(0)} 50%{ transform: translateY(6px)} 100%{ transform: translateY(0)} }
-
-  /* Spin button */
-  .spin-btn {
-    background: linear-gradient(90deg,#0ea5b3,#7c3aed);
-    color: #fff;
-    border-radius:999px;
-    padding:8px 18px;
-    font-weight:700;
-    border:none;
-    box-shadow: 0 12px 28px rgba(124,58,237,0.09);
-    margin-top:6px;
-  }
-  .spin-btn:disabled { opacity:0.6; cursor:not-allowed; transform:none !important; }
-
-  /* Live pill */
-  .live-pill {
-    display:flex; align-items:center; gap:12px; padding:10px 14px; background:#fff; border-radius:999px;
-    box-shadow:0 6px 18px rgba(2,6,23,0.03); border:1px solid rgba(2,6,23,0.04);
-  }
-  .live-text { font-size:14px; color:#0f172a; font-weight:600; }
-
-  /* challenge card */
-  #daily-challenges .challenge-card {
-    display:flex; align-items:center; justify-content:space-between;
-    background:#fff; padding:14px; border-radius:12px; box-shadow:0 6px 18px rgba(2,6,23,0.03); border:1px solid rgba(2,6,23,0.04);
-  }
-  .challenge-left { width:70%; }
-  .challenge-title { font-size:14px; font-weight:600; color:#0f172a; }
-  .progress-track { width:100%; height:10px; background:#f1f5f9; border-radius:999px; margin-top:8px; overflow:hidden; }
-  .progress-bar { height:100%; width:0%; background:linear-gradient(90deg,#06b6d4,#7c3aed); transition:width 400ms ease; }
-
-  .challenge-right { text-align:right; width:28%; }
-  .status-text { font-size:13px; font-weight:700; }
-  .status-text.not-completed { color:#ef4444; }
-  .status-text.completed { color:#16a34a; }
-
-  @media (max-width:768px){
-    .confetti-left, .confetti-right { display:none; }
-    .challenge-left { width:65%; } .challenge-right { width:33%; }
-    .wheel-container { width:280px; height:280px; }
-  }
-</style>
-
+		
 <!-- ====== Script: complete logic (single file) ====== -->
 <script>
 /* ====== Spin Wheel + Daily Challenge Script (Firebase compat) ====== */
