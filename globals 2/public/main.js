@@ -4189,16 +4189,7 @@ function addToMyJobsUI(job) {
   `;
 }
 
-// escape helper
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
+
 
 // ====== submitTask (min workers 20, no premium) ======
 async function submitTask() {
