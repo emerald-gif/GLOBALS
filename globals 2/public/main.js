@@ -3981,7 +3981,6 @@ function populateSubcategories() {
   if (subcategoryOptions[category]) {
     for (const [key, value] of Object.entries(subcategoryOptions[category])) {
       const opt = document.createElement("option");
-      // store numeric price in value (base 10)
       opt.value = String(value);
       opt.textContent = `${key} (₦${value})`;
       subcategory.appendChild(opt);
@@ -3989,7 +3988,6 @@ function populateSubcategories() {
   }
 }
 
-// when user chooses a subcategory we set the workerEarn and defaultEarn
 function updateWorkerEarn() {
   const subVal = parseInt(document.getElementById("subcategory").value, 10);
   if (!isNaN(subVal)) {
@@ -4010,7 +4008,6 @@ function validateWorkerEarn() {
   }
 }
 
-// fix: accept event param and use it
 function limitProofFiles(e) {
   const checkboxes = document.querySelectorAll("input[name='proofFile']");
   const checked = Array.from(checkboxes).filter(i => i.checked);
@@ -4029,14 +4026,11 @@ function updateTotal() {
   document.getElementById("totalCost").textContent = `₦${total}`;
 }
 
-// ----- Fix for missing functions that caused console errors -----
 function switchTab(sectionId) {
-  // if you already have activateTab elsewhere prefer that
   if (typeof activateTab === "function") {
     try { activateTab(sectionId); } catch (err) { console.warn('activateTab call failed, falling back', err); }
     return;
   }
-  // fallback simple tab switch
   document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
   const target = document.getElementById(sectionId);
   if (target) target.classList.remove('hidden');
@@ -4044,7 +4038,6 @@ function switchTab(sectionId) {
 
 function activeTab(el) {
   if (!el) return;
-  // find a sensible container (closest ul) and only toggle within it
   const container = el.closest('ul') || document;
   container.querySelectorAll('a').forEach(a => {
     a.classList.remove('bg-green-50', 'text-green-600');
@@ -4052,9 +4045,14 @@ function activeTab(el) {
   el.classList.add('bg-green-50', 'text-green-600');
 }
 
-// ----- submitTask: safer + clearer validation -----
 async function submitTask() {
+  const btn = document.getElementById("submitTaskBtn");
   try {
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Submitting…";
+    }
+
     const category = document.getElementById("category")?.value || "";
     const subCategory = document.getElementById("subcategory")?.value || "";
     const taskTitle = document.getElementById("taskTitle")?.value.trim() || "";
@@ -4080,21 +4078,22 @@ async function submitTask() {
 
     if (missing.length) {
       alert(`⚠️ Please fill required fields: ${missing.join(', ')}`);
+      if (btn) { btn.disabled = false; btn.textContent = "Submit Task"; }
       return;
     }
 
-    // firebase auth guard
     if (typeof auth === 'undefined' || !auth.currentUser) {
       alert("⚠️ You must be logged in to post a job.");
+      if (btn) { btn.disabled = false; btn.textContent = "Submit Task"; }
       return;
     }
 
-    // fetch user profile
     const user = auth.currentUser;
     const userDocRef = db.collection("users").doc(user.uid);
     const userDoc = await userDocRef.get();
     if (!userDoc.exists) {
       alert("⚠️ User profile not found.");
+      if (btn) { btn.disabled = false; btn.textContent = "Submit Task"; }
       return;
     }
     const userProfile = userDoc.data();
@@ -4106,10 +4105,10 @@ async function submitTask() {
 
     if (currentBalance < total) {
       alert(`⚠️ Insufficient balance. Required ₦${total}, available ₦${currentBalance}.`);
+      if (btn) { btn.disabled = false; btn.textContent = "Submit Task"; }
       return;
     }
 
-    // Upload screenshot (if your uploadToCloudinary exists)
     let screenshotURL = "";
     if (screenshotExample) {
       try {
@@ -4121,6 +4120,7 @@ async function submitTask() {
       } catch (err) {
         console.error("Screenshot upload failed:", err);
         alert("❌ Screenshot upload failed. Try again.");
+        if (btn) { btn.disabled = false; btn.textContent = "Submit Task"; }
         return;
       }
     }
@@ -4148,7 +4148,6 @@ async function submitTask() {
       }
     };
 
-    // Transaction: deduct balance + create task
     await db.runTransaction(async (transaction) => {
       transaction.update(userDocRef, { balance: currentBalance - total });
       const taskRef = db.collection("tasks").doc();
@@ -4156,17 +4155,23 @@ async function submitTask() {
     });
 
     alert("✅ Task successfully posted!");
-    // optionally reset form here
     updateTotal();
+
+    // reload to dashboard after short delay
+    setTimeout(() => {
+      window.location.href = "dashboard.html";
+    }, 1500);
 
   } catch (err) {
     console.error("🔥 Error posting task:", err);
     alert("❌ Something went wrong. Try again later.");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Submit Task";
+    }
   }
 }
-
-
-
 
 
 
