@@ -4059,13 +4059,14 @@ async function submitTask() {
     const description = document.getElementById("description")?.value.trim() || "";
     const proof = document.getElementById("proof")?.value.trim() || "";
     const screenshotInput = document.getElementById("screenshotInput");
-    const screenshotExample = screenshotInput && screenshotInput.files ? screenshotInput.files[0] : null;
+    const screenshotExample = screenshotInput?.files?.[0] || null;
     const numWorkers = parseInt(document.getElementById("workerCount")?.value, 10) || 0;
     const workerEarn = parseInt(document.getElementById("workerEarn")?.value, 10) || 0;
     const makePremium = document.getElementById("makePremium")?.checked || false;
     const proofFileCountEl = document.getElementById("proofFileCount");
     const proofFileCount = proofFileCountEl ? parseInt(proofFileCountEl.value, 10) || 1 : 1;
 
+    // --- Validation ---
     const missing = [];
     if (!taskTitle) missing.push("Task title");
     if (!category) missing.push("Category");
@@ -4082,6 +4083,7 @@ async function submitTask() {
       return;
     }
 
+    // --- Auth guard ---
     if (typeof auth === 'undefined' || !auth.currentUser) {
       alert("⚠️ You must be logged in to post a job.");
       if (btn) { btn.disabled = false; btn.textContent = "Submit Task"; }
@@ -4096,8 +4098,8 @@ async function submitTask() {
       if (btn) { btn.disabled = false; btn.textContent = "Submit Task"; }
       return;
     }
-    const userProfile = userDoc.data();
 
+    const userProfile = userDoc.data();
     const reviewFee = 200;
     const premiumFee = makePremium ? 100 : 0;
     const total = (numWorkers * workerEarn) + reviewFee + premiumFee;
@@ -4109,13 +4111,14 @@ async function submitTask() {
       return;
     }
 
+    // --- Upload screenshot (optional) ---
     let screenshotURL = "";
     if (screenshotExample) {
       try {
-        if (typeof uploadToCloudinary !== "function") {
-          console.warn("uploadToCloudinary helper not found — skipping upload (add your uploader).");
-        } else {
+        if (typeof uploadToCloudinary === "function") {
           screenshotURL = await uploadToCloudinary(screenshotExample);
+        } else {
+          console.warn("uploadToCloudinary not found — skipping upload.");
         }
       } catch (err) {
         console.error("Screenshot upload failed:", err);
@@ -4125,6 +4128,7 @@ async function submitTask() {
       }
     }
 
+    // --- Prepare job data ---
     const jobData = {
       title: taskTitle,
       category,
@@ -4148,19 +4152,28 @@ async function submitTask() {
       }
     };
 
+    // --- Firestore transaction ---
     await db.runTransaction(async (transaction) => {
       transaction.update(userDocRef, { balance: currentBalance - total });
       const taskRef = db.collection("tasks").doc();
       transaction.set(taskRef, jobData);
     });
 
+    // --- Success feedback ---
     alert("✅ Task successfully posted!");
-    updateTotal();
 
-    // reload to dashboard after short delay
-    setTimeout(() => {
-      window.location.href = "dashboard.html";
-    }, 1500);
+    // --- Reset form fields ---
+    document.getElementById("taskTitle").value = "";
+    document.getElementById("category").value = "";
+    document.getElementById("subcategory").innerHTML = '<option value="">Select subcategory</option>';
+    document.getElementById("description").value = "";
+    document.getElementById("proof").value = "";
+    document.getElementById("screenshotInput").value = "";
+    document.getElementById("workerCount").value = "";
+    document.getElementById("workerEarn").value = "";
+    document.getElementById("makePremium").checked = false;
+    document.getElementById("totalCost").textContent = "₦0";
+    defaultEarn = 0;
 
   } catch (err) {
     console.error("🔥 Error posting task:", err);
@@ -4176,6 +4189,9 @@ async function submitTask() {
 
 
 
+
+
+		  
 
 // AFFILIATE  Update Total When Inputs Change
                           
