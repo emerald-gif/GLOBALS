@@ -3974,15 +3974,13 @@ const subcategoryOptions = {
 
 
         
-
-// ====== Task form helpers (paste/replace your old versions) ======
+// ====== Task form helpers ======
 let defaultEarn = 0;
 let isSubmitting = false;
 
-// utility: find likely submit button
+// find submit button (prefers id)
 function findSubmitButton() {
   return document.getElementById('submitTaskBtn')
-    || document.getElementById('postTaskBtn')
     || document.querySelector("button[type='submit']")
     || document.querySelector("button[data-action='post-task']")
     || null;
@@ -3993,10 +3991,9 @@ function setBtnSubmitting(btn) {
   if (!btn.dataset.origHtml) btn.dataset.origHtml = btn.innerHTML || btn.textContent || 'Submit';
   btn.disabled = true;
   btn.setAttribute('aria-busy', 'true');
-  // spinner + text
   btn.innerHTML = `<span style="display:inline-flex;align-items:center;gap:8px">
     <svg width="16" height="16" viewBox="0 0 50 50" aria-hidden>
-      <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-dasharray="31.4 31.4" transform="rotate(0 25 25)">
+      <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-dasharray="31.4 31.4">
         <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="0.9s" repeatCount="indefinite"/>
       </circle>
     </svg>
@@ -4013,13 +4010,13 @@ function restoreBtn(btn) {
   btn.classList.remove('opacity-70', 'cursor-not-allowed');
 }
 
-// populate subcategories (unchanged behavior)
+// populate subcategories
 function populateSubcategories() {
   const category = document.getElementById("category")?.value || "";
   const subcategory = document.getElementById("subcategory");
   if (!subcategory) return console.warn("populateSubcategories: no #subcategory element found");
   subcategory.innerHTML = '<option value="">Select subcategory</option>';
-  if (subcategoryOptions[category]) {
+  if (subcategoryOptions && subcategoryOptions[category]) {
     for (const [key, value] of Object.entries(subcategoryOptions[category])) {
       const opt = document.createElement("option");
       opt.value = String(value);
@@ -4027,28 +4024,72 @@ function populateSubcategories() {
       subcategory.appendChild(opt);
     }
   }
+  // reset defaultEarn if user clears category
+  if (!category) {
+    defaultEarn = 0;
+    const we = document.getElementById('workerEarn');
+    if (we) we.removeAttribute('min');
+  }
+  updateTotal();
 }
 
-// update worker earn from subcategory
+// update worker earn from subcategory - only increases visible earn
 function updateWorkerEarn() {
-  const subVal = parseInt(document.getElementById("subcategory")?.value, 10);
-  if (!isNaN(subVal)) {
-    const workerEarnEl = document.getElementById("workerEarn");
-    if (workerEarnEl) workerEarnEl.value = subVal;
-    defaultEarn = subVal;
+  const subValRaw = document.getElementById("subcategory")?.value;
+  const subVal = parseInt(subValRaw, 10);
+  const workerEarnEl = document.getElementById("workerEarn");
+
+  if (isNaN(subVal) || !workerEarnEl) {
+    defaultEarn = 0;
+    if (workerEarnEl) workerEarnEl.removeAttribute('min');
     updateTotal();
+    return;
   }
+
+  // set the default/min allowed earn for this subcategory
+  defaultEarn = subVal;
+  workerEarnEl.min = String(subVal);
+
+  // Only increase the visible workerEarn if the subcategory default is GREATER
+  // than the current value. This prevents subcategory changes from lowering
+  // a manually increased workerEarn.
+  const current = parseInt(workerEarnEl.value, 10) || 0;
+  if (current < subVal) {
+    workerEarnEl.value = subVal;
+  }
+
+  const warning = document.getElementById("earnWarning");
+  if (warning) warning.classList.add("hidden");
+  updateTotal();
 }
 
+// validate manual edits — snap back if user tries to go below defaultEarn
 function validateWorkerEarn() {
-  const inputVal = parseInt(document.getElementById("workerEarn")?.value, 10);
+  const workerEarnEl = document.getElementById("workerEarn");
   const warning = document.getElementById("earnWarning");
-  if (!isNaN(inputVal) && inputVal < defaultEarn) {
-    if (warning) warning.classList.remove("hidden");
-  } else {
-    if (warning) warning.classList.add("hidden");
+  if (!workerEarnEl) return;
+
+  const inputVal = parseInt(workerEarnEl.value, 10);
+
+  if (isNaN(inputVal)) {
+    if (warning) { warning.classList.add("hidden"); warning.textContent = ""; }
     updateTotal();
+    return;
   }
+
+  if (defaultEarn && inputVal < defaultEarn) {
+    // snap the input back to allowed minimum
+    workerEarnEl.value = defaultEarn;
+    if (warning) {
+      warning.textContent = `Minimum allowed for this subcategory is ₦${defaultEarn}. Value reset.`;
+      warning.classList.remove("hidden");
+    }
+    updateTotal();
+    return;
+  }
+
+  if (warning) { warning.classList.add("hidden"); warning.textContent = ""; }
+  updateTotal();
 }
 
 function limitProofFiles(e) {
@@ -4060,12 +4101,12 @@ function limitProofFiles(e) {
   }
 }
 
+// updateTotal (premium removed)
 function updateTotal() {
   const earn = Number(document.getElementById("workerEarn")?.value) || 0;
   const count = Number(document.getElementById("workerCount")?.value) || 0;
-  const premium = document.getElementById("makePremium")?.checked ? 100 : 0;
   const approvalFee = 200;
-  const total = (earn * count) + premium + approvalFee;
+  const total = (earn * count) + approvalFee;
   const totalEl = document.getElementById("totalCost");
   if (totalEl) totalEl.textContent = `₦${total}`;
   return total;
@@ -4101,21 +4142,80 @@ function resetTaskForm() {
   if (safe("screenshotInput")) safe("screenshotInput").value = "";
   if (safe("workerCount")) safe("workerCount").value = "";
   if (safe("workerEarn")) safe("workerEarn").value = "";
-  if (safe("makePremium")) safe("makePremium").checked = false;
   if (safe("proofFileCount")) safe("proofFileCount").value = "1";
   defaultEarn = 0;
   updateTotal();
 }
 
-// ====== submitTask with min worker logic (>= 20) ======
+// Add the posted job to My Jobs UI (tries a few container ids then falls back to a notice)
+function addToMyJobsUI(job) {
+  const container = document.getElementById('myJobsList')
+    || document.getElementById('myJobsSection')
+    || document.querySelector('#myJobsSection .jobs-list');
+
+  const createdAt = new Date().toLocaleString();
+
+  const cardHtml = `
+    <div class="p-4 mb-3 bg-white rounded-lg shadow-sm border">
+      <div class="flex justify-between items-start">
+        <div>
+          <div class="font-semibold text-gray-800">${escapeHtml(job.title || 'Untitled task')}</div>
+          <div class="text-sm text-gray-500">Posted: ${createdAt}</div>
+          <div class="text-sm text-gray-600 mt-2">Total: ₦${job.total}</div>
+        </div>
+        <div class="text-sm px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 font-medium">Waiting admin approval</div>
+      </div>
+    </div>`.trim();
+
+  if (container) {
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = cardHtml;
+    container.insertBefore(wrapper.firstElementChild, container.firstChild);
+    return;
+  }
+
+  let notice = document.getElementById('myJobsNotice');
+  if (!notice) {
+    notice = document.createElement('div');
+    notice.id = 'myJobsNotice';
+    notice.className = 'my-4 p-3 rounded-lg bg-green-50 border border-green-100 text-green-700';
+    const postTaskSection = document.getElementById('postTaskSection');
+    if (postTaskSection) postTaskSection.querySelector('.max-w-2xl')?.insertAdjacentElement('beforebegin', notice);
+  }
+  notice.innerHTML = `
+    ✅ Task posted and is waiting admin approval. 
+    <a href="/my-jobs.html" class="underline font-medium">View My Jobs</a>
+    ${job.title ? `<div class="text-sm text-gray-700 mt-2">Task: ${escapeHtml(job.title)}</div>` : ''}
+  `;
+}
+
+// escape helper
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ====== submitTask (min workers 20, no premium) ======
 async function submitTask() {
-  if (isSubmitting) return; // double-submit guard
+  if (isSubmitting) return;
   const btn = findSubmitButton();
+
+  function bail(msg) {
+    if (msg) alert(msg);
+    restoreBtn(btn);
+    isSubmitting = false;
+    return;
+  }
+
   try {
     isSubmitting = true;
     setBtnSubmitting(btn);
 
-    // read fields
     const category = document.getElementById("category")?.value || "";
     const subCategory = document.getElementById("subcategory")?.value || "";
     const taskTitle = document.getElementById("taskTitle")?.value.trim() || "";
@@ -4125,11 +4225,10 @@ async function submitTask() {
     const screenshotExample = screenshotInput?.files?.[0] || null;
     const numWorkers = parseInt(document.getElementById("workerCount")?.value, 10) || 0;
     const workerEarn = parseInt(document.getElementById("workerEarn")?.value, 10) || 0;
-    const makePremium = document.getElementById("makePremium")?.checked || false;
     const proofFileCountEl = document.getElementById("proofFileCount");
     const proofFileCount = proofFileCountEl ? parseInt(proofFileCountEl.value, 10) || 1 : 1;
 
-    // --- Validation (including minimum 20 workers) ---
+    // Validation
     const missing = [];
     if (!taskTitle) missing.push("Task title");
     if (!category) missing.push("Category");
@@ -4143,50 +4242,42 @@ async function submitTask() {
 
     if (missing.length) {
       console.warn("submitTask validation failed:", missing);
-      alert(`⚠️ Please fix: ${missing.join(', ')}`);
-      return;
+      return bail(`⚠️ Please fix: ${missing.join(', ')}`);
     }
 
     // Auth guard
     if (typeof auth === 'undefined' || !auth.currentUser) {
-      alert("⚠️ You must be logged in to post a job.");
-      return;
+      return bail("⚠️ You must be logged in to post a job.");
     }
 
-    // load user
     const user = auth.currentUser;
     const userDocRef = db.collection("users").doc(user.uid);
     const userDocSnapshot = await userDocRef.get();
     if (!userDocSnapshot.exists) {
-      alert("⚠️ User profile not found.");
-      return;
+      return bail("⚠️ User profile not found.");
     }
     const userProfile = userDocSnapshot.data();
 
     const reviewFee = 200;
-    const premiumFee = makePremium ? 100 : 0;
-    const total = (numWorkers * workerEarn) + reviewFee + premiumFee;
+    const total = (numWorkers * workerEarn) + reviewFee;
     const currentBalance = userProfile.balance || 0;
 
     if (currentBalance < total) {
-      alert(`⚠️ Insufficient balance. Required ₦${total}, available ₦${currentBalance}.`);
-      return;
+      return bail(`⚠️ Insufficient balance. Required ₦${total}, available ₦${currentBalance}.`);
     }
 
-    // Upload screenshot (optional helper)
+    // Upload screenshot if uploader exists
     let screenshotURL = "";
     if (screenshotExample) {
       try {
         if (typeof uploadToCloudinary === "function") {
           screenshotURL = await uploadToCloudinary(screenshotExample);
         } else {
-          // not fatal: we proceed but warn the console
-          console.warn("uploadToCloudinary() not defined — screenshot will not be uploaded. Implement uploader to save screenshot.");
+          console.warn("uploadToCloudinary() not defined — screenshot will not be uploaded.");
         }
       } catch (err) {
         console.error("Screenshot upload failed:", err);
-        alert("❌ Screenshot upload failed. Try again.");
-        return;
+        return bail("❌ Screenshot upload failed. Try again.");
       }
     }
 
@@ -4199,7 +4290,6 @@ async function submitTask() {
       screenshotURL,
       numWorkers,
       workerEarn,
-      makePremium,
       total,
       proofFileCount,
       status: "on review",
@@ -4213,7 +4303,7 @@ async function submitTask() {
       }
     };
 
-    // safer transaction: re-read inside transaction
+    // Transaction with re-read inside
     await db.runTransaction(async (transaction) => {
       const freshUserSnap = await transaction.get(userDocRef);
       const freshBalance = (freshUserSnap.exists && (freshUserSnap.data().balance || 0)) || 0;
@@ -4225,10 +4315,10 @@ async function submitTask() {
       transaction.set(taskRef, jobData);
     });
 
-    // success
-    alert("✅ Task successfully posted!");
-    // reset the form in place (no reload)
+    // SUCCESS: optimistic UI
+    alert("✅ Task successfully posted! It is now waiting admin approval — check My Jobs.");
     resetTaskForm();
+    addToMyJobsUI({ title: taskTitle, total });
 
   } catch (err) {
     console.error("submitTask error:", err);
@@ -4241,36 +4331,28 @@ async function submitTask() {
 
 // auto-wire form/button on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
-  // attach populateSubcategories on category change if present
   const catEl = document.getElementById('category');
   if (catEl) catEl.addEventListener('change', populateSubcategories);
 
-  // attach updateWorkerEarn on subcategory change
   const subEl = document.getElementById('subcategory');
   if (subEl) subEl.addEventListener('change', updateWorkerEarn);
 
-  // attach validateWorkerEarn on manual workerEarn input change
   const weEl = document.getElementById('workerEarn');
   if (weEl) weEl.addEventListener('input', validateWorkerEarn);
 
-  // wire submit action: prefer form submit otherwise button click
-  const form = document.getElementById('postTaskForm') || document.querySelector('form');
+  const wcEl = document.getElementById('workerCount');
+  if (wcEl) wcEl.addEventListener('input', updateTotal);
+
   const btn = findSubmitButton();
-  if (form) {
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      submitTask();
-    });
-  } else if (btn) {
+  if (btn) {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       submitTask();
     });
   } else {
-    console.warn("No form or submit button found to attach submitTask to. Add id='submitTaskBtn' to your submit button or id='postTaskForm' to your form.");
+    console.warn("No submit button found — add #submitTaskBtn to your button.");
   }
 });
-
 
 
 
