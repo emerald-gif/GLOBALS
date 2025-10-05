@@ -3972,11 +3972,52 @@ const subcategoryOptions = {
   }
 };
 
-let defaultEarn = 0;
 
+        
+
+// ====== Task form helpers (paste/replace your old versions) ======
+let defaultEarn = 0;
+let isSubmitting = false;
+
+// utility: find likely submit button
+function findSubmitButton() {
+  return document.getElementById('submitTaskBtn')
+    || document.getElementById('postTaskBtn')
+    || document.querySelector("button[type='submit']")
+    || document.querySelector("button[data-action='post-task']")
+    || null;
+}
+
+function setBtnSubmitting(btn) {
+  if (!btn) return;
+  if (!btn.dataset.origHtml) btn.dataset.origHtml = btn.innerHTML || btn.textContent || 'Submit';
+  btn.disabled = true;
+  btn.setAttribute('aria-busy', 'true');
+  // spinner + text
+  btn.innerHTML = `<span style="display:inline-flex;align-items:center;gap:8px">
+    <svg width="16" height="16" viewBox="0 0 50 50" aria-hidden>
+      <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-dasharray="31.4 31.4" transform="rotate(0 25 25)">
+        <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="0.9s" repeatCount="indefinite"/>
+      </circle>
+    </svg>
+    Submitting…
+  </span>`;
+  btn.classList.add('opacity-70', 'cursor-not-allowed');
+}
+
+function restoreBtn(btn) {
+  if (!btn) return;
+  btn.disabled = false;
+  btn.removeAttribute('aria-busy');
+  if (btn.dataset.origHtml) btn.innerHTML = btn.dataset.origHtml;
+  btn.classList.remove('opacity-70', 'cursor-not-allowed');
+}
+
+// populate subcategories (unchanged behavior)
 function populateSubcategories() {
-  const category = document.getElementById("category").value;
+  const category = document.getElementById("category")?.value || "";
   const subcategory = document.getElementById("subcategory");
+  if (!subcategory) return console.warn("populateSubcategories: no #subcategory element found");
   subcategory.innerHTML = '<option value="">Select subcategory</option>';
   if (subcategoryOptions[category]) {
     for (const [key, value] of Object.entries(subcategoryOptions[category])) {
@@ -3988,22 +4029,24 @@ function populateSubcategories() {
   }
 }
 
+// update worker earn from subcategory
 function updateWorkerEarn() {
-  const subVal = parseInt(document.getElementById("subcategory").value, 10);
+  const subVal = parseInt(document.getElementById("subcategory")?.value, 10);
   if (!isNaN(subVal)) {
-    document.getElementById("workerEarn").value = subVal;
+    const workerEarnEl = document.getElementById("workerEarn");
+    if (workerEarnEl) workerEarnEl.value = subVal;
     defaultEarn = subVal;
     updateTotal();
   }
 }
 
 function validateWorkerEarn() {
-  const inputVal = parseInt(document.getElementById("workerEarn").value, 10);
+  const inputVal = parseInt(document.getElementById("workerEarn")?.value, 10);
   const warning = document.getElementById("earnWarning");
   if (!isNaN(inputVal) && inputVal < defaultEarn) {
-    warning.classList.remove("hidden");
+    if (warning) warning.classList.remove("hidden");
   } else {
-    warning.classList.add("hidden");
+    if (warning) warning.classList.add("hidden");
     updateTotal();
   }
 }
@@ -4018,12 +4061,14 @@ function limitProofFiles(e) {
 }
 
 function updateTotal() {
-  const earn = Number(document.getElementById("workerEarn").value) || 0;
-  const count = Number(document.getElementById("workerCount").value) || 0;
-  const premium = document.getElementById("makePremium").checked ? 100 : 0;
+  const earn = Number(document.getElementById("workerEarn")?.value) || 0;
+  const count = Number(document.getElementById("workerCount")?.value) || 0;
+  const premium = document.getElementById("makePremium")?.checked ? 100 : 0;
   const approvalFee = 200;
   const total = (earn * count) + premium + approvalFee;
-  document.getElementById("totalCost").textContent = `₦${total}`;
+  const totalEl = document.getElementById("totalCost");
+  if (totalEl) totalEl.textContent = `₦${total}`;
+  return total;
 }
 
 function switchTab(sectionId) {
@@ -4045,14 +4090,32 @@ function activeTab(el) {
   el.classList.add('bg-green-50', 'text-green-600');
 }
 
-async function submitTask() {
-  const btn = document.getElementById("submitTaskBtn");
-  try {
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = "Submitting…";
-    }
+// reset form in-place (no reload)
+function resetTaskForm() {
+  const safe = id => document.getElementById(id);
+  if (safe("taskTitle")) safe("taskTitle").value = "";
+  if (safe("category")) safe("category").value = "";
+  if (safe("subcategory")) safe("subcategory").innerHTML = '<option value="">Select subcategory</option>';
+  if (safe("description")) safe("description").value = "";
+  if (safe("proof")) safe("proof").value = "";
+  if (safe("screenshotInput")) safe("screenshotInput").value = "";
+  if (safe("workerCount")) safe("workerCount").value = "";
+  if (safe("workerEarn")) safe("workerEarn").value = "";
+  if (safe("makePremium")) safe("makePremium").checked = false;
+  if (safe("proofFileCount")) safe("proofFileCount").value = "1";
+  defaultEarn = 0;
+  updateTotal();
+}
 
+// ====== submitTask with min worker logic (>= 20) ======
+async function submitTask() {
+  if (isSubmitting) return; // double-submit guard
+  const btn = findSubmitButton();
+  try {
+    isSubmitting = true;
+    setBtnSubmitting(btn);
+
+    // read fields
     const category = document.getElementById("category")?.value || "";
     const subCategory = document.getElementById("subcategory")?.value || "";
     const taskTitle = document.getElementById("taskTitle")?.value.trim() || "";
@@ -4066,7 +4129,7 @@ async function submitTask() {
     const proofFileCountEl = document.getElementById("proofFileCount");
     const proofFileCount = proofFileCountEl ? parseInt(proofFileCountEl.value, 10) || 1 : 1;
 
-    // --- Validation ---
+    // --- Validation (including minimum 20 workers) ---
     const missing = [];
     if (!taskTitle) missing.push("Task title");
     if (!category) missing.push("Category");
@@ -4075,31 +4138,31 @@ async function submitTask() {
     if (!proof) missing.push("Proof instructions");
     if (!screenshotExample) missing.push("Screenshot example (upload)");
     if (!numWorkers || numWorkers < 1) missing.push("Number of workers");
+    if (numWorkers && numWorkers < 20) missing.push("Minimum number of workers is 20");
     if (!workerEarn || workerEarn < 1) missing.push("Worker earn");
 
     if (missing.length) {
-      alert(`⚠️ Please fill required fields: ${missing.join(', ')}`);
-      if (btn) { btn.disabled = false; btn.textContent = "Submit Task"; }
+      console.warn("submitTask validation failed:", missing);
+      alert(`⚠️ Please fix: ${missing.join(', ')}`);
       return;
     }
 
-    // --- Auth guard ---
+    // Auth guard
     if (typeof auth === 'undefined' || !auth.currentUser) {
       alert("⚠️ You must be logged in to post a job.");
-      if (btn) { btn.disabled = false; btn.textContent = "Submit Task"; }
       return;
     }
 
+    // load user
     const user = auth.currentUser;
     const userDocRef = db.collection("users").doc(user.uid);
-    const userDoc = await userDocRef.get();
-    if (!userDoc.exists) {
+    const userDocSnapshot = await userDocRef.get();
+    if (!userDocSnapshot.exists) {
       alert("⚠️ User profile not found.");
-      if (btn) { btn.disabled = false; btn.textContent = "Submit Task"; }
       return;
     }
+    const userProfile = userDocSnapshot.data();
 
-    const userProfile = userDoc.data();
     const reviewFee = 200;
     const premiumFee = makePremium ? 100 : 0;
     const total = (numWorkers * workerEarn) + reviewFee + premiumFee;
@@ -4107,28 +4170,26 @@ async function submitTask() {
 
     if (currentBalance < total) {
       alert(`⚠️ Insufficient balance. Required ₦${total}, available ₦${currentBalance}.`);
-      if (btn) { btn.disabled = false; btn.textContent = "Submit Task"; }
       return;
     }
 
-    // --- Upload screenshot (optional) ---
+    // Upload screenshot (optional helper)
     let screenshotURL = "";
     if (screenshotExample) {
       try {
         if (typeof uploadToCloudinary === "function") {
           screenshotURL = await uploadToCloudinary(screenshotExample);
         } else {
-          console.warn("uploadToCloudinary not found — skipping upload.");
+          // not fatal: we proceed but warn the console
+          console.warn("uploadToCloudinary() not defined — screenshot will not be uploaded. Implement uploader to save screenshot.");
         }
       } catch (err) {
         console.error("Screenshot upload failed:", err);
         alert("❌ Screenshot upload failed. Try again.");
-        if (btn) { btn.disabled = false; btn.textContent = "Submit Task"; }
         return;
       }
     }
 
-    // --- Prepare job data ---
     const jobData = {
       title: taskTitle,
       category,
@@ -4152,39 +4213,65 @@ async function submitTask() {
       }
     };
 
-    // --- Firestore transaction ---
+    // safer transaction: re-read inside transaction
     await db.runTransaction(async (transaction) => {
-      transaction.update(userDocRef, { balance: currentBalance - total });
+      const freshUserSnap = await transaction.get(userDocRef);
+      const freshBalance = (freshUserSnap.exists && (freshUserSnap.data().balance || 0)) || 0;
+      if (freshBalance < total) {
+        throw new Error(`Insufficient balance in transaction. Required ₦${total}, available ₦${freshBalance}`);
+      }
+      transaction.update(userDocRef, { balance: freshBalance - total });
       const taskRef = db.collection("tasks").doc();
       transaction.set(taskRef, jobData);
     });
 
-    // --- Success feedback ---
+    // success
     alert("✅ Task successfully posted!");
-
-    // --- Reset form fields ---
-    document.getElementById("taskTitle").value = "";
-    document.getElementById("category").value = "";
-    document.getElementById("subcategory").innerHTML = '<option value="">Select subcategory</option>';
-    document.getElementById("description").value = "";
-    document.getElementById("proof").value = "";
-    document.getElementById("screenshotInput").value = "";
-    document.getElementById("workerCount").value = "";
-    document.getElementById("workerEarn").value = "";
-    document.getElementById("makePremium").checked = false;
-    document.getElementById("totalCost").textContent = "₦0";
-    defaultEarn = 0;
+    // reset the form in place (no reload)
+    resetTaskForm();
 
   } catch (err) {
-    console.error("🔥 Error posting task:", err);
-    alert("❌ Something went wrong. Try again later.");
+    console.error("submitTask error:", err);
+    alert((err && err.message) ? `❌ ${err.message}` : "❌ Something went wrong. Try again later.");
   } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = "Submit Task";
-    }
+    isSubmitting = false;
+    restoreBtn(btn);
   }
 }
+
+// auto-wire form/button on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+  // attach populateSubcategories on category change if present
+  const catEl = document.getElementById('category');
+  if (catEl) catEl.addEventListener('change', populateSubcategories);
+
+  // attach updateWorkerEarn on subcategory change
+  const subEl = document.getElementById('subcategory');
+  if (subEl) subEl.addEventListener('change', updateWorkerEarn);
+
+  // attach validateWorkerEarn on manual workerEarn input change
+  const weEl = document.getElementById('workerEarn');
+  if (weEl) weEl.addEventListener('input', validateWorkerEarn);
+
+  // wire submit action: prefer form submit otherwise button click
+  const form = document.getElementById('postTaskForm') || document.querySelector('form');
+  const btn = findSubmitButton();
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submitTask();
+    });
+  } else if (btn) {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      submitTask();
+    });
+  } else {
+    console.warn("No form or submit button found to attach submitTask to. Add id='submitTaskBtn' to your submit button or id='postTaskForm' to your form.");
+  }
+});
+
+
 
 
 
