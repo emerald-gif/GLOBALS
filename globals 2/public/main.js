@@ -4295,29 +4295,21 @@ async function processReferralCreditTx(referredUserDocId, referrerUid) {
 
 
 // === Campaign Logo Upload Handling ===
+// === Campaign Logo Upload Handling (simplified version) ===
 document.getElementById("campaignLogoFile").addEventListener("change", async (e) => {
   const file = e.target.files[0];
   const statusEl = document.getElementById("campaignLogoStatus");
   if (!file) return;
 
-  // Reset
   statusEl.classList.remove("hidden");
   statusEl.style.color = "#2563eb";
   statusEl.innerText = "⏳ Uploading... please wait";
 
   try {
-    // Upload to Cloudinary
     const uploadedURL = await uploadToCloudinary(file);
-
-    // Show success + URL
     statusEl.style.color = "#059669"; // green
-    statusEl.innerHTML = `
-      ✅ Upload Successful!<br>
-      <span class="text-xs text-gray-700 break-all">${uploadedURL}</span>
-    `;
-
-    // Store URL on element dataset for later use in submitAffiliateJob
-    e.target.dataset.uploadedUrl = uploadedURL;
+    statusEl.innerText = "✅ Upload Successful!";
+    e.target.dataset.uploadedUrl = uploadedURL; // keep for submission use
   } catch (err) {
     console.error("Upload failed:", err);
     statusEl.style.color = "#dc2626"; // red
@@ -4410,7 +4402,6 @@ if (!campaignLogoURL) {
   alert("⚠️ Please upload a campaign logo before submitting.");
   return;
 }
-
       const jobData = {
         jobType: "affiliate",
         category,
