@@ -1238,103 +1238,107 @@
 <!-- POST TASK SECTION (small id additions) -->
 <!-- POST TASK SECTION -->
 <section id="postTaskSection" class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6">
-  <button onclick="activateTab('dashboard')" class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-    </svg>
-    Back
-  </button>
+  <button onclick="activateTab('dashboard')" 
+      class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      Back
+    </button>
 
-  <div class="max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow-xl space-y-6">
-    <h2 class="text-2xl font-bold text-center text-gray-800">Post a Job Task</h2>
+    <div class="max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow-xl space-y-6">
+      <h2 class="text-2xl font-bold text-center text-gray-800">Post a Job Task</h2>
 
-    <!-- Category -->
-    <div>
-      <label class="block text-sm font-semibold mb-1">Category</label>
-      <select id="category" class="w-full p-2 border rounded-lg" onchange="populateSubcategories()">
-        <option value="">Select a category</option>
-        <option value="whatsapp">whatsapp</option>
-        <option value="telegram">telegram</option>
-        <option value="instagram">instagram</option>
-        <option value="tiktok">tiktok</option>
-        <option value="app">app</option>
-        <option value="youtube">youtube</option>
-        <option value="facebook">facebook</option>
-        <option value="twitter">twitter</option>
-        <option value="website">website</option>
-        <option value="vote">vote</option>
-        <option value="music">music</option>
-      </select>
-    </div>
-
-    <!-- Subcategory -->
-    <div>
-      <label class="block text-sm font-semibold mb-1">Subcategory</label>
-      <select id="subcategory" class="w-full p-2 border rounded-lg" onchange="updateWorkerEarn()">
-        <option value="">Select subcategory</option>
-      </select>
-    </div>
-
-    <!-- Task Title -->
-    <div>
-      <label for="taskTitle" class="block text-sm font-semibold mb-1">Task Title</label>
-      <input type="text" id="taskTitle" class="w-full p-2 border rounded-lg" placeholder="task title" />
-    </div>
-
-    <!-- Description -->
-    <div>
-      <label class="block text-sm font-semibold mb-1">Description & Link</label>
-      <textarea id="description" class="w-full p-2 border rounded-lg" rows="3" placeholder="Describe what you want the worker to do and add a link if needed"></textarea>
-    </div>
-
-    <!-- Required Proof -->
-    <div>
-      <label class="block text-sm font-semibold mb-1">Required Proof</label>
-      <textarea id="proof" class="w-full p-2 border rounded-lg" rows="2" placeholder="Write out the proof workers are to submit"></textarea>
-    </div>
-
-    <!-- Proof File Count -->
-    <label for="proofFileCount" class="block mt-4 text-sm font-medium text-gray-700">How many proof uploads should workers submit?</label>
-    <select id="proofFileCount" class="w-full p-2 border border-gray-300 rounded-lg mt-1">
-      <option value="1">Require 1 proof upload</option>
-      <option value="2">Require 2 proof uploads</option>
-      <option value="3">Require 3 proof uploads</option>
-    </select>
-
-    <!-- Screenshot Example -->
-    <div>
-      <label class="block text-sm font-semibold mb-1">Upload Screenshot Example (required)</label>
-      <input id="screenshotInput" type="file" class="w-full border p-2 rounded-lg" accept="image/*">
-    </div>
-
-    <!-- Number of Workers (min 20) -->
-    <div>
-      <label class="block text-sm font-semibold mb-1">Number of Workers</label>
-      <input id="workerCount" type="number" min="20" class="w-full p-2 border rounded-lg" placeholder="Minimum 20 workers" oninput="updateTotal()">
-      <p class="text-xs text-gray-600 mt-1">Minimum workers: <strong>20</strong></p>
-    </div>
-
-    <!-- Worker Earn -->
-    <div>
-      <label class="block text-sm font-semibold mb-1">Worker Earn (₦)</label>
-      <input id="workerEarn" type="number" class="w-full p-2 border rounded-lg" oninput="validateWorkerEarn()">
-      <p class="text-xs text-gray-600 mt-1">Note: Price payout can increase to attract workers. Reducing subcategory price isn't allowed.</p>
-      <p id="earnWarning" class="text-sm text-red-600 hidden mt-1">You cannot reduce the default subcategory price.</p>
-    </div>
-
-    <div class="text-sm text-gray-700">Note: Company review & approval task fee is ₦200</div>
-
-    <!-- TOTAL + Submit (submit button has id so JS can control it) -->
-    <div class="mt-4">
-      <div class="flex justify-between items-center font-semibold text-lg">
-        <span>Total:</span>
-        <span id="totalCost">₦0</span>
+      <!-- 1. Category -->
+      <div>
+        <label class="block text-sm font-semibold mb-1">Category</label>
+        <select id="category" class="w-full p-2 border rounded-lg" onchange="populateSubcategories()">
+          <option value="">Select a category</option>
+          <option value="whatsapp">whatsapp</option>
+          <option value="telegram">telegram</option>
+          <option value="instagram">instagram</option>
+          <option value="tiktok">tiktok</option>
+          <option value="app">app</option>
+          <option value="youtube">youtube</option>
+          <option value="facebook">facebook</option>
+          <option value="twitter">twitter</option>
+          <option value="website">website</option>
+          <option value="vote">vote</option>
+          <option value="music">music</option>
+        </select>
       </div>
-      <button id="submitTaskBtn" type="button" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl mt-4 font-bold transition">Post Job</button>
-    </div>
-  </div>
-</section>
 
+      <!-- 2. Subcategory (conditional) -->
+      <div>
+        <label class="block text-sm font-semibold mb-1">Subcategory</label>
+        <select id="subcategory" class="w-full p-2 border rounded-lg" onchange="updateWorkerEarn()">
+          <option value="">Select subcategory</option>
+        </select>
+      </div>
+
+      <!-- 2.5. Task Title -->
+      <div>
+        <label for="taskTitle" class="block text-sm font-semibold mb-1">Task Title</label>
+        <input type="text" id="taskTitle" class="w-full p-2 border rounded-lg" placeholder="task title" />
+      </div>
+
+      <!-- 3. Description + Link (added id="description") -->
+      <div>
+        <label class="block text-sm font-semibold mb-1">Description & Link</label>
+        <textarea id="description" class="w-full p-2 border rounded-lg" rows="3"
+          placeholder="Describe what you want the worker to do and add a link if needed"></textarea>
+      </div>
+
+      <!-- 4. Required Proof -->
+      <div>
+        <label class="block text-sm font-semibold mb-1">Required Proof</label>
+        <textarea id="proof" class="w-full p-2 border rounded-lg" rows="2"
+          placeholder="Write out the proof workers are to submit"></textarea>
+      </div>
+
+      <!-- 5. Proof Files -->
+      <label for="proofFileCount" class="block mt-4 text-sm font-medium text-gray-700">How many proof uploads should workers submit?</label>
+      <select id="proofFileCount" class="w-full p-2 border border-gray-300 rounded-lg mt-1">
+        <option value="1">Require 1 proof upload</option>
+        <option value="2">Require 2 proof uploads</option>
+        <option value="3">Require 3 proof uploads</option>
+      </select>
+
+      <!-- 6. Upload Screenshot Example -->
+      <div>
+        <label class="block text-sm font-semibold mb-1">Upload Screenshot Example (required)</label>
+        <input id="screenshotInput" type="file" class="w-full border p-2 rounded-lg" accept="image/*">
+      </div>
+
+      <!-- 7. Number of Workers -->
+      <div>
+        <label class="block text-sm font-semibold mb-1">Number of Workers</label>
+        <!-- min now 20 -->
+        <input id="workerCount" type="number" min="20" class="w-full p-2 border rounded-lg" placeholder="Minimum 20 workers" oninput="updateTotal()">
+      </div>
+
+      <!-- 8. Worker Earn -->
+      <div>
+        <label class="block text-sm font-semibold mb-1">Worker Earn (₦)</label>
+        <input id="workerEarn" type="number" class="w-full p-2 border rounded-lg" oninput="validateWorkerEarn()">
+        <p class="text-xs text-gray-600 mt-1">Note: Price payout can be increased to attract workers. If you set a value lower than the subcategory price the task will not submit.</p>
+        <p id="earnWarning" class="text-sm text-red-600 hidden mt-1">You cannot reduce the default subcategory price.</p>
+      </div>
+
+      <!-- NOTE: remove premium UI -->
+      <div class="text-sm text-gray-700">Note: Company review & approval task fee is ₦200</div>
+
+      <!-- 11. TOTAL -->
+      <div class="mt-4">
+        <div class="flex justify-between items-center font-semibold text-lg">
+          <span>Total:</span>
+          <span id="totalCost">₦0</span>
+        </div>
+        <!-- give the button an ID so JS can disable it during submit -->
+        <button id="postJobBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl mt-4 font-bold transition" onclick="submitTask()">Post Job</button>
+      </div>
+    </div>
+</section>
 
 
 
