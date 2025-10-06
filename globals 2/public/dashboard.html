@@ -1350,17 +1350,16 @@
 
 
 	
+
+
 <section id="afffiliateJobFormSection" class="tab-section hidden">
-
-
-<button onclick="activateTab('dashboard')" 
-    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-    </svg>
-    Back
-  </button>
-	
+  <button onclick="activateTab('dashboard')" 
+      class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      Back
+    </button>
 
   <div class="max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow-xl space-y-6">
     <h2 class="text-2xl font-bold text-center text-gray-800">Submit an Affiliate Campaign</h2>
@@ -1399,78 +1398,80 @@
     <div>
       <label class="block text-sm font-semibold mb-1">Proof Required</label>
       <textarea id="proofRequired" class="w-full p-2 border rounded-lg" placeholder="What proof should workers submit?"></textarea>
-	</div>  
-	  
-      <label for="affiliateProofFileCount" class="block mt-4 text-sm font-medium text-gray-700">
-  How many proof uploads should workers submit?
-</label>
-<select id="affiliateProofFileCount" class="w-full p-2 border border-gray-300 rounded-lg mt-1">
-  <option value="1">Require 1 proof upload</option>
-  <option value="2">Require 2 proof uploads</option>
-  <option value="3">Require 3 proof uploads</option>
-</select>
-    
+    </div>
+
+    <!-- Proof file count -->
+    <label for="affiliateProofFileCount" class="block mt-4 text-sm font-medium text-gray-700">
+      How many proof uploads should workers submit?
+    </label>
+    <select id="affiliateProofFileCount" class="w-full p-2 border border-gray-300 rounded-lg mt-1">
+      <option value="1">Require 1 proof upload</option>
+      <option value="2">Require 2 proof uploads</option>
+      <option value="3">Require 3 proof uploads</option>
+    </select>
 
     <!-- 6. Number of Workers -->
     <div>
       <label class="block text-sm font-semibold mb-1">Number of Workers</label>
-       <input id="numWorkers" type="number" class="w-full p-2 border rounded-lg" placeholder="Minimum 20 workers" min="20" oninput="updateAffiliateJobTotal()">
+      <input id="numWorkers" type="number" class="w-full p-2 border rounded-lg" placeholder="Minimum 20 workers" min="20" oninput="updateAffiliateJobTotal()">
+      <p id="affiliateCountWarning" class="text-sm text-red-600 hidden mt-1">Minimum number of workers is 20.</p>
     </div>
-		 
+
     <!-- 7. Worker Pay -->
     <div>
       <label class="block text-sm font-semibold mb-1">Amount to Pay Each Worker (₦)</label>
       <input id="workerPay" type="number" class="w-full p-2 border rounded-lg" placeholder="Minimum ₦100" min="100" oninput="updateAffiliateJobTotal()">
-	</div>
-		
-    <!-- 8. campaign logo-->
-    <div>
-
-      
-      <style>
-.upload-blue {
-  display: inline-block;
-  background: #008dce; /* blue */
-  color: #fff;
-  padding: 10px 14px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  box-shadow: 0 6px 18px rgba(14, 165, 233, 0.16);
-}
-.upload-blue:hover {
-  opacity: 0.95;
-}
-.label-upload input[type="file"] {
-  display: none;
-}
-</style>
-
-<!-- Upload Button -->
-<label for="campaignLogoFile" class="upload-blue label-upload">
-  Upload campaign logo
-  <input id="campaignLogoFile" type="file" accept="image/*" />
-</label>
-
-
+      <p id="affiliatePayWarning" class="text-sm text-red-600 hidden mt-1">Minimum worker pay is ₦100.</p>
     </div>
 
-    <!-- 10. Approval Fee Note -->
+    <!-- 8. Campaign logo (required) - premium-styled upload box -->
+    <div>
+      <style>
+        .upload-premium {
+          display: block;
+          border: 2px dashed rgba(255,183,77,0.75);
+          background: linear-gradient(180deg, rgba(255,247,230,0.6), rgba(255,244,230,0.35));
+          padding: 14px;
+          border-radius: 12px;
+          text-align: center;
+          cursor: pointer;
+          font-weight: 700;
+          color: #8a4b00;
+          box-shadow: 0 8px 24px rgba(250, 200, 120, 0.12);
+        }
+        .upload-premium small { display:block; margin-top:6px; font-weight:600; color:#6b4a1d; }
+        .upload-premium input[type="file"] { display:none; }
+        .upload-premium:hover { transform: translateY(-2px); transition: all .15s ease; }
+      </style>
+
+      <label for="campaignLogoFile" class="upload-premium">
+        Upload campaign logo (required)
+        <small>PNG/JPG — recommended 300×300</small>
+        <input id="campaignLogoFile" type="file" accept="image/*" />
+      </label>
+      <p id="affiliateLogoWarning" class="text-sm text-red-600 hidden mt-1">Campaign logo is required.</p>
+    </div>
+
+    <!-- Approval Fee Note -->
     <div class="text-sm text-gray-700">
       Note: A fixed ₦300 approval fee applies to every campaign.
     </div>
 
-    <!-- 11. Total + Post Job -->
+    <!-- Total + Post Job -->
     <div class="mt-4">
       <div class="flex justify-between items-center font-semibold text-lg">
         <span>Total:</span>
         <span id="affiliateJobTotal">₦0</span>
       </div>
-      <button class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl mt-4 font-bold transition" onclick="submitAffiliateJob()">Post Job</button>
+      <button id="postAffiliateBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl mt-4 font-bold transition" onclick="submitAffiliateJob()">Post Job</button>
     </div>
   </div>
 </section>
 
+
+
+
+		
 
 
 
