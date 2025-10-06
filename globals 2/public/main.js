@@ -3230,48 +3230,49 @@ function showTapSection(tab) {
    
 
 /* ====== Safe Balance Listener (no imports, no side effects) ====== */
+
+
+
+
+
+
 (function (w, d) {
-  // If already running (e.g., script included twice), stop the old one cleanly.
+  // prevent double init
   if (w.__balanceCtrl && typeof w.__balanceCtrl.stop === "function") {
     w.__balanceCtrl.stop();
   }
 
+  // small helpers
   function fmtNaira(n) {
-    var v = Number(n) || 0;
-    return "₦" + v.toLocaleString();
+    n = Number(n) || 0;
+    return "₦" + n.toLocaleString();
   }
-
   function coerceNumber(val) {
     if (val == null) return 0;
     if (typeof val === "number") return isFinite(val) ? val : 0;
-    // strip commas/spaces/naira symbol if string
     var s = String(val).replace(/[₦,\s]/g, "");
     var n = Number(s);
     return isFinite(n) ? n : 0;
   }
-
   function isVisible(el) {
     if (!el || !d.contains(el)) return false;
-    // visible if it has a box on screen
     return el.getClientRects().length > 0 && !(d.hidden);
   }
 
+  // animateNumber (cancellable)
   function animateNumber(el, from, to, duration) {
-    // If hidden or duration tiny, just set directly (prevents layout churn)
+    if (!el) return;
     if (!isVisible(el) || duration <= 0) {
       el.textContent = fmtNaira(to);
       return;
     }
-    // Cancel any previous animation on this element
     if (el.__rafId) cancelAnimationFrame(el.__rafId);
-
     var start = performance.now();
     var diff = to - from;
     var D = Math.max(200, duration || 800);
 
     function step(t) {
       var p = Math.min((t - start) / D, 1);
-      // ease-out cubic
       var eased = 1 - Math.pow(1 - p, 3);
       var val = Math.round(from + diff * eased);
       el.textContent = fmtNaira(val);
@@ -3284,18 +3285,20 @@ function showTapSection(tab) {
     el.__rafId = requestAnimationFrame(step);
   }
 
-  // Controller to manage lifecycle safely
+  // controller
   var ctrl = {
     auth: null,
     db: null,
     unsubUser: null,
     balanceEl: null,
-    currentValue: 0,
+    currentValue: 0,       // numeric: latest known balance from Firebase
+    lastShownValue: 0,     // numeric: last numeric value that was displayed (used for animation-from)
     started: false,
     observer: null,
+    isHidden: JSON.parse(localStorage.getItem('balanceHidden') || "false"),
 
     findEl: function () {
-      return d.getElementById("balance"); // <- your element ID
+      return d.getElementById("balance");
     },
 
     attachEl: function () {
@@ -3308,10 +3311,25 @@ function showTapSection(tab) {
       }
       this.balanceEl = el;
       if (el) {
-        // seed current from DOM (number if already rendered)
+        // seed currentValue from data-value or DOM text
         var seed = coerceNumber(el.dataset.value || el.textContent);
         this.currentValue = seed;
-        el.textContent = fmtNaira(seed);
+        this.lastShownValue = seed;
+        // set element text to a formatted seed (but respect hidden state)
+        if (this.isHidden) {
+          el.textContent = "₦****";
+        } else {
+          el.textContent = fmtNaira(seed);
+        }
+      }
+      // attach toggle button listener (if present)
+      var toggleBtn = d.getElementById("toggleBalanceBtn");
+      if (toggleBtn && !toggleBtn.__attached) {
+        var self = this;
+        toggleBtn.addEventListener('click', function () {
+          self.toggleHidden();
+        });
+        toggleBtn.__attached = true;
       }
     },
 
@@ -3338,6 +3356,7 @@ function showTapSection(tab) {
       setTimeout(this.waitForFirebase.bind(this, cb, tries + 1), 250);
     },
 
+    // core start
     start: function () {
       if (this.started) return;
       this.started = true;
@@ -3356,10 +3375,13 @@ function showTapSection(tab) {
         }
 
         self.auth.onAuthStateChanged(function (user) {
-          // clean previous doc listener
           if (self.unsubUser) { self.unsubUser(); self.unsubUser = null; }
 
-          if (!user) return;
+          if (!user) {
+            // clear UI if needed
+            // keep last currentValue but hide UI
+            return;
+          }
 
           var ref = self.db.collection("users").doc(user.uid);
           self.unsubUser = ref.onSnapshot(function (snap) {
@@ -3367,31 +3389,83 @@ function showTapSection(tab) {
             var next = coerceNumber(snap.data().balance);
             if (!isFinite(next)) return;
 
-            // If element missing, just cache and wait
+            // always store numeric value on dataset for other scripts
+            if (self.balanceEl) self.balanceEl.dataset.value = String(next);
+
+            // If element missing, cache value and wait
             if (!self.balanceEl) {
               self.currentValue = next;
               return;
             }
 
-            // Avoid re-animating same value
+            // If value same, do nothing
             if (next === self.currentValue) return;
 
-            // Store numeric value on element (helpful if DOM replaces it later)
-            self.balanceEl.dataset.value = String(next);
-
-            // Animate only when visible, else set silently
-            if (isVisible(self.balanceEl)) {
-              animateNumber(self.balanceEl, self.currentValue, next, 800);
-            } else {
-              self.balanceEl.textContent = fmtNaira(next);
-            }
-
+            // update currentValue (always)
+            var oldValue = self.currentValue;
             self.currentValue = next;
+
+            // If currently hidden -> do not animate visible change; just set masked text
+            if (self.isHidden) {
+              // update stored lastShownValue so when unhidden we animate correctly
+              self.lastShownValue = next;
+              self.balanceEl.textContent = "₦****";
+            } else {
+              // visible: animate from lastShownValue (or oldValue) -> next
+              var from = self.lastShownValue || oldValue || 0;
+              animateNumber(self.balanceEl, from, next, 700);
+              self.lastShownValue = next;
+            }
           }, function (err) {
             console.error("[balance] onSnapshot error:", err);
           });
         });
       });
+    },
+
+    // toggle hidden state
+    toggleHidden: function () {
+      this.isHidden = !this.isHidden;
+      localStorage.setItem('balanceHidden', JSON.stringify(this.isHidden));
+      // re-render element according to new state
+      if (!this.balanceEl) return;
+      if (this.isHidden) {
+        // hide immediately
+        this.balanceEl.textContent = "₦****";
+      } else {
+        // show: animate from lastShownValue (may equal currentValue already)
+        var from = this.lastShownValue || 0;
+        var to = this.currentValue || 0;
+        animateNumber(this.balanceEl, from, to, 700);
+        this.lastShownValue = to;
+      }
+      // update toggle icon (if present)
+      var eye = d.getElementById('eyeIcon');
+      if (eye) {
+        if (this.isHidden) {
+          eye.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.269-2.943-9.543-7a10.05 10.05 0 012.037-3.368m3.226-2.335A9.953 9.953 0 0112 5c4.478 0 8.269 2.943 9.543 7a10.03 10.03 0 01-4.107 5.067M3 3l18 18"/>';
+        } else {
+          eye.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/><circle cx="12" cy="12" r="3"/>';
+        }
+      }
+      // update aria-pressed
+      var tbtn = d.getElementById('toggleBalanceBtn');
+      if (tbtn) tbtn.setAttribute('aria-pressed', this.isHidden ? 'true' : 'false');
+    },
+
+    // public setter (useful if you want to set value manually)
+    setBalance: function (amount) {
+      var n = coerceNumber(amount);
+      this.currentValue = n;
+      this.lastShownValue = n;
+      if (this.balanceEl) {
+        this.balanceEl.dataset.value = String(n);
+        if (this.isHidden) {
+          this.balanceEl.textContent = "₦****";
+        } else {
+          this.balanceEl.textContent = fmtNaira(n);
+        }
+      }
     },
 
     stop: function () {
@@ -3405,19 +3479,32 @@ function showTapSection(tab) {
     }
   };
 
-  // expose for diagnostics / hot-reload safety
+  // expose controller
   w.__balanceCtrl = ctrl;
 
-  // Start when DOM ready (prevents element-not-found issues)
-  if (d.readyState === "loading") {
-    d.addEventListener("DOMContentLoaded", function () { ctrl.start(); }, { once: true });
-  } else {
+  // init
+  function boot() {
+    ctrl.attachEl();
     ctrl.start();
+    // ensure toggle button shows correct icon for startup state
+    ctrl.toggleHidden();           // toggleHidden flips state, so flip twice to re-render correctly
+    ctrl.toggleHidden();
+    // expose convenience functions
+    w.toggleBalance = function () { ctrl.toggleHidden(); };
+    w.setBalance = function (amt) { ctrl.setBalance(amt); };
   }
 
-  // Clean up on unload
+  if (d.readyState === "loading") {
+    d.addEventListener("DOMContentLoaded", boot, { once: true });
+  } else {
+    boot();
+  }
+
+  // cleanup
   w.addEventListener("beforeunload", function () { ctrl.stop(); });
+
 })(window, document);
+
 
 
 
