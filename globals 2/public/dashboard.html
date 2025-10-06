@@ -497,15 +497,15 @@
 
 <!-- 💰 Wallet Balance Card -->
 
-	<!-- Wallet Card (fixed, minimal verified badge, robust toggle) -->
+<!-- ===== Wallet Card (subtle verified, eye toggle next to balance, small gap) ===== -->
 <div class="w-full max-w-xs mx-auto mt-4 relative">
   <div class="rounded-3xl shadow-2xl overflow-hidden bg-gradient-to-br from-indigo-900 via-indigo-800 to-indigo-700 p-[1px]">
-    <div class="rounded-3xl bg-indigo-950/80 backdrop-blur-xl p-5 text-indigo-50 ring-1 ring-indigo-700/40 shadow-inner">
+    <div class="rounded-3xl bg-indigo-950/80 backdrop-blur-lg p-5 text-indigo-50 ring-1 ring-indigo-700/40 shadow-inner">
 
       <!-- Header Row -->
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <!-- ✅ Subtle Verified Badge -->
+          <!-- subtle verified badge -->
           <span class="inline-flex items-center justify-center w-5 h-5 bg-green-500 rounded-full">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
@@ -515,7 +515,7 @@
         </div>
 
         <!-- + Add Money -->
-        <button onclick="switchTab('depositSection')" 
+        <button onclick="switchTab('depositSection')"
           class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-xs font-bold py-1 px-3 rounded-full transition-all duration-300 shadow-md">
           + Add Money
         </button>
@@ -523,135 +523,24 @@
 
       <!-- Balance Row: balance first, then eye toggle (side-by-side) -->
       <div class="flex items-center gap-3 mt-2">
-        <p id="balance" class="text-2xl font-extrabold tracking-tight" data-raw="">₦0</p>
+        <p id="balance" class="text-2xl font-extrabold tracking-tight" data-value="0">₦0</p>
 
-        <button id="toggleBalanceBtn" aria-pressed="false" title="Show/hide balance" 
+        <button id="toggleBalanceBtn" aria-pressed="false" title="Show/hide balance"
                 class="text-indigo-300 hover:text-white transition-colors duration-200 p-1 rounded">
-          <!-- svg inside will be replaced by JS -->
-          <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" fill="none" 
-               viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-            <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5
-                     c4.477 0 8.268 2.943 9.542 7
-                     -1.274 4.057-5.065 7-9.542 7
-                     -4.477 0-8.268-2.943-9.542-7z" />
-            <circle cx="12" cy="12" r="3" />
+          <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" fill="none"
+               viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5" aria-hidden="true">
+            <!-- will be replaced by JS -->
           </svg>
         </button>
       </div>
+
     </div>
   </div>
 </div>
 
-<script>
-  (function () {
-    // internal state
-    let realBalance = 0; // numeric value (in kobo/NGN integer)
-    let isBalanceHidden = JSON.parse(localStorage.getItem("balanceHidden")) ?? false;
-
-    // DOM refs
-    const balanceEl = document.getElementById("balance");
-    const toggleBtn = document.getElementById("toggleBalanceBtn");
-    const eyeIcon = document.getElementById("eyeIcon");
-
-    // helper to format number as Naira
-    function formatNaira(amount) {
-      // ensure integer input
-      const n = Number(amount) || 0;
-      return "₦" + n.toLocaleString();
-    }
-
-    // render the eye icon (show/hide)
-    function renderEyeIcon(hidden) {
-      if (hidden) {
-        // eye-off icon (hidden)
-        eyeIcon.innerHTML = `
-          <path stroke-linecap="round" stroke-linejoin="round"
-                d="M13.875 18.825A10.05 10.05 0 0112 19
-                c-4.478 0-8.269-2.943-9.543-7
-                a10.05 10.05 0 012.037-3.368m3.226-2.335
-                A9.953 9.953 0 0112 5c4.478 0 8.269 2.943
-                9.543 7a10.03 10.03 0 01-4.107 5.067M3 3l18 18"/>`;
-      } else {
-        // eye icon (visible)
-        eyeIcon.innerHTML = `
-          <path stroke-linecap="round" stroke-linejoin="round"
-                d="M2.458 12C3.732 7.943 7.523 5 12 5
-                c4.477 0 8.268 2.943 9.542 7
-                -1.274 4.057-5.065 7-9.542 7
-                -4.477 0-8.268-2.943-9.542-7z" />
-          <circle cx="12" cy="12" r="3" />`;
-      }
-    }
-
-    // render balance with a tiny fade
-    function renderBalance() {
-      // quick fade out -> update -> fade in
-      balanceEl.style.transition = "opacity 140ms ease";
-      balanceEl.style.opacity = "0";
-      setTimeout(() => {
-        if (isBalanceHidden) {
-          balanceEl.textContent = "₦****";
-        } else {
-          balanceEl.textContent = formatNaira(realBalance);
-        }
-        balanceEl.style.opacity = "1";
-      }, 140);
-
-      // update aria-pressed and icon
-      toggleBtn.setAttribute("aria-pressed", isBalanceHidden ? "true" : "false");
-      renderEyeIcon(isBalanceHidden);
-    }
-
-    // public setter for balance (call this after Firebase fetch)
-    function setBalance(amount) {
-      // normalize numeric
-      const n = Number(amount) || 0;
-      realBalance = Math.round(n); // keep integer
-      // store raw value on the element so other scripts can read if needed
-      balanceEl.dataset.raw = String(realBalance);
-      renderBalance();
-    }
-
-    function toggleBalance() {
-      isBalanceHidden = !isBalanceHidden;
-      localStorage.setItem("balanceHidden", JSON.stringify(isBalanceHidden));
-      renderBalance();
-    }
-
-    // init: try to read any pre-rendered value from DOM or fallback to 0
-    function init() {
-      // if page server-side injected a number into #balance (like "₦12,800" or "12800"), parse it
-      const currentText = (balanceEl.textContent || "").trim();
-      const digits = currentText.replace(/[^\d]/g, "");
-      if (digits.length > 0 && Number(digits) > 0) {
-        realBalance = Number(digits);
-      } else {
-        // try dataset raw
-        const ds = balanceEl.dataset.raw;
-        if (ds && !isNaN(Number(ds))) realBalance = Number(ds);
-      }
-
-      // attach listener
-      toggleBtn.addEventListener("click", toggleBalance);
-
-      // initial render
-      renderBalance();
-
-      // expose setter globally so your Firebase callback can call window.setBalance(...)
-      window.setBalance = setBalance;
-    }
-
-    // run init when DOM ready
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", init);
-    } else {
-      init();
-    }
-  })();
-</script>
 
 
+	
 
 	
 
