@@ -657,18 +657,18 @@
 <!-- Drawer -->
 <!-- Optimized Drawer (replace your old drawer HTML with this) -->
 <!-- Drawer -->
-<div id="servicesDrawer" 
-     class="fixed inset-0 hidden z-50 transition-opacity duration-300 ease-out">
-  
-  <!-- Background Overlay -->
-  <div id="drawerOverlay"
-       onclick="closeServicesDrawer()"
-       class="absolute inset-0 bg-black/50 backdrop-blur-[2px] opacity-0 transition-opacity duration-300 ease-out"></div>
 
-  <!-- Drawer Body -->
-  <div id="drawerPanel"
-       class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-xl translate-y-full transition-transform duration-300 ease-out">
-    
+<!-- Drawer Animations -->
+
+
+
+
+<!-- Drawer -->
+<div id="servicesDrawer" 
+     class="fixed inset-0 bg-black/40 hidden z-50">
+  <div onclick="closeServicesDrawer()" class="absolute inset-0"></div>
+  
+  <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-xl animate-slideUp">
     <!-- Top Close Line -->
     <div class="w-full flex justify-center py-3 cursor-pointer" onclick="closeServicesDrawer()">
       <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
@@ -678,40 +678,60 @@
     <div class="grid grid-cols-4 gap-6 px-6 pb-8">
 
       <!-- Airtime -->
-      <div onclick="airtimeOpen()" class="flex flex-col items-center cursor-pointer group">
+      <div onclick="airtimeOpen()" 
+           class="flex flex-col items-center cursor-pointer group">
         <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
-                    bg-white border border-gray-100 shadow-md 
-                    group-hover:shadow-lg group-hover:scale-110 transition-all duration-300">
+                    bg-white border border-gray-100
+                    shadow-md group-hover:shadow-lg 
+                    group-hover:scale-110 transition-all duration-300">
           <img src="AIRTIME1.jpg" class="w-6 h-6 object-contain" alt="Airtime">
         </div>
         <p class="mt-2 text-sm font-semibold text-blue-900">Airtime</p>
       </div>
 
       <!-- Data -->
-      <div onclick="dataOpen()" class="flex flex-col items-center cursor-pointer group">
+      <div onclick="dataOpen()" 
+           class="flex flex-col items-center cursor-pointer group">
         <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
-                    bg-white border border-gray-100 shadow-md 
-                    group-hover:shadow-lg group-hover:scale-110 transition-all duration-300">
+                    bg-white border border-gray-100
+                    shadow-md group-hover:shadow-lg 
+                    group-hover:scale-110 transition-all duration-300">
           <img src="DATA1.jpg" class="w-6 h-6 object-contain" alt="Data">
         </div>
         <p class="mt-2 text-sm font-semibold text-blue-900">Data</p>
       </div>
 
       <!-- Electricity -->
-      <div onclick="activateTab('electricity-screen')" class="flex flex-col items-center cursor-pointer group">
+      <div onclick="activateTab('electricity-screen')" 
+           class="flex flex-col items-center cursor-pointer group">
         <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
-                    bg-white border border-gray-100 shadow-md 
-                    group-hover:shadow-lg group-hover:scale-110 transition-all duration-300">
+                    bg-white border border-gray-100
+                    shadow-md group-hover:shadow-lg 
+                    group-hover:scale-110 transition-all duration-300">
           <img src="ELECTRICITY1.jpg" class="w-6 h-6 object-contain" alt="Electricity">
         </div>
         <p class="mt-2 text-sm font-semibold text-blue-900">Electricity</p>
       </div>
 
-      <!-- TV -->
-      <div onclick="activateTab('tv-screen')" class="flex flex-col items-center cursor-pointer group">
+      <!-- Betting -->
+      <div onclick="activateTab('betting-screen')" 
+           class="flex flex-col items-center cursor-pointer group">
         <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
-                    bg-white border border-gray-100 shadow-md 
-                    group-hover:shadow-lg group-hover:scale-110 transition-all duration-300">
+                    bg-white border border-gray-100
+                    shadow-md group-hover:shadow-lg 
+                    group-hover:scale-110 transition-all duration-300">
+          <img src="BETTING1.jpg" class="w-6 h-6 object-contain" alt="Betting">
+        </div>
+        <p class="mt-2 text-sm font-semibold text-blue-900">Betting</p>
+      </div>
+
+      <!-- TV -->
+      <div onclick="activateTab('tv-screen')" 
+           class="flex flex-col items-center cursor-pointer group">
+        <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
+                    bg-white border border-gray-100
+                    shadow-md group-hover:shadow-lg 
+                    group-hover:scale-110 transition-all duration-300">
           <img src="TV1.jpg" class="w-6 h-6 object-contain" alt="TV">
         </div>
         <p class="mt-2 text-sm font-semibold text-blue-900">TV</p>
@@ -721,8 +741,8 @@
   </div>
 </div>
 
-<!-- Drawer Animations -->
 
+	
 	<style>
 		
 .drawer-panel { transform: translateY(100%); }
