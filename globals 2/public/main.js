@@ -4293,6 +4293,39 @@ async function processReferralCreditTx(referredUserDocId, referrerUid) {
     if (p) p.addEventListener("input", updateAffiliateJobTotal);
   })();
 
+
+// === Campaign Logo Upload Handling ===
+document.getElementById("campaignLogoFile").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  const statusEl = document.getElementById("campaignLogoStatus");
+  if (!file) return;
+
+  // Reset
+  statusEl.classList.remove("hidden");
+  statusEl.style.color = "#2563eb";
+  statusEl.innerText = "⏳ Uploading... please wait";
+
+  try {
+    // Upload to Cloudinary
+    const uploadedURL = await uploadToCloudinary(file);
+
+    // Show success + URL
+    statusEl.style.color = "#059669"; // green
+    statusEl.innerHTML = `
+      ✅ Upload Successful!<br>
+      <span class="text-xs text-gray-700 break-all">${uploadedURL}</span>
+    `;
+
+    // Store URL on element dataset for later use in submitAffiliateJob
+    e.target.dataset.uploadedUrl = uploadedURL;
+  } catch (err) {
+    console.error("Upload failed:", err);
+    statusEl.style.color = "#dc2626"; // red
+    statusEl.innerText = "❌ Upload failed. Try again.";
+  }
+});
+
+
   // ---- submitAffiliateJob (single-submit safe, required logo, atomic balance update) ----
   async function submitAffiliateJob() {
     if (isSubmittingAff) return;
@@ -4369,23 +4402,14 @@ async function processReferralCreditTx(referredUserDocId, referrerUid) {
 
       const total = (numWorkers * workerPay) + AFF_COMPANY_FEE;
 
-      // upload logo if uploader exists
-      let campaignLogoURL = "";
-      if (logoFile) {
-        try {
-          if (typeof uploadToCloudinary !== "function") {
-            // uploader missing — warn in console but proceed (you can make the uploader mandatory server-side)
-            console.warn("uploadToCloudinary not found. Logo will not be uploaded to remote storage.");
-            campaignLogoURL = "";
-          } else {
-            campaignLogoURL = await uploadToCloudinary(logoFile);
-          }
-        } catch (err) {
-          console.error("Logo upload failed:", err);
-          alert("❌ Campaign logo upload failed. Try again.");
-          return;
-        }
-      }
+      // ✅ Use already-uploaded URL from the file input
+const logoInput = document.getElementById("campaignLogoFile");
+let campaignLogoURL = logoInput?.dataset?.uploadedUrl || "";
+
+if (!campaignLogoURL) {
+  alert("⚠️ Please upload a campaign logo before submitting.");
+  return;
+}
 
       const jobData = {
         jobType: "affiliate",
