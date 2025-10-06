@@ -774,85 +774,100 @@
 
 
 <!-- ✅ 2025 Upgraded Available Tasks Section -->
-<div id="tasks" class="max-w-6xl mx-auto mt-12 px-6">
-  <!-- Title -->
-  <h2 class="text-2xl font-bold text-gray-900 mb-8 tracking-tight">
-    Available Tasks
-  </h2>
-
-  <!-- Grid Layout -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-
-    <!-- 🔥 High-Paying Affiliate Tasks -->
-    <a href="#affiliateSection" onclick="switchTab('aff2_root')" 
-       class="task-box group bg-white/80 backdrop-blur-xl border border-gray-100 rounded-3xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 hover:scale-[1.02] relative">
-      
-      <!-- HOT Badge -->
-      <!-- HOT Badge -->
-<div class="absolute top-2 left-2 bg-gradient-to-r from-rose-500 via-red-500 to-orange-400
-            text-white text-[10px] font-bold px-2 py-[3px] rounded-full 
-            shadow-md backdrop-blur-sm tracking-tight
-            ring-1 ring-white/20">
-  HOT
-</div>
-
-      <div class="flex items-center gap-3 mb-3">
-        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-600 text-white shadow-inner">
-          <i data-lucide="zap" class="w-5 h-5"></i>
-        </div>
-        <h3 class="text-lg font-semibold text-gray-900">Affiliate Tasks</h3>
-      </div>
-
-      <p class="text-sm text-gray-600">Complete affiliate jobs for high payouts.</p>
-    </a>
-
-    <!-- 📲 Install & Earn Bonus -->
-    <a href="#app-install-tasks" onclick="activateTab('taskSection')" 
-       class="task-box group bg-white/80 backdrop-blur-xl border border-gray-100 rounded-3xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 hover:scale-[1.02]">
-      
-      <div class="flex items-center gap-3 mb-3">
-        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-inner">
-          <i data-lucide="smartphone" class="w-5 h-5"></i>
-        </div>
-        <h3 class="text-lg font-semibold text-gray-900">Task Job</h3>
-      </div>
-
-      <p class="text-sm text-gray-600">Do simple jobs & earn instantly.</p>
-    </a>
-
-    <!-- 🎓 Spin & Earn -->
-    <a href="#buy-earn" onclick="activateTab('daily-spin-section')" 
-       class="task-box group bg-white/80 backdrop-blur-xl border border-gray-100 rounded-3xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 hover:scale-[1.02]">
-      
-      <div class="flex items-center gap-3 mb-3">
-        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-pink-400 to-pink-600 text-white shadow-inner">
-          <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
-        </div>
-        <h3 class="text-lg font-semibold text-gray-900">Spin & Earn</h3>
-      </div>
-
-      <p class="text-sm text-gray-600">Spin the wheel daily for rewards.</p>
-    </a>
-
-    <!-- 🎮 Referrals -->
-    <a href="#team" onclick="activateTab('team')" 
-       class="task-box group bg-white/80 backdrop-blur-xl border border-gray-100 rounded-3xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 hover:scale-[1.02]">
-      
-      <div class="flex items-center gap-3 mb-3">
-        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-red-400 to-red-600 text-white shadow-inner">
-          <i data-lucide="users" class="w-5 h-5"></i>
-        </div>
-        <h3 class="text-lg font-semibold text-gray-900">Refer & Earn</h3>
-      </div>
-
-      <p class="text-sm text-gray-600">Invite friends & get referral bonuses.</p>
-    </a>
-
+<!-- ================== TASKS SECTION (Refined Professional Layout) ================== -->
+<section id="tasks" class="relative w-full py-14 bg-gradient-to-br from-indigo-50 via-white to-indigo-100 overflow-hidden">
+  <!-- Subtle background glow -->
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute -top-32 -left-20 w-72 h-72 bg-indigo-300/20 blur-3xl rounded-full"></div>
+    <div class="absolute bottom-0 right-0 w-96 h-96 bg-purple-200/20 blur-3xl rounded-full"></div>
   </div>
-</div>
+
+  <!-- Content Container -->
+  <div class="relative max-w-6xl mx-auto px-6">
+    <!-- Title -->
+    <div class="flex items-center justify-between mb-10">
+      <h2 class="text-3xl font-bold bg-gradient-to-r from-indigo-800 to-indigo-600 bg-clip-text text-transparent tracking-tight">
+        Available Tasks
+      </h2>
+      <div class="w-16 h-[3px] bg-gradient-to-r from-indigo-600 to-purple-400 rounded-full"></div>
+    </div>
+
+    <!-- Task Cards Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+
+      <!-- 🔥 Affiliate Tasks -->
+      <a href="#affiliateSection" onclick="switchTab('aff2_root')" 
+         class="relative group rounded-3xl overflow-hidden backdrop-blur-xl bg-white/70 border border-indigo-100 
+                p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_10px_35px_rgb(0,0,0,0.08)] 
+                transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]">
+        
+        <!-- Badge -->
+        <div class="absolute top-3 left-3 bg-gradient-to-r from-rose-500 via-red-500 to-orange-400
+                    text-white text-[10px] font-bold px-2 py-[3px] rounded-full shadow-md">
+          HOT
+        </div>
+
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-600 text-white shadow-inner">
+            <i data-lucide="zap" class="w-5 h-5"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900">Affiliate Tasks</h3>
+        </div>
+        <p class="text-sm text-gray-600">Complete affiliate jobs for high payouts.</p>
+      </a>
+
+      <!-- 📲 Task Job -->
+      <a href="#app-install-tasks" onclick="activateTab('taskSection')" 
+         class="relative group rounded-3xl overflow-hidden backdrop-blur-xl bg-white/70 border border-indigo-100 
+                p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_10px_35px_rgb(0,0,0,0.08)] 
+                transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]">
+        
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-inner">
+            <i data-lucide="smartphone" class="w-5 h-5"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900">Task Job</h3>
+        </div>
+        <p class="text-sm text-gray-600">Do simple jobs & earn instantly.</p>
+      </a>
+
+      <!-- 🎓 Spin & Earn -->
+      <a href="#buy-earn" onclick="activateTab('daily-spin-section')" 
+         class="relative group rounded-3xl overflow-hidden backdrop-blur-xl bg-white/70 border border-indigo-100 
+                p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_10px_35px_rgb(0,0,0,0.08)] 
+                transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]">
+        
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-pink-400 to-pink-600 text-white shadow-inner">
+            <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900">Spin & Earn</h3>
+        </div>
+        <p class="text-sm text-gray-600">Spin the wheel daily for rewards.</p>
+      </a>
+
+      <!-- 👥 Refer & Earn -->
+      <a href="#team" onclick="activateTab('team')" 
+         class="relative group rounded-3xl overflow-hidden backdrop-blur-xl bg-white/70 border border-indigo-100 
+                p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_10px_35px_rgb(0,0,0,0.08)] 
+                transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]">
+        
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-red-400 to-red-600 text-white shadow-inner">
+            <i data-lucide="users" class="w-5 h-5"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900">Refer & Earn</h3>
+        </div>
+        <p class="text-sm text-gray-600">Invite friends & get referral bonuses.</p>
+      </a>
+
+    </div>
+  </div>
+</section>
 
 <!-- ✅ Lucide Icons -->
 <script src="https://unpkg.com/lucide@latest"></script>
+<script>lucide.createIcons();</script>
 
 
 
