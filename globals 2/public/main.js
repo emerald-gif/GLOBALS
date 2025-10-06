@@ -5630,12 +5630,140 @@ window.loadBanks = loadBanks;
                                                                  // SERVICE FUNCTION  
 
 
-function openServicesDrawer() {
-  document.getElementById("servicesDrawer").classList.remove("hidden");
-}
-function closeServicesDrawer() {
-  document.getElementById("servicesDrawer").classList.add("hidden");
-}
+
+// Service FUNCTION FOR CARD
+
+window.addEventListener('load', () => {
+  const icons = ["AIRTIME1.jpg", "DATA1.jpg", "ELECTRICITY1.jpg", "TV1.jpg"];
+  icons.forEach(src => {
+    const img = new Image();
+    img.src = src;
+  });
+});
+
+
+
+
+
+
+
+
+// Optimized drawer JS FUNCTION 
+(function () {
+  const drawer = document.getElementById('servicesDrawer');
+  if (!drawer) return;
+
+  const backdrop = drawer.querySelector('[data-backdrop]');
+  const panel = drawer.querySelector('.drawer-panel');
+  const closeBtnArea = drawer.querySelector('[data-close]');
+  const serviceButtons = drawer.querySelectorAll('[data-action]');
+
+  // internal timers to stagger image loads
+  let _staggerTimers = [];
+
+  // open drawer
+  window.openServicesDrawer = function openServicesDrawer() {
+    // quick guard
+    if (!drawer.classList.contains('hidden')) return;
+
+    // show overlay
+    drawer.classList.remove('hidden');
+    drawer.setAttribute('aria-hidden', 'false');
+
+    // lock body scroll
+    document.body.style.overflow = 'hidden';
+
+    // small rAF to ensure the class transition fires
+    requestAnimationFrame(() => {
+      backdrop.classList.add('opacity-100');
+      panel.classList.add('open'); // we rely on CSS .open -> transform: translateY(0)
+      panel.style.transform = 'translateY(0)';
+    });
+
+    // load icons/images in a staggered way to avoid main-thread spikes
+    staggerLoadDrawerImages();
+  };
+
+  // close drawer
+  window.closeServicesDrawer = function closeServicesDrawer() {
+    if (drawer.classList.contains('hidden')) return;
+
+    // hide overlay with transition
+    backdrop.classList.remove('opacity-100');
+
+    // animate panel down
+    panel.classList.remove('open');
+    panel.style.transform = 'translateY(100%)';
+
+    // after animation completes, hide the wrapper and restore body scroll
+    const onEnd = () => {
+      drawer.classList.add('hidden');
+      drawer.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      panel.removeEventListener('transitionend', onEnd);
+      // clear any stagger timers and optionally unload images
+      clearStaggerTimers();
+      unloadDrawerImages(); // optional (saves memory / avoids background refs)
+    };
+    panel.addEventListener('transitionend', onEnd, { once: true });
+  };
+
+  // close when backdrop or handle clicked
+  backdrop.addEventListener('click', closeServicesDrawer);
+  if (closeBtnArea) closeBtnArea.addEventListener('click', closeServicesDrawer);
+
+  // delegate service buttons to actions (keeps event count low)
+  serviceButtons.forEach(btn => {
+    btn.addEventListener('click', (ev) => {
+      const action = btn.dataset.action;
+      // close first for snappy UX
+      closeServicesDrawer();
+      // small timeout to allow close animation, then call the action
+      setTimeout(() => {
+        // call existing functions by mapping - keep safe checks
+        if (action === 'airtime' && typeof airtimeOpen === 'function') airtimeOpen();
+        if (action === 'data' && typeof dataOpen === 'function') dataOpen();
+        if (action === 'electricity' && typeof activateTab === 'function') activateTab('electricity-screen');
+        if (action === 'betting' && typeof activateTab === 'function') activateTab('betting-screen');
+        if (action === 'tv' && typeof activateTab === 'function') activateTab('tv-screen');
+      }, 260); // slightly after panel transition
+    });
+  });
+
+  // ---------- lazy load / stagger helpers ----------
+  function staggerLoadDrawerImages() {
+    clearStaggerTimers();
+    const imgs = drawer.querySelectorAll('img.lazy[data-src]');
+    imgs.forEach((img, i) => {
+      // stagger by 60-90ms per image
+      const t = setTimeout(() => {
+        if (img.dataset.src && (!img.src || img.src.indexOf('data:') === 0)) {
+          img.src = img.dataset.src;
+        }
+      }, i * 70);
+      _staggerTimers.push(t);
+    });
+  }
+
+  function clearStaggerTimers() {
+    _staggerTimers.forEach(id => clearTimeout(id));
+    _staggerTimers = [];
+  }
+
+  function unloadDrawerImages() {
+    // remove src to free memory and avoid background decoding
+    const imgs = drawer.querySelectorAll('img.lazy');
+    imgs.forEach(img => {
+      try {
+        // keep data-src for next open, but remove live src
+        img.removeAttribute('src');
+      } catch (e) { /* noop */ }
+    });
+  }
+
+  // ensure panel CSS open state is applied via class too (for graceful degrade)
+  // CSS rule we rely on: .drawer-panel { transform: translateY(100%); } .drawer-panel.open { transform: translateY(0); }
+})();
 
 
 
