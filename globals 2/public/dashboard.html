@@ -1425,32 +1425,53 @@
     </div>
 
     <!-- 8. Campaign logo (required) - premium-styled upload box -->
-    <div>
-      <style>
-        .upload-premium {
-          display: block;
-          border: 2px dashed rgba(255,183,77,0.75);
-          background: linear-gradient(180deg, rgba(255,247,230,0.6), rgba(255,244,230,0.35));
-          padding: 14px;
-          border-radius: 12px;
-          text-align: center;
-          cursor: pointer;
-          font-weight: 700;
-          color: #8a4b00;
-          box-shadow: 0 8px 24px rgba(250, 200, 120, 0.12);
-        }
-        .upload-premium small { display:block; margin-top:6px; font-weight:600; color:#6b4a1d; }
-        .upload-premium input[type="file"] { display:none; }
-        .upload-premium:hover { transform: translateY(-2px); transition: all .15s ease; }
-      </style>
+    <!-- 8. Campaign Logo Upload -->
+<div>
+  <label class="block text-sm font-semibold mb-2">Campaign Logo <span class="text-red-500">*</span></label>
 
-      <label for="campaignLogoFile" class="upload-premium">
-        Upload campaign logo (required)
-        <small>PNG/JPG — recommended 300×300</small>
-        <input id="campaignLogoFile" type="file" accept="image/*" />
-      </label>
-      <p id="affiliateLogoWarning" class="text-sm text-red-600 hidden mt-1">Campaign logo is required.</p>
-    </div>
+  <style>
+    .upload-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(145deg, #f0f8ff, #e0f0ff);
+      border: 2px dashed #60a5fa;
+      border-radius: 14px;
+      padding: 24px;
+      text-align: center;
+      transition: all 0.3s ease;
+      box-shadow: 0 6px 22px rgba(59,130,246,0.15);
+    }
+    .upload-box:hover {
+      background: #eff6ff;
+      border-color: #3b82f6;
+      box-shadow: 0 8px 26px rgba(37,99,235,0.18);
+    }
+    .upload-box input[type="file"] {
+      display: none;
+    }
+    .upload-status {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: #2563eb;
+      word-break: break-all;
+      text-align: center;
+    }
+  </style>
+
+  <label for="campaignLogoFile" class="upload-box cursor-pointer" id="campaignLogoLabel">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-500 mb-2" fill="none" viewBox="0 0 24 24"
+      stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M3 15a4 4 0 014-4h10a4 4 0 014 4M12 12V4m0 8l3 3m-3-3l-3 3" />
+    </svg>
+    <span class="font-semibold text-blue-600">Click to Upload Campaign Logo</span>
+    <input id="campaignLogoFile" type="file" accept="image/*" required />
+  </label>
+
+  <div id="campaignLogoStatus" class="upload-status hidden"></div>
+</div>
 
     <!-- Approval Fee Note -->
     <div class="text-sm text-gray-700">
