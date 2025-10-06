@@ -4460,29 +4460,65 @@ if (!campaignLogoURL) {
   }
 
   // reset the affiliate form in-place (no reload)
-  function resetAffiliateForm() {
-    const root = document.getElementById("afffiliateJobFormSection") || document;
-    const fields = ['affiliateCategory','campaignTitle','workerInstructions','targetLink','proofRequired','numWorkers','workerPay'];
-    fields.forEach(id => {
-      const el = root.querySelector("#" + id) || document.getElementById(id);
-      if (!el) return;
-      if (el.tagName === "SELECT" || el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
-        el.value = "";
-      }
-    });
-    // reset proof select to 1
-    const proofSel = root.querySelector("#affiliateProofFileCount") || document.getElementById("affiliateProofFileCount");
-    if (proofSel) proofSel.value = "1";
-    // clear file input
-    const logo = root.querySelector("#campaignLogoFile") || document.getElementById("campaignLogoFile");
-    if (logo) logo.value = "";
-    // hide warnings
-    const warnIds = ['affiliateLogoWarning','affiliateCountWarning','affiliatePayWarning'];
-    warnIds.forEach(id => { const w = document.getElementById(id); if (w) w.classList.add("hidden"); });
-    // reset total
-    const totalDisplay = document.getElementById("affiliateJobTotal");
-    if (totalDisplay) totalDisplay.innerText = "₦0";
+  // reset the affiliate form in-place (no reload)
+function resetAffiliateForm() {
+  const root = document.getElementById("afffiliateJobFormSection") || document;
+
+  // clear simple fields
+  const fields = ['affiliateCategory','campaignTitle','workerInstructions','targetLink','proofRequired','numWorkers','workerPay'];
+  fields.forEach(id => {
+    const el = root.querySelector("#" + id) || document.getElementById(id);
+    if (!el) return;
+    if (el.tagName === "SELECT" || el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+      el.value = "";
+    }
+  });
+
+  // reset proof select to 1
+  const proofSel = root.querySelector("#affiliateProofFileCount") || document.getElementById("affiliateProofFileCount");
+  if (proofSel) proofSel.value = "1";
+
+  // clear file input AND remove uploaded URL stored in dataset
+  const logo = root.querySelector("#campaignLogoFile") || document.getElementById("campaignLogoFile");
+  if (logo) {
+    // clear selected file
+    try { logo.value = ""; } catch (e) { /* ignore */ }
+
+    // remove dataset property if present (so submit won't find an uploaded URL)
+    try {
+      if (logo.dataset && logo.dataset.uploadedUrl) delete logo.dataset.uploadedUrl;
+      // remove HTML attribute too (defensive)
+      logo.removeAttribute && logo.removeAttribute('data-uploaded-url');
+    } catch (e) { /* ignore */ }
   }
+
+  // hide & clear upload status message
+  const statusEl = root.querySelector("#campaignLogoStatus") || document.getElementById("campaignLogoStatus");
+  if (statusEl) {
+    statusEl.classList.add("hidden");
+    statusEl.innerText = "";
+    statusEl.style.color = "";
+  }
+
+  // hide warnings
+  const warnIds = ['affiliateLogoWarning','affiliateCountWarning','affiliatePayWarning'];
+  warnIds.forEach(id => {
+    const w = root.querySelector("#" + id) || document.getElementById(id);
+    if (w) w.classList.add("hidden");
+  });
+
+  // reset total display
+  const totalDisplay = root.querySelector("#affiliateJobTotal") || document.getElementById("affiliateJobTotal");
+  if (totalDisplay) totalDisplay.innerText = "₦0";
+
+  // (optional) ensure submit button is enabled and shows default text
+  const submitBtn = root.querySelector("#postAffiliateBtn") || document.getElementById("postAffiliateBtn");
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    // keep label consistent
+    submitBtn.textContent = "Post Job";
+  }
+}
 
 
 
