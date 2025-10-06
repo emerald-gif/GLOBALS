@@ -5004,7 +5004,28 @@ firebase.auth().onAuthStateChanged(async (user) => {
 // NOTIFICATION
 // ---------- Notifications JS (updated) ----------
 
+
+// ---------- Notifications JS (improved menu + clear all + UI upgrades) ----------
 let unsubscribeNotif = null; // holds the notifications listener
+let lastUnreadCount = 0;     // track unread count for UX/toasts
+
+
+
+// human friendly time-ago
+function timeAgo(date) {
+  if (!date) return '';
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 10) return 'Just now';
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days}d`;
+  return date.toLocaleDateString();
+}
 
 // Ensure the notification_user_state doc exists for the user (new users won't see old notifications)
 async function ensureUserState(uid) {
@@ -5012,12 +5033,10 @@ async function ensureUserState(uid) {
     const ref = db.collection('notification_user_state').doc(uid);
     const doc = await ref.get();
     if (!doc.exists) {
-      // create joinedAt + lastReadAt as serverTimestamp so new users start from "now"
       await ref.set({
         joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
         lastReadAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
-      // re-read so later reads get the server timestamp value
       return await ref.get();
     }
     return doc;
@@ -5035,24 +5054,20 @@ async function listenForNotifications(uid) {
     unsubscribeNotif = null;
   }
 
-  // make sure user's state exists before listening
   await ensureUserState(uid);
 
-  // attach realtime listener to notifications (most recent first)
   unsubscribeNotif = db.collection('notifications')
     .orderBy('timestamp', 'desc')
     .onSnapshot(async snapshot => {
       try {
-        // read the user's state
         const stateDoc = await db.collection('notification_user_state').doc(uid).get();
         const joinedAt = (stateDoc.exists && stateDoc.data().joinedAt)
           ? stateDoc.data().joinedAt.toDate()
-          : new Date(); // fallback = now
+          : new Date();
         const lastReadAt = (stateDoc.exists && stateDoc.data().lastReadAt)
           ? stateDoc.data().lastReadAt.toDate()
           : new Date(0);
 
-        // UI elements (may or may not exist depending on page)
         const notifDot = document.getElementById('notifDot');
         const notifPopup = document.getElementById('notifPopup');
         const notifMessage = document.getElementById('notifMessage');
@@ -5060,7 +5075,6 @@ async function listenForNotifications(uid) {
         const banner = document.getElementById('notifBanner');
         const bannerText = document.getElementById('notifBannerText');
 
-        // Count unread and render list
         let unreadCount = 0;
         if (notifList) notifList.innerHTML = '';
 
@@ -5069,32 +5083,43 @@ async function listenForNotifications(uid) {
           const ts = data.timestamp;
           const tsDate = ts ? ts.toDate() : null;
 
-          // 🚀 show only notifications created AFTER user joined
-          if (tsDate && tsDate <= joinedAt) {
-            return; // skip old notifications
-          }
+          // show only after user joined
+          if (tsDate && tsDate <= joinedAt) return;
 
           const isUnread = tsDate ? (tsDate > lastReadAt) : false;
           if (isUnread) unreadCount++;
 
-          // render into notifications list (notifications tab)
+          // render card
           if (notifList) {
-            const dateStr = tsDate ? tsDate.toLocaleString() : 'Just now';
+            const avatarText = escapeHtml((data.icon || (data.title || '').charAt(0) || '·').toString().toUpperCase());
+            const dateStr = tsDate ? timeAgo(tsDate) : 'Just now';
+
             const card = document.createElement('div');
-            card.className = `bg-white rounded-xl p-4 shadow-md border-l-4 ${isUnread ? 'border-blue-400' : 'border-gray-200'} animate-fade-in`;
+            card.className = `bg-white rounded-xl p-4 shadow-md border-l-4 ${isUnread ? 'border-blue-400' : 'border-gray-200'} flex gap-3 items-start animate-fade-in`;
             card.innerHTML = `
-              <p class="text-gray-800 font-semibold">${escapeHtml(data.title || 'No Title')}</p>
-              <p class="text-sm text-gray-600 mt-1">${escapeHtml(data.message || '')}</p>
-              <p class="text-xs text-gray-500 mt-2">${escapeHtml(dateStr)}</p>
+              <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center font-semibold text-sm text-gray-700">
+                ${avatarText}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="text-gray-800 font-semibold truncate">${escapeHtml(data.title || 'No Title')}</p>
+                    <p class="text-sm text-gray-600 mt-1 truncate">${escapeHtml(data.message || '')}</p>
+                  </div>
+                  <div class="flex-shrink-0 text-right ml-2">
+                    <p class="text-xs text-gray-400">${escapeHtml(dateStr)}</p>
+                  </div>
+                </div>
+              </div>
             `;
             notifList.appendChild(card);
           }
         });
 
+        lastUnreadCount = unreadCount;
+
         // Update red dot (nav)
-        if (notifDot) {
-          notifDot.classList.toggle('hidden', unreadCount === 0);
-        }
+        if (notifDot) notifDot.classList.toggle('hidden', unreadCount === 0);
 
         // Update popup (small blue popup under bell)
         if (notifPopup && notifMessage) {
@@ -5116,6 +5141,11 @@ async function listenForNotifications(uid) {
           }
         }
 
+        // If no notifications visible after filtering, show empty state
+        if (notifList && notifList.children.length === 0) {
+          notifList.innerHTML = `<p class="text-gray-400 text-center py-8">No notifications yet.</p>`;
+        }
+
       } catch (err) {
         console.error("onSnapshot processing error:", err);
       }
@@ -5125,6 +5155,7 @@ async function listenForNotifications(uid) {
 }
 
 // Mark all notifications as read for this user (update lastReadAt)
+// (we keep original behaviour — just re-use it)
 async function markNotificationsAsRead(uid) {
   try {
     await db.collection('notification_user_state').doc(uid).set({
@@ -5138,34 +5169,19 @@ async function markNotificationsAsRead(uid) {
     if (notifDot) notifDot.classList.add('hidden');
     if (notifPopup) notifPopup.classList.add('hidden');
     if (banner) banner.classList.add('hidden');
+
+    // Optimistically mark items in the list as read (so UX feels snappy)
+    document.querySelectorAll('#notificationList > .border-blue-400').forEach(el => {
+      el.classList.remove('border-blue-400');
+      el.classList.add('border-gray-200');
+    });
   } catch (err) {
     console.error("markNotificationsAsRead error:", err);
+    throw err;
   }
 }
 
-// Close popup without marking as read
-function closeNotifPopup() {
-  const notifPopup = document.getElementById('notifPopup');
-  if (notifPopup) notifPopup.classList.add('hidden');
-}
-
-// Basic activateTab that won't break clicks — ensures tab switching works
-function activateTab(tabId) {
-  document.querySelectorAll('.tab-section').forEach(el => el.classList.add('hidden'));
-  const el = document.getElementById(tabId);
-  if (el) el.classList.remove('hidden');
-
-  // if opening the notifications tab, load / mark as read
-  if (tabId === 'notifications') {
-    const user = auth.currentUser;
-    if (user) {
-      markNotificationsAsRead(user.uid).catch(console.error);
-      // loadNotifications not required because the realtime listener already populates #notificationList
-    }
-  }
-}
-
-// OPTIONAL: on-demand load (one-time) if you need it elsewhere — fallback if realtime hasn't triggered
+// Optional: on-demand one-time loader (keeps behaviour but upgraded UI)
 async function loadNotificationsOnce() {
   try {
     const notifList = document.getElementById('notificationList');
@@ -5175,15 +5191,16 @@ async function loadNotificationsOnce() {
 
     snapshot.forEach(doc => {
       const data = doc.data();
-      const date = data.timestamp ? data.timestamp.toDate().toLocaleString() : 'Just now';
-      if (notifList) {
-        notifList.innerHTML += `
-          <div class="bg-white rounded-xl p-4 shadow-md border-l-4 border-blue-400 animate-fade-in">
-            <p class="text-gray-800 font-semibold">${escapeHtml(data.title || 'No Title')}</p>
-            <p class="text-sm text-gray-600">${escapeHtml(data.message || '')}</p>
-            <p class="text-xs text-gray-500 mt-1">${escapeHtml(date)}</p>
-          </div>`;
-      }
+      const tsDate = data.timestamp ? data.timestamp.toDate() : null;
+      const date = tsDate ? timeAgo(tsDate) : 'Just now';
+
+      const cardHtml = `
+        <div class="bg-white rounded-xl p-4 shadow-md border-l-4 border-blue-400 animate-fade-in">
+          <p class="text-gray-800 font-semibold">${escapeHtml(data.title || 'No Title')}</p>
+          <p class="text-sm text-gray-600">${escapeHtml(data.message || '')}</p>
+          <p class="text-xs text-gray-500 mt-2">${escapeHtml(date)}</p>
+        </div>`;
+      if (notifList) notifList.innerHTML += cardHtml;
     });
 
     if (notifList && snapshot.empty) notifList.innerHTML = `<p class="text-gray-400 text-center">No notifications yet.</p>`;
@@ -5194,37 +5211,117 @@ async function loadNotificationsOnce() {
   }
 }
 
-// Wire up click handling for the bell if element exists
+// Simple toast helper
+function showNotifToast(message, ms = 3000) {
+  const wrap = document.getElementById('notifToastWrap');
+  if (!wrap) return;
+  const t = document.createElement('div');
+  t.className = 'mb-2 rounded-lg px-4 py-2 shadow-md bg-gray-800 text-white text-sm';
+  t.textContent = message;
+  wrap.appendChild(t);
+  setTimeout(() => {
+    t.classList.add('opacity-0', 'transition', 'duration-300');
+    setTimeout(() => t.remove(), 300);
+  }, ms);
+}
+
+// Wire up menu + modal + clear logic
 document.addEventListener('DOMContentLoaded', () => {
-  const bell = document.getElementById('notifBell');
-  if (bell) {
-    bell.addEventListener('click', (e) => {
-      activateTab('notifications');
-      const user = auth.currentUser;
-      if (user) markNotificationsAsRead(user.uid).catch(console.error);
+  const menuBtn = document.getElementById('notifMenuBtn');
+  const menu = document.getElementById('notifMenu');
+  const closeMenuBtn = document.getElementById('closeMenuBtn');
+  const clearAllBtn = document.getElementById('clearAllBtn');
+  const confirmModal = document.getElementById('confirmClearModal');
+  const confirmBtn = document.getElementById('confirmClearBtn');
+  const cancelClearBtn = document.getElementById('cancelClearBtn');
+
+  if (menuBtn && menu) {
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isHidden = menu.classList.contains('hidden');
+      menu.classList.toggle('hidden', !isHidden);
+      menuBtn.setAttribute('aria-expanded', String(isHidden));
+    });
+
+    // close when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!menu.contains(e.target) && !menuBtn.contains(e.target)) {
+        menu.classList.add('hidden');
+        menuBtn.setAttribute('aria-expanded', 'false');
+      }
     });
   }
+
+  if (closeMenuBtn) closeMenuBtn.addEventListener('click', () => {
+    if (menu) menu.classList.add('hidden');
+  });
+
+  if (clearAllBtn) clearAllBtn.addEventListener('click', () => {
+    if (confirmModal) confirmModal.classList.remove('hidden');
+    if (menu) menu.classList.add('hidden');
+  });
+
+  if (cancelClearBtn) cancelClearBtn.addEventListener('click', () => {
+    if (confirmModal) confirmModal.classList.add('hidden');
+  });
+
+  if (confirmBtn) confirmBtn.addEventListener('click', async () => {
+    confirmBtn.disabled = true;
+    const user = auth.currentUser;
+    if (!user) {
+      showNotifToast('Please sign in to clear notifications');
+      confirmBtn.disabled = false;
+      return;
+    }
+    try {
+      await markNotificationsAsRead(user.uid);
+      showNotifToast(lastUnreadCount > 0 ? `Cleared ${lastUnreadCount} notification${lastUnreadCount > 1 ? 's' : ''}` : 'No notifications to clear');
+      lastUnreadCount = 0;
+      // close modal
+      if (confirmModal) confirmModal.classList.add('hidden');
+    } catch (err) {
+      showNotifToast('Failed to clear notifications');
+      console.error(err);
+    } finally {
+      confirmBtn.disabled = false;
+    }
+  });
+
+  // popup close (keeps your id)
   const closeBtn = document.getElementById('notifPopupClose');
-  if (closeBtn) closeBtn.addEventListener('click', closeNotifPopup);
+  if (closeBtn) closeBtn.addEventListener('click', () => {
+    const notifPopup = document.getElementById('notifPopup');
+    if (notifPopup) notifPopup.classList.add('hidden');
+  });
 });
 
-// Auth state: start/stop listeners
+// Auth state: start/stop listeners (keeps existing behaviour)
 auth.onAuthStateChanged(async user => {
   if (user) {
     try {
-      await ensureUserState(user.uid);   // make sure user state doc exists
-      listenForNotifications(user.uid);  // start realtime listener
+      await ensureUserState(user.uid);
+      listenForNotifications(user.uid);
     } catch (err) {
       console.error("Error initializing notifications for user:", err);
     }
   } else {
-    // cleanup
     if (unsubscribeNotif) {
       unsubscribeNotif();
       unsubscribeNotif = null;
     }
   }
 });
+
+
+
+
+
+
+
+
+
+
+
 
 
 
