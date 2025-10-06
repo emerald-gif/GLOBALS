@@ -493,36 +493,48 @@
 															   
 <div id="dashboard" class="tab-section">
   <!-- ✨ Upgraded Earnings Carousel (2025 Fintech Design) -->
-  <div class="w-full max-w-xs mx-auto mt-1 space-y-2 relative">
-  <!-- 🚀 Earnings Swiper -->
-  <div class="swiper earnings-swiper rounded-3xl shadow-2xl overflow-hidden bg-gradient-to-br from-indigo-900 via-indigo-800 to-indigo-700 p-1">
-    <div class="swiper-wrapper">
 
-      <!-- 💰 Slide: Balance -->
-      <div class="swiper-slide h-24 rounded-3xl bg-indigo-950/70 backdrop-blur-lg p-5 flex flex-col justify-between text-indigo-50 shadow-inner ring-1 ring-indigo-700 relative">
 
-        <!-- Balance Info -->
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="text-sm font-medium opacity-80 tracking-wide">Balance</h3>
-            <p id="balance" class="text-2xl font-extrabold mt-1 tracking-tight">₦0</p>
-          </div>
-          <!-- 👁️ Eye Toggle -->
-          <button id="toggleBalanceBtn" onclick="toggleBalance()" class="text-indigo-300 hover:text-white transition-colors duration-300">
-            <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-          </button>
+<!-- 💰 Wallet Balance Card -->
+<div class="w-full max-w-xs mx-auto mt-3.5 space-y-2 relative">  
+  <div class="rounded-3xl shadow-2xl overflow-hidden bg-gradient-to-br from-indigo-900 via-indigo-800 to-indigo-700 p-1">
+    <div class="rounded-3xl bg-indigo-950/70 backdrop-blur-lg p-5 text-indigo-50 shadow-inner ring-1 ring-indigo-700">
+
+      <!-- Header Row -->
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-1.5">
+          <!-- ✅ Verified Badge -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.707a1 1 0 00-1.414-1.414L9 10.586 
+            7.707 9.293a1 1 0 10-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <h3 class="text-sm font-medium opacity-90 tracking-wide">Balance</h3>
         </div>
 
         <!-- + Add Money Button -->
-        <div class="flex justify-end">
-          <button onclick="switchTab('depositSection')" 
-            class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-xs font-bold py-1.5 px-4 rounded-full transition-all duration-300 shadow-md">
-            + Add Money
-          </button>
-        </div>
+        <button onclick="switchTab('depositSection')" 
+          class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-xs font-bold py-1 px-3 rounded-full transition-all duration-300 shadow-md">
+          + Add Money
+        </button>
+      </div>
+
+      <!-- Balance Row -->
+      <div class="flex items-center justify-between mt-2">
+        <p id="balance" class="text-2xl font-extrabold tracking-tight">₦0</p>
+
+        <!-- 👁️ Eye Toggle -->
+        <button id="toggleBalanceBtn" onclick="toggleBalance()" 
+          class="text-indigo-300 hover:text-white transition-colors duration-300">
+          <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" fill="none" 
+               viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5
+                     c4.477 0 8.268 2.943 9.542 7
+                     -1.274 4.057-5.065 7-9.542 7
+                     -4.477 0-8.268-2.943-9.542-7z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </button>
       </div>
 
     </div>
@@ -530,29 +542,54 @@
 </div>
 
 <script>
-  let isBalanceHidden = false;
-  function toggleBalance() {
-    const balance = document.getElementById("balance");
-    const eyeIcon = document.getElementById("eyeIcon");
-    isBalanceHidden = !isBalanceHidden;
+  // Simulated balance (replace later with real Firebase data)
+  let realBalance = 2500;
 
+  function formatNaira(amount) {
+    return "₦" + amount.toLocaleString();
+  }
+
+  // Restore eye toggle state
+  let isBalanceHidden = JSON.parse(localStorage.getItem("balanceHidden")) || false;
+  const balanceEl = document.getElementById("balance");
+  const eyeIcon = document.getElementById("eyeIcon");
+
+  function renderBalance() {
     if (isBalanceHidden) {
-      balance.textContent = "******";
+      balanceEl.textContent = "₦****";
       eyeIcon.innerHTML = `
-        <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A9.956 9.956 0 0112 19c-4.477 0-8.268-2.943-9.542-7a9.982 9.982 0 012.466-4.356m3.245-1.96A9.959 9.959 0 0112 5c4.477 0 8.268 2.943 9.542 7a9.982 9.982 0 01-1.422 2.63M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        <line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" stroke-width="2" />
-      `;
+        <path stroke-linecap="round" stroke-linejoin="round" 
+              d="M13.875 18.825A10.05 10.05 0 0112 19
+              c-4.478 0-8.269-2.943-9.543-7
+              a10.05 10.05 0 012.037-3.368m3.226-2.335
+              A9.953 9.953 0 0112 5c4.478 0 8.269 2.943
+              9.543 7a10.03 10.03 0 01-4.107 5.067M3 3l18 18"/>`;
     } else {
-      balance.textContent = "₦0";
+      balanceEl.textContent = formatNaira(realBalance);
       eyeIcon.innerHTML = `
-        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-        <circle cx="12" cy="12" r="3" />
-      `;
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M2.458 12C3.732 7.943 7.523 5 12 5
+              c4.477 0 8.268 2.943 9.542 7
+              -1.274 4.057-5.065 7-9.542 7
+              -4.477 0-8.268-2.943-9.542-7z" />
+        <circle cx="12" cy="12" r="3" />`;
     }
   }
+
+  function toggleBalance() {
+    isBalanceHidden = !isBalanceHidden;
+    localStorage.setItem("balanceHidden", JSON.stringify(isBalanceHidden));
+    renderBalance();
+  }
+
+  // Initialize display on load
+  document.addEventListener("DOMContentLoaded", renderBalance);
 </script>
 
 
+
+
+	
 
 
 
