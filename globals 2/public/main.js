@@ -5766,35 +5766,6 @@ window.addEventListener('load', () => {
 })();
 
 
-function openServicesDrawer() {
-  const drawer = document.getElementById("servicesDrawer");
-  const panel = document.getElementById("drawerPanel");
-  const overlay = document.getElementById("drawerOverlay");
-  
-  drawer.classList.remove("hidden");
-
-  // Force reflow before animating
-  void drawer.offsetWidth;
-
-  // Animate fade and slide-up
-  overlay.classList.remove("opacity-0");
-  panel.classList.remove("translate-y-full");
-}
-
-function closeServicesDrawer() {
-  const drawer = document.getElementById("servicesDrawer");
-  const panel = document.getElementById("drawerPanel");
-  const overlay = document.getElementById("drawerOverlay");
-
-  // Animate back
-  overlay.classList.add("opacity-0");
-  panel.classList.add("translate-y-full");
-
-  // Wait for animation to finish before hiding
-  setTimeout(() => {
-    drawer.classList.add("hidden");
-  }, 300);
-}
 
 
 
