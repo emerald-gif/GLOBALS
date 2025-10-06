@@ -3888,463 +3888,354 @@ async function processReferralCreditTx(referredUserDocId, referrerUid) {
 
 
 
-// ---- Keep your subcategoryOptions as-is ----
-const subcategoryOptions = {
-  whatsapp: {
-    "WhatsApp group join": 15,
-    "WhatsApp status post": 50,
-    "WhatsApp contact add": 15,
-    "Share to 3 WhatsApp group": 50,
-    "WhatsApp channel follow": 20,
-    "Community join": 30,
-    "WhatsApp linking": 500
-  },
-  telegram: {
-    "Telegram group join": 15,
-    "Share to 3 Telegram group": 50,
-    "Telegram bot": 30,
-    "Telegram story post": 50
-  },
-  instagram: {
-    "Follow": 8,
-    "Like": 8,
-    "Comment": 8,
-    "Follow+like": 15,
-    "Like + comment": 15,
-    "Follow+ like + comment": 25,
-    "Use sound": 20,
-    "Share post": 25
-  },
-  tiktok: { // ✅ copy of Instagram
-    "Follow": 8,
-    "Like": 8,
-    "Comment": 8,
-    "Follow+like": 15,
-    "Like + comment": 15,
-    "Follow+ like + comment": 25,
-    "Use sound": 20,
-    "Share post": 25
-  },
-  app: {
-    "Download Only": 50,
-    "Download + Install": 80,
-    "Download + Register": 100,
-    "Download + Register + KYC": 150,
-    "Download + Install + Word review": 150
-  },
-  youtube: {
-    "Like": 6,
-    "Comment": 8,
-    "Channel subscribe": 10,
-    "Like + comment": 10,
-    "Subscribe+like + comment": 20
-  },
-  facebook: {
-    "Like": 10,
-    "Follow": 10,
-    "Comment": 15,
-    "Follow+ like": 20,
-    "Follow + like + comment": 25,
-    "Add a friend": 10,
-    "Join a group": 15,
-    "Share to story": 15
-  },
-  twitter: {
-    "Like": 5,
-    "Comment": 8,
-    "Like + comment": 15,
-    "Post": 10,
-    "Follow": 5,
-    "Retweet": 8
-  },
-  website: {
-    "View/ traffic": 5,
-    "Simple sign up": 20,
-    "Complex sign up": 75,
-    "Signup + kyc": 150,
-    "Online Survey": 100
-  },
-  vote: { "Vote me": 30 },
-  music: {
-    "Music like": 10,
-    "Page follow": 15,
-    "Stream music": 30
-  }
-};
 
+  // ----- subcategory options remain the same (user kept them as-is) -----
+  const subcategoryOptions = {
+    whatsapp: {
+      "WhatsApp group join": 15,
+      "WhatsApp status post": 50,
+      "WhatsApp contact add": 15,
+      "Share to 3 WhatsApp group": 50,
+      "WhatsApp channel follow": 20,
+      "Community join": 30,
+      "WhatsApp linking": 500
+    },
+    telegram: {
+      "Telegram group join": 15,
+      "Share to 3 Telegram group": 50,
+      "Telegram bot": 30,
+      "Telegram story post": 50
+    },
+    instagram: {
+      "Follow": 8,
+      "Like": 8,
+      "Comment": 8,
+      "Follow+like": 15,
+      "Like + comment": 15,
+      "Follow+ like + comment": 25,
+      "Use sound": 20,
+      "Share post": 25
+    },
+    tiktok: {
+      "Follow": 8,
+      "Like": 8,
+      "Comment": 8,
+      "Follow+like": 15,
+      "Like + comment": 15,
+      "Follow+ like + comment": 25,
+      "Use sound": 20,
+      "Share post": 25
+    },
+    app: {
+      "Download Only": 50,
+      "Download + Install": 80,
+      "Download + Register": 100,
+      "Download + Register + KYC": 150,
+      "Download + Install + Word review": 150
+    },
+    youtube: {
+      "Like": 6,
+      "Comment": 8,
+      "Channel subscribe": 10,
+      "Like + comment": 10,
+      "Subscribe+like + comment": 20
+    },
+    facebook: {
+      "Like": 10,
+      "Follow": 10,
+      "Comment": 15,
+      "Follow+ like": 20,
+      "Follow + like + comment": 25,
+      "Add a friend": 10,
+      "Join a group": 15,
+      "Share to story": 15
+    },
+    twitter: {
+      "Like": 5,
+      "Comment": 8,
+      "Like + comment": 15,
+      "Post": 10,
+      "Follow": 5,
+      "Retweet": 8
+    },
+    website: {
+      "View/ traffic": 5,
+      "Simple sign up": 20,
+      "Complex sign up": 75,
+      "Signup + kyc": 150,
+      "Online Survey": 100
+    },
+    vote: { "Vote me": 30 },
+    music: {
+      "Music like": 10,
+      "Page follow": 15,
+      "Stream music": 30
+    }
+  };
 
-        
-// ====== Task form helpers ======
-let defaultEarn = 0;
-let isSubmitting = false;
+  // current default price for chosen subcategory
+  let defaultEarn = 0;
+  // guard against double submission
+  let isSubmitting = false;
 
-// find submit button (prefers id)
-function findSubmitButton() {
-  return document.getElementById('submitTaskBtn')
-    || document.querySelector("button[type='submit']")
-    || document.querySelector("button[data-action='post-task']")
-    || null;
-}
-
-function setBtnSubmitting(btn) {
-  if (!btn) return;
-  if (!btn.dataset.origHtml) btn.dataset.origHtml = btn.innerHTML || btn.textContent || 'Submit';
-  btn.disabled = true;
-  btn.setAttribute('aria-busy', 'true');
-  btn.innerHTML = `<span style="display:inline-flex;align-items:center;gap:8px">
-    <svg width="16" height="16" viewBox="0 0 50 50" aria-hidden>
-      <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-dasharray="31.4 31.4">
-        <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="0.9s" repeatCount="indefinite"/>
-      </circle>
-    </svg>
-    Submitting…
-  </span>`;
-  btn.classList.add('opacity-70', 'cursor-not-allowed');
-}
-
-function restoreBtn(btn) {
-  if (!btn) return;
-  btn.disabled = false;
-  btn.removeAttribute('aria-busy');
-  if (btn.dataset.origHtml) btn.innerHTML = btn.dataset.origHtml;
-  btn.classList.remove('opacity-70', 'cursor-not-allowed');
-}
-
-// populate subcategories
-function populateSubcategories() {
-  const category = document.getElementById("category")?.value || "";
-  const subcategory = document.getElementById("subcategory");
-  if (!subcategory) return console.warn("populateSubcategories: no #subcategory element found");
-  subcategory.innerHTML = '<option value="">Select subcategory</option>';
-  if (subcategoryOptions && subcategoryOptions[category]) {
-    for (const [key, value] of Object.entries(subcategoryOptions[category])) {
-      const opt = document.createElement("option");
-      opt.value = String(value);
-      opt.textContent = `${key} (₦${value})`;
-      subcategory.appendChild(opt);
+  function populateSubcategories() {
+    const category = document.getElementById("category").value;
+    const subcategory = document.getElementById("subcategory");
+    subcategory.innerHTML = '<option value="">Select subcategory</option>';
+    if (subcategoryOptions[category]) {
+      for (const [key, value] of Object.entries(subcategoryOptions[category])) {
+        const opt = document.createElement("option");
+        // store numeric price in value (base 10)
+        opt.value = String(value);
+        opt.textContent = `${key} (₦${value})`;
+        subcategory.appendChild(opt);
+      }
     }
   }
-  // reset defaultEarn if user clears category
-  if (!category) {
-    defaultEarn = 0;
-    const we = document.getElementById('workerEarn');
-    if (we) we.removeAttribute('min');
-  }
-  updateTotal();
-}
 
-// update worker earn from subcategory - only increases visible earn
-function updateWorkerEarn() {
-  const subValRaw = document.getElementById("subcategory")?.value;
-  const subVal = parseInt(subValRaw, 10);
-  const workerEarnEl = document.getElementById("workerEarn");
-
-  if (isNaN(subVal) || !workerEarnEl) {
-    defaultEarn = 0;
-    if (workerEarnEl) workerEarnEl.removeAttribute('min');
+  // when user chooses a subcategory we set the workerEarn and defaultEarn
+  function updateWorkerEarn() {
+    const subVal = parseInt(document.getElementById("subcategory").value, 10);
+    const workerEarnEl = document.getElementById("workerEarn");
+    if (!isNaN(subVal)) {
+      // set the suggested value, but allow the user to change it
+      if (workerEarnEl) workerEarnEl.value = subVal;
+      defaultEarn = subVal;
+    } else {
+      defaultEarn = 0;
+    }
+    // show/hide warning and update totals
+    validateWorkerEarn();
     updateTotal();
-    return;
   }
 
-  // set the default/min allowed earn for this subcategory
-  defaultEarn = subVal;
-  workerEarnEl.min = String(subVal);
-
-  // Only increase the visible workerEarn if the subcategory default is GREATER
-  // than the current value. This prevents subcategory changes from lowering
-  // a manually increased workerEarn.
-  const current = parseInt(workerEarnEl.value, 10) || 0;
-  if (current < subVal) {
-    workerEarnEl.value = subVal;
-  }
-
-  const warning = document.getElementById("earnWarning");
-  if (warning) warning.classList.add("hidden");
-  updateTotal();
-}
-
-// validate manual edits — snap back if user tries to go below defaultEarn
-function validateWorkerEarn() {
-  const workerEarnEl = document.getElementById("workerEarn");
-  const warning = document.getElementById("earnWarning");
-  if (!workerEarnEl) return;
-
-  const inputVal = parseInt(workerEarnEl.value, 10);
-
-  if (isNaN(inputVal)) {
-    if (warning) { warning.classList.add("hidden"); warning.textContent = ""; }
-    updateTotal();
-    return;
-  }
-
-  if (defaultEarn && inputVal < defaultEarn) {
-    // snap the input back to allowed minimum
-    workerEarnEl.value = defaultEarn;
-    if (warning) {
-      warning.textContent = `Minimum allowed for this subcategory is ₦${defaultEarn}. Value reset.`;
+  function validateWorkerEarn() {
+    const inputEl = document.getElementById("workerEarn");
+    const warning = document.getElementById("earnWarning");
+    const inputVal = parseInt(inputEl.value, 10);
+    if (!isNaN(inputVal) && defaultEarn > 0 && inputVal < defaultEarn) {
       warning.classList.remove("hidden");
+      // Do NOT update totals when worker pay is below default (keeps UX clear)
+    } else {
+      warning.classList.add("hidden");
+      updateTotal();
     }
-    updateTotal();
-    return;
   }
 
-  if (warning) { warning.classList.add("hidden"); warning.textContent = ""; }
-  updateTotal();
-}
-
-function limitProofFiles(e) {
-  const checkboxes = document.querySelectorAll("input[name='proofFile']");
-  const checked = Array.from(checkboxes).filter(i => i.checked);
-  if (checked.length > 3) {
-    alert("You can only select up to 3 proof files");
-    if (e && e.target) e.target.checked = false;
-  }
-}
-
-// updateTotal (premium removed)
-function updateTotal() {
-  const earn = Number(document.getElementById("workerEarn")?.value) || 0;
-  const count = Number(document.getElementById("workerCount")?.value) || 0;
-  const approvalFee = 200;
-  const total = (earn * count) + approvalFee;
-  const totalEl = document.getElementById("totalCost");
-  if (totalEl) totalEl.textContent = `₦${total}`;
-  return total;
-}
-
-function switchTab(sectionId) {
-  if (typeof activateTab === "function") {
-    try { activateTab(sectionId); } catch (err) { console.warn('activateTab call failed, falling back', err); }
-    return;
-  }
-  document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
-  const target = document.getElementById(sectionId);
-  if (target) target.classList.remove('hidden');
-}
-
-function activeTab(el) {
-  if (!el) return;
-  const container = el.closest('ul') || document;
-  container.querySelectorAll('a').forEach(a => {
-    a.classList.remove('bg-green-50', 'text-green-600');
-  });
-  el.classList.add('bg-green-50', 'text-green-600');
-}
-
-// reset form in-place (no reload)
-function resetTaskForm() {
-  const safe = id => document.getElementById(id);
-  if (safe("taskTitle")) safe("taskTitle").value = "";
-  if (safe("category")) safe("category").value = "";
-  if (safe("subcategory")) safe("subcategory").innerHTML = '<option value="">Select subcategory</option>';
-  if (safe("description")) safe("description").value = "";
-  if (safe("proof")) safe("proof").value = "";
-  if (safe("screenshotInput")) safe("screenshotInput").value = "";
-  if (safe("workerCount")) safe("workerCount").value = "";
-  if (safe("workerEarn")) safe("workerEarn").value = "";
-  if (safe("proofFileCount")) safe("proofFileCount").value = "1";
-  defaultEarn = 0;
-  updateTotal();
-}
-
-// Add the posted job to My Jobs UI (tries a few container ids then falls back to a notice)
-function addToMyJobsUI(job) {
-  const container = document.getElementById('myJobsList')
-    || document.getElementById('myJobsSection')
-    || document.querySelector('#myJobsSection .jobs-list');
-
-  const createdAt = new Date().toLocaleString();
-
-  const cardHtml = `
-    <div class="p-4 mb-3 bg-white rounded-lg shadow-sm border">
-      <div class="flex justify-between items-start">
-        <div>
-          <div class="font-semibold text-gray-800">${escapeHtml(job.title || 'Untitled task')}</div>
-          <div class="text-sm text-gray-500">Posted: ${createdAt}</div>
-          <div class="text-sm text-gray-600 mt-2">Total: ₦${job.total}</div>
-        </div>
-        <div class="text-sm px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 font-medium">Waiting admin approval</div>
-      </div>
-    </div>`.trim();
-
-  if (container) {
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = cardHtml;
-    container.insertBefore(wrapper.firstElementChild, container.firstChild);
-    return;
-  }
-
-  let notice = document.getElementById('myJobsNotice');
-  if (!notice) {
-    notice = document.createElement('div');
-    notice.id = 'myJobsNotice';
-    notice.className = 'my-4 p-3 rounded-lg bg-green-50 border border-green-100 text-green-700';
-    const postTaskSection = document.getElementById('postTaskSection');
-    if (postTaskSection) postTaskSection.querySelector('.max-w-2xl')?.insertAdjacentElement('beforebegin', notice);
-  }
-  notice.innerHTML = `
-    ✅ Task posted and is waiting admin approval. 
-    <a href="/my-jobs.html" class="underline font-medium">View My Jobs</a>
-    ${job.title ? `<div class="text-sm text-gray-700 mt-2">Task: ${escapeHtml(job.title)}</div>` : ''}
-  `;
-}
-
-
-
-// ====== submitTask (min workers 20, no premium) ======
-async function submitTask() {
-  if (isSubmitting) return;
-  const btn = findSubmitButton();
-
-  function bail(msg) {
-    if (msg) alert(msg);
-    restoreBtn(btn);
-    isSubmitting = false;
-    return;
-  }
-
-  try {
-    isSubmitting = true;
-    setBtnSubmitting(btn);
-
-    const category = document.getElementById("category")?.value || "";
-    const subCategory = document.getElementById("subcategory")?.value || "";
-    const taskTitle = document.getElementById("taskTitle")?.value.trim() || "";
-    const description = document.getElementById("description")?.value.trim() || "";
-    const proof = document.getElementById("proof")?.value.trim() || "";
-    const screenshotInput = document.getElementById("screenshotInput");
-    const screenshotExample = screenshotInput?.files?.[0] || null;
-    const numWorkers = parseInt(document.getElementById("workerCount")?.value, 10) || 0;
-    const workerEarn = parseInt(document.getElementById("workerEarn")?.value, 10) || 0;
-    const proofFileCountEl = document.getElementById("proofFileCount");
-    const proofFileCount = proofFileCountEl ? parseInt(proofFileCountEl.value, 10) || 1 : 1;
-
-    // Validation
-    const missing = [];
-    if (!taskTitle) missing.push("Task title");
-    if (!category) missing.push("Category");
-    if (!subCategory) missing.push("Subcategory");
-    if (!description) missing.push("Description");
-    if (!proof) missing.push("Proof instructions");
-    if (!screenshotExample) missing.push("Screenshot example (upload)");
-    if (!numWorkers || numWorkers < 1) missing.push("Number of workers");
-    if (numWorkers && numWorkers < 20) missing.push("Minimum number of workers is 20");
-    if (!workerEarn || workerEarn < 1) missing.push("Worker earn");
-
-    if (missing.length) {
-      console.warn("submitTask validation failed:", missing);
-      return bail(`⚠️ Please fix: ${missing.join(', ')}`);
+  // fix: accept event param and use it
+  function limitProofFiles(e) {
+    const checkboxes = document.querySelectorAll("input[name='proofFile']");
+    const checked = Array.from(checkboxes).filter(i => i.checked);
+    if (checked.length > 3) {
+      alert("You can only select up to 3 proof files");
+      if (e && e.target) e.target.checked = false;
     }
+  }
 
-    // Auth guard
-    if (typeof auth === 'undefined' || !auth.currentUser) {
-      return bail("⚠️ You must be logged in to post a job.");
+  function updateTotal() {
+    const earn = Number(document.getElementById("workerEarn").value) || 0;
+    const count = Number(document.getElementById("workerCount").value) || 0;
+    // premium removed per request
+    const approvalFee = 200;
+    const total = (earn * count) + approvalFee;
+    document.getElementById("totalCost").textContent = `₦${total}`;
+  }
+
+  // ----- Fix for missing functions that caused console errors -----
+  function switchTab(sectionId) {
+    if (typeof activateTab === "function") {
+      try { activateTab(sectionId); } catch (err) { console.warn('activateTab call failed, falling back', err); }
+      return;
     }
+    document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
+    const target = document.getElementById(sectionId);
+    if (target) target.classList.remove('hidden');
+  }
 
-    const user = auth.currentUser;
-    const userDocRef = db.collection("users").doc(user.uid);
-    const userDocSnapshot = await userDocRef.get();
-    if (!userDocSnapshot.exists) {
-      return bail("⚠️ User profile not found.");
-    }
-    const userProfile = userDocSnapshot.data();
+  function activeTab(el) {
+    if (!el) return;
+    const container = el.closest('ul') || document;
+    container.querySelectorAll('a').forEach(a => {
+      a.classList.remove('bg-green-50', 'text-green-600');
+    });
+    el.classList.add('bg-green-50', 'text-green-600');
+  }
 
-    const reviewFee = 200;
-    const total = (numWorkers * workerEarn) + reviewFee;
-    const currentBalance = userProfile.balance || 0;
+  // ----- submitTask: single-submit safe, validation for min workers and price floor -----
+  async function submitTask() {
+    if (isSubmitting) return; // protect against double click
+    const submitBtn = document.getElementById('postJobBtn');
+    const originalBtnText = submitBtn ? submitBtn.textContent : null;
+    try {
+      isSubmitting = true;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Posting...';
+      }
 
-    if (currentBalance < total) {
-      return bail(`⚠️ Insufficient balance. Required ₦${total}, available ₦${currentBalance}.`);
-    }
+      const category = document.getElementById("category")?.value || "";
+      const subCategory = document.getElementById("subcategory")?.value || "";
+      const taskTitle = document.getElementById("taskTitle")?.value.trim() || "";
+      const description = document.getElementById("description")?.value.trim() || "";
+      const proof = document.getElementById("proof")?.value.trim() || "";
+      const screenshotInput = document.getElementById("screenshotInput");
+      const screenshotExample = screenshotInput && screenshotInput.files ? screenshotInput.files[0] : null;
+      const numWorkers = parseInt(document.getElementById("workerCount")?.value, 10) || 0;
+      const workerEarn = parseInt(document.getElementById("workerEarn")?.value, 10) || 0;
+      const proofFileCountEl = document.getElementById("proofFileCount");
+      const proofFileCount = proofFileCountEl ? parseInt(proofFileCountEl.value, 10) || 1 : 1;
 
-    // Upload screenshot if uploader exists
-    let screenshotURL = "";
-    if (screenshotExample) {
-      try {
-        if (typeof uploadToCloudinary === "function") {
-          screenshotURL = await uploadToCloudinary(screenshotExample);
-        } else {
-          console.warn("uploadToCloudinary() not defined — screenshot will not be uploaded.");
+      const missing = [];
+      if (!taskTitle) missing.push("Task title");
+      if (!category) missing.push("Category");
+      if (!subCategory) missing.push("Subcategory");
+      if (!description) missing.push("Description");
+      if (!proof) missing.push("Proof instructions");
+      if (!screenshotExample) missing.push("Screenshot example (upload)");
+      // enforce min workers = 20
+      if (!numWorkers || numWorkers < 20) missing.push("Number of workers (minimum 20)");
+      if (!workerEarn || workerEarn < 1) missing.push("Worker earn (₦)");
+
+      if (missing.length) {
+        alert(`⚠️ Please fill required fields: ${missing.join(', ')}`);
+        return;
+      }
+
+      // disallow workerEarn lower than default subcategory price
+      if (defaultEarn > 0 && workerEarn < defaultEarn) {
+        alert(`⚠️ Worker earn cannot be less than the subcategory price (₦${defaultEarn}). Increase the amount or pick a different subcategory.`);
+        return;
+      }
+
+      // firebase auth guard
+      if (typeof auth === 'undefined' || !auth.currentUser) {
+        alert("⚠️ You must be logged in to post a job.");
+        return;
+      }
+
+      // fetch user profile
+      const user = auth.currentUser;
+      const userDocRef = db.collection("users").doc(user.uid);
+      const userDoc = await userDocRef.get();
+      if (!userDoc.exists) {
+        alert("⚠️ User profile not found.");
+        return;
+      }
+      const userProfile = userDoc.data();
+
+      const reviewFee = 200;
+      const total = (numWorkers * workerEarn) + reviewFee;
+      const currentBalance = userProfile.balance || 0;
+
+      if (currentBalance < total) {
+        alert(`⚠️ Insufficient balance. Required ₦${total}, available ₦${currentBalance}.`);
+        return;
+      }
+
+      // Upload screenshot (if your uploadToCloudinary exists)
+      let screenshotURL = "";
+      if (screenshotExample) {
+        try {
+          if (typeof uploadToCloudinary !== "function") {
+            // uploader missing — we accept the local file but skip uploading (add your uploader in production)
+            console.warn("uploadToCloudinary helper not found — skipping upload (add your uploader).");
+            screenshotURL = ""; // no remote url
+          } else {
+            screenshotURL = await uploadToCloudinary(screenshotExample);
+          }
+        } catch (err) {
+          console.error("Screenshot upload failed:", err);
+          alert("❌ Screenshot upload failed. Try again.");
+          return;
         }
-      } catch (err) {
-        console.error("Screenshot upload failed:", err);
-        return bail("❌ Screenshot upload failed. Try again.");
+      }
+
+      const jobData = {
+        title: taskTitle,
+        category,
+        subCategory,
+        description,
+        proof,
+        screenshotURL,
+        numWorkers,
+        workerEarn,
+        total,
+        proofFileCount,
+        status: "on review",
+        postedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        postedBy: {
+          uid: user.uid,
+          name: userProfile.name || "",
+          email: userProfile.email || "",
+          phone: userProfile.phone || "",
+          photo: userProfile.photo || ""
+        }
+      };
+
+      // Transaction: re-read and deduct balance inside transaction to avoid races
+      await db.runTransaction(async (transaction) => {
+        const userSnap = await transaction.get(userDocRef);
+        if (!userSnap.exists) {
+          throw new Error("User not found during transaction");
+        }
+        const bal = (userSnap.data().balance || 0);
+        if (bal < total) {
+          throw new Error("Insufficient balance during transaction");
+        }
+        transaction.update(userDocRef, { balance: bal - total });
+        const taskRef = db.collection("tasks").doc();
+        transaction.set(taskRef, jobData);
+      });
+
+      alert("✅ Task successfully posted! Awaiting Admins Approval.Check Jobs in MyJobs section");
+      // reset form in-place (no reload)
+      resetPostTaskForm();
+      updateTotal();
+
+    } catch (err) {
+      console.error("🔥 Error posting task:", err);
+      // show friendlier messages for known transaction errors
+      if (err && err.message && err.message.toLowerCase().includes('insufficient')) {
+        alert("⚠️ Transaction failed: insufficient balance (someone may have spent from your account). Try again after topping up.");
+      } else {
+        alert("❌ Something went wrong. Try again later.");
+      }
+    } finally {
+      isSubmitting = false;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        if (originalBtnText) submitBtn.textContent = originalBtnText;
       }
     }
-
-    const jobData = {
-      title: taskTitle,
-      category,
-      subCategory,
-      description,
-      proof,
-      screenshotURL,
-      numWorkers,
-      workerEarn,
-      total,
-      proofFileCount,
-      status: "on review",
-      postedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      postedBy: {
-        uid: user.uid,
-        name: userProfile.name || "",
-        email: userProfile.email || "",
-        phone: userProfile.phone || "",
-        photo: userProfile.photo || ""
-      }
-    };
-
-    // Transaction with re-read inside
-    await db.runTransaction(async (transaction) => {
-      const freshUserSnap = await transaction.get(userDocRef);
-      const freshBalance = (freshUserSnap.exists && (freshUserSnap.data().balance || 0)) || 0;
-      if (freshBalance < total) {
-        throw new Error(`Insufficient balance in transaction. Required ₦${total}, available ₦${freshBalance}`);
-      }
-      transaction.update(userDocRef, { balance: freshBalance - total });
-      const taskRef = db.collection("tasks").doc();
-      transaction.set(taskRef, jobData);
-    });
-
-    // SUCCESS: optimistic UI
-    alert("✅ Task successfully posted! It is now waiting admin approval — check My Jobs.");
-    resetTaskForm();
-    addToMyJobsUI({ title: taskTitle, total });
-
-  } catch (err) {
-    console.error("submitTask error:", err);
-    alert((err && err.message) ? `❌ ${err.message}` : "❌ Something went wrong. Try again later.");
-  } finally {
-    isSubmitting = false;
-    restoreBtn(btn);
   }
-}
 
-// auto-wire form/button on DOM ready
-document.addEventListener('DOMContentLoaded', () => {
-  const catEl = document.getElementById('category');
-  if (catEl) catEl.addEventListener('change', populateSubcategories);
-
-  const subEl = document.getElementById('subcategory');
-  if (subEl) subEl.addEventListener('change', updateWorkerEarn);
-
-  const weEl = document.getElementById('workerEarn');
-  if (weEl) weEl.addEventListener('input', validateWorkerEarn);
-
-  const wcEl = document.getElementById('workerCount');
-  if (wcEl) wcEl.addEventListener('input', updateTotal);
-
-  const btn = findSubmitButton();
-  if (btn) {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      submitTask();
+  function resetPostTaskForm() {
+    const categoryEl = document.getElementById('category');
+    if (categoryEl) categoryEl.selectedIndex = 0;
+    const sub = document.getElementById('subcategory');
+    if (sub) sub.innerHTML = '<option value="">Select subcategory</option>';
+    const fields = ['taskTitle', 'description', 'proof', 'workerCount', 'workerEarn'];
+    fields.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
     });
-  } else {
-    console.warn("No submit button found — add #submitTaskBtn to your button.");
+    const screenshotInput = document.getElementById('screenshotInput');
+    if (screenshotInput) screenshotInput.value = '';
+    const proofFileCountEl = document.getElementById('proofFileCount');
+    if (proofFileCountEl) proofFileCountEl.value = '1';
+    defaultEarn = 0;
+    const warn = document.getElementById('earnWarning');
+    if (warn) warn.classList.add('hidden');
+    const totalCost = document.getElementById('totalCost');
+    if (totalCost) totalCost.textContent = '₦0';
   }
-});
 
+
+
+
+
+
+      
 
 
 
