@@ -4247,156 +4247,233 @@ async function processReferralCreditTx(referredUserDocId, referrerUid) {
 // AFFILIATE  Update Total When Inputs Change
                           
                           
-function updateAffiliateJobTotal() {
-  const numWorkers = parseInt(document.getElementById("numWorkers").value) || 0;
-  const workerPay = parseInt(document.getElementById("workerPay").value) || 0;
-  
 
-  
-  const companyFee = 300;
+  // ---- config / state ----
+  const AFF_COMPANY_FEE = 300;
+  let isSubmittingAff = false;
 
-  const total = (numWorkers * workerPay) + companyFee;
+  function updateAffiliateJobTotal() {
+    const numWorkersEl = document.getElementById("numWorkers");
+    const workerPayEl = document.getElementById("workerPay");
+    const count = parseInt(numWorkersEl?.value, 10) || 0;
+    const pay = parseInt(workerPayEl?.value, 10) || 0;
 
-  const totalDisplay = document.getElementById("affiliateJobTotal");
-  if (totalDisplay) {
-    totalDisplay.innerText = `₦${total}`;
+    const countWarning = document.getElementById("affiliateCountWarning");
+    const payWarning = document.getElementById("affiliatePayWarning");
+    // show warnings but do not allow submit until fixed
+    if (count > 0 && count < 20) {
+      if (countWarning) countWarning.classList.remove("hidden");
+    } else if (countWarning) {
+      countWarning.classList.add("hidden");
+    }
+
+    if (pay > 0 && pay < 100) {
+      if (payWarning) payWarning.classList.remove("hidden");
+    } else if (payWarning) {
+      payWarning.classList.add("hidden");
+    }
+
+    // only update the shown total when values meet minimums
+    const totalDisplay = document.getElementById("affiliateJobTotal");
+    if (count >= 20 && pay >= 100) {
+      const total = (count * pay) + AFF_COMPANY_FEE;
+      if (totalDisplay) totalDisplay.innerText = `₦${total}`;
+    } else {
+      // still show a helpful preview if either input is set (but not valid)
+      const previewTotal = (count * pay) + AFF_COMPANY_FEE;
+      if (totalDisplay) totalDisplay.innerText = `₦${previewTotal}`; // shows preview but submit will be blocked
+    }
   }
-}
 
-// 🔁 Trigger Total Update When Inputs Change
-document.getElementById("numWorkers").addEventListener("input", updateAffiliateJobTotal);
-document.getElementById("workerPay").addEventListener("input", updateAffiliateJobTotal);
+  // safe hookup for inputs if they already exist
+  (function attachAffiliateListeners() {
+    const n = document.getElementById("numWorkers");
+    const p = document.getElementById("workerPay");
+    if (n) n.addEventListener("input", updateAffiliateJobTotal);
+    if (p) p.addEventListener("input", updateAffiliateJobTotal);
+  })();
 
+  // ---- submitAffiliateJob (single-submit safe, required logo, atomic balance update) ----
+  async function submitAffiliateJob() {
+    if (isSubmittingAff) return;
+    const submitBtn = document.getElementById("postAffiliateBtn");
+    const originalBtnText = submitBtn ? submitBtn.textContent : null;
 
-// 🚀 Submit Affiliate Job
-// 🚀 Replace your existing submitAffiliateJob() with this exact function
-async function submitAffiliateJob() {
-  try {
-    // Get the affiliate form container (note: your HTML uses id "afffiliateJobFormSection")
-    const formSection = document.getElementById("afffiliateJobFormSection") || document;
+    try {
+      isSubmittingAff = true;
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Posting..."; }
 
-    // Read inputs (prefer to query inside the affiliate form to avoid duplicate-id problems)
-    const category = (formSection.querySelector("#affiliateCategory") || document.getElementById("affiliateCategory"))?.value || "";
-    const title = (formSection.querySelector("#campaignTitle") || document.getElementById("campaignTitle"))?.value.trim() || "";
-    const instructions = (formSection.querySelector("#workerInstructions") || document.getElementById("workerInstructions"))?.value.trim() || "";
-    const targetLink = (formSection.querySelector("#targetLink") || document.getElementById("targetLink"))?.value.trim() || "";
-    const proofRequired = (formSection.querySelector("#proofRequired") || document.getElementById("proofRequired"))?.value.trim() || "";
-    const numWorkers = parseInt((formSection.querySelector("#numWorkers") || document.getElementById("numWorkers"))?.value, 10) || 0;
-    const workerPay = parseInt((formSection.querySelector("#workerPay") || document.getElementById("workerPay"))?.value, 10) || 0;
-    const campaignLogoFile = (formSection.querySelector("#campaignLogoFile") || document.getElementById("campaignLogoFile"))?.files?.[0] || null;
+      const formRoot = document.getElementById("afffiliateJobFormSection") || document;
+      const category = (formRoot.querySelector("#affiliateCategory") || {}).value || "";
+      const title = (formRoot.querySelector("#campaignTitle") || {}).value?.trim() || "";
+      const instructions = (formRoot.querySelector("#workerInstructions") || {}).value?.trim() || "";
+      const targetLink = (formRoot.querySelector("#targetLink") || {}).value?.trim() || "";
+      const proofRequired = (formRoot.querySelector("#proofRequired") || {}).value?.trim() || "";
+      const numWorkers = parseInt((formRoot.querySelector("#numWorkers") || {}).value, 10) || 0;
+      const workerPay = parseInt((formRoot.querySelector("#workerPay") || {}).value, 10) || 0;
+      const proofSelect = formRoot.querySelector("#affiliateProofFileCount") || document.getElementById("affiliateProofFileCount");
+      const proofFileCount = proofSelect ? parseInt(proofSelect.value, 10) || 1 : 1;
+      const logoFile = (formRoot.querySelector("#campaignLogoFile") || {}).files?.[0] || null;
 
-    // --- ROBUST proofFileCount reading ---
-    // Prefer the select inside affiliate form, fall back to id anywhere
-    const proofSelect =
-      formSection.querySelector("#affiliateProofFileCount") ||
-      document.getElementById("affiliateProofFileCount") ||
-      document.getElementById("proofFileCount"); // last fallback if you still have old id
+      // inline warnings elements
+      const logoWarn = document.getElementById("affiliateLogoWarning");
+      const countWarn = document.getElementById("affiliateCountWarning");
+      const payWarn = document.getElementById("affiliatePayWarning");
 
-    const proofFileCountRaw = proofSelect ? proofSelect.value : null;
-    const proofFileCount = parseInt(proofFileCountRaw, 10) || 1;
+      // BASIC validation: every field required
+      const missing = [];
+      if (!category) missing.push("Category");
+      if (!title) missing.push("Campaign Title");
+      if (!instructions) missing.push("Instructions");
+      if (!targetLink) missing.push("Target Link");
+      if (!proofRequired) missing.push("Proof Required");
+      if (!numWorkers || numWorkers < 20) {
+        missing.push("Number of workers (minimum 20)");
+        if (countWarn) countWarn.classList.remove("hidden");
+      } else if (countWarn) {
+        countWarn.classList.add("hidden");
+      }
+      if (!workerPay || workerPay < 100) {
+        missing.push("Worker pay (minimum ₦100)");
+        if (payWarn) payWarn.classList.remove("hidden");
+      } else if (payWarn) {
+        payWarn.classList.add("hidden");
+      }
+      if (!logoFile) {
+        missing.push("Campaign logo (required)");
+        if (logoWarn) logoWarn.classList.remove("hidden");
+      } else if (logoWarn) {
+        logoWarn.classList.add("hidden");
+      }
 
-    // --- DEBUG INFO (open browser console to see) ---
-    console.log("DEBUG submitAffiliateJob: proofSelect element:", proofSelect);
-    console.log("DEBUG submitAffiliateJob: proofFileCountRaw =", proofFileCountRaw, "parsed =", proofFileCount);
-
-    // Check for duplicate IDs that could cause wrong reads
-    const dup_old = document.querySelectorAll("#proofFileCount");
-    const dup_aff = document.querySelectorAll("#affiliateProofFileCount");
-    if (dup_old.length > 0) {
-      console.warn("WARNING: Found", dup_old.length, "elements with id 'proofFileCount'. Rename them to avoid conflicts.");
-    }
-    if (dup_aff.length > 1) {
-      console.warn("WARNING: Found", dup_aff.length, "elements with id 'affiliateProofFileCount' (should be 1).");
-    }
-
-    // Basic validation
-    if (!category || !title || !instructions || !targetLink || !proofRequired || numWorkers <= 0 || workerPay <= 0) {
-      alert("⚠️ Please fill in all required fields.");
-      return;
-    }
-
-    const user = auth.currentUser;
-    if (!user) {
-      alert("⚠️ You must be logged in.");
-      return;
-    }
-
-    // Fetch user profile
-    const userDocRef = db.collection("users").doc(user.uid);
-    const userSnap = await userDocRef.get();
-    if (!userSnap.exists) {
-      alert("⚠️ User profile not found.");
-      return;
-    }
-    const userProfile = userSnap.data();
-
-    // Calculate total
-    const companyFee = 300;
-    const total = (numWorkers * workerPay) + companyFee;
-
-    const userBalance = userProfile.balance || 0;
-    if (userBalance < total) {
-      alert(`⚠️ Insufficient balance. Required ₦${total}, available ₦${userBalance}.`);
-      return;
-    }
-
-    // Upload logo if provided
-    let campaignLogoURL = "";
-    if (campaignLogoFile) {
-      try {
-        campaignLogoURL = await uploadToCloudinary(campaignLogoFile);
-      } catch (err) {
-        console.error("Logo upload failed:", err);
-        alert("❌ Campaign logo upload failed. Try again.");
+      if (missing.length) {
+        alert(`⚠️ Please fix the following: ${missing.join(", ")}`);
         return;
       }
-    }
 
-    // Prepare job data — using proofFileCount variable (number)
-    const jobData = {
-      jobType: "affiliate",
-      category,
-      title,
-      instructions,
-      targetLink,
-      proofRequired,
-      numWorkers,
-      workerPay,
-      total,
-      proofFileCount,        // <-- correct numeric value stored here
-      campaignLogoURL,
-      companyFee,
-      status: "on review",
-      pinned: false,
-      pinnedStart: null,
-      postedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      postedBy: {
-        uid: user.uid,
-        name: userProfile.name || "",
-        email: userProfile.email || "",
-        phone: userProfile.phone || "",
-        photo: userProfile.photo || ""
+      // auth guard
+      if (typeof auth === "undefined" || !auth.currentUser) {
+        alert("⚠️ You must be logged in to post a campaign.");
+        return;
       }
-    };
 
-    // Final debug print before saving
-    console.log("DEBUG submitAffiliateJob: jobData about to save ->", jobData);
+      // fetch user (will re-check inside transaction)
+      const user = auth.currentUser;
+      const userDocRef = db.collection("users").doc(user.uid);
+      const userSnap = await userDocRef.get();
+      if (!userSnap.exists) {
+        alert("⚠️ User profile not found.");
+        return;
+      }
+      const userProfile = userSnap.data();
 
-    // Save job & deduct balance atomically
-    await db.runTransaction(async (transaction) => {
-      transaction.update(userDocRef, { balance: userBalance - total });
-      const jobRef = db.collection("affiliateJobs").doc();
-      transaction.set(jobRef, jobData);
-    });
+      const total = (numWorkers * workerPay) + AFF_COMPANY_FEE;
 
-    alert("✅ Affiliate job submitted successfully!");
-    window.location.reload();
+      // upload logo if uploader exists
+      let campaignLogoURL = "";
+      if (logoFile) {
+        try {
+          if (typeof uploadToCloudinary !== "function") {
+            // uploader missing — warn in console but proceed (you can make the uploader mandatory server-side)
+            console.warn("uploadToCloudinary not found. Logo will not be uploaded to remote storage.");
+            campaignLogoURL = "";
+          } else {
+            campaignLogoURL = await uploadToCloudinary(logoFile);
+          }
+        } catch (err) {
+          console.error("Logo upload failed:", err);
+          alert("❌ Campaign logo upload failed. Try again.");
+          return;
+        }
+      }
 
-  } catch (error) {
-    console.error("🔥 Error submitting affiliate job:", error);
-    alert("❌ Something went wrong. Try again.");
+      const jobData = {
+        jobType: "affiliate",
+        category,
+        title,
+        instructions,
+        targetLink,
+        proofRequired,
+        numWorkers,
+        workerPay,
+        total,
+        proofFileCount,
+        campaignLogoURL,
+        companyFee: AFF_COMPANY_FEE,
+        status: "on review",
+        pinned: false,
+        pinnedStart: null,
+        postedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        postedBy: {
+          uid: user.uid,
+          name: userProfile.name || "",
+          email: userProfile.email || "",
+          phone: userProfile.phone || "",
+          photo: userProfile.photo || ""
+        }
+      };
+
+      // Atomic transaction: re-read balance inside transaction to avoid races
+      await db.runTransaction(async (transaction) => {
+        const snap = await transaction.get(userDocRef);
+        if (!snap.exists) throw new Error("User not found during transaction");
+        const currentBal = snap.data().balance || 0;
+        if (currentBal < total) throw new Error("Insufficient balance during transaction");
+        transaction.update(userDocRef, { balance: currentBal - total });
+        const jobRef = db.collection("affiliateJobs").doc();
+        transaction.set(jobRef, jobData);
+      });
+
+      alert("✅ Affiliate campaign submitted successfully! Awaiting Admins approval .Check Jobs in MyJobs section");
+      resetAffiliateForm();
+      updateAffiliateJobTotal();
+
+    } catch (err) {
+      console.error("🔥 Error submitting affiliate job:", err);
+      if (err && err.message && err.message.toLowerCase().includes("insufficient")) {
+        alert("⚠️ Transaction failed: insufficient balance (someone may have spent from your account). Top up and try again.");
+      } else {
+        alert("❌ Something went wrong. Try again.");
+      }
+    } finally {
+      isSubmittingAff = false;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        if (originalBtnText) submitBtn.textContent = originalBtnText;
+      }
+    }
   }
-}
+
+  // reset the affiliate form in-place (no reload)
+  function resetAffiliateForm() {
+    const root = document.getElementById("afffiliateJobFormSection") || document;
+    const fields = ['affiliateCategory','campaignTitle','workerInstructions','targetLink','proofRequired','numWorkers','workerPay'];
+    fields.forEach(id => {
+      const el = root.querySelector("#" + id) || document.getElementById(id);
+      if (!el) return;
+      if (el.tagName === "SELECT" || el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+        el.value = "";
+      }
+    });
+    // reset proof select to 1
+    const proofSel = root.querySelector("#affiliateProofFileCount") || document.getElementById("affiliateProofFileCount");
+    if (proofSel) proofSel.value = "1";
+    // clear file input
+    const logo = root.querySelector("#campaignLogoFile") || document.getElementById("campaignLogoFile");
+    if (logo) logo.value = "";
+    // hide warnings
+    const warnIds = ['affiliateLogoWarning','affiliateCountWarning','affiliatePayWarning'];
+    warnIds.forEach(id => { const w = document.getElementById(id); if (w) w.classList.add("hidden"); });
+    // reset total
+    const totalDisplay = document.getElementById("affiliateJobTotal");
+    if (totalDisplay) totalDisplay.innerText = "₦0";
+  }
+
+
+
+
+
+
 
 
 
