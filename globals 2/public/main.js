@@ -5633,6 +5633,7 @@ window.loadBanks = loadBanks;
 
 // Service FUNCTION FOR CARD
 
+
 window.addEventListener('load', () => {
   const icons = ["AIRTIME1.jpg", "DATA1.jpg", "ELECTRICITY1.jpg", "TV1.jpg"];
   icons.forEach(src => {
@@ -5649,6 +5650,8 @@ window.addEventListener('load', () => {
 
 
 // Optimized drawer JS FUNCTION 
+
+// Optimized drawer JS (attach once)
 (function () {
   const drawer = document.getElementById('servicesDrawer');
   if (!drawer) return;
