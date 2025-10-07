@@ -7012,36 +7012,6 @@ startCheckinListener();
 
 
 
-// ✅ Globals SPA navigation fix (handles back + reload)
-document.addEventListener("DOMContentLoaded", () => {
-  const originalActivateTab = window.activateTab;
-  if (!originalActivateTab) return;
-
-  // helper to activate and store the current tab
-  window.activateTab = function(tabId) {
-    originalActivateTab(tabId);
-    history.pushState({ tabId }, "", "#" + tabId);
-    localStorage.setItem("lastActiveTab", tabId); // save current tab
-  };
-
-  // handle phone/browser back button
-  window.addEventListener("popstate", (e) => {
-    const tabId = e.state?.tabId || localStorage.getItem("lastActiveTab") || "dashboard";
-    originalActivateTab(tabId);
-  });
-
-  // when page reloads, restore the last opened tab
-  const lastTab = localStorage.getItem("lastActiveTab") || "dashboard";
-  if (lastTab) {
-    // slight delay to ensure DOM is ready
-    setTimeout(() => {
-      originalActivateTab(lastTab);
-      history.replaceState({ tabId: lastTab }, "", "#" + lastTab);
-    }, 100);
-  }
-});
-
-
 
 
 
