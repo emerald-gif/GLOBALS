@@ -5500,7 +5500,7 @@ firebase.auth().onAuthStateChanged(user=>{
 // deposit_withdraw_client.js
 // Place this after Firebase SDK in your HTML (or import into main bundle)
 
-const PAYSTACK_PUBLIC_KEY = "pk_live_8490c2179be3d6cb47b027152bdc2e04b774d22d";
+const PAYSTACK_PUBLIC_KEY = "pk_live_795c60d1769a1ebef31e9705886a91f84de3144d";
 
 function debugLog(...args) { try { console.log('[CLIENT]', ...args); } catch (e) {} }
 
