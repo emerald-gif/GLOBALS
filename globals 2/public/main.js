@@ -5862,15 +5862,15 @@ window.loadBanks = loadBanks;
 
 
                                    //WATCH ADS FUNCTION 
-  
 
-/* ====================== SETUP / CONSTANTS ====================== */
-const REWARD_NAIRA = 0.5;         // reward per successful ad (₦)
-const NUM_CARDS = 20;             // number of ad cards to render
+/* ====================== SETTINGS ====================== */
+const REWARD_NAIRA = 0.5;
+const NUM_CARDS = 20;
 const VAST_LINK = 'https://silkyspite.com/d.mlFpzUd/G/NYvdZkGoUk/ee/mJ9iu/ZrUVlokJPwTyY/2wNTz/AK2ZNUzTQNtZNSjKYj3hMsDmYp3qNkQs';
 const SMARTLINK = 'https://www.revenuecpmgate.com/n945dxhe?key=84160f9954ff564239085356c5b84a78';
+const DAILY_MAX_PER_USER = NUM_CARDS; // safe guard if you want a limit
 
-/* UI elements */
+/* ========== UI elements ========== */
 const adsGrid = document.getElementById('adsGrid');
 const statClicked = document.getElementById('statClicked');
 const statCompleted = document.getElementById('statCompleted');
@@ -5882,206 +5882,226 @@ const adPlayer = document.getElementById('adPlayer');
 const adSpinner = document.getElementById('adSpinner');
 const closeAd = document.getElementById('closeAd');
 
-/* state */
 let currentUser = null;
 let inProgress = {};      // cardId -> boolean
 let cardStatus = {};      // cardId -> 'available' | 'completed' | 'abandoned'
-let userStats = {
-  adsClicked: 0,
-  adsCompleted: 0,
-  adsAbandoned: 0,
-  balance: 0
-};
+let userStats = { adsClicked:0, adsCompleted:0, adsAbandoned:0, balance:0, adEarnings:0 };
 
-/* Utility to format Naira */
+/* utility */
 function formatNaira(v){ return '₦' + Number(v).toFixed(2); }
+function todayString(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
-/* ========= render 20 cards (lazy, nothing loaded until clicked) ========== */
-function renderCards() {
+/* Render cards (nothing loads until click) */
+function renderCards(){
   adsGrid.innerHTML = '';
   for (let i=1;i<=NUM_CARDS;i++){
     const status = cardStatus[i] || 'available';
-    const disabled = status !== 'available';
+    const disabled = (status === 'completed' || status === 'abandoned');
     const card = document.createElement('div');
-    card.className = `relative group rounded-3xl overflow-hidden backdrop-blur-xl bg-white/80 border border-indigo-100 p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all duration-200 ${disabled?'opacity-50 pointer-events-none':''}`;
     card.dataset.cardId = i;
+    card.className = `relative group rounded-2xl p-4 bg-white/80 backdrop-blur border border-indigo-100 ${disabled? 'opacity-60 pointer-events-none' : 'hover:-translate-y-1 hover:shadow-lg transition'}`;
     card.innerHTML = `
-      <div class="flex items-center justify-between mb-3">
-        <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-inner">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A2 2 0 0122 9.618V14a2 2 0 01-1.447 1.914L15 18m0-8v8" /></svg>
+      <div class="flex items-start gap-4">
+        <div class="w-14 h-14 rounded-xl overflow-hidden">
+          <img src="GLOBALS.jpg" alt="globals" class="w-full h-full object-cover">
+        </div>
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm font-semibold text-slate-900">Global Ad #${i}</div>
+              <div class="text-xs text-slate-500 mt-0.5">Watch video to earn</div>
+            </div>
+            <div class="text-right">
+              <div class="text-sm font-semibold text-emerald-600">${formatNaira(REWARD_NAIRA)}</div>
+              <div class="text-xs text-slate-400">Globals Ads</div>
+            </div>
           </div>
-          <div>
-            <div class="text-sm font-semibold text-gray-900">Global Ad #${i}</div>
-            <div class="text-xs text-gray-500">Watch video to earn</div>
+          <div class="mt-3 flex items-center gap-2">
+            <button class="watch-btn inline-flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-xl text-sm" aria-label="Watch Ad ${i}">
+              <i data-lucide="play" class="w-4 h-4"></i>
+              Watch
+            </button>
+            <div class="status-pill ml-2 text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">${status === 'available' ? 'Available' : (status === 'completed' ? 'Completed' : 'Skipped')}</div>
           </div>
         </div>
-        <div class="text-right">
-          <div class="text-sm font-semibold text-green-600">₦${REWARD_NAIRA}</div>
-          <div class="text-xs text-gray-400">Globals Ads</div>
-        </div>
       </div>
-      <div class="flex gap-2 items-center">
-        <button class="watch-btn ml-auto inline-flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-xl text-sm">Watch</button>
-        <div class="status-label text-xs font-medium text-gray-500 ml-2">${status === 'available' ? 'Available' : (status === 'completed' ? 'Completed' : 'Skipped')}</div>
-      </div>
-      ${disabled ? `<div class="absolute inset-0 bg-white/60 flex items-center justify-center text-sm font-semibold">${status === 'completed' ? 'COMPLETED' : 'SKIPPED'}</div>` : ''}
     `;
     adsGrid.appendChild(card);
   }
+  // render icons inside cards
+  setTimeout(()=>{ if(window.lucide) lucide.createIcons(); }, 30);
 }
 
-/* ========== Firebase: load or initialize user doc ========== */
+/* ======== Firestore helpers ======== */
 async function ensureUserDoc(uid){
   const docRef = db.collection('users').doc(uid);
   const doc = await docRef.get();
+  const today = todayString();
   if (!doc.exists){
     await docRef.set({
       balance: 0,
+      adEarnings: 0,
       adsClicked: 0,
       adsCompleted: 0,
       adsAbandoned: 0,
-      watchedAds: {}   // map: cardId -> 'completed' | 'abandoned'
+      watchedAds: {},     // cardId -> 'completed'|'abandoned'
+      lastDailyReset: today
     });
-    return {balance:0, adsClicked:0, adsCompleted:0, adsAbandoned:0, watchedAds:{}};
+    return { balance:0, adEarnings:0, adsClicked:0, adsCompleted:0, adsAbandoned:0, watchedAds:{}, lastDailyReset: today };
   }
   return doc.data();
 }
 
-/* ========== Load user's saved watched status & stats ========== */
+/* daily reset: clears watchedAds but keeps totals */
+async function dailyResetIfNeeded(uid, userDoc){
+  const today = todayString();
+  if (!userDoc) return;
+  const last = userDoc.lastDailyReset || '';
+  if (last !== today){
+    // reset watchedAds only
+    await db.collection('users').doc(uid).set({ watchedAds: {}, lastDailyReset: today }, { merge:true });
+    // also update local states
+    cardStatus = {};
+    renderCards();
+  }
+}
+
+/* load user data and UI sync */
 async function loadUserData(uid){
   try {
-    const data = await ensureUserDoc(uid);
-    userStats.adsClicked = data.adsClicked || 0;
-    userStats.adsCompleted = data.adsCompleted || 0;
-    userStats.adsAbandoned = data.adsAbandoned || 0;
-    userStats.balance = data.balance || 0;
-    const watched = data.watchedAds || {};
-    // populate cardStatus
+    const docRef = db.collection('users').doc(uid);
+    const docSnap = await docRef.get();
+    let data = docSnap.exists ? docSnap.data() : await ensureUserDoc(uid);
+
+    // daily reset if needed
+    await dailyResetIfNeeded(uid, data);
+    // if we reset, reload doc
+    const fresh = (await db.collection('users').doc(uid).get()).data();
+
+    userStats.adsClicked = fresh.adsClicked || 0;
+    userStats.adsCompleted = fresh.adsCompleted || 0;
+    userStats.adsAbandoned = fresh.adsAbandoned || 0;
+    userStats.balance = fresh.balance || 0;
+    userStats.adEarnings = fresh.adEarnings || 0;
+
+    // load watchedAds -> cardStatus
     cardStatus = {};
+    const watched = fresh.watchedAds || {};
     Object.keys(watched).forEach(k=>{
       const id = Number(k);
       if (id >=1 && id <= NUM_CARDS) cardStatus[id] = watched[k];
     });
-    // update UI
+
     updateStatsUI();
     renderCards();
-  } catch (err) {
+
+    // If we have an in-progress ad recorded in localStorage from before reload, and it's still there -> mark as abandoned now
+    const inProg = localStorage.getItem('ad_in_progress');
+    if (inProg){
+      const cid = Number(inProg);
+      // If that ad was neither completed nor abandoned in Firestore, mark abandoned
+      if (cid >=1 && cid <= NUM_CARDS && (!cardStatus[cid] || cardStatus[cid] === 'available')){
+        try {
+          await recordAbandoned(uid, cid);
+        } catch(e){ console.warn('failed mark abandoned on load', e); }
+      }
+      localStorage.removeItem('ad_in_progress');
+    }
+  } catch (err){
     console.error('loadUserData err', err);
   }
 }
 
-/* ========== UI stats update ========== */
+/* UI stats update */
 function updateStatsUI(){
   statClicked.textContent = userStats.adsClicked || 0;
   statCompleted.textContent = userStats.adsCompleted || 0;
   statAbandoned.textContent = userStats.adsAbandoned || 0;
-  statIncome.textContent = formatNaira(userStats.balance || 0);
+  statIncome.textContent = formatNaira(userStats.adEarnings || 0); // show ad-only earnings
 }
 
-/* ========== Helper to mark a card locally & in UI ========== */
-function setCardLocalStatus(cardId, status){
-  cardStatus[cardId] = status;     // 'completed' or 'abandoned'
-  renderCards();
-}
-
-/* ========== Firestore update helpers ========== */
+/* record a click (only increments adsClicked) */
 async function recordClickOnly(uid, cardId){
   const docRef = db.collection('users').doc(uid);
-  const field = `watchedAds.${cardId}`;
   await docRef.set({
-    adsClicked: firebase.firestore.FieldValue.increment(1),
-    [field]: 'clicked'
+    adsClicked: firebase.firestore.FieldValue.increment(1)
   }, {merge:true});
-  // update local
   userStats.adsClicked++;
   updateStatsUI();
 }
 
+/* record abandoned (skipped), does NOT increment adsClicked (click already counted) */
 async function recordAbandoned(uid, cardId){
   const docRef = db.collection('users').doc(uid);
   const field = `watchedAds.${cardId}`;
   await docRef.set({
-    adsClicked: firebase.firestore.FieldValue.increment(1),
     adsAbandoned: firebase.firestore.FieldValue.increment(1),
     [field]: 'abandoned'
   }, {merge:true});
-  userStats.adsClicked++;
   userStats.adsAbandoned++;
-  setCardLocalStatus(cardId, 'abandoned');
+  cardStatus[cardId] = 'abandoned';
   updateStatsUI();
+  renderCards();
 }
 
+/* reward user: increment balance and adEarnings and adsCompleted; set watchedAds.cardId = 'completed' */
 async function rewardUser(uid, cardId){
   const docRef = db.collection('users').doc(uid);
   const field = `watchedAds.${cardId}`;
-  // atomic increment
   await docRef.set({
     balance: firebase.firestore.FieldValue.increment(REWARD_NAIRA),
-    adsClicked: firebase.firestore.FieldValue.increment(1),
+    adEarnings: firebase.firestore.FieldValue.increment(REWARD_NAIRA),
     adsCompleted: firebase.firestore.FieldValue.increment(1),
     [field]: 'completed'
   }, {merge:true});
 
-  // update local stats to keep UI synced
   userStats.balance = (Number(userStats.balance) || 0) + Number(REWARD_NAIRA);
-  userStats.adsClicked++;
+  userStats.adEarnings = (Number(userStats.adEarnings) || 0) + Number(REWARD_NAIRA);
   userStats.adsCompleted++;
-  setCardLocalStatus(cardId, 'completed');
+  cardStatus[cardId] = 'completed';
   updateStatsUI();
+  renderCards();
 }
 
-/* ========== VAST resolution + player logic (resolves mp4 or hls; falls back to smartlink) ========== */
+/* ======= VAST resolution & playback helpers (same approach as before) ======= */
 async function fetchText(url){
   const res = await fetch(url, {method:'GET', mode:'cors'});
   if (!res.ok) throw new Error('fetch failed ' + res.status);
   return res.text();
 }
-
-function parseXML(text){
-  try {
-    return (new DOMParser()).parseFromString(text, 'application/xml');
-  } catch(e){ return null; }
-}
-
+function parseXML(text){ try{ return (new DOMParser()).parseFromString(text,'application/xml'); }catch(e){return null;} }
 async function resolveVast(url, depth=0){
-  if (!url || depth > 3) return null;
+  if (!url || depth>3) return null;
   try {
     const text = await fetchText(url);
     const xml = parseXML(text);
-    if(!xml) return null;
-
-    // If wrapper present -> follow nested VASTAdTagURI
+    if (!xml) return null;
     const wrapper = xml.querySelector('Wrapper > VASTAdTagURI, VASTAdTagURI');
     if (wrapper && wrapper.textContent && wrapper.textContent.trim()){
       const next = wrapper.textContent.trim();
       return await resolveVast(next, depth+1);
     }
-
     const mediaFiles = Array.from(xml.querySelectorAll('MediaFile'));
     const candidates = mediaFiles.map(node=>{
       const urlText = node.textContent.trim();
       const type = node.getAttribute('type') || '';
       return {url: urlText, type};
     }).filter(m => m.url && !/javascript|vpaid/i.test(m.url));
-
     const mp4 = candidates.find(c => /mp4|video\/mp4/i.test(c.type) || /\.mp4(\?|$)/i.test(c.url));
     if (mp4) return {kind:'mp4', url: mp4.url};
-
     const hls = candidates.find(c => /\.m3u8(\?|$)/i.test(c.url) || /application\/x-mpegURL/i.test(c.type));
     if (hls) return {kind:'hls', url: hls.url};
-
     return null;
-  } catch (err) {
-    console.warn('resolveVast error', err);
+  } catch(e){
+    console.warn('resolveVast err', e);
     return null;
   }
 }
 
-/* load HLS lib when needed */
+/* load HLS lib if needed */
 let hlsLoaded = false;
 function loadHlsJs(){
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve,reject)=>{
     if (hlsLoaded) return resolve(window.Hls);
     const s = document.createElement('script');
     s.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
@@ -6091,65 +6111,104 @@ function loadHlsJs(){
   });
 }
 
-/* ========== Main handler for clicking a specific card ========== */
+/* Keep track of which card is playing */
+let currentPlayingCard = null;
+
+/* Prevent seeking: track lastTime and clamp seeking */
+function attachNoSeekProtection(video){
+  let lastTime = 0;
+  const onTime = ()=> { lastTime = Math.max(lastTime, video.currentTime); };
+  const onSeeking = ()=> {
+    if (video.currentTime > lastTime + 0.5) {
+      video.currentTime = lastTime;
+    }
+  };
+  video.addEventListener('timeupdate', onTime);
+  video.addEventListener('seeking', onSeeking);
+  // prevent context menu (optional)
+  video.addEventListener('contextmenu', e=>e.preventDefault());
+  // cleanup function
+  return ()=>{
+    video.removeEventListener('timeupdate', onTime);
+    video.removeEventListener('seeking', onSeeking);
+    video.removeEventListener('contextmenu', e=>e.preventDefault());
+  };
+}
+
+/* ========== Main click handler ========== */
 async function handleWatchClick(cardId, cardEl){
+  // guard
   if (!currentUser) { alert('Please sign in to watch ads and earn.'); return; }
-  if (inProgress[cardId]) return;                 // already in progress
-  if (cardStatus[cardId] === 'completed' || cardStatus[cardId] === 'abandoned') return; // done
+  if (inProgress[cardId]) return;
+  if (cardStatus[cardId] === 'completed' || cardStatus[cardId] === 'abandoned') return;
 
+  // prevent reentry fast
   inProgress[cardId] = true;
-  // record click (so it's logged quickly)
-  try { await recordClickOnly(currentUser.uid, cardId); } catch(e){ console.warn('recordClickOnly failed', e); }
+  currentPlayingCard = cardId;
+  // mark in localStorage so reload will mark abandoned
+  try { localStorage.setItem('ad_in_progress', String(cardId)); } catch(e){}
 
-  // open modal
+  // record click (only increment clicks once)
+  try { await recordClickOnly(currentUser.uid, cardId); } catch(e) { console.warn('recordClickOnly failed', e); }
+
+  // open modal UI
   adModal.classList.remove('hidden');
-  adSpinner.style.display = 'block';
+  adSpinner.style.display = 'flex';
   adPlayer.style.display = 'none';
   adPlayer.src = '';
 
+  // attempt VAST resolution
   let resolved = null;
-  try {
-    resolved = await resolveVast(VAST_LINK);
-  } catch (err) {
-    resolved = null;
-  }
+  try { resolved = await resolveVast(VAST_LINK); } catch(e){ resolved = null; }
 
-  // If no playable media -> fallback to smartlink (open new tab) and reward after 15s
   if (!resolved){
+    // fallback: open smartlink in new tab, reward after 15s
     adModal.classList.add('hidden');
     window.open(SMARTLINK, '_blank');
-    // give user 15s to consider it watched -> then reward (this is how your smartlink fallback worked before)
+
     setTimeout(async ()=>{
       try {
         await rewardUser(currentUser.uid, cardId);
         alert(`✅ You earned ${formatNaira(REWARD_NAIRA)} for watching this ad!`);
-      } catch (err) {
-        console.error('rewardUser failed', err);
-      } finally {
-        inProgress[cardId] = false;
-      }
+      } catch(err){ console.error('rewardUser failed', err); }
+      inProgress[cardId] = false;
+      currentPlayingCard = null;
+      localStorage.removeItem('ad_in_progress');
     }, 15000);
+
     return;
   }
 
-  // if mp4 -> play inline
+  // playable media available
   try {
+    // ensure previous listeners cleared
+    adPlayer.onended = null;
+    adPlayer.pause();
+    adPlayer.removeAttribute('src');
+    // MP4
     if (resolved.kind === 'mp4'){
       adPlayer.src = resolved.url;
       adPlayer.style.display = 'block';
       adSpinner.style.display = 'none';
-      // safety fallback: if can't load in 8s -> fallback
+
+      // attach no-seek protection
+      const cleanupSeek = attachNoSeekProtection(adPlayer);
+
+      // safety fallback: if video doesn't start loading in 8s -> fallback
       const failTimeout = setTimeout(()=>{
         if (adPlayer.readyState === 0){
+          // fallback
           adModal.classList.add('hidden');
           inProgress[cardId] = false;
-          // mark abandoned because video failed to load
+          currentPlayingCard = null;
+          cleanupSeek();
+          localStorage.removeItem('ad_in_progress');
           recordAbandoned(currentUser.uid, cardId).catch(()=>{});
-          window.open(SMARTLINK,'_blank');
+          window.open(SMARTLINK, '_blank');
         }
       }, 8000);
 
-      // play
+      // attempt play (user click is a gesture)
       const playPromise = adPlayer.play();
       if (playPromise !== undefined){
         playPromise.catch(err => {
@@ -6157,27 +6216,27 @@ async function handleWatchClick(cardId, cardEl){
           clearTimeout(failTimeout);
           adModal.classList.add('hidden');
           inProgress[cardId] = false;
+          currentPlayingCard = null;
+          cleanupSeek();
           recordAbandoned(currentUser.uid, cardId).catch(()=>{});
-          window.open(SMARTLINK,'_blank');
+          window.open(SMARTLINK, '_blank');
         });
       }
 
-      adPlayer.onended = async () => {
+      adPlayer.onended = async ()=>{
         clearTimeout(failTimeout);
         adModal.classList.add('hidden');
         try {
           await rewardUser(currentUser.uid, cardId);
           alert(`✅ You earned ${formatNaira(REWARD_NAIRA)} for watching this ad!`);
-        } catch (err) {
-          console.error('rewardUser error', err);
-        } finally {
-          inProgress[cardId] = false;
-        }
+        } catch(err){ console.error('reward error', err); }
+        inProgress[cardId] = false;
+        currentPlayingCard = null;
+        cleanupSeek();
+        localStorage.removeItem('ad_in_progress');
       };
 
-      // if user closes before end, we handle via closeAd handler to mark abandoned
-    }
-    else if (resolved.kind === 'hls'){
+    } else if (resolved.kind === 'hls'){
       const Hls = await loadHlsJs();
       if (Hls && Hls.isSupported()){
         const hls = new Hls();
@@ -6185,15 +6244,21 @@ async function handleWatchClick(cardId, cardEl){
         hls.attachMedia(adPlayer);
         adPlayer.style.display = 'block';
         adSpinner.style.display = 'none';
-        adPlayer.addEventListener('loadedmetadata', ()=> {
+
+        const cleanupSeek = attachNoSeekProtection(adPlayer);
+
+        adPlayer.addEventListener('loadedmetadata', ()=>{
           adPlayer.play().catch(err=>{
             console.warn('HLS play failed', err);
             adModal.classList.add('hidden');
             inProgress[cardId] = false;
+            currentPlayingCard = null;
+            cleanupSeek();
             recordAbandoned(currentUser.uid, cardId).catch(()=>{});
-            window.open(SMARTLINK,'_blank');
+            window.open(SMARTLINK, '_blank');
           });
         });
+
         adPlayer.onended = async ()=>{
           adModal.classList.add('hidden');
           try {
@@ -6201,84 +6266,120 @@ async function handleWatchClick(cardId, cardEl){
             alert(`✅ You earned ${formatNaira(REWARD_NAIRA)} for watching this ad!`);
           } catch(err){ console.error(err); }
           inProgress[cardId] = false;
+          currentPlayingCard = null;
+          cleanupSeek();
+          localStorage.removeItem('ad_in_progress');
         };
+
       } else {
-        // hls not supported fallback
         adModal.classList.add('hidden');
         inProgress[cardId] = false;
+        currentPlayingCard = null;
         recordAbandoned(currentUser.uid, cardId).catch(()=>{});
-        window.open(SMARTLINK,'_blank');
+        window.open(SMARTLINK, '_blank');
       }
     } else {
-      // unknown -> fallback
+      // unknown type
       adModal.classList.add('hidden');
       inProgress[cardId] = false;
+      currentPlayingCard = null;
       recordAbandoned(currentUser.uid, cardId).catch(()=>{});
-      window.open(SMARTLINK,'_blank');
+      window.open(SMARTLINK, '_blank');
     }
   } catch(err){
     console.error('playback error', err);
     adModal.classList.add('hidden');
     inProgress[cardId] = false;
+    currentPlayingCard = null;
     recordAbandoned(currentUser.uid, cardId).catch(()=>{});
-    window.open(SMARTLINK,'_blank');
+    window.open(SMARTLINK, '_blank');
+    localStorage.removeItem('ad_in_progress');
   }
 }
 
-/* ========== Close modal handler (marks abandoned if ad was playing) ========== */
+/* modal close -> mark abandoned if it was in progress */
 closeAd.addEventListener('click', async ()=>{
-  // if a video is currently playing and not ended, find which card is in progress and mark abandoned
-  let inProgCard = null;
-  for (const k in inProgress) if (inProgress[k]) { inProgCard = k; break; }
-  try { if (!adPlayer.paused) adPlayer.pause(); } catch(e){}
-
-  adModal.classList.add('hidden');
-
-  if (inProgCard){
-    // mark as abandoned
+  if (currentPlayingCard){
     try {
-      await recordAbandoned(currentUser.uid, Number(inProgCard));
-      alert('⚠️ Ad was closed early. Marked as skipped (no reward).');
+      await recordAbandoned(currentUser.uid, Number(currentPlayingCard));
+      alert('⚠️ Ad closed early — marked as skipped (no reward).');
     } catch(e){ console.warn('recordAbandoned err', e); }
-    inProgress[inProgCard] = false;
   }
+  try { adPlayer.pause(); } catch(e){}
+  adModal.classList.add('hidden');
+  inProgress[currentPlayingCard] = false;
+  localStorage.removeItem('ad_in_progress');
+  currentPlayingCard = null;
 });
 
-/* ========== Wire click events on cards (delegate) ========== */
+/* delegation: watch button clicks */
 adsGrid.addEventListener('click', (e)=>{
   const btn = e.target.closest('.watch-btn');
   if (!btn) return;
   const cardEl = e.target.closest('[data-card-id]');
   if (!cardEl) return;
   const cardId = Number(cardEl.dataset.cardId);
+  // disable immediate double clicks by disabling the button visually
+  btn.setAttribute('disabled','true');
+  setTimeout(()=>btn.removeAttribute('disabled'), 1000);
   handleWatchClick(cardId, cardEl);
 });
 
-/* ========== Auth watcher: load user data when signed in ========== */
-auth.onAuthStateChanged(async (u) => {
+/* process ad_in_progress on page load/login: if found, mark abandoned */
+async function processInProgressOnLoad(){
+  try {
+    const inProg = localStorage.getItem('ad_in_progress');
+    if (!inProg) return;
+    const cid = Number(inProg);
+    if (!currentUser) return; // will be processed after login in auth state change
+    // if that card hasn't been marked completed/abandoned already, mark abandoned now
+    const doc = await db.collection('users').doc(currentUser.uid).get();
+    const watched = (doc.exists && doc.data().watchedAds) ? doc.data().watchedAds : {};
+    if (!watched || !watched[cid]){
+      await recordAbandoned(currentUser.uid, cid);
+    }
+    localStorage.removeItem('ad_in_progress');
+  } catch(e){ console.warn('processInProgressOnLoad err', e); }
+}
+
+/* show/hide watchAdsSection from Tasks */
+function showWatchAdsSection(){
+  document.getElementById('tasks').classList.add('hidden');
+  document.getElementById('watchAdsSection').classList.remove('hidden');
+  renderCards();
+}
+
+/* Auth watcher */
+auth.onAuthStateChanged(async (u)=>{
   currentUser = u;
   if (u){
     await loadUserData(u.uid);
+    // after loading user data, check if there was an in-progress ad that needs marking abandoned
+    await processInProgressOnLoad();
   } else {
-    // no user - show zeroed UI and cardStatus from localStorage maybe
-    userStats = {adsClicked:0, adsCompleted:0, adsAbandoned:0, balance:0};
-    // try to load watched from localStorage fallback (so guest sessions stay consistent)
-    const stored = localStorage.getItem('watchedAdsFallback');
+    // guest - reset UI but keep any local fallback statuses
+    userStats = { adsClicked:0, adsCompleted:0, adsAbandoned:0, balance:0, adEarnings:0 };
     try {
-      cardStatus = stored ? JSON.parse(stored) : {};
-    } catch(e){ cardStatus={}; }
+      cardStatus = JSON.parse(localStorage.getItem('watchedAdsFallback') || '{}') || {};
+    } catch(e){ cardStatus = {}; }
     updateStatsUI();
     renderCards();
   }
 });
 
-/* Save watched states to localStorage as a fallback when user is guest or to keep UI quick */
+/* periodic save fallback */
 setInterval(()=> {
   try { localStorage.setItem('watchedAdsFallback', JSON.stringify(cardStatus)); } catch(e){}
 }, 5000);
 
-/* initial render */
+/* beforeunload: we keep localStorage 'ad_in_progress' mark so reload will be handled */
+window.addEventListener('beforeunload', ()=>{
+  // do nothing synchronous - just let the flag remain; handle on next load
+});
+
+/* init UI + icons */
 renderCards();
+setTimeout(()=>{ if(window.lucide) lucide.createIcons(); }, 50);
 
 
 
