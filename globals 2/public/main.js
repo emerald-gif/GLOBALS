@@ -6141,8 +6141,7 @@ async function resolveVast(url, depth=0){
       return {url: urlText, type};
     }).filter(m => m.url && !/javascript|vpaid/i.test(m.url));
     const mp4 = candidates.find(c => /mp4|video\/mp4/i.test(c.type) || /\.mp4$/i.test(c.url));
-	  if (mp4) return {kind:'mp4', url: mp4.url};
-    const hls = candidates.find(c => /\.m3u8(?|$)/i.test(c.url) || /application\/x-mpegURL/i.test(c.type));
+const hls = candidates.find(c => /\.m3u8$/i.test(c.url) || /application\/x-mpegURL/i.test(c.type));
     if (hls) return {kind:'hls', url: hls.url};
     return null;
   } catch(e){ console.warn('resolveVast err', e); return null; }
