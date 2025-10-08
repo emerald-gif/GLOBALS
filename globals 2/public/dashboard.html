@@ -630,6 +630,7 @@
 
     <!-- Electricity -->
     <!-- ✅ Watch Ad Section -->
+<!-- ✅ Watch Ad Button -->
 <div id="watchAdBtn"
      class="flex flex-col items-center cursor-pointer group">
   <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
@@ -644,7 +645,7 @@
   <p class="mt-2 text-sm font-semibold text-blue-900">Watch Ad</p>
 </div>
 
-<!-- 🎥 Video Ad Modal -->
+<!-- 🎥 Ad Modal -->
 <div id="adModal" class="fixed inset-0 hidden bg-black/80 flex items-center justify-center z-50">
   <div class="relative bg-white rounded-2xl overflow-hidden shadow-xl w-[90%] max-w-lg">
     <video id="adPlayer" width="100%" height="auto" controls playsinline></video>
@@ -653,44 +654,68 @@
   </div>
 </div>
 
-<!-- ✅ Script -->
+<!-- 🎬 Fluid Player -->
 <script src="https://cdn.fluidplayer.com/v3/current/fluidplayer.min.js"></script>
+
 <script>
 const watchAdBtn = document.getElementById('watchAdBtn');
 const adModal = document.getElementById('adModal');
 const adPlayer = document.getElementById('adPlayer');
 const closeAd = document.getElementById('closeAd');
 
+const VAST_LINK = 'https://silkyspite.com/dFm/Ffz/d.GgN/vpZwGiUZ/eecmg9suLZ/Ujlak/P/TkY/2hNYzjAB2gNYzCQMtKNxj/YZ3mMaDSYl3GN/Qd';
+const SMARTLINK = 'https://www.revenuecpmgate.com/n945dxhe?key=84160f9954ff564239085356c5b84a78';
+
 watchAdBtn.addEventListener('click', () => {
   adModal.classList.remove('hidden');
 
-  // 🎬 Initialize Fluid Player with your Hilltop VAST link
-  const player = fluidPlayer('adPlayer', {
-    layoutControls: { fillToContainer: true },
-    vastOptions: {
-      adList: [{
-        roll: 'preRoll',
-        vastTag: 'https://silkyspite.com/dFm/Ffz/d.GgN/vpZwGiUZ/eecmg9suLZ/Ujlak/P/TkY/2hNYzjAB2gNYzCQMtKNxj/YZ3mMaDSYl3GN/Qd'
-      }],
-      skipButtonCaption: 'Skip Ad',
-    }
-  });
+  try {
+    const player = fluidPlayer('adPlayer', {
+      layoutControls: {
+        fillToContainer: true,
+        autoplay: true,
+        mute: false
+      },
+      vastOptions: {
+        adList: [{
+          roll: 'preRoll',
+          vastTag: VAST_LINK
+        }]
+      }
+    });
 
-  // 💰 Reward user after ad finishes
-  adPlayer.addEventListener('ended', () => {
+    // Reward after 15s (simulate watch time)
+    setTimeout(() => {
+      adModal.classList.add('hidden');
+      alert('✅ You earned 5 coins for watching the ad!');
+      // 🔧 Add your Firestore or API reward update here
+    }, 15000);
+
+    // If ad doesn’t load within 5s, open smartlink fallback
+    setTimeout(() => {
+      if (adPlayer.readyState === 0) {
+        adModal.classList.add('hidden');
+        window.open(SMARTLINK, '_blank');
+        setTimeout(() => {
+          alert('✅ You earned 5 coins for watching the ad!');
+        }, 15000);
+      }
+    }, 5000);
+
+  } catch (e) {
     adModal.classList.add('hidden');
-    alert('✅ You earned 5 coins for watching the ad!');
-    // 🔧 You can update balance here via Firestore or your API
-  });
+    window.open(SMARTLINK, '_blank');
+    setTimeout(() => {
+      alert('✅ You earned 5 coins for watching the ad!');
+    }, 15000);
+  }
 });
 
-// 🟥 Close button
 closeAd.addEventListener('click', () => {
   adModal.classList.add('hidden');
   adPlayer.pause();
 });
 </script>
-
     <!-- TV -->
     <div onclick="activateTab('tv-screen')" 
          class="flex flex-col items-center cursor-pointer group">
