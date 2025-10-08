@@ -5861,9 +5861,6 @@ window.loadBanks = loadBanks;
 
 
 
-                                   //WATCH ADS FUNCTION 
-
-/* ====================== SETTINGS ====================== */
 
 
 /* ====================== SETTINGS ====================== */
@@ -5871,9 +5868,9 @@ const REWARD_NAIRA = 0.5;
 const NUM_CARDS = 20;
 const VAST_LINK = 'https://silkyspite.com/d.mlFpzUd/G/NYvdZkGoUk/ee/mJ9iu/ZrUVlokJPwTyY/2wNTz/AK2ZNUzTQNtZNSjKYj3hMsDmYp3qNkQs';
 const SMARTLINK = 'https://www.revenuecpmgate.com/n945dxhe?key=84160f9954ff564239085356c5b84a78';
-const DAILY_MAX_PER_USER = NUM_CARDS; // safe guard if you want a limit
+const DAILY_MAX_PER_USER = NUM_CARDS;
 
-/* ========== UI elements ========== */
+/* ========== DOM elements ========== */
 const adsGrid = document.getElementById('adsGrid');
 const statClicked = document.getElementById('statClicked');
 const statCompleted = document.getElementById('statCompleted');
@@ -5885,33 +5882,57 @@ const adModal = document.getElementById('adModal');
 const adPlayer = document.getElementById('adPlayer');
 const adSpinner = document.getElementById('adSpinner');
 const closeAd = document.getElementById('closeAd');
-const adControls = document.getElementById('adControls');
-const adProgress = document.getElementById('adProgress');
-const adElapsed = document.getElementById('adElapsed');
-const adRemaining = document.getElementById('adRemaining');
+const videoContainer = document.getElementById('videoContainer');
+const adProgressBar = document.getElementById('adProgressBar');
+const currentTimeEl = document.getElementById('currentTime');
+const totalTimeEl = document.getElementById('totalTime');
 
 let currentUser = null;
 let inProgress = {};      // cardId -> boolean
 let cardStatus = {};      // cardId -> 'available' | 'completed' | 'abandoned'
-let userStats = {
-  adsClicked:0,
-  adsCompleted:0,
-  adsAbandoned:0,
-  balance:0,
-  adEarningsToday:0,
-  adEarningsTotal:0
-};
+let userStats = { adsClicked:0, adsCompleted:0, adsAbandoned:0, balance:0, adEarningsToday:0, adEarningsTotal:0 };
 
 let currentPlayingCard = null;
 let currentCleanupSeek = null;
 let currentCleanupTime = null;
 
+/* ===== Guest fallback (localStorage) ===== */
+const GUEST_KEY = 'watchAdsFallbackData';
+function loadGuestData(){
+  try {
+    const raw = localStorage.getItem(GUEST_KEY);
+    const def = { completed: [], skipped: [], todayIncome:0, totalIncome:0, adsClicked:0, adsCompleted:0, adsAbandoned:0, date: new Date().toDateString() };
+    if (!raw) { localStorage.setItem(GUEST_KEY, JSON.stringify(def)); return def; }
+    const parsed = JSON.parse(raw);
+    // daily reset for guest
+    if (parsed.date !== new Date().toDateString()){
+      parsed.completed = [];
+      parsed.skipped = [];
+      parsed.todayIncome = 0;
+      parsed.date = new Date().toDateString();
+      localStorage.setItem(GUEST_KEY, JSON.stringify(parsed));
+    }
+    return parsed;
+  } catch(e){ console.warn('guest load err', e); const def = { completed: [], skipped: [], todayIncome:0, totalIncome:0, adsClicked:0, adsCompleted:0, adsAbandoned:0, date: new Date().toDateString() }; localStorage.setItem(GUEST_KEY, JSON.stringify(def)); return def; }
+}
+function saveGuestData(d){ try { localStorage.setItem(GUEST_KEY, JSON.stringify(d)); } catch(e){ console.warn('guest save err', e); } }
+let guestData = loadGuestData();
+
 /* utility */
 function formatNaira(v){ return '₦' + Number(v || 0).toFixed(2); }
 function todayString(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
-function formatTime(s){ s = Number(s) || 0; const m = Math.floor(s/60); const sec = Math.floor(s%60); return String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0'); }
+function formatTime(s){ s = Number(s) || 0; const m = Math.floor(s/60); const sec = Math.floor(s%60); return String(m)+':'+String(sec).padStart(2,'0'); }
 
-/* Render cards (nothing loads until click) */
+/* ===== Ads data (example) - replace with your dynamic feed if needed ===== */
+const ADS_META = Array.from({length: NUM_CARDS}).map((_,i)=>({
+  id: i+1,
+  title: `Global Ad #${i+1}`,
+  // fallback video placeholder; your VAST will override in production when available
+  video: 'https://cdn.pixabay.com/video/2022/03/06/108502-690210521_large.mp4',
+  reward: REWARD_NAIRA
+}));
+
+/* ===== Render cards ===== */
 function renderCards(){
   adsGrid.innerHTML = '';
   for (let i=1;i<=NUM_CARDS;i++){
@@ -5920,6 +5941,7 @@ function renderCards(){
     const card = document.createElement('div');
     card.dataset.cardId = i;
     card.className = 'relative group rounded-2xl p-4 bg-white/80 backdrop-blur border border-indigo-100 ' + (disabled ? 'opacity-60 pointer-events-none' : 'hover:-translate-y-1 hover:shadow-lg transition');
+    const rewardDisplay = formatNaira(REWARD_NAIRA);
     card.innerHTML = `
       <div class="flex items-start gap-4">
         <div class="w-14 h-14 rounded-xl overflow-hidden">
@@ -5932,13 +5954,13 @@ function renderCards(){
               <div class="text-xs text-slate-500 mt-0.5">Watch video to earn</div>
             </div>
             <div class="text-right">
-              <div class="text-sm font-semibold text-emerald-600">${formatNaira(REWARD_NAIRA)}</div>
+              <div class="text-sm font-semibold text-emerald-600">${rewardDisplay}</div>
               <div class="text-xs text-slate-400">Globals Ads</div>
             </div>
           </div>
           <div class="mt-3 flex items-center gap-2">
             <button class="watch-btn inline-flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-xl text-sm" aria-label="Watch Ad ${i}">
-              <i data-lucide="play" class="w-4 h-4"></i>
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 3v18l15-9L5 3z"></path></svg>
               Watch
             </button>
             <div class="status-pill ml-2 text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">${status === 'available' ? 'Available' : (status === 'completed' ? 'Completed' : 'Skipped')}</div>
@@ -5948,11 +5970,9 @@ function renderCards(){
     `;
     adsGrid.appendChild(card);
   }
-  // render icons inside cards
-  setTimeout(()=>{ if(window.lucide) lucide.createIcons(); }, 30);
 }
 
-/* ======== Firestore helpers ======== */
+/* ===== Firestore helpers (user) ===== */
 async function ensureUserDoc(uid){
   const docRef = db.collection('users').doc(uid);
   const doc = await docRef.get();
@@ -5973,44 +5993,32 @@ async function ensureUserDoc(uid){
   return doc.data();
 }
 
-/* daily reset: clears watchedAds but keeps totals; moves today's earnings into total */
 async function dailyResetIfNeeded(uid, userDoc){
   const today = todayString();
   if (!userDoc) return;
   const last = userDoc.lastDailyReset || '';
   if (last === today) return;
 
-  // move today's earnings to total, reset watchedAds and today's earnings
   const todayEarn = Number(userDoc.adEarningsToday || 0);
   const updates = {
     watchedAds: {},
     lastDailyReset: today,
     adEarningsToday: 0
   };
-  if (todayEarn) {
-    updates.adEarningsTotal = firebase.firestore.FieldValue.increment(todayEarn);
-  }
-  await db.collection('users').doc(uid).set(updates, {merge:true});
+  if (todayEarn) updates.adEarningsTotal = firebase.firestore.FieldValue.increment(todayEarn);
 
-  // local update so UI doesn't flicker wrong
-  cardStatus = {};
-  userStats.adEarningsTotal = (Number(userStats.adEarningsTotal) || 0) + todayEarn;
-  userStats.adEarningsToday = 0;
-  renderCards();
-  updateStatsUI();
+  await db.collection('users').doc(uid).set(updates, {merge:true});
+  // local state will be refreshed by loadUserData immediately after
 }
 
-/* load user data and UI sync */
 async function loadUserData(uid){
   try {
     const docRef = db.collection('users').doc(uid);
     const docSnap = await docRef.get();
-    let data = docSnap.exists ? docSnap.data() : await ensureUserDoc(uid);
+    const data = docSnap.exists ? docSnap.data() : await ensureUserDoc(uid);
 
-    // daily reset if needed (this will move yesterday's 'today' earnings into total)
     await dailyResetIfNeeded(uid, data);
-
-    // reload fresh doc
+    // reload after potential reset
     const freshSnap = await db.collection('users').doc(uid).get();
     const fresh = freshSnap.exists ? freshSnap.data() : {};
 
@@ -6021,7 +6029,7 @@ async function loadUserData(uid){
     userStats.adEarningsToday = fresh.adEarningsToday || 0;
     userStats.adEarningsTotal = fresh.adEarningsTotal || 0;
 
-    // load watchedAds -> cardStatus
+    // map watchedAds to cardStatus
     cardStatus = {};
     const watched = fresh.watchedAds || {};
     Object.keys(watched).forEach(k=>{
@@ -6031,83 +6039,92 @@ async function loadUserData(uid){
 
     updateStatsUI();
     renderCards();
+  } catch(e){ console.error('loadUserData error', e); }
+}
 
-    // If there was an in-progress ad recorded in localStorage from before reload, and it's still there -> mark as abandoned now
-    const inProg = localStorage.getItem('ad_in_progress');
-    if (inProg){
-      const cid = Number(inProg);
-      if (cid >=1 && cid <= NUM_CARDS && (!cardStatus[cid] || cardStatus[cid] === 'available')){
-        try {
-          await recordAbandoned(uid, cid);
-        } catch(e){ console.warn('failed mark abandoned on load', e); }
-      }
-      localStorage.removeItem('ad_in_progress');
-    }
-
-  } catch (err){
-    console.error('loadUserData err', err);
+/* UI update based on logged-in vs guest */
+function updateStatsUI(){
+  if (currentUser){
+    statClicked.textContent = userStats.adsClicked || 0;
+    statCompleted.textContent = userStats.adsCompleted || 0;
+    statAbandoned.textContent = userStats.adsAbandoned || 0;
+    statIncome.textContent = formatNaira(userStats.adEarningsToday || 0);
+    statIncomeTotal.textContent = formatNaira(userStats.adEarningsTotal || 0);
+  } else {
+    statClicked.textContent = (guestData.adsClicked || 0);
+    statCompleted.textContent = (guestData.adsCompleted || guestData.completed.length || 0);
+    statAbandoned.textContent = (guestData.adsAbandoned || guestData.skipped.length || 0);
+    statIncome.textContent = formatNaira(guestData.todayIncome || 0);
+    statIncomeTotal.textContent = formatNaira(guestData.totalIncome || 0);
   }
 }
 
-/* UI stats update */
-function updateStatsUI(){
-  statClicked.textContent = userStats.adsClicked || 0;
-  statCompleted.textContent = userStats.adsCompleted || 0;
-  statAbandoned.textContent = userStats.adsAbandoned || 0;
-  statIncome.textContent = formatNaira(userStats.adEarningsToday || 0); // today's ad earnings
-  if (statIncomeTotal) statIncomeTotal.textContent = formatNaira(userStats.adEarningsTotal || 0); // total ad earnings
-}
-
-/* record a click (only increments adsClicked) */
+/* ===== Record actions ===== */
 async function recordClickOnly(uid, cardId){
-  const docRef = db.collection('users').doc(uid);
-  await docRef.set({
-    adsClicked: firebase.firestore.FieldValue.increment(1)
-  }, {merge:true});
-  userStats.adsClicked++;
-  updateStatsUI();
+  if (uid){
+    await db.collection('users').doc(uid).set({ adsClicked: firebase.firestore.FieldValue.increment(1) }, {merge:true});
+    userStats.adsClicked++;
+    updateStatsUI();
+  } else {
+    guestData.adsClicked = (guestData.adsClicked || 0) + 1;
+    saveGuestData(guestData);
+    updateStatsUI();
+  }
 }
 
-/* record abandoned (skipped), does NOT increment adsClicked (click already counted) */
 async function recordAbandoned(uid, cardId){
-  const docRef = db.collection('users').doc(uid);
-  const fieldKey = `watchedAds.${cardId}`;
-  await docRef.set({
-    adsAbandoned: firebase.firestore.FieldValue.increment(1),
-    [fieldKey]: 'abandoned'
-  }, {merge:true});
-  userStats.adsAbandoned++;
-  cardStatus[cardId] = 'abandoned';
-  updateStatsUI();
-  renderCards();
+  if (uid){
+    const fieldKey = `watchedAds.${cardId}`;
+    await db.collection('users').doc(uid).set({
+      adsAbandoned: firebase.firestore.FieldValue.increment(1),
+      [fieldKey]: 'abandoned'
+    }, {merge:true});
+    userStats.adsAbandoned++;
+    cardStatus[cardId] = 'abandoned';
+    updateStatsUI();
+    renderCards();
+  } else {
+    if (!guestData.skipped.includes(cardId)) guestData.skipped.push(cardId);
+    guestData.adsAbandoned = (guestData.adsAbandoned || 0) + 1;
+    saveGuestData(guestData);
+    // sync cardStatus
+    cardStatus[cardId] = 'abandoned';
+    updateStatsUI();
+    renderCards();
+  }
 }
 
-/* reward user: increment balance and adEarningsToday and adsCompleted; set watchedAds.cardId = 'completed' */
 async function rewardUser(uid, cardId){
-  const docRef = db.collection('users').doc(uid);
-  const fieldKey = `watchedAds.${cardId}`;
-  await docRef.set({
-    balance: firebase.firestore.FieldValue.increment(REWARD_NAIRA),
-    adEarningsToday: firebase.firestore.FieldValue.increment(REWARD_NAIRA),
-    adsCompleted: firebase.firestore.FieldValue.increment(1),
-    [fieldKey]: 'completed'
-  }, {merge:true});
-
-  userStats.balance = (Number(userStats.balance) || 0) + Number(REWARD_NAIRA);
-  userStats.adEarningsToday = (Number(userStats.adEarningsToday) || 0) + Number(REWARD_NAIRA);
-  userStats.adsCompleted++;
-  cardStatus[cardId] = 'completed';
-  updateStatsUI();
-  renderCards();
+  if (uid){
+    const fieldKey = `watchedAds.${cardId}`;
+    await db.collection('users').doc(uid).set({
+      balance: firebase.firestore.FieldValue.increment(REWARD_NAIRA),
+      adEarningsToday: firebase.firestore.FieldValue.increment(REWARD_NAIRA),
+      adsCompleted: firebase.firestore.FieldValue.increment(1),
+      [fieldKey]: 'completed'
+    }, {merge:true});
+    userStats.balance = (Number(userStats.balance) || 0) + Number(REWARD_NAIRA);
+    userStats.adEarningsToday = (Number(userStats.adEarningsToday) || 0) + Number(REWARD_NAIRA);
+    userStats.adsCompleted++;
+    cardStatus[cardId] = 'completed';
+    updateStatsUI();
+    renderCards();
+  } else {
+    if (!guestData.completed.includes(cardId)) guestData.completed.push(cardId);
+    guestData.todayIncome = (Number(guestData.todayIncome) || 0) + Number(REWARD_NAIRA);
+    guestData.totalIncome = (Number(guestData.totalIncome) || 0) + Number(REWARD_NAIRA);
+    guestData.adsCompleted = (guestData.adsCompleted || 0) + 1;
+    saveGuestData(guestData);
+    cardStatus[cardId] = 'completed';
+    updateStatsUI();
+    renderCards();
+  }
 }
 
-/* ======= VAST resolution & playback helpers (same approach as before) ======= */
-async function fetchText(url){
-  const res = await fetch(url, {method:'GET', mode:'cors'});
-  if (!res.ok) throw new Error('fetch failed ' + res.status);
-  return res.text();
-}
-function parseXML(text){ try{ return (new DOMParser()).parseFromString(text,'application/xml'); }catch(e){return null;} }
+/* ======= VAST helpers (resolve to mp4/hls) ======= */
+async function fetchText(url){ const res = await fetch(url, {method:'GET', mode:'cors'}); if (!res.ok) throw new Error('fetch failed ' + res.status); return res.text(); }
+function parseXML(text){ try{return (new DOMParser()).parseFromString(text,'application/xml'); } catch(e){ return null; } }
+
 async function resolveVast(url, depth=0){
   if (!url || depth>3) return null;
   try {
@@ -6130,130 +6147,102 @@ async function resolveVast(url, depth=0){
     const hls = candidates.find(c => /\.m3u8(?|$)/i.test(c.url) || /application\/x-mpegURL/i.test(c.type));
     if (hls) return {kind:'hls', url: hls.url};
     return null;
-  } catch(e){
-    console.warn('resolveVast err', e);
-    return null;
-  }
+  } catch(e){ console.warn('resolveVast err', e); return null; }
 }
 
-/* load HLS lib if needed */
+/* load HLS if needed */
 let hlsLoaded = false;
-function loadHlsJs(){
-  return new Promise((resolve,reject)=>{
-    if (hlsLoaded) return resolve(window.Hls);
-    const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
-    s.onload = ()=>{ hlsLoaded=true; resolve(window.Hls); };
-    s.onerror = reject;
-    document.head.appendChild(s);
-  });
-}
+function loadHlsJs(){ return new Promise((resolve,reject)=>{ if (hlsLoaded) return resolve(window.Hls); const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest'; s.onload = ()=>{ hlsLoaded=true; resolve(window.Hls); }; s.onerror = reject; document.head.appendChild(s); }); }
 
-/* Prevent seeking: track lastTime and clamp seeking */
+/* Prevent seeking */
 function attachNoSeekProtection(video){
   let lastTime = 0;
   const onTime = ()=> { lastTime = Math.max(lastTime, video.currentTime || 0); };
-  const onSeeking = ()=> {
-    if (video.currentTime > lastTime + 0.5) {
-      video.currentTime = lastTime;
-    }
-  };
+  const onSeeking = ()=> { if (video.currentTime > lastTime + 0.5) video.currentTime = lastTime; };
   video.addEventListener('timeupdate', onTime);
   video.addEventListener('seeking', onSeeking);
-  // prevent context menu (optional)
   const onContext = (e)=> e.preventDefault();
   video.addEventListener('contextmenu', onContext);
-  // cleanup function
-  return ()=>{
-    video.removeEventListener('timeupdate', onTime);
-    video.removeEventListener('seeking', onSeeking);
-    video.removeEventListener('contextmenu', onContext);
-  };
+  return ()=>{ video.removeEventListener('timeupdate', onTime); video.removeEventListener('seeking', onSeeking); video.removeEventListener('contextmenu', onContext); };
 }
 
-/* Attach progress/time UI. returns cleanup fn */
+/* Attach time/progress UI */
 function attachTimeUI(video){
-  adControls.classList.remove('hidden');
-  adProgress.style.width = '0%';
-  adElapsed.textContent = '00:00';
-  adRemaining.textContent = '-00:00';
-  const onTimeUpdate = () => {
+  adProgressBar.style.width = '0%';
+  currentTimeEl.textContent = '0:00';
+  totalTimeEl.textContent = '0:00';
+  const onTime = ()=>{
     const cur = Math.floor(video.currentTime || 0);
     const dur = Math.floor(video.duration || 0);
-    const percent = dur ? Math.min(100, (cur / dur) * 100) : 0;
-    adProgress.style.width = percent + '%';
-    adElapsed.textContent = formatTime(cur);
-    adRemaining.textContent = dur ? '-' + formatTime(dur - cur) : '-00:00';
+    const pct = dur ? Math.min(100, (cur / dur) * 100) : 0;
+    adProgressBar.style.width = pct + '%';
+    currentTimeEl.textContent = formatTime(cur);
+    totalTimeEl.textContent = dur ? formatTime(dur) : '0:00';
   };
-  video.addEventListener('timeupdate', onTimeUpdate);
-  return ()=> {
-    try { video.removeEventListener('timeupdate', onTimeUpdate); } catch(e){}
-    adControls.classList.add('hidden');
-    adProgress.style.width = '0%';
-  };
+  video.addEventListener('timeupdate', onTime);
+  return ()=>{ try{ video.removeEventListener('timeupdate', onTime); }catch(e){}; adProgressBar.style.width = '0%'; };
 }
 
-/* ========== Main click handler ========== */
+/* ======== Main playback flow ======== */
 async function handleWatchClick(cardId, cardEl){
-  // guard
-  if (!currentUser) { alert('Please sign in to watch ads and earn.'); return; }
+  // guard: if user is logged out we allow preview/guest flow (guestData) — works offline via localStorage
   if (inProgress[cardId]) return;
   if (cardStatus[cardId] === 'completed' || cardStatus[cardId] === 'abandoned') return;
 
-  // prevent reentry
   inProgress[cardId] = true;
   currentPlayingCard = cardId;
   try { localStorage.setItem('ad_in_progress', String(cardId)); } catch(e){}
 
-  // record click (only increment clicks once)
-  try { await recordClickOnly(currentUser.uid, cardId); } catch(e) { console.warn('recordClickOnly failed', e); }
+  // record click increment
+  if (currentUser) {
+    try { await recordClickOnly(currentUser.uid, cardId); } catch(e){ console.warn('recordClickOnly failed', e); }
+  } else {
+    await recordClickOnly(null, cardId); // updates guestData
+  }
 
-  // open modal UI
+  // show modal
   adModal.classList.remove('hidden');
   adSpinner.style.display = 'flex';
+  videoContainer.classList.add('hidden');
   adPlayer.style.display = 'none';
   adPlayer.src = '';
-  adControls.classList.add('hidden');
 
   // attempt VAST resolution
   let resolved = null;
   try { resolved = await resolveVast(VAST_LINK); } catch(e){ resolved = null; }
 
+  // fallback path (open SMARTLINK + reward after 15s)
   if (!resolved){
-    // fallback: open smartlink in new tab, reward after 15s
     adModal.classList.add('hidden');
     window.open(SMARTLINK, '_blank');
-
     setTimeout(async ()=>{
       try {
-        await rewardUser(currentUser.uid, cardId);
+        if (currentUser) await rewardUser(currentUser.uid, cardId);
+        else await rewardUser(null, cardId);
         alert(`✅ You earned ${formatNaira(REWARD_NAIRA)} for watching this ad!`);
       } catch(err){ console.error('rewardUser failed', err); }
       inProgress[cardId] = false;
       currentPlayingCard = null;
       localStorage.removeItem('ad_in_progress');
     }, 15000);
-
     return;
   }
 
-  // playable media available
+  // prepare playback
   try {
-    // cleanup previous listeners if any
     if (currentCleanupSeek) { currentCleanupSeek(); currentCleanupSeek = null; }
     if (currentCleanupTime) { currentCleanupTime(); currentCleanupTime = null; }
 
-    // MP4
     if (resolved.kind === 'mp4'){
       adPlayer.src = resolved.url;
+      adPlayer.load();
       adPlayer.style.display = 'block';
       adSpinner.style.display = 'none';
+      videoContainer.classList.remove('hidden');
 
-      // attach protections + UI
       currentCleanupSeek = attachNoSeekProtection(adPlayer);
       currentCleanupTime = attachTimeUI(adPlayer);
 
-      // safety fallback: if video doesn't start loading in 8s -> fallback
       const failTimeout = setTimeout(()=>{
         if (adPlayer.readyState === 0){
           adModal.classList.add('hidden');
@@ -6262,15 +6251,15 @@ async function handleWatchClick(cardId, cardEl){
           if (currentCleanupSeek) { currentCleanupSeek(); currentCleanupSeek = null; }
           if (currentCleanupTime) { currentCleanupTime(); currentCleanupTime = null; }
           localStorage.removeItem('ad_in_progress');
-          recordAbandoned(currentUser.uid, cardId).catch(()=>{});
+          if (currentUser) recordAbandoned(currentUser.uid, cardId).catch(()=>{});
+          else recordAbandoned(null, cardId).catch(()=>{});
           window.open(SMARTLINK, '_blank');
         }
       }, 8000);
 
-      // attempt play (user click is a gesture)
       const playPromise = adPlayer.play();
       if (playPromise !== undefined){
-        playPromise.catch(err => {
+        playPromise.catch(err=>{
           console.warn('play failed', err);
           clearTimeout(failTimeout);
           adModal.classList.add('hidden');
@@ -6278,7 +6267,8 @@ async function handleWatchClick(cardId, cardEl){
           currentPlayingCard = null;
           if (currentCleanupSeek) { currentCleanupSeek(); currentCleanupSeek = null; }
           if (currentCleanupTime) { currentCleanupTime(); currentCleanupTime = null; }
-          recordAbandoned(currentUser.uid, cardId).catch(()=>{});
+          if (currentUser) recordAbandoned(currentUser.uid, cardId).catch(()=>{});
+          else recordAbandoned(null, cardId).catch(()=>{});
           window.open(SMARTLINK, '_blank');
           localStorage.removeItem('ad_in_progress');
         });
@@ -6288,14 +6278,14 @@ async function handleWatchClick(cardId, cardEl){
         clearTimeout(failTimeout);
         adModal.classList.add('hidden');
         try {
-          await rewardUser(currentUser.uid, cardId);
-          alert(`✅ You earned ${formatNaira(REWARD_NAIRA)} for watching this ad!`);
+          if (currentUser) await rewardUser(currentUser.uid, cardId);
+          else await rewardUser(null, cardId);
         } catch(err){ console.error('reward error', err); }
         inProgress[cardId] = false;
         currentPlayingCard = null;
+        localStorage.removeItem('ad_in_progress');
         if (currentCleanupSeek) { currentCleanupSeek(); currentCleanupSeek = null; }
         if (currentCleanupTime) { currentCleanupTime(); currentCleanupTime = null; }
-        localStorage.removeItem('ad_in_progress');
       };
 
     } else if (resolved.kind === 'hls'){
@@ -6306,12 +6296,12 @@ async function handleWatchClick(cardId, cardEl){
         hls.attachMedia(adPlayer);
         adPlayer.style.display = 'block';
         adSpinner.style.display = 'none';
+        videoContainer.classList.remove('hidden');
 
-        // protections + UI
         currentCleanupSeek = attachNoSeekProtection(adPlayer);
         currentCleanupTime = attachTimeUI(adPlayer);
 
-        adPlayer.addEventListener('loadedmetadata', ()=> {
+        adPlayer.addEventListener('loadedmetadata', ()=>{
           adPlayer.play().catch(err=>{
             console.warn('HLS play failed', err);
             adModal.classList.add('hidden');
@@ -6319,7 +6309,8 @@ async function handleWatchClick(cardId, cardEl){
             currentPlayingCard = null;
             if (currentCleanupSeek) { currentCleanupSeek(); currentCleanupSeek = null; }
             if (currentCleanupTime) { currentCleanupTime(); currentCleanupTime = null; }
-            recordAbandoned(currentUser.uid, cardId).catch(()=>{});
+            if (currentUser) recordAbandoned(currentUser.uid, cardId).catch(()=>{});
+            else recordAbandoned(null, cardId).catch(()=>{});
             window.open(SMARTLINK, '_blank');
             localStorage.removeItem('ad_in_progress');
           });
@@ -6328,38 +6319,39 @@ async function handleWatchClick(cardId, cardEl){
         adPlayer.onended = async ()=>{
           adModal.classList.add('hidden');
           try {
-            await rewardUser(currentUser.uid, cardId);
-            alert(`✅ You earned ${formatNaira(REWARD_NAIRA)} for watching this ad!`);
+            if (currentUser) await rewardUser(currentUser.uid, cardId);
+            else await rewardUser(null, cardId);
           } catch(err){ console.error(err); }
           inProgress[cardId] = false;
           currentPlayingCard = null;
+          localStorage.removeItem('ad_in_progress');
           if (currentCleanupSeek) { currentCleanupSeek(); currentCleanupSeek = null; }
           if (currentCleanupTime) { currentCleanupTime(); currentCleanupTime = null; }
-          localStorage.removeItem('ad_in_progress');
         };
 
       } else {
         adModal.classList.add('hidden');
         inProgress[cardId] = false;
         currentPlayingCard = null;
-        recordAbandoned(currentUser.uid, cardId).catch(()=>{});
+        if (currentUser) recordAbandoned(currentUser.uid, cardId).catch(()=>{});
+        else recordAbandoned(null, cardId).catch(()=>{});
         window.open(SMARTLINK, '_blank');
       }
     } else {
-      // unknown type
       adModal.classList.add('hidden');
       inProgress[cardId] = false;
       currentPlayingCard = null;
-      recordAbandoned(currentUser.uid, cardId).catch(()=>{});
+      if (currentUser) recordAbandoned(currentUser.uid, cardId).catch(()=>{});
+      else recordAbandoned(null, cardId).catch(()=>{});
       window.open(SMARTLINK, '_blank');
     }
-
   } catch(err){
     console.error('playback error', err);
     adModal.classList.add('hidden');
     inProgress[cardId] = false;
     currentPlayingCard = null;
-    recordAbandoned(currentUser.uid, cardId).catch(()=>{});
+    if (currentUser) recordAbandoned(currentUser.uid, cardId).catch(()=>{});
+    else recordAbandoned(null, cardId).catch(()=>{});
     window.open(SMARTLINK, '_blank');
     localStorage.removeItem('ad_in_progress');
     if (currentCleanupSeek) { currentCleanupSeek(); currentCleanupSeek = null; }
@@ -6367,11 +6359,12 @@ async function handleWatchClick(cardId, cardEl){
   }
 }
 
-/* modal close -> mark abandoned if it was in progress */
+/* modal close -> mark abandoned if in progress */
 closeAd.addEventListener('click', async ()=>{
   if (currentPlayingCard){
     try {
-      await recordAbandoned(currentUser.uid, Number(currentPlayingCard));
+      if (currentUser) await recordAbandoned(currentUser.uid, Number(currentPlayingCard));
+      else await recordAbandoned(null, Number(currentPlayingCard));
       alert('⚠️ Ad closed early — marked as skipped (no reward).');
     } catch(e){ console.warn('recordAbandoned err', e); }
   }
@@ -6384,31 +6377,37 @@ closeAd.addEventListener('click', async ()=>{
   if (currentCleanupTime) { currentCleanupTime(); currentCleanupTime = null; }
 });
 
-/* delegation: watch button clicks */
+/* delegation: watch button clicks in cards */
 adsGrid.addEventListener('click', (e)=>{
   const btn = e.target.closest('.watch-btn');
   if (!btn) return;
   const cardEl = e.target.closest('[data-card-id]');
   if (!cardEl) return;
   const cardId = Number(cardEl.dataset.cardId);
-  // disable immediate double clicks by disabling the button visually
   btn.setAttribute('disabled','true');
-  setTimeout(()=>btn.removeAttribute('disabled'), 1000);
+  setTimeout(()=>btn.removeAttribute('disabled'), 800);
   handleWatchClick(cardId, cardEl);
 });
 
-/* process ad_in_progress on page load/login: if found, mark abandoned */
+/* process ad_in_progress on page load/login: mark abandoned if needed */
 async function processInProgressOnLoad(){
   try {
     const inProg = localStorage.getItem('ad_in_progress');
     if (!inProg) return;
     const cid = Number(inProg);
-    if (!currentUser) return; // will be processed after login in auth state change
-    // if that card hasn't been marked completed/abandoned already, mark abandoned now
-    const doc = await db.collection('users').doc(currentUser.uid).get();
-    const watched = (doc.exists && doc.data().watchedAds) ? doc.data().watchedAds : {};
-    if (!watched || !watched[cid]){
-      await recordAbandoned(currentUser.uid, cid);
+    if (currentUser){
+      const doc = await db.collection('users').doc(currentUser.uid).get();
+      const watched = (doc.exists && doc.data().watchedAds) ? doc.data().watchedAds : {};
+      if (!watched || !watched[cid]) await recordAbandoned(currentUser.uid, cid);
+    } else {
+      // guest
+      if (!guestData.skipped.includes(cid) && !guestData.completed.includes(cid)){
+        guestData.skipped.push(cid);
+        guestData.adsAbandoned = (guestData.adsAbandoned || 0) + 1;
+        saveGuestData(guestData);
+        cardStatus[cid] = 'abandoned';
+        updateStatsUI(); renderCards();
+      }
     }
     localStorage.removeItem('ad_in_progress');
   } catch(e){ console.warn('processInProgressOnLoad err', e); }
@@ -6416,43 +6415,43 @@ async function processInProgressOnLoad(){
 
 /* show/hide watchAdsSection from Tasks */
 function showWatchAdsSection(){
-  document.getElementById('tasks').classList.add('hidden');
+  const el = document.getElementById('tasks');
+  if (el) el.classList.add('hidden');
   document.getElementById('watchAdsSection').classList.remove('hidden');
   renderCards();
 }
 
-/* Auth watcher */
+/* Auth watcher: on login load Firestore; on logout use guest fallback */
 auth.onAuthStateChanged(async (u)=>{
   currentUser = u;
   if (u){
     await loadUserData(u.uid);
-    // after loading user data, check if there was an in-progress ad that needs marking abandoned
+    // clear guest overlay state (we won't merge guest -> user automatically)
+    guestData = loadGuestData(); // keep guest in localStorage but prefer Firestore UI
     await processInProgressOnLoad();
   } else {
-    // guest - reset UI but keep any local fallback statuses
+    // guest mode: use local guestData for stats & card states
     userStats = { adsClicked:0, adsCompleted:0, adsAbandoned:0, balance:0, adEarningsToday:0, adEarningsTotal:0 };
-    try {
-      cardStatus = JSON.parse(localStorage.getItem('watchedAdsFallback') || '{}') || {};
-    } catch(e){ cardStatus = {}; }
+    guestData = loadGuestData();
+    // build cardStatus from guestData
+    cardStatus = {};
+    guestData.completed.forEach(id=>cardStatus[id] = 'completed');
+    guestData.skipped.forEach(id=>cardStatus[id] = 'abandoned');
     updateStatsUI();
     renderCards();
+    await processInProgressOnLoad();
   }
 });
 
-/* periodic save fallback */
+/* periodic fallback save for cardStatus (best-effort) */
 setInterval(()=> {
   try { localStorage.setItem('watchedAdsFallback', JSON.stringify(cardStatus)); } catch(e){}
 }, 5000);
 
-/* beforeunload: we keep localStorage 'ad_in_progress' mark so reload will be handled */
-window.addEventListener('beforeunload', ()=>{
-  // do nothing synchronous - just let the flag remain; handle on next load
-});
-
-/* init UI + icons */
+/* init UI */
 renderCards();
-setTimeout(()=>{ if(window.lucide) lucide.createIcons(); }, 50);
-
+updateStatsUI();
+setTimeout(()=>{ if(window.lucide) window.lucide.createIcons(); }, 50);
 
 
 
