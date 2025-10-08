@@ -631,91 +631,242 @@
     <!-- Electricity -->
     <!-- ✅ Watch Ad Section -->
 <!-- ✅ Watch Ad Button -->
-<div id="watchAdBtn"
-     class="flex flex-col items-center cursor-pointer group">
+<!-- Watch Ad Button -->
+<div id="watchAdBtn" class="flex flex-col items-center cursor-pointer group">
   <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
-              bg-white border border-gray-100
-              shadow-md group-hover:shadow-lg 
+              bg-white border border-gray-100 shadow-md group-hover:shadow-lg 
               group-hover:scale-110 transition-all duration-300">
-    <img src="ELECTRICITY1.jpg" width="24" height="24"
-         class="w-6 h-6 object-contain transition-opacity duration-200 opacity-0"
-         alt="Watch Ad" loading="eager" decoding="sync"
-         onload="this.style.opacity='1'">
+    <img src="ELECTRICITY1.jpg" width="24" height="24" class="w-6 h-6 object-contain"
+         alt="Watch Ad" loading="eager" decoding="sync">
   </div>
   <p class="mt-2 text-sm font-semibold text-blue-900">Watch Ad</p>
 </div>
 
-<!-- 🎥 Ad Modal -->
+<!-- Ad Modal -->
 <div id="adModal" class="fixed inset-0 hidden bg-black/80 flex items-center justify-center z-50">
   <div class="relative bg-white rounded-2xl overflow-hidden shadow-xl w-[90%] max-w-lg">
-    <video id="adPlayer" width="100%" height="auto" controls playsinline></video>
-    <button id="closeAd" 
-            class="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-full text-xs">×</button>
+    <div id="adContainer" style="background:#000; min-height:240px; display:flex;align-items:center;justify-content:center;">
+      <video id="adPlayer" width="100%" height="auto" controls playsinline style="max-height:65vh; display:none;"></video>
+      <div id="adSpinner" style="color:white;padding:20px;">Loading ad…</div>
+    </div>
+    <button id="closeAd" class="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-full text-xs">×</button>
   </div>
 </div>
 
-<!-- 🎬 Fluid Player -->
-<script src="https://cdn.fluidplayer.com/v3/current/fluidplayer.min.js"></script>
-
 <script>
+/*
+  WHAT THIS DOES
+  1. On click, tries to fetch the VAST XML (resolves wrappers up to depth 3).
+  2. Parses MediaFile(s) and selects a playable URL (mp4 preferred, m3u8 second).
+  3. If mp4 -> sets video.src and plays in modal.
+     If m3u8 -> uses hls.js to play (loads hls.js automatically).
+  4. If anything fails (no playable file or CORS prevents fetch), it FALLS BACK to opening SMARTLINK in new tab.
+  5. Rewards on ad ended (you should replace reward logic with your backend call).
+*/
+
+const VAST_LINK = 'https://silkyspite.com/d.mlFpzUd/G/NYvdZkGoUk/ee/mJ9iu/ZrUVlokJPwTyY/2wNTz/AK2ZNUzTQNtZNSjKYj3hMsDmYp3qNkQs';
+const SMARTLINK = 'https://www.revenuecpmgate.com/n945dxhe?key=84160f9954ff564239085356c5b84a78';
+
 const watchAdBtn = document.getElementById('watchAdBtn');
 const adModal = document.getElementById('adModal');
 const adPlayer = document.getElementById('adPlayer');
 const closeAd = document.getElementById('closeAd');
+const adSpinner = document.getElementById('adSpinner');
 
-const VAST_LINK = 'https://silkyspite.com/dFm/Ffz/d.GgN/vpZwGiUZ/eecmg9suLZ/Ujlak/P/TkY/2hNYzjAB2gNYzCQMtKNxj/YZ3mMaDSYl3GN/Qd';
-const SMARTLINK = 'https://www.revenuecpmgate.com/n945dxhe?key=84160f9954ff564239085356c5b84a78';
+let hlsLoaded = false;
 
-watchAdBtn.addEventListener('click', () => {
+async function fetchText(url) {
+  // Try a normal fetch first
+  try {
+    const res = await fetch(url, { method: 'GET', mode: 'cors' });
+    if (!res.ok) throw new Error('Network response not ok: ' + res.status);
+    return await res.text();
+  } catch (err) {
+    console.warn('Fetch failed (likely CORS):', err);
+    throw err;
+  }
+}
+
+function parseXML(text) {
+  const parser = new DOMParser();
+  return parser.parseFromString(text, 'application/xml');
+}
+
+async function resolveVast(url, depth = 0) {
+  if (!url || depth > 3) return null;
+  try {
+    const xmlText = await fetchText(url);
+    const xml = parseXML(xmlText);
+
+    // If wrapper present -> get nested VASTAdTagURI and recurse
+    const vastTagURI = xml.querySelector('Wrapper > VASTAdTagURI, VASTAdTagURI');
+    if (vastTagURI && vastTagURI.textContent.trim()) {
+      const next = vastTagURI.textContent.trim();
+      // sometimes CDATA or encoded -> decode
+      return await resolveVast(next, depth + 1);
+    }
+
+    // Find MediaFile nodes
+    const mediaFiles = Array.from(xml.querySelectorAll('MediaFile'));
+    // Convert media file nodes to candidate {type, url}
+    const candidates = mediaFiles.map(node => {
+      const urlText = node.textContent.trim();
+      const typeAttr = node.getAttribute('type') || '';
+      return { url: urlText, type: typeAttr };
+    }).filter(m => m.url && !/javascript|vpaid/i.test(m.url) );
+
+    // Prefer mp4
+    const mp4 = candidates.find(c => /mp4|video\/mp4/i.test(c.type) || /\.mp4(\?|$)/i.test(c.url));
+    if (mp4) return { kind: 'mp4', url: mp4.url };
+
+    // HLS (.m3u8)
+    const hls = candidates.find(c => /\.m3u8(\?|$)/i.test(c.url) || /application\/x-mpegURL/i.test(c.type));
+    if (hls) return { kind: 'hls', url: hls.url };
+
+    // If no media files but there is <Linear><MediaFiles> check nested (already done above)
+    // Nothing usable found
+    return null;
+  } catch (err) {
+    console.warn('resolveVast error:', err);
+    return null;
+  }
+}
+
+function openSmartlinkFallback() {
+  window.open(SMARTLINK, '_blank');
+  // reward after 15s from the new tab open (approx)
+  setTimeout(() => {
+    alert('✅ You earned 5 coins for watching the ad!');
+    // TODO: replace with your reward API call
+  }, 15000);
+}
+
+// dynamically load hls.js if needed
+function loadHlsJs() {
+  return new Promise((resolve, reject) => {
+    if (hlsLoaded) return resolve(window.Hls);
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
+    s.onload = () => {
+      hlsLoaded = true;
+      resolve(window.Hls);
+    };
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+watchAdBtn.addEventListener('click', async () => {
   adModal.classList.remove('hidden');
+  adSpinner.style.display = 'block';
+  adPlayer.style.display = 'none';
+  adPlayer.src = '';
+  let resolved = null;
+
+  // Try to resolve playable media from VAST
+  try {
+    resolved = await resolveVast(VAST_LINK);
+  } catch (e) {
+    console.warn('VAST resolve failed:', e);
+    resolved = null;
+  }
+
+  // If no usable media or fetch blocked -> fallback to smartlink
+  if (!resolved) {
+    console.warn('No playable media found in VAST or CORS blocked. Falling back to smartlink.');
+    adModal.classList.add('hidden');
+    openSmartlinkFallback();
+    return;
+  }
+
+  console.log('Resolved media:', resolved);
 
   try {
-    const player = fluidPlayer('adPlayer', {
-      layoutControls: {
-        fillToContainer: true,
-        autoplay: true,
-        mute: false
-      },
-      vastOptions: {
-        adList: [{
-          roll: 'preRoll',
-          vastTag: VAST_LINK
-        }]
+    if (resolved.kind === 'mp4') {
+      adPlayer.src = resolved.url;
+      adPlayer.style.display = 'block';
+      adSpinner.style.display = 'none';
+
+      // try to play (user click is a gesture so should be allowed)
+      const playPromise = adPlayer.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          console.warn('autoplay/play failed:', err);
+          // as last resort fallback
+          adModal.classList.add('hidden');
+          openSmartlinkFallback();
+        });
       }
-    });
 
-    // Reward after 15s (simulate watch time)
-    setTimeout(() => {
-      adModal.classList.add('hidden');
-      alert('✅ You earned 5 coins for watching the ad!');
-      // 🔧 Add your Firestore or API reward update here
-    }, 15000);
-
-    // If ad doesn’t load within 5s, open smartlink fallback
-    setTimeout(() => {
-      if (adPlayer.readyState === 0) {
+      // reward on ended
+      adPlayer.onended = () => {
         adModal.classList.add('hidden');
-        window.open(SMARTLINK, '_blank');
-        setTimeout(() => {
-          alert('✅ You earned 5 coins for watching the ad!');
-        }, 15000);
-      }
-    }, 5000);
+        alert('✅ You earned 5 coins for watching the ad!');
+        // 🔧 TODO: call your backend / Firestore to credit user
+      };
 
-  } catch (e) {
+      // safety: if video doesn't load in 8s (network/wrong resource), fallback
+      setTimeout(() => {
+        if (adPlayer.readyState === 0) {
+          console.warn('Video not loaded, fallback to smartlink.');
+          adModal.classList.add('hidden');
+          openSmartlinkFallback();
+        }
+      }, 8000);
+
+    } else if (resolved.kind === 'hls') {
+      // load hls.js then attach
+      const Hls = await loadHlsJs();
+      if (Hls && Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(resolved.url);
+        hls.attachMedia(adPlayer);
+        adPlayer.style.display = 'block';
+        adSpinner.style.display = 'none';
+
+        adPlayer.addEventListener('loadedmetadata', () => {
+          adPlayer.play().catch(err => {
+            console.warn('play failed for HLS:', err);
+            adModal.classList.add('hidden');
+            openSmartlinkFallback();
+          });
+        });
+
+        adPlayer.onended = () => {
+          adModal.classList.add('hidden');
+          alert('✅ You earned 5 coins for watching the ad!');
+          // TODO: credit user
+        };
+
+      } else {
+        console.warn('HLS not supported, fallback.');
+        adModal.classList.add('hidden');
+        openSmartlinkFallback();
+      }
+    } else {
+      // unknown kind
+      console.warn('Unknown resolved kind, fallback.');
+      adModal.classList.add('hidden');
+      openSmartlinkFallback();
+    }
+  } catch (err) {
+    console.warn('Error playing ad:', err);
     adModal.classList.add('hidden');
-    window.open(SMARTLINK, '_blank');
-    setTimeout(() => {
-      alert('✅ You earned 5 coins for watching the ad!');
-    }, 15000);
+    openSmartlinkFallback();
   }
 });
 
 closeAd.addEventListener('click', () => {
+  try {
+    if (!adPlayer.paused) adPlayer.pause();
+  } catch (e) {}
   adModal.classList.add('hidden');
-  adPlayer.pause();
 });
 </script>
+
+
+
+	  
     <!-- TV -->
     <div onclick="activateTab('tv-screen')" 
          class="flex flex-col items-center cursor-pointer group">
