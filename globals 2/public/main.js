@@ -5861,7 +5861,11 @@ window.loadBanks = loadBanks;
 
 
 
-
+/* ====== CONFIG: replace with your Firebase config ====== */
+const firebaseConfig = /* FIREBASE CONFIG HERE */;
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
 /* ====================== SETTINGS ====================== */
 const REWARD_NAIRA = 0.5;
