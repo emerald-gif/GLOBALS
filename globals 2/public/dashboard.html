@@ -926,6 +926,7 @@
 
 
 
+<!-- 🟣 Watch Ads Section — Final, corrected & fully functional -->
 <section id="watchAdsSection" class="hidden relative w-full py-16 bg-gradient-to-br from-indigo-50 via-white to-indigo-100 overflow-hidden">
   <div class="absolute inset-0 pointer-events-none">
     <div class="absolute -top-24 -left-32 w-96 h-96 bg-indigo-400/20 blur-3xl rounded-full"></div>
@@ -937,52 +938,62 @@
     <p class="text-gray-600 mt-2 text-sm md:text-base">Watch short video ads and earn instant rewards — daily reset allows you to watch again tomorrow.</p>
   </div>
 
-  <!-- top stats -->
-  
-<div class="relative max-w-4xl mx-auto mb-8 grid grid-cols-2 sm:grid-cols-5 gap-4 px-6">
-  <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
-    <div class="text-xs text-gray-500">Clicked</div>
-    <div id="statClicked" class="text-lg font-semibold text-indigo-700">0</div>
+  <!-- Top Stats -->
+  <div class="relative max-w-5xl mx-auto mb-8 grid grid-cols-2 sm:grid-cols-5 gap-4 px-6">
+    <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
+      <div class="text-xs text-gray-500">Clicked</div>
+      <div id="statClicked" class="text-lg font-semibold text-indigo-700">0</div>
+    </div>
+    <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
+      <div class="text-xs text-gray-500">Completed</div>
+      <div id="statCompleted" class="text-lg font-semibold text-green-700">0</div>
+    </div>
+    <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
+      <div class="text-xs text-gray-500">Skipped</div>
+      <div id="statAbandoned" class="text-lg font-semibold text-rose-600">0</div>
+    </div>
+    <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
+      <div class="text-xs text-gray-500">Ad Income (Today)</div>
+      <div id="statIncome" class="text-lg font-semibold text-blue-700">₦0.00</div>
+    </div>
+    <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
+      <div class="text-xs text-gray-500">Total Income</div>
+      <div id="statIncomeTotal" class="text-lg font-semibold text-indigo-800">₦0.00</div>
+    </div>
   </div>
-  <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
-    <div class="text-xs text-gray-500">Completed</div>
-    <div id="statCompleted" class="text-lg font-semibold text-green-700">0</div>
-  </div>
-  <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
-    <div class="text-xs text-gray-500">Skipped</div>
-    <div id="statAbandoned" class="text-lg font-semibold text-rose-600">0</div>
-  </div>
-  <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
-    <div class="text-xs text-gray-500">Ad Income (today)</div>
-    <div id="statIncome" class="text-lg font-semibold text-blue-700">₦0.00</div>
-  </div>
-  <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
-    <div class="text-xs text-gray-500">Total Ad Income (total)</div>
-    <div id="statIncomeTotal" class="text-lg font-semibold text-indigo-700">₦0.00</div>
-  </div>
-</div>
 
-  <!-- grid -->
+  <!-- Ads Grid -->
   <div class="relative max-w-6xl mx-auto px-6">
     <div id="adsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
   </div>
 </section>
 
-<!-- modal (single) -->
-<div id="adSpinner" class="p-8 flex items-center justify-center">
-  <div class="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-</div>
+<!-- Modal -->
+<div id="adModal" class="fixed inset-0 hidden z-60 bg-black/60 flex items-center justify-center">
+  <div class="bg-white rounded-3xl shadow-xl overflow-hidden max-w-2xl w-[92%] relative">
+    <button id="closeAd" class="absolute top-3 right-3 bg-gray-100 hover:bg-gray-200 p-2 rounded-full z-30">
+      <i data-lucide="x" class="w-5 h-5 text-gray-600"></i>
+    </button>
 
-<video id="adPlayer" class="w-full hidden" playsinline></video>
+    <div id="adSpinner" class="p-8 flex items-center justify-center">
+      <div class="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+    </div>
 
-<!-- controls: progress bar + time -->
-<div id="adControls" class="p-4 hidden border-t">
-  <div class="w-full bg-slate-100 h-2 rounded overflow-hidden">
-    <div id="adProgress" class="h-2 rounded w-0"></div>
-  </div>
-  <div class="mt-2 flex items-center justify-between text-xs text-slate-500">
-    <div id="adElapsed">00:00</div>
-    <div id="adRemaining">-00:00</div>
+    <div id="videoContainer" class="hidden relative bg-black">
+      <video id="adPlayer" class="w-full rounded-b-3xl" playsinline></video>
+
+      <!-- progress bar -->
+      <div class="absolute left-0 right-0 bottom-10 px-4">
+        <div id="adProgressContainer" class="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+          <div id="adProgressBar" class="h-2 w-0 rounded-full bg-white/70"></div>
+        </div>
+      </div>
+
+      <!-- time overlay -->
+      <div id="videoOverlay" class="absolute bottom-2 left-0 right-0 text-center text-xs text-white/90 bg-black/40 py-1 backdrop-blur-sm">
+        <span id="currentTime">0:00</span> / <span id="totalTime">0:00</span>
+      </div>
+    </div>
   </div>
 </div>
 		
