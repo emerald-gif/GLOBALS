@@ -629,19 +629,67 @@
     </div>
 
     <!-- Electricity -->
-    <div onclick="activateTab('electricity-screen')" 
-         class="flex flex-col items-center cursor-pointer group">
-      <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
-                  bg-white border border-gray-100
-                  shadow-md group-hover:shadow-lg 
-                  group-hover:scale-110 transition-all duration-300">
-        <img src="ELECTRICITY1.jpg" width="24" height="24"
-             class="w-6 h-6 object-contain transition-opacity duration-200 opacity-0"
-             alt="Electricity" loading="eager" decoding="sync"
-             onload="this.style.opacity='1'">
-      </div>
-      <p class="mt-2 text-sm font-semibold text-blue-900">Electricity</p>
-    </div>
+    <!-- ✅ Watch Ad Section -->
+<div id="watchAdBtn"
+     class="flex flex-col items-center cursor-pointer group">
+  <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
+              bg-white border border-gray-100
+              shadow-md group-hover:shadow-lg 
+              group-hover:scale-110 transition-all duration-300">
+    <img src="ELECTRICITY1.jpg" width="24" height="24"
+         class="w-6 h-6 object-contain transition-opacity duration-200 opacity-0"
+         alt="Watch Ad" loading="eager" decoding="sync"
+         onload="this.style.opacity='1'">
+  </div>
+  <p class="mt-2 text-sm font-semibold text-blue-900">Watch Ad</p>
+</div>
+
+<!-- 🎥 Video Ad Modal -->
+<div id="adModal" class="fixed inset-0 hidden bg-black/80 flex items-center justify-center z-50">
+  <div class="relative bg-white rounded-2xl overflow-hidden shadow-xl w-[90%] max-w-lg">
+    <video id="adPlayer" width="100%" height="auto" controls playsinline></video>
+    <button id="closeAd" 
+            class="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-full text-xs">×</button>
+  </div>
+</div>
+
+<!-- ✅ Script -->
+<script src="https://cdn.fluidplayer.com/v3/current/fluidplayer.min.js"></script>
+<script>
+const watchAdBtn = document.getElementById('watchAdBtn');
+const adModal = document.getElementById('adModal');
+const adPlayer = document.getElementById('adPlayer');
+const closeAd = document.getElementById('closeAd');
+
+watchAdBtn.addEventListener('click', () => {
+  adModal.classList.remove('hidden');
+
+  // 🎬 Initialize Fluid Player with your Hilltop VAST link
+  const player = fluidPlayer('adPlayer', {
+    layoutControls: { fillToContainer: true },
+    vastOptions: {
+      adList: [{
+        roll: 'preRoll',
+        vastTag: 'https://silkyspite.com/dFm/Ffz/d.GgN/vpZwGiUZ/eecmg9suLZ/Ujlak/P/TkY/2hNYzjAB2gNYzCQMtKNxj/YZ3mMaDSYl3GN/Qd'
+      }],
+      skipButtonCaption: 'Skip Ad',
+    }
+  });
+
+  // 💰 Reward user after ad finishes
+  adPlayer.addEventListener('ended', () => {
+    adModal.classList.add('hidden');
+    alert('✅ You earned 5 coins for watching the ad!');
+    // 🔧 You can update balance here via Firestore or your API
+  });
+});
+
+// 🟥 Close button
+closeAd.addEventListener('click', () => {
+  adModal.classList.add('hidden');
+  adPlayer.pause();
+});
+</script>
 
     <!-- TV -->
     <div onclick="activateTab('tv-screen')" 
