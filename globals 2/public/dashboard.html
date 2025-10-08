@@ -938,24 +938,29 @@
   </div>
 
   <!-- top stats -->
-  <div class="relative max-w-4xl mx-auto mb-8 grid grid-cols-2 sm:grid-cols-4 gap-4 px-6">
-    <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
-      <div class="text-xs text-gray-500">Clicked</div>
-      <div id="statClicked" class="text-lg font-semibold text-indigo-700">0</div>
-    </div>
-    <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
-      <div class="text-xs text-gray-500">Completed</div>
-      <div id="statCompleted" class="text-lg font-semibold text-green-700">0</div>
-    </div>
-    <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
-      <div class="text-xs text-gray-500">Skipped</div>
-      <div id="statAbandoned" class="text-lg font-semibold text-rose-600">0</div>
-    </div>
-    <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
-      <div class="text-xs text-gray-500">Ad Income (today)</div>
-      <div id="statIncome" class="text-lg font-semibold text-blue-700">₦0.00</div>
-    </div>
+  
+<div class="relative max-w-4xl mx-auto mb-8 grid grid-cols-2 sm:grid-cols-5 gap-4 px-6">
+  <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
+    <div class="text-xs text-gray-500">Clicked</div>
+    <div id="statClicked" class="text-lg font-semibold text-indigo-700">0</div>
   </div>
+  <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
+    <div class="text-xs text-gray-500">Completed</div>
+    <div id="statCompleted" class="text-lg font-semibold text-green-700">0</div>
+  </div>
+  <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
+    <div class="text-xs text-gray-500">Skipped</div>
+    <div id="statAbandoned" class="text-lg font-semibold text-rose-600">0</div>
+  </div>
+  <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
+    <div class="text-xs text-gray-500">Ad Income (today)</div>
+    <div id="statIncome" class="text-lg font-semibold text-blue-700">₦0.00</div>
+  </div>
+  <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
+    <div class="text-xs text-gray-500">Total Ad Income (total)</div>
+    <div id="statIncomeTotal" class="text-lg font-semibold text-indigo-700">₦0.00</div>
+  </div>
+</div>
 
   <!-- grid -->
   <div class="relative max-w-6xl mx-auto px-6">
@@ -964,18 +969,23 @@
 </section>
 
 <!-- modal (single) -->
-<div id="adModal" class="fixed inset-0 hidden z-60 bg-black/60 flex items-center justify-center">
-  <div class="bg-white rounded-3xl shadow-xl overflow-hidden max-w-2xl w-[92%] relative">
-    <button id="closeAd" class="absolute top-3 right-3 bg-gray-100 hover:bg-gray-200 p-2 rounded-full z-30">
-      <i data-lucide="x" class="w-5 h-5 text-gray-600"></i>
-    </button>
-    <div id="adSpinner" class="p-8 flex items-center justify-center">
-      <div class="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-    </div>
-    <video id="adPlayer" class="w-full hidden" playsinline></video>
-  </div>
+<div id="adSpinner" class="p-8 flex items-center justify-center">
+  <div class="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
 </div>
 
+<video id="adPlayer" class="w-full hidden" playsinline></video>
+
+<!-- controls: progress bar + time -->
+<div id="adControls" class="p-4 hidden border-t">
+  <div class="w-full bg-slate-100 h-2 rounded overflow-hidden">
+    <div id="adProgress" class="h-2 rounded w-0"></div>
+  </div>
+  <div class="mt-2 flex items-center justify-between text-xs text-slate-500">
+    <div id="adElapsed">00:00</div>
+    <div id="adRemaining">-00:00</div>
+  </div>
+</div>
+		
 <!-- ✅ Lucide Icons -->
 <script src="https://unpkg.com/lucide@latest"></script>
 <script>lucide.createIcons();</script>
