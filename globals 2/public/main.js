@@ -5862,6 +5862,10 @@ window.loadBanks = loadBanks;
 
 
 /* ====================== SETTINGSS ====================== */
+
+
+
+/* ====================== SETTINGS ====================== */
 const REWARD_NAIRA = 0.5;
 const NUM_CARDS = 20;
 const VAST_LINK = 'https://silkyspite.com/d.mlFpzUd/G/NYvdZkGoUk/ee/mJ9iu/ZrUVlokJPwTyY/2wNTz/AK2ZNUzTQNtZNSjKYj3hMsDmYp3qNkQs';
@@ -5893,6 +5897,7 @@ let userStats = { adsClicked:0, adsCompleted:0, adsAbandoned:0, balance:0, adEar
 let currentPlayingCard = null;
 let currentCleanupSeek = null;
 let currentCleanupTime = null;
+let currentHls = null;
 
 /* ===== Guest fallback (localStorage) ===== */
 const GUEST_KEY = 'watchAdsFallbackData';
@@ -6006,7 +6011,6 @@ async function dailyResetIfNeeded(uid, userDoc){
   if (todayEarn) updates.adEarningsTotal = firebase.firestore.FieldValue.increment(todayEarn);
 
   await db.collection('users').doc(uid).set(updates, {merge:true});
-  // local state will be refreshed by loadUserData immediately after
 }
 
 async function loadUserData(uid){
@@ -6085,7 +6089,6 @@ async function recordAbandoned(uid, cardId){
     if (!guestData.skipped.includes(cardId)) guestData.skipped.push(cardId);
     guestData.adsAbandoned = (guestData.adsAbandoned || 0) + 1;
     saveGuestData(guestData);
-    // sync cardStatus
     cardStatus[cardId] = 'abandoned';
     updateStatsUI();
     renderCards();
@@ -6123,28 +6126,54 @@ async function rewardUser(uid, cardId){
 async function fetchText(url){ const res = await fetch(url, {method:'GET', mode:'cors'}); if (!res.ok) throw new Error('fetch failed ' + res.status); return res.text(); }
 function parseXML(text){ try{return (new DOMParser()).parseFromString(text,'application/xml'); } catch(e){ return null; } }
 
+function resolveRelative(base, maybeRelative){
+  try { return (new URL(maybeRelative, base)).toString(); } catch(e){ return maybeRelative; }
+}
+
 async function resolveVast(url, depth=0){
   if (!url || depth>3) return null;
   try {
+    console.log('[resolveVast] fetching', url);
     const text = await fetchText(url);
     const xml = parseXML(text);
     if (!xml) return null;
+
+    // wrapper -> recurse
     const wrapper = xml.querySelector('Wrapper > VASTAdTagURI, VASTAdTagURI');
     if (wrapper && wrapper.textContent && wrapper.textContent.trim()){
       const next = wrapper.textContent.trim();
       return await resolveVast(next, depth+1);
     }
+
+    // find MediaFile nodes
     const mediaFiles = Array.from(xml.querySelectorAll('MediaFile'));
     const candidates = mediaFiles.map(node=>{
-      const urlText = node.textContent.trim();
-      const type = node.getAttribute('type') || '';
-      return {url: urlText, type};
+      let urlText = node.textContent || '';
+      urlText = urlText.trim();
+      // sometimes MediaFile has CDATA or an inner <![CDATA[...]]> which textContent handles
+      const type = (node.getAttribute('type') || '').trim();
+      return { url: urlText, type };
     }).filter(m => m.url && !/javascript|vpaid/i.test(m.url));
+
+    // normalize relative URLs based on the VAST file location
+    const base = url;
+    candidates.forEach(c => { if (!/^(https?:)?\/\//i.test(c.url)) c.url = resolveRelative(base, c.url); });
+
+    // pick mp4
     const mp4 = candidates.find(c => /mp4|video\/mp4/i.test(c.type) || /\.mp4$/i.test(c.url));
-const hls = candidates.find(c => /\.m3u8$/i.test(c.url) || /application\/x-mpegURL/i.test(c.type));
-    if (hls) return {kind:'hls', url: hls.url};
+    if (mp4) { console.log('[resolveVast] mp4 candidate', mp4.url); return { kind:'mp4', url: mp4.url }; }
+
+    // pick HLS
+    const hls = candidates.find(c => /\.m3u8$/i.test(c.url) || /application\/x-mpegURL/i.test(c.type));
+    if (hls) { console.log('[resolveVast] hls candidate', hls.url); return { kind:'hls', url: hls.url }; }
+
+    console.log('[resolveVast] no media files found');
     return null;
-  } catch(e){ console.warn('resolveVast err', e); return null; }
+
+  } catch(e){
+    console.warn('resolveVast err', e);
+    return null;
+  }
 }
 
 /* load HLS if needed */
@@ -6180,9 +6209,151 @@ function attachTimeUI(video){
   return ()=>{ try{ video.removeEventListener('timeupdate', onTime); }catch(e){}; adProgressBar.style.width = '0%'; };
 }
 
+/* ======== Playback utility: play resolved media (mp4/hls) ======== */
+async function playResolvedMedia(resolved, cardId){
+  // cleanup previous
+  if (currentHls) { try { currentHls.destroy(); } catch(e){} currentHls = null; }
+  if (currentCleanupSeek) { currentCleanupSeek(); currentCleanupSeek = null; }
+  if (currentCleanupTime) { currentCleanupTime(); currentCleanupTime = null; }
+
+  // show UI
+  adSpinner.style.display = 'none';
+  videoContainer.classList.remove('hidden');
+
+  // MP4
+  if (resolved.kind === 'mp4' || /\.mp4$/i.test(resolved.url)){
+    adPlayer.src = resolved.url;
+    adPlayer.crossOrigin = 'anonymous';
+    adPlayer.load();
+    currentCleanupSeek = attachNoSeekProtection(adPlayer);
+    currentCleanupTime = attachTimeUI(adPlayer);
+
+    // try play
+    try {
+      await adPlayer.play();
+    } catch(err){
+      console.warn('[playResolvedMedia] autoplay/play rejected for mp4:', err);
+      throw err;
+    }
+
+    // on ended -> reward
+    const onEnd = async () => {
+      adPlayer.removeEventListener('ended', onEnd);
+      try {
+        if (currentUser) await rewardUser(currentUser.uid, cardId);
+        else await rewardUser(null, cardId);
+      } catch(err){ console.error('reward error', err); }
+      cleanupAfterPlayback();
+    };
+    adPlayer.addEventListener('ended', onEnd);
+    return;
+  }
+
+  // HLS
+  if (resolved.kind === 'hls' || /\.m3u8$/i.test(resolved.url)){
+    // If native HLS support (Safari) -> use direct src
+    const canPlayNative = adPlayer.canPlayType('application/vnd.apple.mpegurl');
+    if (canPlayNative){
+      adPlayer.src = resolved.url;
+      adPlayer.load();
+      currentCleanupSeek = attachNoSeekProtection(adPlayer);
+      currentCleanupTime = attachTimeUI(adPlayer);
+      try {
+        await adPlayer.play();
+      } catch(err){
+        console.warn('[playResolvedMedia] native HLS play rejected:', err);
+        throw err;
+      }
+      const onEnd = async () => {
+        adPlayer.removeEventListener('ended', onEnd);
+        try {
+          if (currentUser) await rewardUser(currentUser.uid, cardId);
+          else await rewardUser(null, cardId);
+        } catch(err){ console.error('reward error', err); }
+        cleanupAfterPlayback();
+      };
+      adPlayer.addEventListener('ended', onEnd);
+      return;
+    }
+
+    // else use hls.js if supported
+    const HlsLib = await loadHlsJs().catch(()=>null);
+    if (HlsLib && HlsLib.isSupported()){
+      currentHls = new HlsLib();
+      currentHls.loadSource(resolved.url);
+      currentHls.attachMedia(adPlayer);
+      currentCleanupSeek = attachNoSeekProtection(adPlayer);
+      currentCleanupTime = attachTimeUI(adPlayer);
+
+      // play when buffer ready
+      const onManifest = () => {
+        adPlayer.play().catch(err=>{
+          console.warn('[playResolvedMedia] hls.js play rejected', err);
+          // let caller handle fallback
+        });
+      };
+      currentHls.on(HlsLib.Events.MANIFEST_PARSED, onManifest);
+
+      // ended handler
+      const onEnd = async () => {
+        try {
+          if (currentUser) await rewardUser(currentUser.uid, cardId);
+          else await rewardUser(null, cardId);
+        } catch(err){ console.error('reward error', err); }
+        cleanupAfterPlayback();
+      };
+      adPlayer.addEventListener('ended', onEnd);
+      return;
+    }
+
+    // not playable -> throw so caller can fallback
+    throw new Error('HLS not supported in this browser and hls.js failed to load');
+  }
+
+  throw new Error('Unknown media type');
+}
+
+/* cleanup helpers */
+function cleanupAfterPlayback(){
+  try { adPlayer.pause(); } catch(e){}
+  adPlayer.removeAttribute('src');
+  adPlayer.load();
+  videoContainer.classList.add('hidden');
+  adModal.classList.add('hidden');
+  localStorage.removeItem('ad_in_progress');
+  if (currentHls) { try { currentHls.destroy(); } catch(e){} currentHls = null; }
+  if (currentCleanupSeek) { currentCleanupSeek(); currentCleanupSeek = null; }
+  if (currentCleanupTime) { currentCleanupTime(); currentCleanupTime = null; }
+  inProgress[currentPlayingCard] = false;
+  currentPlayingCard = null;
+}
+
+/* fallback open smartlink and mark reward/abandon as configured */
+function openSmartlinkFallback(cardId, reward=true){
+  // open smartlink in new tab
+  try { window.open(SMARTLINK, '_blank'); } catch(e){ console.warn('openSmartlink failed', e); }
+
+  if (reward){
+    // reward after short delay (your previous behavior)
+    setTimeout(()=> {
+      if (currentUser) rewardUser(currentUser.uid, cardId).catch(e=>console.warn('rewardUser err', e));
+      else rewardUser(null, cardId).catch(e=>console.warn('guest reward err', e));
+      inProgress[cardId] = false;
+      localStorage.removeItem('ad_in_progress');
+      currentPlayingCard = null;
+    }, 15000);
+  } else {
+    // mark abandoned
+    if (currentUser) recordAbandoned(currentUser.uid, cardId).catch(()=>{});
+    else recordAbandoned(null, cardId).catch(()=>{});
+    inProgress[cardId] = false;
+    localStorage.removeItem('ad_in_progress');
+    currentPlayingCard = null;
+  }
+}
+
 /* ======== Main playback flow ======== */
 async function handleWatchClick(cardId, cardEl){
-  // guard: if user is logged out we allow preview/guest flow (guestData) — works offline via localStorage
   if (inProgress[cardId]) return;
   if (cardStatus[cardId] === 'completed' || cardStatus[cardId] === 'abandoned') return;
 
@@ -6190,169 +6361,48 @@ async function handleWatchClick(cardId, cardEl){
   currentPlayingCard = cardId;
   try { localStorage.setItem('ad_in_progress', String(cardId)); } catch(e){}
 
-  // record click increment
-  if (currentUser) {
-    try { await recordClickOnly(currentUser.uid, cardId); } catch(e){ console.warn('recordClickOnly failed', e); }
-  } else {
-    await recordClickOnly(null, cardId); // updates guestData
-  }
+  // record click
+  await recordClickOnly(currentUser ? currentUser.uid : null, cardId).catch(e=>console.warn('recordClickOnly err', e));
 
-  // show modal
+  // UI: show modal + spinner
   adModal.classList.remove('hidden');
   adSpinner.style.display = 'flex';
   videoContainer.classList.add('hidden');
   adPlayer.style.display = 'none';
   adPlayer.src = '';
 
-  // attempt VAST resolution
+  // Attempt VAST resolution
   let resolved = null;
-  try { resolved = await resolveVast(VAST_LINK); } catch(e){ resolved = null; }
+  try {
+    resolved = await resolveVast(VAST_LINK);
+  } catch(e){
+    console.warn('resolveVast error', e);
+    resolved = null;
+  }
 
-  // fallback path (open SMARTLINK + reward after 15s)
+  // If no resolved media, attempt fallback to a known placeholder MP4 (safe) before opening smartlink
   if (!resolved){
-    adModal.classList.add('hidden');
-    window.open(SMARTLINK, '_blank');
-    setTimeout(async ()=>{
-      try {
-        if (currentUser) await rewardUser(currentUser.uid, cardId);
-        else await rewardUser(null, cardId);
-        alert(`✅ You earned ${formatNaira(REWARD_NAIRA)} for watching this ad!`);
-      } catch(err){ console.error('rewardUser failed', err); }
-      inProgress[cardId] = false;
-      currentPlayingCard = null;
-      localStorage.removeItem('ad_in_progress');
-    }, 15000);
+    console.warn('[handleWatchClick] no VAST media; attempting fallback mp4');
+    // Try fallback sample mp4 (your local placeholder) — if you want to skip this, set to null
+    const fallbackMp4 = ADS_META[0] && ADS_META[0].video ? ADS_META[0].video : null;
+    if (fallbackMp4){
+      resolved = { kind: 'mp4', url: fallbackMp4 };
+    }
+  }
+
+  if (!resolved){
+    // final fallback: open smartlink and reward after 15s (keeps original behavior)
+    openSmartlinkFallback(cardId, true);
     return;
   }
 
-  // prepare playback
+  // Try to play resolved media
   try {
-    if (currentCleanupSeek) { currentCleanupSeek(); currentCleanupSeek = null; }
-    if (currentCleanupTime) { currentCleanupTime(); currentCleanupTime = null; }
-
-    if (resolved.kind === 'mp4'){
-      adPlayer.src = resolved.url;
-      adPlayer.load();
-      adPlayer.style.display = 'block';
-      adSpinner.style.display = 'none';
-      videoContainer.classList.remove('hidden');
-
-      currentCleanupSeek = attachNoSeekProtection(adPlayer);
-      currentCleanupTime = attachTimeUI(adPlayer);
-
-      const failTimeout = setTimeout(()=>{
-        if (adPlayer.readyState === 0){
-          adModal.classList.add('hidden');
-          inProgress[cardId] = false;
-          currentPlayingCard = null;
-          if (currentCleanupSeek) { currentCleanupSeek(); currentCleanupSeek = null; }
-          if (currentCleanupTime) { currentCleanupTime(); currentCleanupTime = null; }
-          localStorage.removeItem('ad_in_progress');
-          if (currentUser) recordAbandoned(currentUser.uid, cardId).catch(()=>{});
-          else recordAbandoned(null, cardId).catch(()=>{});
-          window.open(SMARTLINK, '_blank');
-        }
-      }, 8000);
-
-      const playPromise = adPlayer.play();
-      if (playPromise !== undefined){
-        playPromise.catch(err=>{
-          console.warn('play failed', err);
-          clearTimeout(failTimeout);
-          adModal.classList.add('hidden');
-          inProgress[cardId] = false;
-          currentPlayingCard = null;
-          if (currentCleanupSeek) { currentCleanupSeek(); currentCleanupSeek = null; }
-          if (currentCleanupTime) { currentCleanupTime(); currentCleanupTime = null; }
-          if (currentUser) recordAbandoned(currentUser.uid, cardId).catch(()=>{});
-          else recordAbandoned(null, cardId).catch(()=>{});
-          window.open(SMARTLINK, '_blank');
-          localStorage.removeItem('ad_in_progress');
-        });
-      }
-
-      adPlayer.onended = async ()=>{
-        clearTimeout(failTimeout);
-        adModal.classList.add('hidden');
-        try {
-          if (currentUser) await rewardUser(currentUser.uid, cardId);
-          else await rewardUser(null, cardId);
-        } catch(err){ console.error('reward error', err); }
-        inProgress[cardId] = false;
-        currentPlayingCard = null;
-        localStorage.removeItem('ad_in_progress');
-        if (currentCleanupSeek) { currentCleanupSeek(); currentCleanupSeek = null; }
-        if (currentCleanupTime) { currentCleanupTime(); currentCleanupTime = null; }
-      };
-
-    } else if (resolved.kind === 'hls'){
-      const Hls = await loadHlsJs();
-      if (Hls && Hls.isSupported()){
-        const hls = new Hls();
-        hls.loadSource(resolved.url);
-        hls.attachMedia(adPlayer);
-        adPlayer.style.display = 'block';
-        adSpinner.style.display = 'none';
-        videoContainer.classList.remove('hidden');
-
-        currentCleanupSeek = attachNoSeekProtection(adPlayer);
-        currentCleanupTime = attachTimeUI(adPlayer);
-
-        adPlayer.addEventListener('loadedmetadata', ()=>{
-          adPlayer.play().catch(err=>{
-            console.warn('HLS play failed', err);
-            adModal.classList.add('hidden');
-            inProgress[cardId] = false;
-            currentPlayingCard = null;
-            if (currentCleanupSeek) { currentCleanupSeek(); currentCleanupSeek = null; }
-            if (currentCleanupTime) { currentCleanupTime(); currentCleanupTime = null; }
-            if (currentUser) recordAbandoned(currentUser.uid, cardId).catch(()=>{});
-            else recordAbandoned(null, cardId).catch(()=>{});
-            window.open(SMARTLINK, '_blank');
-            localStorage.removeItem('ad_in_progress');
-          });
-        });
-
-        adPlayer.onended = async ()=>{
-          adModal.classList.add('hidden');
-          try {
-            if (currentUser) await rewardUser(currentUser.uid, cardId);
-            else await rewardUser(null, cardId);
-          } catch(err){ console.error(err); }
-          inProgress[cardId] = false;
-          currentPlayingCard = null;
-          localStorage.removeItem('ad_in_progress');
-          if (currentCleanupSeek) { currentCleanupSeek(); currentCleanupSeek = null; }
-          if (currentCleanupTime) { currentCleanupTime(); currentCleanupTime = null; }
-        };
-
-      } else {
-        adModal.classList.add('hidden');
-        inProgress[cardId] = false;
-        currentPlayingCard = null;
-        if (currentUser) recordAbandoned(currentUser.uid, cardId).catch(()=>{});
-        else recordAbandoned(null, cardId).catch(()=>{});
-        window.open(SMARTLINK, '_blank');
-      }
-    } else {
-      adModal.classList.add('hidden');
-      inProgress[cardId] = false;
-      currentPlayingCard = null;
-      if (currentUser) recordAbandoned(currentUser.uid, cardId).catch(()=>{});
-      else recordAbandoned(null, cardId).catch(()=>{});
-      window.open(SMARTLINK, '_blank');
-    }
-  } catch(err){
-    console.error('playback error', err);
-    adModal.classList.add('hidden');
-    inProgress[cardId] = false;
-    currentPlayingCard = null;
-    if (currentUser) recordAbandoned(currentUser.uid, cardId).catch(()=>{});
-    else recordAbandoned(null, cardId).catch(()=>{});
-    window.open(SMARTLINK, '_blank');
-    localStorage.removeItem('ad_in_progress');
-    if (currentCleanupSeek) { currentCleanupSeek(); currentCleanupSeek = null; }
-    if (currentCleanupTime) { currentCleanupTime(); currentCleanupTime = null; }
+    await playResolvedMedia(resolved, cardId);
+  } catch(playErr){
+    console.warn('playResolvedMedia failed:', playErr);
+    // If playback fails (CORS or autoplay blocked), fallback to opening SMARTLINK (no HLS possible)
+    openSmartlinkFallback(cardId, true);
   }
 }
 
@@ -6370,6 +6420,7 @@ closeAd.addEventListener('click', async ()=>{
   inProgress[currentPlayingCard] = false;
   localStorage.removeItem('ad_in_progress');
   currentPlayingCard = null;
+  if (currentHls) { try { currentHls.destroy(); } catch(e){} currentHls = null; }
   if (currentCleanupSeek) { currentCleanupSeek(); currentCleanupSeek = null; }
   if (currentCleanupTime) { currentCleanupTime(); currentCleanupTime = null; }
 });
@@ -6423,14 +6474,11 @@ auth.onAuthStateChanged(async (u)=>{
   currentUser = u;
   if (u){
     await loadUserData(u.uid);
-    // clear guest overlay state (we won't merge guest -> user automatically)
-    guestData = loadGuestData(); // keep guest in localStorage but prefer Firestore UI
+    guestData = loadGuestData();
     await processInProgressOnLoad();
   } else {
-    // guest mode: use local guestData for stats & card states
     userStats = { adsClicked:0, adsCompleted:0, adsAbandoned:0, balance:0, adEarningsToday:0, adEarningsTotal:0 };
     guestData = loadGuestData();
-    // build cardStatus from guestData
     cardStatus = {};
     guestData.completed.forEach(id=>cardStatus[id] = 'completed');
     guestData.skipped.forEach(id=>cardStatus[id] = 'abandoned');
@@ -6449,6 +6497,7 @@ setInterval(()=> {
 renderCards();
 updateStatsUI();
 setTimeout(()=>{ if(window.lucide) window.lucide.createIcons(); }, 50);
+
 
 
 
