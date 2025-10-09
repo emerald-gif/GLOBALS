@@ -1285,7 +1285,7 @@
 <!-- PREMIUM SECTION (non-interfering) -->
 <section id="premium-section" class="tab-section hidden">
 
-<button onclick="activateTab('dashboard')" 
+  <button onclick="activateTab('dashboard')" 
     class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -1293,7 +1293,6 @@
     Back
   </button>
 
-	
   <div class="gp-container">
     <!-- HEADER -->
     <div class="gp-header">
@@ -1303,17 +1302,18 @@
     <!-- FEATURES -->
     <div class="gp-features-box">
       <ul class="gp-features">
-        <li class="gp-feature">👑 Withdraw funds with 5% less fee</li>
-        <li class="gp-feature">👑 Affiliate: Banner task included</li>
-        <li class="gp-feature">👑 WhatsApp & Instagram locked (Telegram free)</li>
-        <li class="gp-feature">👑 ₦500 unlock for WhatsApp/Telegram</li>
-        <li class="gp-feature">👑 ₦1,000 unlock for Instagram/TikTok (1k+ followers)</li>
-        <li class="gp-feature">👑 Cashback on Airtime, Data, Betting, TV, Electricity</li>
-        <li class="gp-feature">👑 No fee for daily challenge entry</li>
-        <li class="gp-feature">👑 Minimum withdrawal ₦500 (Premium unlimited)</li>
-        <li class="gp-feature">👑 Referral bonus: ₦300 (normal), ₦500 (premium)</li>
-        <li class="gp-feature">👑 Unlock all NFT badge rewards</li>
-        <li class="gp-feature">👑 Post & Affiliate tasks boosted visibility</li>
+        <li class="gp-feature">👑 Full access to all social tasks (WhatsApp, Instagram, TikTok)</li>
+        <li class="gp-feature">👑 Unlimited access to all affiliate jobs and task opportunities</li>
+        <li class="gp-feature">👑 Access to over 100+ video ads daily</li>
+        <li class="gp-feature">👑 Cashback on airtime, data, betting, TV, and electricity purchases</li>
+        <li class="gp-feature">👑 Deposit bonus on every deposit made</li>
+        <li class="gp-feature">👑 Full access to Globals Support AI</li>
+        <li class="gp-feature">👑 Unlock real-time task insights and engagement tracking</li>
+        <li class="gp-feature">👑 Premium tasks appear first — boosted visibility for higher reach</li>
+        <li class="gp-feature">👑 Advertisers enjoy wider audience exposure for their tasks</li>
+        <li class="gp-feature">👑 Unlimited daily withdrawals (₦0 fee on every withdrawal)</li>
+        <li class="gp-feature">👑 Daily check-in rewards available for Premium users</li>
+        <li class="gp-feature">👑 Priority access to the highest paying affiliate and task jobs</li>
       </ul>
     </div>
 
@@ -1324,15 +1324,15 @@
 
     <!-- ACTION -->
     <div class="gp-action">
-      <!-- keep original class for your JS handlers -->
       <button class="go-premium-btn gp-btn">👑 Go Premium</button>
     </div>
   </div>
+
 </section>
 
 <style>
 /* Hard isolation for premium area */
-#premium-section.gp-premium-section {
+#premium-section .gp-premium-section {
   width: 100%;
   min-height: 100vh;
   display: flex;
