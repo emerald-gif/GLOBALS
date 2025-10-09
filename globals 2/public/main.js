@@ -6883,8 +6883,8 @@ window.loadBanks = loadBanks;
 /* ====================== WATCH ADS SETTINGS ====================== */
 const REWARD_NAIRA = 0.5;
 const NUM_CARDS = 20;
-const VAST_LINK = 'https://silkyspite.com/d.mlFpzUd/G/NYvdZkGoUk/ee/mJ9iu/ZrUVlokJPwTyY/2wNTz/AK2ZNUzTQNtZNSjKYj3hMsDmYp3qNkQs';
-const SMARTLINK = 'https://www.revenuecpmgate.com/n945dxhe?key=84160f9954ff564239085356c5b84a78';
+const VAST_LINK = 'https://silkyspite.com/dFm.FkzMdRGUN/vPZhGFUX/geYmX9Su/Z-UKluk/PWTvYb2gNEzHAo2/N/zaQ/tBNNj/YB3rMaDXYw3kNAQr';
+const SMARTLINK = 'https://silkyspite.com/CWkyYA';
 
 /* ========== UI elements ========== */
 const adsGrid = document.getElementById('adsGrid');
