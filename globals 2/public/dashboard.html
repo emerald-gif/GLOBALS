@@ -909,7 +909,106 @@
 </div>
 
 
+<script>
+// Smooth Dashboard Load & Transition Optimization
 
+document.addEventListener("DOMContentLoaded", () => {
+  // ✅ Preload icons and fade them in
+  lucide.createIcons();
+  const imgs = document.querySelectorAll("img[loading='lazy'], img[decoding='async']");
+  imgs.forEach(img => {
+    img.addEventListener("load", () => img.style.opacity = "1");
+  });
+
+  // ✅ Prevent dashboard lag during tab switching
+  const sections = document.querySelectorAll(".tab-section");
+  const activeTab = localStorage.getItem("activeTab");
+  if (activeTab) switchTab(activeTab);
+
+  window.switchTab = (id) => {
+    sections.forEach(sec => sec.classList.add("hidden"));
+    const target = document.getElementById(id);
+    if (target) {
+      target.classList.remove("hidden");
+      localStorage.setItem("activeTab", id);
+      requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+    }
+  };
+
+  // ✅ Drawer optimization (smooth open/close)
+  const drawer = document.getElementById("servicesDrawer");
+  const backdrop = drawer?.querySelector("[data-backdrop]");
+  const panel = drawer?.querySelector(".drawer-panel");
+
+  window.openServicesDrawer = () => {
+    drawer.classList.remove("hidden");
+    requestAnimationFrame(() => {
+      backdrop.classList.add("opacity-100");
+      panel.classList.add("open");
+    });
+  };
+
+  drawer?.querySelectorAll("[data-close], [data-backdrop]").forEach(el =>
+    el.addEventListener("click", () => {
+      backdrop.classList.remove("opacity-100");
+      panel.classList.remove("open");
+      setTimeout(() => drawer.classList.add("hidden"), 300);
+    })
+  );
+
+  // ✅ Cache scroll position for smoother reloads
+  if (sessionStorage.scrollPos) {
+    window.scrollTo(0, sessionStorage.scrollPos);
+  }
+  window.addEventListener("beforeunload", () => {
+    sessionStorage.scrollPos = window.scrollY;
+  });
+
+  // ✅ Lazy load effect for better UX
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add("animate-fadeIn");
+    });
+  });
+  document.querySelectorAll(".group, .tab-section").forEach(el => observer.observe(el));
+});
+</script>
+
+<style>
+/* ✨ Subtle fade-in animation for smooth load */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out both;
+}
+
+/* Unified shadow depth for consistent UI */
+.shadow-md { box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important; }
+.shadow-lg { box-shadow: 0 6px 18px rgba(0,0,0,0.08) !important; }
+.shadow-xl { box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important; }
+
+/* Balanced spacing & visual consistency */
+.tab-section {
+  scroll-behavior: smooth;
+  transition: opacity 0.4s ease, transform 0.3s ease;
+}
+.tab-section.hidden {
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+}
+
+/* Minor layout cleanup for cards and grids */
+.grid > a, .grid > div {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.grid > a:hover, .grid > div:hover {
+  transform: scale(1.02);
+  box-shadow: 0 10px 35px rgba(0,0,0,0.08);
+}
+</style>
 
 
 
