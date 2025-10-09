@@ -24,7 +24,7 @@ const db = firebase.firestore();
 
 
 
-// Handle tab switchings
+// Handle tab switching
 const tabBtns = document.querySelectorAll('.tab-btn');
 const tabContents = document.querySelectorAll('.tab-content');
 
