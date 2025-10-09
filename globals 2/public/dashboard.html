@@ -925,43 +925,48 @@
                                                            <!-- 📱 WATCH ADS Screen -->
 
 
-<!-- 🟣 Watch Ads Section — Fixed & Functional -->
+<!-- ================= WATCH ADS DASHBOARD + PLAYER (FULL) ================= -->
 
-<!-- ================= WATCH ADS DASHBOARD SECTION ================= -->
 <section id="watchAdsSection" class="hidden relative w-full py-16 bg-gradient-to-br from-indigo-50 via-white to-indigo-100 overflow-hidden">
-  <!-- background blurs -->
   <div class="absolute inset-0 pointer-events-none">
     <div class="absolute -top-24 -left-32 w-96 h-96 bg-indigo-400/20 blur-3xl rounded-full"></div>
     <div class="absolute bottom-0 right-0 w-[500px] h-[500px] bg-purple-300/20 blur-3xl rounded-full"></div>
   </div>
 
-  <!-- header -->
   <div class="relative max-w-6xl mx-auto px-6 mb-6 text-center">
     <h2 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-indigo-800 to-indigo-600 bg-clip-text text-transparent">
       Watch Ads & Earn
     </h2>
     <p class="text-gray-600 mt-2 text-sm md:text-base">
-      Watch short video ads and earn instant rewards — daily reset allows you to watch again tomorrow.
+      Watch short video ads and earn instant rewards — watched ads reset daily so you can watch again tomorrow.
     </p>
   </div>
 
-  <!-- top stats -->
-  <div class="relative max-w-4xl mx-auto mb-8 grid grid-cols-2 sm:grid-cols-4 gap-4 px-6">
+  <!-- top stats (added lifetime ad total) -->
+  <div class="relative max-w-4xl mx-auto mb-8 grid grid-cols-2 sm:grid-cols-5 gap-4 px-6">
     <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
       <div class="text-xs text-gray-500">Clicked</div>
       <div id="statClicked" class="text-lg font-semibold text-indigo-700">0</div>
     </div>
+
     <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
       <div class="text-xs text-gray-500">Completed</div>
       <div id="statCompleted" class="text-lg font-semibold text-green-700">0</div>
     </div>
+
     <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
       <div class="text-xs text-gray-500">Skipped</div>
       <div id="statAbandoned" class="text-lg font-semibold text-rose-600">0</div>
     </div>
+
     <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
       <div class="text-xs text-gray-500">Ad Income (today)</div>
       <div id="statIncome" class="text-lg font-semibold text-blue-700">₦0.00</div>
+    </div>
+
+    <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
+      <div class="text-xs text-gray-500">Ad Income (total)</div>
+      <div id="statAdTotal" class="text-lg font-semibold text-gray-900">₦0.00</div>
     </div>
   </div>
 
@@ -971,16 +976,28 @@
   </div>
 </section>
 
-<!-- ================= AD MODAL ================= -->
+<!-- modal (single) -->
 <div id="adModal" class="fixed inset-0 hidden z-60 bg-black/60 flex items-center justify-center">
   <div class="bg-white rounded-3xl shadow-xl overflow-hidden max-w-2xl w-[92%] relative">
     <button id="closeAd" class="absolute top-3 right-3 bg-gray-100 hover:bg-gray-200 p-2 rounded-full z-30">
       <i data-lucide="x" class="w-5 h-5 text-gray-600"></i>
     </button>
-    <div id="adSpinner" class="p-8 flex items-center justify-center">
-      <div class="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+
+    <!-- progress + time (read-only) -->
+    <div id="videoProgressWrap" class="px-6 pt-6 pb-3">
+      <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+        <div id="videoProgress" class="h-full w-0 bg-indigo-600 transition-width duration-150"></div>
+      </div>
+      <div class="flex justify-between mt-2 text-xs text-slate-500">
+        <div id="videoTimeLabel">00:00 / 00:00</div>
+        <div id="videoRemainingLabel"></div>
+      </div>
     </div>
-    <video id="adPlayer" class="w-full hidden" playsinline controlsList="nodownload nofullscreen noremoteplayback" disablePictureInPicture></video>
+
+    <!-- player (no native controls) -->
+    <div class="px-6 pb-6">
+      <video id="adPlayer" class="w-full rounded-lg bg-black" playsinline preload="metadata"></video>
+    </div>
   </div>
 </div>
 
