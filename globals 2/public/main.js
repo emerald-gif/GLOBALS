@@ -1948,8 +1948,14 @@ function closeBoxPopup() {
 
                                    // PREMIUM FUNCTION 1
 
-async function checkPremiumStatus() {
+
+document.addEventListener("DOMContentLoaded", async () => {
   
+  const premiumBanner = document.querySelector(".go-premium-banner");
+
+  // Hide the banner immediately until we confirm user state
+  if (premiumBanner) premiumBanner.style.display = "none";
+
   auth.onAuthStateChanged(async (user) => {
     if (!user) return; // Not logged in
 
@@ -1960,25 +1966,23 @@ async function checkPremiumStatus() {
       if (userSnap.exists) {
         const userData = userSnap.data();
 
-        // 👑 If user is premium, hide the "Go Premium" banner
         if (userData.is_Premium === true) {
-          const premiumBanner = document.querySelector(".go-premium-banner");
-          if (premiumBanner) {
-            premiumBanner.style.transition = "opacity 0.4s ease, transform 0.4s ease";
-            premiumBanner.style.opacity = "0";
-            premiumBanner.style.transform = "translateY(-10px)";
-            setTimeout(() => premiumBanner.remove(), 400);
-          }
+          // User is premium — never show banner
+          if (premiumBanner) premiumBanner.remove();
+        } else {
+          // Not premium — show banner immediately (no flicker)
+          if (premiumBanner) premiumBanner.style.display = "block";
         }
+      } else {
+        // If no user data found, still show banner safely
+        if (premiumBanner) premiumBanner.style.display = "block";
       }
     } catch (error) {
       console.error("Error checking premium status:", error);
+      if (premiumBanner) premiumBanner.style.display = "block"; // Fallback
     }
   });
-}
-
-// 🔄 Run instantly
-checkPremiumStatus();
+});
 
 
 
