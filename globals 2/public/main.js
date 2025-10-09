@@ -1936,8 +1936,56 @@ function closeBoxPopup() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+                                   // PREMIUM FUNCTION 1
+
+async function checkPremiumStatus() {
+  
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) return; // Not logged in
+
+    try {
+      const userRef = db.collection("users").doc(user.uid);
+      const userSnap = await userRef.get();
+
+      if (userSnap.exists) {
+        const userData = userSnap.data();
+
+        // 👑 If user is premium, hide the "Go Premium" banner
+        if (userData.is_Premium === true) {
+          const premiumBanner = document.querySelector(".go-premium-banner");
+          if (premiumBanner) {
+            premiumBanner.style.transition = "opacity 0.4s ease, transform 0.4s ease";
+            premiumBanner.style.opacity = "0";
+            premiumBanner.style.transform = "translateY(-10px)";
+            setTimeout(() => premiumBanner.remove(), 400);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error checking premium status:", error);
+    }
+  });
+}
+
+// 🔄 Run instantly
+checkPremiumStatus();
+
+
+
+
+
                       
-                                   // IDs of sections that require PREMIUM FUNCTION 
+                                   // PREMIUM FUNCTION 2
 
 // IDs of sections that require premium
 const premiumRequiredSections = [
