@@ -2575,6 +2575,459 @@ async function showTaskSubmissionDetailsUser(submissionId) {
 	
                                     //AFFILIATE 
 
+(function(){
+  'use strict';
+
+  // Single-instance guard
+  if (window.__AFF2_INSTANCE__) { console.warn('[AFF2] Instance already present — skipping second init.'); return; }
+
+  // tiny helpers
+  const safeText = s => String(s||'')
+    .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#39;");
+  const formatNaira = n => (n==null||isNaN(Number(n))) ? '₦0' : '₦'+Number(n).toLocaleString('en-NG');
+  const el = id => document.getElementById(id);
+
+  // Defensive firebase pick
+  const firebaseAvailable = !!(window.firebase && window.firebase.firestore);
+  const db = firebaseAvailable ? window.firebase.firestore() : null;
+  const auth = (window.firebase && window.firebase.auth) ? window.firebase.auth() : null;
+
+  // Realtime multiplexer: coalesces identical queries so we don't attach duplicate onSnapshots
+  function RealtimeMultiplexer(db) {
+    const registry = new Map();
+    return {
+      subscribe(key, buildQueryFn, onUpdate) {
+        if (!db) return () => {};
+        if (registry.has(key)) {
+          const entry = registry.get(key);
+          entry.subs.add(onUpdate);
+          // call immediately with latest snapshot if available
+          if (entry.latest) try{ onUpdate(entry.latest);}catch(e){console.error(e)}
+          return () => {
+            entry.subs.delete(onUpdate);
+            if (entry.subs.size===0) {
+              try{ entry.unsub && entry.unsub(); }catch(_){}
+              registry.delete(key);
+            }
+          };
+        }
+        // create new listener
+        const subs = new Set([onUpdate]);
+        let latest = null;
+        let unsub = null;
+        try {
+          const q = buildQueryFn(db);
+          unsub = q.onSnapshot(snap => {
+            const arr = [];
+            snap.forEach(d => arr.push({ id: d.id, ...d.data() }));
+            latest = arr;
+            for (const s of subs) try{ s(arr);}catch(e){console.error(e)}
+          }, err => { console.error('[AFF2] multiplexer snapshot error', err); });
+        } catch (err) { console.error('[AFF2] multiplexer build error', err); }
+        registry.set(key, { subs, unsub, latest });
+        return () => {
+          const entry = registry.get(key);
+          if (!entry) return;
+          entry.subs.delete(onUpdate);
+          if (entry.subs.size===0) { try{ entry.unsub && entry.unsub(); }catch(_){} registry.delete(key); }
+        };
+      }
+    };
+  }
+
+  const multiplexer = db ? RealtimeMultiplexer(db) : null;
+
+  // Module state
+  const state = {
+    instanceId: 'aff2_' + Math.random().toString(36).slice(2,9),
+    unsubscribers: [],
+    listeners: [],
+    currentDetailJobId: null
+  };
+
+  // ======= RENDERERS (use DOM API, minimal innerHTML) =======
+  function makeJobCard(job) {
+    const accepted = Number(job.filledWorkers || 0);
+    const total = Number(job.numWorkers || 0);
+    const percent = total>0 ? Math.min(100, Math.round((accepted/total)*100)) : 0;
+    const img = job.campaignLogoURL || job.image || '/assets/default-thumb.jpg';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'bg-white rounded-2xl aff2-card p-3';
+
+    const inner = document.createElement('div');
+    inner.innerHTML = `
+      <div class="overflow-hidden rounded-xl">
+        <img src="${safeText(img)}" alt="${safeText(job.title||'')}" class="w-full h-36 object-cover rounded-xl" />
+      </div>
+      <div class="mt-3">
+        <h4 class="font-semibold text-md">${safeText(job.title||'')}</h4>
+        <div class="text-sm text-gray-500 mt-1">${formatNaira(job.workerPay)}</div>
+        <div class="text-sm text-gray-500 mt-1">${accepted}/${total} workers · ${percent}%</div>
+        <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden mt-3">
+          <div style="width:${percent}%" class="h-2 rounded-full bg-blue-300 transition-all duration-300"></div>
+        </div>
+        <div class="mt-4 flex gap-2">
+          <button class="flex-1 py-2 rounded-xl bg-blue-600 text-white font-semibold aff2_view_task aff2-clickable" data-id="${safeText(job.id)}">View Task</button>
+        </div>
+      </div>
+    `;
+
+    wrap.appendChild(inner);
+    return wrap;
+  }
+
+  function renderGrid(jobs) {
+    const grid = el('aff2_grid');
+    if (!grid) return;
+    // diff approach: simple replace for now to keep code robust and deterministic
+    grid.innerHTML = '';
+    if (!jobs || !jobs.length) {
+      const empty = document.createElement('div');
+      empty.className = 'col-span-2 p-6 bg-white rounded-xl aff2-card text-center';
+      empty.textContent = 'No affiliate tasks right now.';
+      grid.appendChild(empty);
+      return;
+    }
+    const frag = document.createDocumentFragment();
+    for (const j of jobs) frag.appendChild(makeJobCard(j));
+    grid.appendChild(frag);
+  }
+
+  function makeFinishedCard(sub, jobTitle) {
+    const wrap = document.createElement('div');
+    wrap.className = 'p-4 bg-white rounded-xl shadow-sm flex items-center justify-between hover:shadow-md';
+    const left = document.createElement('div');
+    const h = document.createElement('h3'); h.className = 'font-semibold text-gray-900'; h.textContent = jobTitle || 'Affiliate Job';
+    const p1 = document.createElement('p'); p1.className='text-sm text-gray-600'; p1.textContent = sub.status || '';
+    const p2 = document.createElement('p'); p2.className='text-xs text-gray-400'; p2.textContent = (sub.postedAt && sub.postedAt.toDate) ? sub.postedAt.toDate().toLocaleString() : '';
+    left.appendChild(h); left.appendChild(p1); left.appendChild(p2);
+
+    const right = document.createElement('div'); right.className='flex flex-col gap-2 items-end';
+    const btn = document.createElement('button'); btn.className='px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg aff2_view_finished aff2-clickable'; btn.dataset.id = sub.id; btn.textContent = 'View';
+    right.appendChild(btn);
+
+    wrap.appendChild(left); wrap.appendChild(right);
+    return wrap;
+  }
+
+  function renderFinishedList(items, jobMap) {
+    const listEl = el('aff2_finishedList'); if (!listEl) return;
+    listEl.innerHTML = '';
+    if (!items || items.length===0) { listEl.innerHTML = '<p class="text-center text-gray-500">You have no finished tasks.</p>'; return; }
+    const frag = document.createDocumentFragment();
+    let pending=0, approved=0;
+    items.sort((a,b)=>((b.postedAt&&b.postedAt.seconds)||0)-((a.postedAt&&a.postedAt.seconds)||0));
+    for (const it of items) {
+      const s = (it.status||'').toLowerCase(); if (s==='approved') approved++; else pending++;
+      frag.appendChild(makeFinishedCard(it, jobMap[it.jobId]?.title));
+    }
+    listEl.appendChild(frag);
+    el('aff2_pendingCount') && (el('aff2_pendingCount').textContent = String(pending));
+    el('aff2_approvedCount') && (el('aff2_approvedCount').textContent = String(approved));
+  }
+
+  // ======= SUBSCRIPTIONS =======
+  // Jobs grid subscription (shared via multiplexer)
+  function startJobsListener() {
+    if (!multiplexer) return;
+    const unsub = multiplexer.subscribe('aff2_jobs_approved', db=> db.collection('affiliateJobs').where('status','==','approved'), (jobs)=>{
+      // sort for stable order by postedAt
+      jobs.sort((a,b)=>((b.postedAt&&b.postedAt.seconds)||0)-((a.postedAt&&a.postedAt.seconds)||0));
+      renderGrid(jobs);
+    });
+    state.unsubscribers.push(unsub);
+  }
+
+  // Finished tasks subscription for current user
+  let finishedLocalUnsub = null;
+  function startFinishedListenerForUser(uid) {
+    if (!multiplexer || !uid) return;
+    // factory returns a Query
+    const key = 'aff2_finished_user_'+uid;
+    // keep a short-lived local jobMap cache to render job titles
+    const jobMapCache = {};
+    const fetchJobMap = async (jobsIds) => {
+      if (!db) return {};
+      const unique = [...new Set(jobsIds||[])];
+      if (!unique.length) return {};
+      try {
+        // Firestore doesn't allow >10 in where-in; chunk if needed
+        const map = {};
+        for (let i=0;i<unique.length;i+=10) {
+          const chunk = unique.slice(i,i+10);
+          const snap = await db.collection('affiliateJobs').where(window.firebase.firestore.FieldPath.documentId(), 'in', chunk).get();
+          snap.forEach(d=> map[d.id] = d.data());
+        }
+        return map;
+      } catch(err){ console.error('[AFF2] fetchJobMap',err); return {}; }
+    };
+
+    finishedLocalUnsub = multiplexer.subscribe(key, db=> db.collection('affiliate_submissions').where('userId','==',uid), async (items)=>{
+      const jobIds = items.map(i=>i.jobId).filter(Boolean);
+      const jm = await fetchJobMap(jobIds);
+      renderFinishedList(items, jm);
+    });
+    state.unsubscribers.push(()=>{ finishedLocalUnsub && finishedLocalUnsub(); finishedLocalUnsub=null; });
+  }
+
+  // Job detail: subscribe for approved count
+  let jobDetailUnsub = null;
+  async function openJobDetail(jobId) {
+    if (!db) { alert('Database not ready'); return; }
+    try {
+      const doc = await db.collection('affiliateJobs').doc(jobId).get();
+      if (!doc.exists) { alert('Job not found'); return; }
+      const job = { id: doc.id, ...doc.data() };
+      state.currentDetailJobId = job.id;
+
+      // render detail content (innerHTML for complex layout is ok here but safely encoded values)
+      const container = el('aff2_jobDetailContent'); if (!container) return;
+      container.innerHTML = '';
+      const wrapper = document.createElement('div'); wrapper.className='bg-white rounded-2xl aff2-card overflow-hidden';
+      const imgWrap = document.createElement('div'); imgWrap.className='relative';
+      const banner = document.createElement('img'); banner.src = job.campaignLogoURL||job.image||'/assets/default-banner.jpg'; banner.className='w-full h-44 object-cover';
+      const thumb = document.createElement('img'); thumb.src = job.campaignLogoURL||job.image||'/assets/default-thumb.jpg'; thumb.className='absolute -bottom-6 left-6 w-14 h-14 rounded-full border-4 border-white object-cover shadow';
+      imgWrap.appendChild(banner); imgWrap.appendChild(thumb);
+      wrapper.appendChild(imgWrap);
+
+      const body = document.createElement('div'); body.className='p-5';
+      body.innerHTML = `
+        <div class="flex justify-between items-start"><div><h3 class="text-xl font-bold">${safeText(job.title||'Untitled')}</h3><p class="text-sm text-gray-500">${formatNaira(job.workerPay)} · ${Number(job.numWorkers||0)} workers</p></div></div>
+        <div class="mt-3 text-gray-700">${safeText(job.instructions||'')}</div>
+        <div class="mt-4"><div class="text-sm text-gray-500">Progress</div><div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden mt-2"><div id="aff2_detailProgressBar" class="h-2 rounded-full bg-blue-400" style="width:0%"></div></div><div id="aff2_detailProgressText" class="text-sm text-gray-500 mt-2">0/0 (0%)</div></div>
+        <hr class="my-4"/>
+        <div><p class="text-sm text-gray-500 mb-2">Proofs required: <strong id="aff2_detailProofCount">${Number(job.proofFileCount||1)}</strong></p>
+        <input id="aff2_detailProofFiles" type="file" multiple accept="image/*" class="mb-2 block w-full" />
+        <textarea id="aff2_detailSubmissionNote" placeholder="Optional note..." class="w-full border rounded-md p-2 mb-2"></textarea>
+        <div class="flex gap-2"><button id="aff2_detailSubmitBtn" data-job-id="${safeText(job.id)}" data-proof-count="${Number(job.proofFileCount||1)}" class="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold">Submit Proof</button><button id="aff2_detailCancelBtn" class="py-3 px-4 rounded-xl bg-gray-100">Cancel</button></div>
+        <p class="text-xs text-gray-400 mt-2">Submissions are reviewed by admin. Approved submissions will reflect here and in Finished Tasks.</p></div>
+      `;
+
+      wrapper.appendChild(body);
+      container.appendChild(wrapper);
+
+      // show/hide screens
+      el('aff2_jobsContainer') && el('aff2_jobsContainer').classList.add('aff2-hidden');
+      el('aff2_finishedScreen') && el('aff2_finishedScreen').classList.add('aff2-hidden');
+      el('aff2_jobDetailScreen') && el('aff2_jobDetailScreen').classList.remove('aff2-hidden');
+
+      // subscribe to approved count via multiplexer
+      if (jobDetailUnsub) { jobDetailUnsub(); jobDetailUnsub = null; }
+      jobDetailUnsub = multiplexer.subscribe('aff2_job_approved_'+job.id, d=> d.collection('affiliate_submissions').where('jobId','==',job.id).where('status','==','approved'), snap => {}); // NOTE: incorrect; factory must accept db; fixed below
+
+    } catch (err) { console.error('[AFF2] openJobDetail error',err); alert('Failed to open job. Check console.'); }
+  }
+
+  // Because we need the multiplexer factory to receive db, re-define the approved subscription correctly
+  async function openJobDetail_correct(jobId) {
+    if (!db) { alert('Database not ready'); return; }
+    try {
+      const doc = await db.collection('affiliateJobs').doc(jobId).get();
+      if (!doc.exists) { alert('Job not found'); return; }
+      const job = { id: doc.id, ...doc.data() };
+      state.currentDetailJobId = job.id;
+
+      const container = el('aff2_jobDetailContent'); if (!container) return;
+      // build UI (we call the same helper as above but avoid repeating too much)
+      container.innerHTML = '';
+      const wrapper = document.createElement('div'); wrapper.className='bg-white rounded-2xl aff2-card overflow-hidden';
+      const imgWrap = document.createElement('div'); imgWrap.className='relative';
+      const banner = document.createElement('img'); banner.src = job.campaignLogoURL||job.image||'/assets/default-banner.jpg'; banner.className='w-full h-44 object-cover';
+      const thumb = document.createElement('img'); thumb.src = job.campaignLogoURL||job.image||'/assets/default-thumb.jpg'; thumb.className='absolute -bottom-6 left-6 w-14 h-14 rounded-full border-4 border-white object-cover shadow';
+      imgWrap.appendChild(banner); imgWrap.appendChild(thumb);
+      wrapper.appendChild(imgWrap);
+      const body = document.createElement('div'); body.className='p-5';
+      body.innerHTML = `
+        <div class="flex justify-between items-start"><div><h3 class="text-xl font-bold">${safeText(job.title||'Untitled')}</h3><p class="text-sm text-gray-500">${formatNaira(job.workerPay)} · ${Number(job.numWorkers||0)} workers</p></div></div>
+        <div class="mt-3 text-gray-700">${safeText(job.instructions||'')}</div>
+        <div class="mt-4"><div class="text-sm text-gray-500">Progress</div><div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden mt-2"><div id="aff2_detailProgressBar" class="h-2 rounded-full bg-blue-400" style="width:0%"></div></div><div id="aff2_detailProgressText" class="text-sm text-gray-500 mt-2">0/0 (0%)</div></div>
+        <hr class="my-4"/>
+        <div><p class="text-sm text-gray-500 mb-2">Proofs required: <strong id="aff2_detailProofCount">${Number(job.proofFileCount||1)}</strong></p>
+        <input id="aff2_detailProofFiles" type="file" multiple accept="image/*" class="mb-2 block w-full" />
+        <textarea id="aff2_detailSubmissionNote" placeholder="Optional note..." class="w-full border rounded-md p-2 mb-2"></textarea>
+        <div class="flex gap-2"><button id="aff2_detailSubmitBtn" data-job-id="${safeText(job.id)}" data-proof-count="${Number(job.proofFileCount||1)}" class="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold">Submit Proof</button><button id="aff2_detailCancelBtn" class="py-3 px-4 rounded-xl bg-gray-100">Cancel</button></div>
+        <p class="text-xs text-gray-400 mt-2">Submissions are reviewed by admin. Approved submissions will reflect here and in Finished Tasks.</p></div>
+      `;
+      wrapper.appendChild(body);
+      container.appendChild(wrapper);
+
+      el('aff2_jobsContainer')?.classList.add('aff2-hidden');
+      el('aff2_finishedScreen')?.classList.add('aff2-hidden');
+      el('aff2_jobDetailScreen')?.classList.remove('aff2-hidden');
+
+      // previously subscribed detail listener
+      if (jobDetailUnsub) { try{ jobDetailUnsub(); }catch(_){} jobDetailUnsub=null; }
+
+      // New subscription to count approved submissions. We use the multiplexer so if other modules subscribe to the same query they reuse the snapshot.
+      jobDetailUnsub = multiplexer.subscribe('aff2_job_approved_'+job.id, (dbLocal)=> dbLocal.collection('affiliate_submissions').where('jobId','==',job.id).where('status','==','approved'), (arr)=>{
+        const approvedCount = arr.length;
+        const totalWorkers = Number(job.numWorkers||0);
+        const percent = totalWorkers>0?Math.min(100, Math.round((approvedCount/totalWorkers)*100)):0;
+        const bar = el('aff2_detailProgressBar'); if (bar && bar.style) bar.style.width = percent + '%';
+        const tEl = el('aff2_detailProgressText'); if (tEl) tEl.textContent = `${approvedCount}/${totalWorkers} (${percent}%)`;
+      });
+      state.unsubscribers.push(jobDetailUnsub);
+
+    } catch (err) { console.error('[AFF2] openJobDetail_correct',err); alert('Failed to open job. See console.'); }
+  }
+
+  // ======= UPLOAD helper (keeps identical behaviour to older module) =======
+  async function uploadFileHelper(file) {
+    if (!file) throw new Error('No file provided');
+    if (typeof window.uploadToCloudinary === 'function') return await window.uploadToCloudinary(file);
+    if (window.firebase && window.firebase.storage && auth && auth.currentUser) {
+      const storageRef = window.firebase.storage().ref();
+      const path = `affiliate_submissions/${auth.currentUser.uid}_${Date.now()}_${file.name}`;
+      const ref = storageRef.child(path);
+      await ref.put(file);
+      return await ref.getDownloadURL();
+    }
+    throw new Error('No upload helper available. Add uploadToCloudinary(file) or enable firebase.storage.');
+  }
+
+  // ======= EVENT BINDINGS (container-scoped) =======
+  const handlers = [];
+
+  function bindEvents() {
+    // Grid clicks
+    const grid = el('aff2_grid');
+    if (grid) {
+      const onGridClick = (ev) => {
+        const btn = ev.target.closest && ev.target.closest('.aff2_view_task');
+        if (btn) {
+          const id = btn.dataset.id;
+          if (id) openJobDetail_correct(id);
+        }
+      };
+      grid.addEventListener('click', onGridClick);
+      handlers.push(()=>grid.removeEventListener('click', onGridClick));
+    }
+
+    // Finished list clicks
+    const finList = el('aff2_finishedList');
+    if (finList) {
+      const onFinClick = (ev) => {
+        const btn = ev.target.closest && ev.target.closest('.aff2_view_finished');
+        if (!btn) return;
+        const subId = btn.dataset.id;
+        if (!subId) return;
+        // open modal for submission details
+        if (!db) { alert('Database not ready'); return; }
+        db.collection('affiliate_submissions').doc(subId).get().then(doc=>{
+          if (!doc.exists) { alert('Submission not found'); return; }
+          const d = doc.data();
+          const images = (d.proofURLs||[]).map(u=>{ const img=document.createElement('img'); img.src=u; img.className='w-full rounded-md mb-2'; return img; });
+          const modal = document.createElement('div'); modal.className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+          const box = document.createElement('div'); box.className='bg-white rounded-xl shadow-lg p-4 w-full max-w-md max-h-[90vh] overflow-y-auto';
+          const h = document.createElement('h3'); h.className='text-lg font-bold mb-2'; h.textContent='Submission Details';
+          box.appendChild(h);
+          const p1 = document.createElement('p'); p1.className='text-sm'; p1.innerHTML = `<strong>Status:</strong> ${safeText(d.status||'')}`;
+          const p2 = document.createElement('p'); p2.className='text-sm'; p2.innerHTML = `<strong>Note:</strong> ${safeText(d.note||'')}`;
+          box.appendChild(p1); box.appendChild(p2);
+          const imagesWrap = document.createElement('div'); imagesWrap.className='mt-3';
+          if (images.length) images.forEach(i=>imagesWrap.appendChild(i)); else imagesWrap.innerHTML='<p class="text-sm text-gray-400">No proof images</p>';
+          box.appendChild(imagesWrap);
+          const foot = document.createElement('div'); foot.className='mt-4 flex justify-end';
+          const closeBtn = document.createElement('button'); closeBtn.className='closeFinishedBtn px-4 py-2 bg-blue-600 text-white rounded-lg'; closeBtn.textContent='Close';
+          closeBtn.addEventListener('click', ()=>modal.remove());
+          foot.appendChild(closeBtn); box.appendChild(foot);
+          modal.appendChild(box); document.body.appendChild(modal);
+        }).catch(err=>{ console.error('[AFF2] load submission',err); alert('Failed to load details'); });
+      };
+      finList.addEventListener('click', onFinClick);
+      handlers.push(()=>finList.removeEventListener('click', onFinClick));
+    }
+
+    // top buttons
+    const openFin = el('aff2_openFinishedBtn'); if (openFin) { const fn=()=>{ if (auth && auth.currentUser) startFinishedListenerForUser(auth.currentUser.uid); el('aff2_jobsContainer')?.classList.add('aff2-hidden'); el('aff2_jobDetailScreen')?.classList.add('aff2-hidden'); el('aff2_finishedScreen')?.classList.remove('aff2-hidden'); }; openFin.addEventListener('click', fn); handlers.push(()=>openFin.removeEventListener('click', fn)); }
+    const backMain = el('aff2_backToMainBtn'); if (backMain) { const fn=()=>{ el('aff2_finishedScreen')?.classList.add('aff2-hidden'); el('aff2_jobsContainer')?.classList.remove('aff2-hidden'); if (typeof finishedLocalUnsub==='function') { finishedLocalUnsub(); finishedLocalUnsub=null; } }; backMain.addEventListener('click', fn); handlers.push(()=>backMain.removeEventListener('click', fn)); }
+    const backToList = el('aff2_backToListBtn'); if (backToList) { const fn=()=>{ el('aff2_jobDetailScreen')?.classList.add('aff2-hidden'); el('aff2_jobsContainer')?.classList.remove('aff2-hidden'); if (jobDetailUnsub) { try{ jobDetailUnsub(); }catch(_){} jobDetailUnsub=null; } }; backToList.addEventListener('click', fn); handlers.push(()=>backToList.removeEventListener('click', fn)); }
+
+    // Submit proof and cancel are in detail screen; use delegated listener on detail screen container
+    const detailScreen = el('aff2_jobDetailContent');
+    const onDetailClick = async (ev) => {
+      const submitBtn = ev.target.closest && ev.target.closest('#aff2_detailSubmitBtn');
+      if (submitBtn) {
+        const jobId = submitBtn.dataset.jobId; if (!jobId) { alert('Job ID missing'); return; }
+        if (!auth || !auth.currentUser) { alert('Login to submit proof.'); return; }
+        const proofRequired = Number(submitBtn.dataset.proofCount||1);
+        const filesInput = el('aff2_detailProofFiles'); const files = filesInput?.files || [];
+        if (files.length !== proofRequired) { alert(`This job requires exactly ${proofRequired} file(s). You provided ${files.length}.`); return; }
+        submitBtn.disabled = true; const prev = submitBtn.textContent; submitBtn.textContent = 'Uploading...';
+        try {
+          const uploads = [];
+          for (let i=0;i<files.length;i++) uploads.push(uploadFileHelper(files[i]));
+          const urls = await Promise.all(uploads);
+          const payload = { jobId, userId: auth.currentUser.uid, userName: auth.currentUser.displayName || auth.currentUser.email || '', postedAt: (window.firebase&&window.firebase.firestore)?window.firebase.firestore.FieldValue.serverTimestamp():new Date(), proofURLs: urls, note: el('aff2_detailSubmissionNote')?.value||'', status: 'on review' };
+          await db.collection('affiliate_submissions').add(payload);
+          alert('✅ Proof submitted! It will be reviewed by admin.');
+          el('aff2_backToListBtn')?.click();
+        } catch (err) { console.error('[AFF2] submit',err); alert('Failed to submit proof. See console.'); }
+        finally { submitBtn.disabled=false; submitBtn.textContent = prev; }
+      }
+      const cancelBtn = ev.target.closest && ev.target.closest('#aff2_detailCancelBtn');
+      if (cancelBtn) { el('aff2_backToListBtn')?.click(); }
+    };
+    // attach even if detail container not present yet; delegate at root (safe and localized)
+    const root = el('aff2_root'); if (root) { root.addEventListener('click', onDetailClick); handlers.push(()=>root.removeEventListener('click', onDetailClick)); }
+
+    // search inputs
+    const sInput = el('aff2_searchMain'); if (sInput) {
+      let to=null; sInput.addEventListener('input', ()=>{ clearTimeout(to); to = setTimeout(()=>{ const q=sInput.value.trim().toLowerCase(); const grid = el('aff2_grid'); if (!grid) return; [...grid.children].forEach(card=>{ const txt=(card.innerText||'').toLowerCase(); card.style.display = txt.includes(q)?'':'none'; }); },170); }); handlers.push(()=>sInput.removeEventListener('input',null)); }
+    const sf = el('aff2_searchFinished'); if (sf) { sf.addEventListener('input', ()=>{ const q=sf.value.trim().toLowerCase(); const list=el('aff2_finishedList'); if(!list) return; [...list.children].forEach(card=>{ const txt=(card.innerText||'').toLowerCase(); card.style.display = txt.includes(q)?'':'none'; }); }); handlers.push(()=>sf.removeEventListener('input',null)); }
+  }
+
+  // ======= AUTH CHANGES =======
+  function attachAuthWatcher() {
+    if (!auth) return;
+    const onAuth = (u)=>{
+      if (u) { startFinishedListenerForUser(u.uid); }
+      else { if (typeof finishedLocalUnsub==='function') { finishedLocalUnsub(); finishedLocalUnsub=null; } const listEl=el('aff2_finishedList'); if (listEl) listEl.innerHTML='<p class="text-center text-gray-500">Login to see your finished tasks.</p>'; }
+    };
+    auth.onAuthStateChanged(onAuth);
+    state.unsubscribers.push(()=>{/* no easy way to remove onAuthStateChanged callback in firebase v8-style; safe to leave */});
+  }
+
+  // ======= INIT / DESTROY =======
+  function init() {
+    // attach events
+    bindEvents();
+    // start jobs stream
+    if (multiplexer) startJobsListener();
+    // attach auth watcher (to start finished tasks listener when user logs in)
+    attachAuthWatcher();
+    console.log('[AFF2] initialized (id: '+state.instanceId+')');
+  }
+
+  function destroy() {
+    // remove event handlers
+    handlers.splice(0).forEach(un => { try{ un(); }catch(_){} });
+    // unsubscribe realtime listeners
+    state.unsubscribers.splice(0).forEach(un => { try{ un(); }catch(_){} });
+    // reset UI (optional)
+    const rootEl = el('aff2_root'); if (rootEl) rootEl.querySelectorAll('*').forEach(n=>n.removeEventListener && n.removeEventListener());
+    // clear root sections back to initial state
+    el('aff2_grid') && (el('aff2_grid').innerHTML='');
+    el('aff2_finishedList') && (el('aff2_finishedList').innerHTML='');
+    // clear module reference
+    try{ delete window.__AFF2_INSTANCE__; }catch(_){ window.__AFF2_INSTANCE__ = null; }
+    console.log('[AFF2] destroyed');
+  }
+
+  // auto-init on DOM ready
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+
+  // expose a tiny API for control/debug
+  const api = { init, destroy, openJob: openJobDetail_correct, id: state.instanceId };
+  window.__AFF2_INSTANCE__ = api; // single global reference
+  window.AffiliateV2 = api; // small convenience alias
+})();
+
+
+
+
+
 
 
 
@@ -5860,8 +6313,565 @@ window.loadBanks = loadBanks;
 
 
 
+<!-- ====== spin and earn function ====== -->
 
-/* ====================== SETTINGSS ====================== */
+/* ====== Spin Wheel + Daily Challenge Script (Firebase compat) ====== */
+(() => {
+  // ---------- CONFIG ----------
+  const COIN_IMG = 'COIN.jpg';
+  const VERIFIED_IMG = 'VERIFIED.jpg';
+  const PRIZES = [10, 30, 20, 200, 5, 0, 100, 1000];   // wheel order
+  const WEIGHTS = [18, 12, 14, 2, 18, 20, 5, 1];
+  const SEGMENTS = PRIZES.length;
+  const ROTATIONS = 6;
+  const TIMESTAMP_CANDIDATES = ['createdAt','submittedAt','timestamp','time','submittedOn','created_on'];
+
+  // Map challenge key -> prize index (so a completed challenge can queue a guaranteed spin)
+  const CHALLENGE_TO_PRIZE_INDEX = {
+    affiliateApproved: 0, // ₦10
+    taskApproved: 2,      // ₦20
+    dataAmount: 1,        // ₦30
+    airtimeAmount: 6      // ₦100
+  };
+
+  // ---------- DOM ----------
+  const canvas = document.getElementById('spin-canvas');
+  if (!canvas) { console.error('Spin canvas not found'); return; }
+  const ctx = canvas.getContext('2d');
+  const spinBtn = document.getElementById('spin-btn');
+  const spinCountEl = document.getElementById('spin-count');
+  const liveText = document.getElementById('live-text');
+  const liveFeedEl = document.getElementById('live-feed-items');
+  const winModal = document.getElementById('win-modal');
+  const winAmountEl = document.getElementById('win-amount');
+  const winVerifiedImg = document.getElementById('win-verified');
+  const winCloseBtn = document.getElementById('win-close');
+  const noSpinModal = document.getElementById('no-spin-modal');
+  const noSpinClose = document.getElementById('no-spin-close');
+  const toastEl = document.getElementById('spin-toast');
+  const toastTextEl = document.getElementById('spin-toast-text');
+  const challengeCards = Array.from(document.querySelectorAll('#daily-challenges .challenge-card'));
+
+  // ---------- STATE ----------
+  let DPR = window.devicePixelRatio || 1;
+  let lastRotation = 0;               // degrees
+  let spinning = false;
+  let currentUser = null;
+  let userDocCached = null;
+  let spinsAvailable = 0;
+  let progressState = { affiliateApproved:0, taskApproved:0, dataAmount:0, airtimeAmount:0 };
+  let prevProgress = { ...progressState };
+  let unsubs = [];
+  let liveInterval = null;
+  let guaranteedPrizes = []; // queue of prize indices to force next spin to land on
+
+  // ---------- HELPERS ----------
+  const todayKey = () => new Date().toISOString().slice(0,10);
+  const startOfToday = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
+  const endOfToday = () => { const d = new Date(); d.setHours(23,59,59,999); return d; };
+
+  function dateFromMaybe(v) {
+    if (v == null) return null;
+    if (typeof v.toDate === 'function') { try { return v.toDate(); } catch(e) { return null; } }
+    if (v && typeof v.seconds === 'number') return new Date(v.seconds * 1000);
+    if (typeof v === 'number') return new Date(v);
+    try { return new Date(v); } catch(e) { return null; }
+  }
+  function docIsToday(data){
+    if (!data) return false;
+    for (const f of TIMESTAMP_CANDIDATES) {
+      if (!data[f]) continue;
+      const dt = dateFromMaybe(data[f]);
+      if (!dt || isNaN(dt.getTime())) continue;
+      if (dt >= startOfToday() && dt <= endOfToday()) return true;
+    }
+    return false;
+  }
+  function weightedRandomIndex(weights){
+    const sum = weights.reduce((a,b)=>a+b,0);
+    let r = Math.random() * sum;
+    for (let i=0;i<weights.length;i++){
+      if (r < weights[i]) return i;
+      r -= weights[i];
+    }
+    return weights.length - 1;
+  }
+  function showToast(msg){
+    if (toastEl && toastTextEl) {
+      toastTextEl.textContent = msg;
+      toastEl.style.display = 'block';
+      clearTimeout(toastEl._hideTO);
+      toastEl._hideTO = setTimeout(()=> { toastEl.style.display = 'none'; }, 3200);
+    } else { alert(msg); }
+  }
+
+  // ---------- preload images ----------
+  const coinImg = new Image(); coinImg.src = COIN_IMG;
+  const verifiedImg = new Image(); verifiedImg.src = VERIFIED_IMG;
+
+  // ---------- responsive HD canvas setup ----------
+  function setupCanvasHD() {
+    DPR = window.devicePixelRatio || 1;
+    // match plate size (canvas.parentElement is .wheel-plate)
+    const plate = canvas.parentElement;
+    const rect = plate.getBoundingClientRect();
+    const css = Math.max(220, Math.min(rect.width, rect.height));
+    canvas.style.width = css + 'px';
+    canvas.style.height = css + 'px';
+    canvas.width = Math.round(css * DPR);
+    canvas.height = Math.round(css * DPR);
+    // make drawing coordinates match CSS pixels
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    drawWheel(lastRotation);
+  }
+
+  // ---------- draw wheel ----------
+  function drawWheel(rotationDeg = 0) {
+    // use CSS pixels for layout
+    const cssW = canvas.clientWidth || parseInt(canvas.style.width || '320',10);
+    const cx = cssW / 2, cy = cssW / 2, r = Math.min(cssW, cssW)/2 - 12;
+    ctx.clearRect(0,0,cssW,cssW);
+    ctx.save();
+    // rotate wheel around center
+    ctx.translate(cx,cy);
+    ctx.rotate(rotationDeg * Math.PI/180);
+    ctx.translate(-cx,-cy);
+
+    const segAngle = 2 * Math.PI / SEGMENTS;
+    const colors = ['#ecfeff','#e6f7ff','#fff8e1','#f3f5ff','#fff0f6','#eef6ff','#fbfbfd','#f0fbff'];
+
+    for (let i=0;i<SEGMENTS;i++){
+      const start = -Math.PI/2 + i*segAngle;
+      const end = start + segAngle;
+
+      // slice
+      ctx.beginPath();
+      ctx.moveTo(cx,cy);
+      ctx.arc(cx,cy,r,start,end);
+      ctx.closePath();
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(2,6,23,0.04)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // amount label near rim
+      const mid = (start + end) / 2;
+      const labelR = r * 0.78;
+      const lx = cx + Math.cos(mid) * labelR;
+      const ly = cy + Math.sin(mid) * labelR;
+      ctx.save();
+      ctx.translate(lx, ly);
+      ctx.rotate(mid + Math.PI/2);
+      ctx.fillStyle = '#0f172a';
+      ctx.font = `${Math.max(11, Math.round(cssW * 0.035))}px Inter, system-ui`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`₦${PRIZES[i]}`, 0, 0);
+      ctx.restore();
+
+      // coin image (upright)
+      if (coinImg && coinImg.complete) {
+        const imgR = r * 0.56;
+        const ix = cx + Math.cos(mid) * imgR;
+        const iy = cy + Math.sin(mid) * imgR;
+        ctx.save();
+        ctx.translate(ix, iy);
+        ctx.rotate(-(rotationDeg * Math.PI/180)); // keep upright
+        const coinSize = Math.max(28, Math.round(cssW * 0.12));
+        ctx.drawImage(coinImg, -coinSize/2, -coinSize/2, coinSize, coinSize);
+        // verified badge for 1000
+        if (PRIZES[i] === 1000 && verifiedImg.complete) {
+          const b = Math.round(coinSize * 0.45);
+          ctx.drawImage(verifiedImg, coinSize/4, coinSize/4, b, b);
+        }
+        ctx.restore();
+      }
+    }
+
+    // bold outer edge ring
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + 6, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(15,23,42,0.06)';
+    ctx.lineWidth = 10;
+    ctx.stroke();
+
+    // center button
+    ctx.beginPath();
+    ctx.arc(cx, cy, 48, 0, Math.PI*2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(15,23,42,0.06)';
+    ctx.stroke();
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '700 14px Inter, system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('SPIN', cx, cy - 6);
+    ctx.font = '600 12px Inter, system-ui';
+    ctx.fillText('NOW', cx, cy + 12);
+
+    ctx.restore();
+  }
+
+  // ---------- easing animation ----------
+  function animateTo(targetAbsolute, duration = 5200) {
+    return new Promise(resolve => {
+      const start = performance.now();
+      const from = lastRotation;
+      const diff = targetAbsolute - from;
+      function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
+      function frame(now){
+        const t = Math.min(1, (now - start) / duration);
+        const v = from + diff * easeOutCubic(t);
+        drawWheel(v);
+        if (t < 1) requestAnimationFrame(frame);
+        else {
+          lastRotation = ((targetAbsolute % 360) + 360) % 360;
+          drawWheel(lastRotation);
+          resolve();
+        }
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
+  // ---------- compute available spins & update UI ----------
+  function recomputeSpinsUI(){
+    // compute completed flags based on goals
+    const goals = {
+      affiliateApproved: Number(document.querySelector('.challenge-card[data-key="affiliateApproved"]')?.dataset.goal || 10),
+      taskApproved: Number(document.querySelector('.challenge-card[data-key="taskApproved"]')?.dataset.goal || 10),
+      dataAmount: Number(document.querySelector('.challenge-card[data-key="dataAmount"]')?.dataset.goal || 1000),
+      airtimeAmount: Number(document.querySelector('.challenge-card[data-key="airtimeAmount"]')?.dataset.goal || 500)
+    };
+
+    const flags = [
+      (progressState.affiliateApproved || 0) >= goals.affiliateApproved,
+      (progressState.taskApproved || 0) >= goals.taskApproved,
+      (progressState.dataAmount || 0) >= goals.dataAmount,
+      (progressState.airtimeAmount || 0) >= goals.airtimeAmount
+    ];
+
+    const completedCount = flags.filter(Boolean).length;
+    const base = 1;
+
+    // used today from user doc
+    let used = 0;
+    let usedDateKey = null;
+    if (userDocCached) {
+      used = Number(userDocCached.spinsUsedCount || 0);
+      const prev = userDocCached.spinsUsedDate || null;
+      if (prev) {
+        try { usedDateKey = (typeof prev.toDate === 'function') ? prev.toDate().toISOString().slice(0,10) : new Date(prev).toISOString().slice(0,10); }
+        catch(e){ usedDateKey = prev; }
+      }
+      if (usedDateKey !== todayKey()) used = 0;
+    }
+
+    const newAvailable = Math.max(0, base + completedCount - used);
+    if (newAvailable !== spinsAvailable) {
+      spinsAvailable = newAvailable;
+      if (spinCountEl) spinCountEl.textContent = `(${spinsAvailable})`;
+      // small pulse animation
+      if (spinCountEl) {
+        spinCountEl.animate([{ transform:'scale(1)'},{ transform:'scale(1.18)'},{ transform:'scale(1)'}], { duration:350, easing:'ease-out' });
+      }
+    }
+
+    // update progress bars & statuses
+    challengeCards.forEach(card => {
+      const key = card.dataset.key;
+      const goal = Number(card.dataset.goal || 1);
+      let val = 0;
+      if (key === 'affiliateApproved') val = progressState.affiliateApproved || 0;
+      else if (key === 'taskApproved') val = progressState.taskApproved || 0;
+      else if (key === 'dataAmount') val = progressState.dataAmount || 0;
+      else if (key === 'airtimeAmount') val = progressState.airtimeAmount || 0;
+
+      const percent = Math.min(100, (val / goal) * 100);
+      const bar = card.querySelector('.progress-bar');
+      const status = card.querySelector('.status-text');
+      if (bar) bar.style.width = percent + '%';
+      if (status) {
+        if (val >= goal) { status.textContent = 'Completed'; status.classList.remove('not-completed'); status.classList.add('completed'); }
+        else { status.textContent = 'Not completed'; status.classList.remove('completed'); status.classList.add('not-completed'); }
+      }
+    });
+  }
+
+  // ---------- realtime listeners helpers ----------
+  function clearUnsubs(){ unsubs.forEach(u=>{ try{ u(); }catch(e){} }); unsubs = []; }
+  function pushGuaranteedPrizeForChallenge(key) {
+    const idx = CHALLENGE_TO_PRIZE_INDEX[key];
+    if (typeof idx === 'number') {
+      guaranteedPrizes.push(idx);
+      // toast & visual cue
+      showToast('Challenge completed — next spin will award the challenge reward!');
+    }
+  }
+
+  // ---------- attachRealtimeProgress (firestore) ----------
+  function attachRealtimeProgress(uid, username) {
+    clearUnsubs();
+    if (typeof db === 'undefined' || !db) { console.warn('db missing'); return; }
+
+    // affiliate_submissions (approved): count today's approved
+    try {
+      const q = db.collection('affiliate_submissions').where('userId','==',uid).where('status','==','approved');
+      const unsub = q.onSnapshot(snap => {
+        let count = 0;
+        snap.forEach(d => { if (docIsToday(d.data())) count++; });
+        // detect crossing threshold
+        const prev = prevProgress.affiliateApproved || 0;
+        progressState.affiliateApproved = count;
+        if ((prev < 10) && (count >= 10)) pushGuaranteedPrizeForChallenge('affiliateApproved');
+        prevProgress.affiliateApproved = count;
+        recomputeSpinsUI();
+      }, err => console.warn('affiliate listener err', err));
+      unsubs.push(unsub);
+    } catch(e){ console.warn('attach affiliate err', e); }
+
+    // task_submissions (approved)
+    try {
+      const q = db.collection('task_submissions').where('userId','==',uid).where('status','==','approved');
+      const unsub = q.onSnapshot(snap => {
+        let count = 0;
+        snap.forEach(d => { if (docIsToday(d.data())) count++; });
+        const prev = prevProgress.taskApproved || 0;
+        progressState.taskApproved = count;
+        if ((prev < 10) && (count >= 10)) pushGuaranteedPrizeForChallenge('taskApproved');
+        prevProgress.taskApproved = count;
+        recomputeSpinsUI();
+      }, err => console.warn('task listener err', err));
+      unsubs.push(unsub);
+    } catch(e){ console.warn('attach task err', e); }
+
+    // bill_submissions (processed) -> data & airtime totals today
+    try {
+      const q = db.collection('bill_submissions').where('userId','==',uid).where('processed','==',true);
+      const unsub = q.onSnapshot(snap => {
+        let dataSum = 0, airtimeSum = 0;
+        snap.forEach(d => {
+          const doc = d.data();
+          if (!docIsToday(doc)) return;
+          const t = (doc.type || 'airtime').toString().toLowerCase();
+          const amt = Number(doc.amount || 0);
+          if (t === 'data') dataSum += amt; else airtimeSum += amt;
+        });
+        // detect threshold crossing for data (>=1000)
+        const prevData = prevProgress.dataAmount || 0;
+        progressState.dataAmount = dataSum;
+        if ((prevData < 1000) && (dataSum >= 1000)) pushGuaranteedPrizeForChallenge('dataAmount');
+        prevProgress.dataAmount = dataSum;
+
+        const prevAirtime = prevProgress.airtimeAmount || 0;
+        progressState.airtimeAmount = airtimeSum;
+        if ((prevAirtime < 500) && (airtimeSum >= 500)) pushGuaranteedPrizeForChallenge('airtimeAmount');
+        prevProgress.airtimeAmount = airtimeSum;
+
+        recomputeSpinsUI();
+      }, err => console.warn('bills listener err', err));
+      unsubs.push(unsub);
+    } catch(e){ console.warn('attach bills err', e); }
+  }
+
+  // ---------- live feed demo (20 names, animated) ----------
+  function startLiveFeedDemo() {
+    const names = ['NOFISAT','ABUBAKAR','FATIMA','CHINEDU','SULEIMAN','GRACE','KINGSLEY','BOLA','AMINA','EMMA','SAMUEL','JOY','MUSA','HANNAH','RAFIQ','OLUWATOYIN','KELECHI','NNEKA','TOMI','RACHEL'];
+    const msgs = [];
+    for (let i=0;i<20;i++){
+      const n = names[i % names.length];
+      const a = PRIZES[Math.floor(Math.random()*PRIZES.length)];
+      msgs.push(`${n} won ₦${a} cashback.`);
+    }
+    let idx = 0;
+    if (liveText) liveText.textContent = msgs[0];
+    if (liveInterval) clearInterval(liveInterval);
+    liveInterval = setInterval(()=> {
+      idx = (idx + 1) % msgs.length;
+      if (liveText) {
+        // small fade animation
+        liveText.style.opacity = 0;
+        setTimeout(()=> {
+          liveText.textContent = msgs[idx];
+          liveText.style.opacity = 1;
+        }, 220);
+      }
+    }, 2500);
+  }
+
+  // ---------- spin math & animation (lands exactly on prize) ----------
+  async function spinToIndex(idx) {
+    const segDeg = 360 / SEGMENTS;
+    // center angle of slice relative to top baseline used for drawing (-90 degrees)
+    const sliceCenter = -90 + (idx + 0.5) * segDeg;
+    // rotation delta required so that sliceCenter becomes -90
+    const rotationDelta = -90 - sliceCenter;
+    const jitter = (Math.random() * (segDeg / 18)) - (segDeg / 36);
+    const total = ROTATIONS * 360 + rotationDelta + jitter;
+    const target = lastRotation + total;
+    await animateTo(target, 5200);
+    lastRotation = ((target % 360) + 360) % 360;
+  }
+
+  // ---------- spin handler ----------
+  async function handleSpinClick() {
+    if (spinning) return;
+    if (typeof auth === 'undefined' || !auth || !auth.currentUser) { showToast('Please login to spin.'); return; }
+    if (spinsAvailable <= 0) {
+      if (noSpinModal) { noSpinModal.classList.remove('hidden'); noSpinModal.style.display = 'flex'; }
+      return;
+    }
+
+    spinning = true;
+    if (spinBtn) spinBtn.disabled = true;
+
+    // optimistic decrement for immediate feedback
+    spinsAvailable = Math.max(0, spinsAvailable - 1);
+    if (spinCountEl) spinCountEl.textContent = `(${spinsAvailable})`;
+
+    // pick prize: guaranteed first, else weighted random
+    let idx;
+    if (guaranteedPrizes.length > 0) {
+      idx = guaranteedPrizes.shift();
+    } else {
+      idx = weightedRandomIndex(WEIGHTS);
+    }
+
+    await spinToIndex(idx);
+    const amount = PRIZES[idx];
+
+    // update DB (balance + spinsUsedCount + spinsUsedDate)
+    try {
+      const uid = auth.currentUser.uid;
+      const userRef = db.collection('users').doc(uid);
+      const today = todayKey();
+      await db.runTransaction(async tx => {
+        const snap = await tx.get(userRef);
+        if (!snap.exists) {
+          tx.set(userRef, {
+            balance: amount,
+            spinsUsedCount: 1,
+            spinsUsedDate: today,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+        } else {
+          const data = snap.data() || {};
+          const prev = data.spinsUsedDate || null;
+          let prevKey = null;
+          try { prevKey = prev && typeof prev.toDate === 'function' ? prev.toDate().toISOString().slice(0,10) : prev; } catch(e){ prevKey = prev; }
+          if (prevKey !== today) {
+            tx.update(userRef, {
+              balance: firebase.firestore.FieldValue.increment(amount),
+              spinsUsedCount: 1,
+              spinsUsedDate: today,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          } else {
+            tx.update(userRef, {
+              balance: firebase.firestore.FieldValue.increment(amount),
+              spinsUsedCount: firebase.firestore.FieldValue.increment(1),
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          }
+        }
+      });
+
+      // refresh local cache
+      const fresh = await db.collection('users').doc(auth.currentUser.uid).get();
+      userDocCached = fresh.exists ? fresh.data() : userDocCached;
+    } catch (err) {
+      console.error('spin update failed', err);
+      showToast('Error updating balance. See console.');
+    }
+
+    // show win modal
+    if (winAmountEl) winAmountEl.textContent = `₦${amount}`;
+    if (amount === 1000 && winVerifiedImg) winVerifiedImg.classList.remove('hidden'); else if (winVerifiedImg) winVerifiedImg.classList.add('hidden');
+    if (winModal) { winModal.classList.remove('hidden'); winModal.style.display = 'flex'; }
+
+    // live pill immediate update using displayName/email fallback
+    if (auth.currentUser && liveText) {
+      const who = (auth.currentUser.displayName || auth.currentUser.email || 'You').split('@')[0].toUpperCase();
+      liveText.textContent = `${who} won ₦${amount} cashback.`;
+    }
+
+    // recompute UI (in case transaction/used counts differ)
+    recomputeSpinsUI();
+
+    spinning = false;
+    if (spinBtn) spinBtn.disabled = false;
+  }
+
+  // ---------- attach auth + init ----------
+  function init() {
+    // responsive canvas sizing
+    setupCanvasHD();
+    drawWheel(lastRotation);
+    startLiveFeedDemo();
+
+    // events
+    if (spinBtn) spinBtn.addEventListener('click', handleSpinClick);
+    if (winCloseBtn) winCloseBtn.addEventListener('click', ()=> { if (winModal) { winModal.classList.add('hidden'); winModal.style.display = 'none'; } });
+    if (noSpinClose) noSpinClose.addEventListener('click', ()=> { if (noSpinModal) { noSpinModal.classList.add('hidden'); noSpinModal.style.display = 'none'; } });
+
+    window.addEventListener('resize', () => { setupCanvasHD(); });
+
+    // If firebase isn't available, just run demo UI (no DB)
+    if (typeof auth === 'undefined' || !auth || typeof db === 'undefined' || !db) {
+      console.warn('Firebase compat not found. Running demo-only UI.');
+      // demo progress so bars show something (optional)
+      progressState = { affiliateApproved: 0, taskApproved: 0, dataAmount: 0, airtimeAmount: 0 };
+      prevProgress = { ...progressState };
+      recomputeSpinsUI();
+      return;
+    }
+
+    // auth listener -> attach realtime listeners for progress
+    auth.onAuthStateChanged(user => {
+      currentUser = user;
+      if (!user) {
+        // signed out
+        userDocCached = null; recomputeSpinsUI(); clearUnsubs(); return;
+      }
+
+      // listen to user doc
+      const uRef = db.collection('users').doc(user.uid);
+      const unsubUser = uRef.onSnapshot(snap => {
+        userDocCached = snap.exists ? snap.data() : {};
+        const username = (userDocCached && userDocCached.username) ? userDocCached.username : (user.displayName || (user.email || '').split('@')[0]);
+        attachRealtimeProgress(user.uid, username);
+        recomputeSpinsUI();
+      }, err => {
+        console.warn('user doc listener error', err);
+        // fallback to one-time read
+        uRef.get().then(snap => {
+          userDocCached = snap.exists ? snap.data() : {};
+          const username = (userDocCached && userDocCached.username) ? userDocCached.username : (user.displayName || (user.email || '').split('@')[0]);
+          attachRealtimeProgress(user.uid, username);
+          recomputeSpinsUI();
+        }).catch(e => console.warn('user fetch failed', e));
+      });
+      unsubs.push(unsubUser);
+    });
+  }
+
+  // ---------- start ----------
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+
+  // ---------- debug helpers ----------
+  window.__spinDebug = { drawWheel, setupCanvasHD, recomputeSpinsUI, progressState, PRIZES, lastRotation, guaranteedPrizes };
+
+})();
+
+
+
+
+
+
+
 
 
 
@@ -5870,7 +6880,7 @@ window.loadBanks = loadBanks;
 
 	
 
-/* ====================== SETTINGS ====================== */
+/* ====================== WATCH ADS SETTINGS ====================== */
 const REWARD_NAIRA = 0.5;
 const NUM_CARDS = 20;
 const VAST_LINK = 'https://silkyspite.com/d.mlFpzUd/G/NYvdZkGoUk/ee/mJ9iu/ZrUVlokJPwTyY/2wNTz/AK2ZNUzTQNtZNSjKYj3hMsDmYp3qNkQs';
