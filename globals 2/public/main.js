@@ -6884,7 +6884,7 @@ window.loadBanks = loadBanks;
 const REWARD_NAIRA = 0.5;
 const NUM_CARDS = 20;
 const VAST_LINK = 'https://silkyspite.com/dFm.FkzMdRGUN/vPZhGFUX/geYmX9Su/Z-UKluk/PWTvYb2gNEzHAo2/N/zaQ/tBNNj/YB3rMaDXYw3kNAQr';
-const SMARTLINK = 'https://silkyspite.com/CWkyYA';
+const SMARTLINK = 'https://www.revenuecpmgate.com/n945dxhe?key=84160f9954ff564239085356c5b84a78';
 
 /* ========== UI elements ========== */
 const adsGrid = document.getElementById('adsGrid');
