@@ -6227,7 +6227,7 @@ async function loadBanks() {
   bankSelect.disabled = true;
   bankSelect.innerHTML = `<option>Loading Banks...</option>`;
 
-  const urls = ['/api/get-banks', location.origin + '/api/get-banks', 'https://globals-myzv.onrender.com/api/get-banks'];
+  const urls = ['/api/get-banks', location.origin + '/api/get-banks', 'https://globalstasks.name.ng/api/get-banks'];
   let banks = null;
   for (const url of urls) {
     try {
@@ -6272,7 +6272,7 @@ async function verifyAccount() {
   nameStatus.classList.remove('hidden');
   nameDisplay.classList.add('hidden');
 
-  const candidates = ['/api/verify-account', location.origin + '/api/verify-account', 'https://globals-myzv.onrender.com/api/verify-account'];
+  const candidates = ['/api/verify-account', location.origin + '/api/verify-account', 'https://globalstasks.name.ng/api/verify-account'];
   let ok = false;
   for (const url of candidates) {
     try {
