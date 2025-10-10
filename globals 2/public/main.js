@@ -7045,7 +7045,7 @@ auth.onAuthStateChanged(async (u)=>{
         await loadUserData(u.uid);
         await processInProgressOnLoad();
     } else {
-        userStats={adsClicked:0,adsCompleted:0,adsAbandoned:0,balance:0
+        userStats = { adsClicked:0, adsCompleted:0, adsAbandoned:0, balance:0, adEarningsToday:0, adEarningsTotal:0 };
 
 
       
