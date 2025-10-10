@@ -1,28 +1,115 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Globals — Earn with tasks</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link rel="shortcut icon" href="GLOBALS.jpg" type="image/jpg">
-  
-  <style>
-    .float-shape { position:absolute; border-radius:999px; filter: blur(18px); opacity:.9; animation: floaty 7s ease-in-out infinite; pointer-events:none; }
-    .shape-1{ width:160px;height:160px; left:-40px; top:-40px; background:linear-gradient(135deg,#06b6d4,#7c3aed); }
-    .shape-2{ width:120px;height:120px; right:-30px; top:120px; background:linear-gradient(135deg,#34d399,#60a5fa); animation-duration:9s; }
-    @keyframes floaty { 0%{transform:translateY(0)}50%{transform:translateY(12px)}100%{transform:translateY(0)} }
-    @media (min-width:900px){ #sidebar{transform:translateX(0) !important; position:relative;} #overlay{display:none!important;} }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
+  <title>Globals | Earn Money Online & Promote Your Brand Easily</title>
+  
+  <!-- 🌍 SEO Meta Tags -->
+  <meta name="description" content="Globals is a powerful online earning and promotion platform where advertisers post tasks to promote their websites, apps, or links — and users earn daily by completing those tasks, watching ads, and spinning to win. Start earning and promoting with Globals today."/>
+  
+  <meta name="keywords" content="Globals, globals tasks, globals earn, earn money online, promote business, post ads, digital promotion, advertise online, earn from tasks, watch ads, spin and earn, get paid daily, Nigerian earning platform, CPM marketing, online income, affiliate promotion, task marketplace, reward site, online job Nigeria, mobile earning app, brand promotion, post and earn, social media tasks, ad network platform, global earn site" />
+  
+  <meta name="author" content="Globals Team" />
+  <meta name="robots" content="index, follow"/>
+
+  <!-- 🌐 Open Graph (Social Media Preview) -->
+  <meta property="og:title" content="Globals - Earn & Promote Online Easily"/>
+  <meta property="og:description" content="Post your promotions and earn with Globals! Advertisers promote their content while users earn real money completing daily online tasks."/>
+  <meta property="og:image" content="https://globalstasks.name.ng/GLOBALS.jpg"/>
+  <meta property="og:url" content="https://globalstasks.name.ng/"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="Globals"/>
+
+  <!-- 🐦 Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="Globals - Promote & Earn Online"/>
+  <meta name="twitter:description" content="Advertisers post promotions and users earn daily by completing them. Join Globals today!"/>
+  <meta name="twitter:image" content="https://globalstasks.name.ng/GLOBALS.jpg"/>
+
+  <!-- 📱 App/Brand Icons -->
+  <link rel="shortcut icon" href="GLOBALS.jpg" type="image/jpg">
+
+  <!-- 💅 Styles & Libraries -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+
+  <!-- 📊 JS Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- 🧩 Structured Data for Google Search -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Globals",
+    "alternateName": "Globals Tasks",
+    "url": "https://globalstasks.name.ng/",
+    "logo": "https://globalstasks.name.ng/GLOBALS.jpg",
+    "sameAs": [
+      "https://www.facebook.com/",
+      "https://www.instagram.com/",
+      "https://t.me/",
+      "https://x.com/"
+    ],
+    "description": "Globals is a digital platform that connects advertisers and earners. Advertisers promote their WhatsApp groups, Telegram channels, websites, or brands — while users complete those tasks, watch ads, and spin to earn real cash rewards daily."
+  }
+  </script>
+
+  <!-- 💬 FAQ Schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is Globals?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Globals is an online earning and advertising platform where advertisers post promotional tasks and users earn money daily by completing them."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How can I earn on Globals?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "You can earn by completing simple tasks such as joining groups, following pages, sharing links, watching ads, and spinning to win bonuses."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I promote my business or group on Globals?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Globals allows advertisers to promote WhatsApp groups, Telegram channels, websites, and other digital campaigns to real active users."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is Globals available worldwide?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, Globals is open to users globally, with a growing community of advertisers and earners across Nigeria and Africa."
+        }
+      }
+    ]
+  }
+  </script>
 
 
 <meta name="5f5979de5cea875775a2048885226dfd62c3d4c1" content="5f5979de5cea875775a2048885226dfd62c3d4c1" />
 
 	
 
-  
+	
 </head>
+
+
+
 <body class="bg-gray-50 text-gray-800 antialiased min-h-screen">
 
   <!-- overlay -->
@@ -35,7 +122,7 @@
         <img src="VERIFIED.jpg" alt="Globals logo" class="w-12 h-12 object-cover rounded-md border-2 border-blue-500"/>
         <div>
           <div class="font-bold text-gray-900">Globals</div>
-          <div class="text-xs text-gray-500">Earn with referrals</div>
+          <div class="text-xs text-gray-500">Earn with tasks</div>
         </div>
         <button id="sidebarCloseBtn" class="ml-auto text-gray-600 hover:text-gray-900 focus:outline-none">✕</button>
       </div>
@@ -80,7 +167,7 @@
         </svg>
       </button>
       <a href="index.html" class="flex items-center gap-2">
-        <img src="VERIFIED.jpg" alt="Globals" class="w-9 h-9 rounded-md object-cover" />
+        <img src="GLOBALS.jpg" alt="Globals" class="w-9 h-9 rounded-md object-cover" />
         <span class="font-bold text-lg text-gray-800">Globals</span>
       </a>
     </div>
@@ -158,7 +245,7 @@
           <span class="mt-2 text-sm font-semibold text-blue-900">Electricity</span>
         </a>
         <a href="#refer" class="p-4 bg-white rounded-xl shadow-sm flex flex-col items-center">
-          <img src="VERIFIED.jpg" alt="Refer" class="w-12 h-12 object-contain" />
+          <img src="GLOBALS.jpg" alt="Refer" class="w-12 h-12 object-contain" />
           <span class="mt-2 text-sm font-semibold text-blue-900">Refer & Earn</span>
         </a>
       </div>
@@ -262,6 +349,7 @@
   </script>
 </body>
 </html>
+
 
 
 
