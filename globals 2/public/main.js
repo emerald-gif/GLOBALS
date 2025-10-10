@@ -6887,68 +6887,103 @@ window.loadBanks = loadBanks;
       if (statAdTotal) statAdTotal.textContent = formatNaira(userStats.adEarningsTotal || 0);
     }
 
-    // write helpers that work with db OR fallback
-    async function recordClickOnly(uid, cardId) {
-      if (db) {
-        await db.collection('users').doc(uid).set({ adsClicked: firebase.firestore.FieldValue.increment(1) }, { merge: true });
-      } else {
-        const key = `watched_user_${uid}`;
-        const obj = JSON.parse(localStorage.getItem(key) || '{}');
-        obj.adsClicked = (obj.adsClicked || 0) + 1;
-        localStorage.setItem(key, JSON.stringify(obj));
-      }
-      userStats.adsClicked++;
-      updateStatsUI();
+/* ====================== TOAST FUNCTION ====================== */
+function showToast(message, type='success', duration=3000){
+    let container = document.getElementById('toastContainer');
+    if(!container){
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'fixed top-6 right-6 z-50 flex flex-col gap-2';
+        document.body.appendChild(container);
     }
 
-    async function recordAbandoned(uid, cardId) {
-      const field = `watchedAds.${cardId}`;
-      if (db) {
-        await db.collection('users').doc(uid).set({ adsAbandoned: firebase.firestore.FieldValue.increment(1), [field]: 'abandoned' }, { merge: true });
-      } else {
-        const key = `watched_user_${uid}`;
-        const obj = JSON.parse(localStorage.getItem(key) || '{}');
-        obj.adsAbandoned = (obj.adsAbandoned || 0) + 1;
-        obj.watchedAds = obj.watchedAds || {};
-        obj.watchedAds[cardId] = 'abandoned';
-        localStorage.setItem(key, JSON.stringify(obj));
-      }
-      userStats.adsAbandoned++;
-      cardStatus[cardId] = 'abandoned';
-      updateStatsUI();
-      renderCards();
-    }
+    const toast = document.createElement('div');
+    toast.className = `
+        px-4 py-2 rounded-lg shadow-lg text-sm font-medium
+        ${type==='success'? 'bg-green-600 text-white':'bg-rose-500 text-white'}
+        animate-fadeIn
+    `;
+    toast.textContent = message;
+    container.appendChild(toast);
 
-    async function rewardUser(uid, cardId) {
-      const field = `watchedAds.${cardId}`;
-      if (db) {
-        await db.collection('users').doc(uid).set({
-          balance: firebase.firestore.FieldValue.increment(REWARD_NAIRA),
-          adEarningsToday: firebase.firestore.FieldValue.increment(REWARD_NAIRA),
-          adEarningsTotal: firebase.firestore.FieldValue.increment(REWARD_NAIRA),
-          adsCompleted: firebase.firestore.FieldValue.increment(1),
-          [field]: 'completed'
-        }, { merge: true });
-      } else {
-        const key = `watched_user_${uid}`;
-        const obj = JSON.parse(localStorage.getItem(key) || '{}');
-        obj.balance = (obj.balance || 0) + REWARD_NAIRA;
-        obj.adEarningsToday = (obj.adEarningsToday || 0) + REWARD_NAIRA;
-        obj.adEarningsTotal = (obj.adEarningsTotal || 0) + REWARD_NAIRA;
-        obj.adsCompleted = (obj.adsCompleted || 0) + 1;
-        obj.watchedAds = obj.watchedAds || {};
-        obj.watchedAds[cardId] = 'completed';
-        localStorage.setItem(key, JSON.stringify(obj));
-      }
+    setTimeout(() => { toast.remove(); }, duration);
+}
 
-      userStats.balance = (Number(userStats.balance) || 0) + Number(REWARD_NAIRA);
-      userStats.adEarningsToday = (Number(userStats.adEarningsToday) || 0) + Number(REWARD_NAIRA);
-      userStats.adEarningsTotal = (Number(userStats.adEarningsTotal) || 0) + Number(REWARD_NAIRA);
-      userStats.adsCompleted++;
-      cardStatus[cardId] = 'completed';
-      updateStatsUI();
-      renderCards();
-    }
+/* ====================== WATCH ADS HELPERS ====================== */
+async function recordClickOnly(uid, cardId) {
+  if (db) {
+    await db.collection('users').doc(uid).set({
+      adsClicked: firebase.firestore.FieldValue.increment(1)
+    }, { merge: true });
+  } else {
+    const key = `watched_user_${uid}`;
+    const obj = JSON.parse(localStorage.getItem(key) || '{}');
+    obj.adsClicked = (obj.adsClicked || 0) + 1;
+    localStorage.setItem(key, JSON.stringify(obj));
+  }
+
+  userStats.adsClicked++;
+  updateStatsUI();
+}
+
+async function recordAbandoned(uid, cardId) {
+  const field = `watchedAds.${cardId}`;
+  if (db) {
+    await db.collection('users').doc(uid).set({
+      adsAbandoned: firebase.firestore.FieldValue.increment(1),
+      [field]: 'abandoned'
+    }, { merge: true });
+  } else {
+    const key = `watched_user_${uid}`;
+    const obj = JSON.parse(localStorage.getItem(key) || '{}');
+    obj.adsAbandoned = (obj.adsAbandoned || 0) + 1;
+    obj.watchedAds = obj.watchedAds || {};
+    obj.watchedAds[cardId] = 'abandoned';
+    localStorage.setItem(key, JSON.stringify(obj));
+  }
+
+  userStats.adsAbandoned++;
+  cardStatus[cardId] = 'abandoned';
+  updateStatsUI();
+  renderCards();
+
+  // Show toast when ad is skipped
+  showToast('⚠️ Ad skipped — no reward', 'error');
+}
+
+async function rewardUser(uid, cardId) {
+  const field = `watchedAds.${cardId}`;
+  if (db) {
+    await db.collection('users').doc(uid).set({
+      balance: firebase.firestore.FieldValue.increment(REWARD_NAIRA),
+      adEarningsToday: firebase.firestore.FieldValue.increment(REWARD_NAIRA),
+      adEarningsTotal: firebase.firestore.FieldValue.increment(REWARD_NAIRA),
+      adsCompleted: firebase.firestore.FieldValue.increment(1),
+      [field]: 'completed'
+    }, { merge: true });
+  } else {
+    const key = `watched_user_${uid}`;
+    const obj = JSON.parse(localStorage.getItem(key) || '{}');
+    obj.balance = (obj.balance || 0) + REWARD_NAIRA;
+    obj.adEarningsToday = (obj.adEarningsToday || 0) + REWARD_NAIRA;
+    obj.adEarningsTotal = (obj.adEarningsTotal || 0) + REWARD_NAIRA;
+    obj.adsCompleted = (obj.adsCompleted || 0) + 1;
+    obj.watchedAds = obj.watchedAds || {};
+    obj.watchedAds[cardId] = 'completed';
+    localStorage.setItem(key, JSON.stringify(obj));
+  }
+
+  userStats.balance = (Number(userStats.balance) || 0) + Number(REWARD_NAIRA);
+  userStats.adEarningsToday = (Number(userStats.adEarningsToday) || 0) + Number(REWARD_NAIRA);
+  userStats.adEarningsTotal = (Number(userStats.adEarningsTotal) || 0) + Number(REWARD_NAIRA);
+  userStats.adsCompleted++;
+  cardStatus[cardId] = 'completed';
+  updateStatsUI();
+  renderCards();
+
+  // Show toast when reward is earned
+  showToast(`🎉 You earned ₦${REWARD_NAIRA} added to your balance!`, 'success');
+}
 
     // ====== VAST RESOLUTION & HLS LOAD ======
     async function fetchText(url) {
@@ -7277,48 +7312,6 @@ window.loadBanks = loadBanks;
 
 
 
-// 🔥 Auto-hide spinner when playback starts
-adPlayer.addEventListener("playing", () => {
-  adPlayer.classList.add("playing");
-});
-adPlayer.addEventListener("pause", () => {
-  adPlayer.classList.remove("playing");
-});
-adPlayer.addEventListener("ended", () => {
-  adPlayer.classList.remove("playing");
-});
-
-
-
-
-
-function showToast(message, type='success', duration=3000){
-    const container = document.getElementById('toastContainer');
-    if(!container) return;
-
-    const toast = document.createElement('div');
-    toast.className = `
-        px-4 py-2 rounded-lg shadow-lg text-sm font-medium
-        ${type==='success'? 'bg-green-600 text-white':'bg-rose-500 text-white'}
-        animate-fadeIn
-    `;
-    toast.textContent = message;
-    container.appendChild(toast);
-
-    setTimeout(() => {
-        toast.remove();
-    }, duration);
-}
-
-
-
-await rewardUser(currentUser.uid, cardId);
-showToast(`🎉 You earned ₦${REWARD_NAIRA} added to your balance!`);
-
-
-
-await recordAbandoned(currentUser.uid, currentPlayingCard);
-showToast('⚠️ Ad skipped — no reward', 'error');
 
 
 
