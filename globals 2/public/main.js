@@ -7277,6 +7277,56 @@ window.loadBanks = loadBanks;
 
 
 
+// 🔥 Auto-hide spinner when playback starts
+adPlayer.addEventListener("playing", () => {
+  adPlayer.classList.add("playing");
+});
+adPlayer.addEventListener("pause", () => {
+  adPlayer.classList.remove("playing");
+});
+adPlayer.addEventListener("ended", () => {
+  adPlayer.classList.remove("playing");
+});
+
+
+
+
+
+function showToast(message, type='success', duration=3000){
+    const container = document.getElementById('toastContainer');
+    if(!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `
+        px-4 py-2 rounded-lg shadow-lg text-sm font-medium
+        ${type==='success'? 'bg-green-600 text-white':'bg-rose-500 text-white'}
+        animate-fadeIn
+    `;
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.remove();
+    }, duration);
+}
+
+
+
+await rewardUser(currentUser.uid, cardId);
+showToast(`🎉 You earned ₦${REWARD_NAIRA} added to your balance!`);
+
+
+
+await recordAbandoned(currentUser.uid, currentPlayingCard);
+showToast('⚠️ Ad skipped — no reward', 'error');
+
+
+
+
+
+
+									 
+
 
 
 
