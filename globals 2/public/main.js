@@ -6367,24 +6367,27 @@ window.loadBanks = loadBanks;
 
 <!-- ====== spin and earn function ====== -->
 
-/* ====== Spin Wheel + Daily Challenge Script (Firebase compat) ====== */
+
+
+
+
+/* ===== Integrated Spin + Ad-to-Spin Script (copy/replace your old spin script) ===== */
 (() => {
   // ---------- CONFIG ----------
+  const BASE_FREE_SPINS = 2; // 2 free spins per day (daily)
   const COIN_IMG = 'COIN.jpg';
   const VERIFIED_IMG = 'VERIFIED.jpg';
-  const PRIZES = [10, 30, 20, 200, 5, 0, 100, 1000];   // wheel order
-  const WEIGHTS = [18, 12, 14, 2, 18, 20, 5, 1];
+  const PRIZES = [10, 30, 20, 200, 5, 0, 100, 1000]; // same wheel layout as before
+  const WEIGHTS = [18, 12, 14, 2, 18, 20, 5, 1]; // default weighted probabilities
   const SEGMENTS = PRIZES.length;
   const ROTATIONS = 6;
-  const TIMESTAMP_CANDIDATES = ['createdAt','submittedAt','timestamp','time','submittedOn','created_on'];
-
-  // Map challenge key -> prize index (so a completed challenge can queue a guaranteed spin)
-  const CHALLENGE_TO_PRIZE_INDEX = {
-    affiliateApproved: 0, // ₦10
-    taskApproved: 2,      // ₦20
-    dataAmount: 1,        // ₦30
-    airtimeAmount: 6      // ₦100
-  };
+  const VAST_LINK = 'https://silkyspite.com/dFm.FkzMdRGUN/vPZhGFUX/geYmX9Su/Z-UKluk/PWTvYb2gNEzHAo2/N/zaQ/tBNNj/YB3rMaDXYw3kNAQr';
+  const SMARTLINK = 'https://www.revenuecpmgate.com/n945dxhe?key=84160f9954ff564239085356c5b84a78';
+  // free-spin-specific choices (only ₦0 and ₦10)
+  const FREE_VALUES = [10, 0];
+  // free-indexes (auto-detect)
+  const FREE_INDEXES = PRIZES.map((v, i) => FREE_VALUES.includes(v) ? i : -1).filter(i => i >= 0);
+  const FREE_WEIGHTS = [0.4, 0.6]; // 40% => ₦10, 60% => ₦0 (adjustable)
 
   // ---------- DOM ----------
   const canvas = document.getElementById('spin-canvas');
@@ -6404,42 +6407,36 @@ window.loadBanks = loadBanks;
   const toastTextEl = document.getElementById('spin-toast-text');
   const challengeCards = Array.from(document.querySelectorAll('#daily-challenges .challenge-card'));
 
+  // watch-ad related DOM (from your watch ad UI — optional fallback to SMARTLINK if missing)
+  const adModal = document.getElementById('adModal');      // optional
+  const adPlayer = document.getElementById('adPlayer');    // optional <video> element
+  const closeAd = document.getElementById('closeAd');      // optional close button
+
   // ---------- STATE ----------
   let DPR = window.devicePixelRatio || 1;
-  let lastRotation = 0;               // degrees
+  let lastRotation = 0;
   let spinning = false;
   let currentUser = null;
-  let userDocCached = null;
-  let spinsAvailable = 0;
+  let userDocCached = null;   // mirror of users doc for quick checks
+  let guaranteedPrizes = [];  // queue of prize indices from challenge completion
   let progressState = { affiliateApproved:0, taskApproved:0, dataAmount:0, airtimeAmount:0 };
-  let prevProgress = { ...progressState };
+  let prevProgress = {...progressState};
   let unsubs = [];
   let liveInterval = null;
-  let guaranteedPrizes = []; // queue of prize indices to force next spin to land on
+
+  // computed availability used elsewhere
+  let regularAvailable = 0; // base + challenge spins left (excluding ad credits)
+  let adCredits = 0;        // ad-earned spin credits in DB
+  let totalAvailable = 0;   // total (regular + adCredits)
 
   // ---------- HELPERS ----------
+  function formatNaira(v){ return '₦' + Number(v).toFixed(2); }
   const todayKey = () => new Date().toISOString().slice(0,10);
-  const startOfToday = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
-  const endOfToday = () => { const d = new Date(); d.setHours(23,59,59,999); return d; };
+  const startOfToday = () => { const d=new Date(); d.setHours(0,0,0,0); return d; };
+  const endOfToday = () => { const d=new Date(); d.setHours(23,59,59,999); return d; };
 
-  function dateFromMaybe(v) {
-    if (v == null) return null;
-    if (typeof v.toDate === 'function') { try { return v.toDate(); } catch(e) { return null; } }
-    if (v && typeof v.seconds === 'number') return new Date(v.seconds * 1000);
-    if (typeof v === 'number') return new Date(v);
-    try { return new Date(v); } catch(e) { return null; }
-  }
-  function docIsToday(data){
-    if (!data) return false;
-    for (const f of TIMESTAMP_CANDIDATES) {
-      if (!data[f]) continue;
-      const dt = dateFromMaybe(data[f]);
-      if (!dt || isNaN(dt.getTime())) continue;
-      if (dt >= startOfToday() && dt <= endOfToday()) return true;
-    }
-    return false;
-  }
-  function weightedRandomIndex(weights){
+  // choose weighted index from array of weights
+  function weightedIndex(weights){
     const sum = weights.reduce((a,b)=>a+b,0);
     let r = Math.random() * sum;
     for (let i=0;i<weights.length;i++){
@@ -6448,23 +6445,30 @@ window.loadBanks = loadBanks;
     }
     return weights.length - 1;
   }
+  // choose weighted among specific indexes with a parallel weights array (weights length matches indexes)
+  function pickWeightedFromIndexes(indexes, weights){
+    if (!indexes || indexes.length === 0) return 0;
+    const idx = weightedIndex(weights);
+    return indexes[idx];
+  }
   function showToast(msg){
-    if (toastEl && toastTextEl) {
+    if (toastEl && toastTextEl){
       toastTextEl.textContent = msg;
       toastEl.style.display = 'block';
       clearTimeout(toastEl._hideTO);
-      toastEl._hideTO = setTimeout(()=> { toastEl.style.display = 'none'; }, 3200);
-    } else { alert(msg); }
+      toastEl._hideTO = setTimeout(()=> toastEl.style.display = 'none', 3200);
+    } else {
+      try { console.log(msg); } catch(e){}
+    }
   }
 
   // ---------- preload images ----------
   const coinImg = new Image(); coinImg.src = COIN_IMG;
   const verifiedImg = new Image(); verifiedImg.src = VERIFIED_IMG;
 
-  // ---------- responsive HD canvas setup ----------
-  function setupCanvasHD() {
+  // ---------- canvas setup & draw ----------
+  function setupCanvasHD(){
     DPR = window.devicePixelRatio || 1;
-    // match plate size (canvas.parentElement is .wheel-plate)
     const plate = canvas.parentElement;
     const rect = plate.getBoundingClientRect();
     const css = Math.max(220, Math.min(rect.width, rect.height));
@@ -6472,31 +6476,23 @@ window.loadBanks = loadBanks;
     canvas.style.height = css + 'px';
     canvas.width = Math.round(css * DPR);
     canvas.height = Math.round(css * DPR);
-    // make drawing coordinates match CSS pixels
     ctx.setTransform(DPR,0,0,DPR,0,0);
     drawWheel(lastRotation);
   }
 
-  // ---------- draw wheel ----------
-  function drawWheel(rotationDeg = 0) {
-    // use CSS pixels for layout
+  function drawWheel(rotationDeg = 0){
     const cssW = canvas.clientWidth || parseInt(canvas.style.width || '320',10);
-    const cx = cssW / 2, cy = cssW / 2, r = Math.min(cssW, cssW)/2 - 12;
+    const cx = cssW/2, cy = cssW/2, r = Math.min(cssW, cssW)/2 - 12;
     ctx.clearRect(0,0,cssW,cssW);
     ctx.save();
-    // rotate wheel around center
     ctx.translate(cx,cy);
     ctx.rotate(rotationDeg * Math.PI/180);
     ctx.translate(-cx,-cy);
-
     const segAngle = 2 * Math.PI / SEGMENTS;
     const colors = ['#ecfeff','#e6f7ff','#fff8e1','#f3f5ff','#fff0f6','#eef6ff','#fbfbfd','#f0fbff'];
-
     for (let i=0;i<SEGMENTS;i++){
       const start = -Math.PI/2 + i*segAngle;
       const end = start + segAngle;
-
-      // slice
       ctx.beginPath();
       ctx.moveTo(cx,cy);
       ctx.arc(cx,cy,r,start,end);
@@ -6506,9 +6502,8 @@ window.loadBanks = loadBanks;
       ctx.strokeStyle = 'rgba(2,6,23,0.04)';
       ctx.lineWidth = 1;
       ctx.stroke();
-
-      // amount label near rim
-      const mid = (start + end) / 2;
+      // amount label
+      const mid = (start + end)/2;
       const labelR = r * 0.78;
       const lx = cx + Math.cos(mid) * labelR;
       const ly = cy + Math.sin(mid) * labelR;
@@ -6521,9 +6516,8 @@ window.loadBanks = loadBanks;
       ctx.textBaseline = 'middle';
       ctx.fillText(`₦${PRIZES[i]}`, 0, 0);
       ctx.restore();
-
-      // coin image (upright)
-      if (coinImg && coinImg.complete) {
+      // coin image upright
+      if (coinImg && coinImg.complete){
         const imgR = r * 0.56;
         const ix = cx + Math.cos(mid) * imgR;
         const iy = cy + Math.sin(mid) * imgR;
@@ -6532,22 +6526,19 @@ window.loadBanks = loadBanks;
         ctx.rotate(-(rotationDeg * Math.PI/180)); // keep upright
         const coinSize = Math.max(28, Math.round(cssW * 0.12));
         ctx.drawImage(coinImg, -coinSize/2, -coinSize/2, coinSize, coinSize);
-        // verified badge for 1000
-        if (PRIZES[i] === 1000 && verifiedImg.complete) {
+        if (PRIZES[i] === 1000 && verifiedImg.complete){
           const b = Math.round(coinSize * 0.45);
           ctx.drawImage(verifiedImg, coinSize/4, coinSize/4, b, b);
         }
         ctx.restore();
       }
     }
-
-    // bold outer edge ring
+    // outer edge
     ctx.beginPath();
     ctx.arc(cx, cy, r + 6, 0, Math.PI*2);
     ctx.strokeStyle = 'rgba(15,23,42,0.06)';
     ctx.lineWidth = 10;
     ctx.stroke();
-
     // center button
     ctx.beginPath();
     ctx.arc(cx, cy, 48, 0, Math.PI*2);
@@ -6563,12 +6554,11 @@ window.loadBanks = loadBanks;
     ctx.fillText('SPIN', cx, cy - 6);
     ctx.font = '600 12px Inter, system-ui';
     ctx.fillText('NOW', cx, cy + 12);
-
     ctx.restore();
   }
 
-  // ---------- easing animation ----------
-  function animateTo(targetAbsolute, duration = 5200) {
+  // animate rotation
+  function animateTo(targetAbsolute, duration = 5200){
     return new Promise(resolve => {
       const start = performance.now();
       const from = lastRotation;
@@ -6589,50 +6579,50 @@ window.loadBanks = loadBanks;
     });
   }
 
-  // ---------- compute available spins & update UI ----------
+  // ---------- progress & UI recompute ----------
   function recomputeSpinsUI(){
-    // compute completed flags based on goals
+    // calculate completed flags from progressState (same thresholds used in original script)
     const goals = {
       affiliateApproved: Number(document.querySelector('.challenge-card[data-key="affiliateApproved"]')?.dataset.goal || 10),
       taskApproved: Number(document.querySelector('.challenge-card[data-key="taskApproved"]')?.dataset.goal || 10),
       dataAmount: Number(document.querySelector('.challenge-card[data-key="dataAmount"]')?.dataset.goal || 1000),
       airtimeAmount: Number(document.querySelector('.challenge-card[data-key="airtimeAmount"]')?.dataset.goal || 500)
     };
-
     const flags = [
       (progressState.affiliateApproved || 0) >= goals.affiliateApproved,
       (progressState.taskApproved || 0) >= goals.taskApproved,
       (progressState.dataAmount || 0) >= goals.dataAmount,
       (progressState.airtimeAmount || 0) >= goals.airtimeAmount
     ];
-
     const completedCount = flags.filter(Boolean).length;
-    const base = 1;
 
-    // used today from user doc
-    let used = 0;
+    // handle user doc spinsUsed counts with daily-reset
+    let usedTotal = Number(userDocCached?.spinsUsedCount || 0);
+    let usedBase = Number(userDocCached?.spinsUsedBase || 0);
+    const prev = userDocCached?.spinsUsedDate || null;
     let usedDateKey = null;
-    if (userDocCached) {
-      used = Number(userDocCached.spinsUsedCount || 0);
-      const prev = userDocCached.spinsUsedDate || null;
-      if (prev) {
-        try { usedDateKey = (typeof prev.toDate === 'function') ? prev.toDate().toISOString().slice(0,10) : new Date(prev).toISOString().slice(0,10); }
-        catch(e){ usedDateKey = prev; }
-      }
-      if (usedDateKey !== todayKey()) used = 0;
+    if (prev){
+      try { usedDateKey = (typeof prev.toDate === 'function') ? prev.toDate().toISOString().slice(0,10) : String(prev); }
+      catch(e) { usedDateKey = prev; }
+    }
+    if (usedDateKey !== todayKey()){
+      usedTotal = 0;
+      usedBase = 0;
     }
 
-    const newAvailable = Math.max(0, base + completedCount - used);
-    if (newAvailable !== spinsAvailable) {
-      spinsAvailable = newAvailable;
-      if (spinCountEl) spinCountEl.textContent = `(${spinsAvailable})`;
-      // small pulse animation
-      if (spinCountEl) {
-        spinCountEl.animate([{ transform:'scale(1)'},{ transform:'scale(1.18)'},{ transform:'scale(1)'}], { duration:350, easing:'ease-out' });
-      }
-    }
+    // base remaining
+    const baseRemaining = Math.max(0, BASE_FREE_SPINS - usedBase);
+    const bonusUsed = Math.max(0, usedTotal - usedBase);
+    const bonusRemaining = Math.max(0, completedCount - bonusUsed);
 
-    // update progress bars & statuses
+    regularAvailable = Math.max(0, baseRemaining + bonusRemaining);
+    adCredits = Number(userDocCached?.adSpinCredits || 0);
+    totalAvailable = regularAvailable + adCredits;
+
+    // hide the small spin-count (per your request). keep the button label simple.
+    if (spinCountEl) spinCountEl.style.display = 'none';
+
+    // update challenge progress UI
     challengeCards.forEach(card => {
       const key = card.dataset.key;
       const goal = Number(card.dataset.goal || 1);
@@ -6641,7 +6631,6 @@ window.loadBanks = loadBanks;
       else if (key === 'taskApproved') val = progressState.taskApproved || 0;
       else if (key === 'dataAmount') val = progressState.dataAmount || 0;
       else if (key === 'airtimeAmount') val = progressState.airtimeAmount || 0;
-
       const percent = Math.min(100, (val / goal) * 100);
       const bar = card.querySelector('.progress-bar');
       const status = card.querySelector('.status-text');
@@ -6653,29 +6642,27 @@ window.loadBanks = loadBanks;
     });
   }
 
-  // ---------- realtime listeners helpers ----------
-  function clearUnsubs(){ unsubs.forEach(u=>{ try{ u(); }catch(e){} }); unsubs = []; }
-  function pushGuaranteedPrizeForChallenge(key) {
+  // ---------- realtime listeners for progress (firestore) ----------
+  function clearUnsubs(){ unsubs.forEach(u => { try { u(); } catch(e){} }); unsubs = []; }
+
+  function pushGuaranteedPrizeForChallenge(key){
+    const CHALLENGE_TO_PRIZE_INDEX = { affiliateApproved:0, taskApproved:2, dataAmount:1, airtimeAmount:6 };
     const idx = CHALLENGE_TO_PRIZE_INDEX[key];
     if (typeof idx === 'number') {
       guaranteedPrizes.push(idx);
-      // toast & visual cue
       showToast('Challenge completed — next spin will award the challenge reward!');
     }
   }
 
-  // ---------- attachRealtimeProgress (firestore) ----------
-  function attachRealtimeProgress(uid, username) {
+  function attachRealtimeProgress(uid){
     clearUnsubs();
     if (typeof db === 'undefined' || !db) { console.warn('db missing'); return; }
 
-    // affiliate_submissions (approved): count today's approved
     try {
       const q = db.collection('affiliate_submissions').where('userId','==',uid).where('status','==','approved');
       const unsub = q.onSnapshot(snap => {
         let count = 0;
         snap.forEach(d => { if (docIsToday(d.data())) count++; });
-        // detect crossing threshold
         const prev = prevProgress.affiliateApproved || 0;
         progressState.affiliateApproved = count;
         if ((prev < 10) && (count >= 10)) pushGuaranteedPrizeForChallenge('affiliateApproved');
@@ -6685,7 +6672,6 @@ window.loadBanks = loadBanks;
       unsubs.push(unsub);
     } catch(e){ console.warn('attach affiliate err', e); }
 
-    // task_submissions (approved)
     try {
       const q = db.collection('task_submissions').where('userId','==',uid).where('status','==','approved');
       const unsub = q.onSnapshot(snap => {
@@ -6700,7 +6686,6 @@ window.loadBanks = loadBanks;
       unsubs.push(unsub);
     } catch(e){ console.warn('attach task err', e); }
 
-    // bill_submissions (processed) -> data & airtime totals today
     try {
       const q = db.collection('bill_submissions').where('userId','==',uid).where('processed','==',true);
       const unsub = q.onSnapshot(snap => {
@@ -6712,25 +6697,42 @@ window.loadBanks = loadBanks;
           const amt = Number(doc.amount || 0);
           if (t === 'data') dataSum += amt; else airtimeSum += amt;
         });
-        // detect threshold crossing for data (>=1000)
         const prevData = prevProgress.dataAmount || 0;
         progressState.dataAmount = dataSum;
         if ((prevData < 1000) && (dataSum >= 1000)) pushGuaranteedPrizeForChallenge('dataAmount');
         prevProgress.dataAmount = dataSum;
-
         const prevAirtime = prevProgress.airtimeAmount || 0;
         progressState.airtimeAmount = airtimeSum;
         if ((prevAirtime < 500) && (airtimeSum >= 500)) pushGuaranteedPrizeForChallenge('airtimeAmount');
         prevProgress.airtimeAmount = airtimeSum;
-
         recomputeSpinsUI();
       }, err => console.warn('bills listener err', err));
       unsubs.push(unsub);
     } catch(e){ console.warn('attach bills err', e); }
   }
 
-  // ---------- live feed demo (20 names, animated) ----------
-  function startLiveFeedDemo() {
+  // helper to check "doc is today"
+  const TIMESTAMP_CANDIDATES = ['createdAt','submittedAt','timestamp','time','submittedOn','created_on'];
+  function dateFromMaybe(v){
+    if (v == null) return null;
+    if (typeof v.toDate === 'function') { try { return v.toDate(); } catch(e) { return null; } }
+    if (v && typeof v.seconds === 'number') return new Date(v.seconds * 1000);
+    if (typeof v === 'number') return new Date(v);
+    try { return new Date(v); } catch(e) { return null; }
+  }
+  function docIsToday(data){
+    if (!data) return false;
+    for (const f of TIMESTAMP_CANDIDATES) {
+      if (!data[f]) continue;
+      const dt = dateFromMaybe(data[f]);
+      if (!dt || isNaN(dt.getTime())) continue;
+      if (dt >= startOfToday() && dt <= endOfToday()) return true;
+    }
+    return false;
+  }
+
+  // ---------- live feed demo ----------
+  function startLiveFeedDemo(){
     const names = ['NOFISAT','ABUBAKAR','FATIMA','CHINEDU','SULEIMAN','GRACE','KINGSLEY','BOLA','AMINA','EMMA','SAMUEL','JOY','MUSA','HANNAH','RAFIQ','OLUWATOYIN','KELECHI','NNEKA','TOMI','RACHEL'];
     const msgs = [];
     for (let i=0;i<20;i++){
@@ -6743,8 +6745,7 @@ window.loadBanks = loadBanks;
     if (liveInterval) clearInterval(liveInterval);
     liveInterval = setInterval(()=> {
       idx = (idx + 1) % msgs.length;
-      if (liveText) {
-        // small fade animation
+      if (liveText){
         liveText.style.opacity = 0;
         setTimeout(()=> {
           liveText.textContent = msgs[idx];
@@ -6754,12 +6755,10 @@ window.loadBanks = loadBanks;
     }, 2500);
   }
 
-  // ---------- spin math & animation (lands exactly on prize) ----------
-  async function spinToIndex(idx) {
+  // ---------- spin math & animation ----------
+  async function spinToIndex(idx){
     const segDeg = 360 / SEGMENTS;
-    // center angle of slice relative to top baseline used for drawing (-90 degrees)
     const sliceCenter = -90 + (idx + 0.5) * segDeg;
-    // rotation delta required so that sliceCenter becomes -90
     const rotationDelta = -90 - sliceCenter;
     const jitter = (Math.random() * (segDeg / 18)) - (segDeg / 36);
     const total = ROTATIONS * 360 + rotationDelta + jitter;
@@ -6768,65 +6767,355 @@ window.loadBanks = loadBanks;
     lastRotation = ((target % 360) + 360) % 360;
   }
 
-  // ---------- spin handler ----------
-  async function handleSpinClick() {
+  // ---------- watch-ad -> grant +1 spin integration ----------
+  // Minimal VAST resolver & HLS loader reused from your watch ad script
+  async function fetchText(url){ const res = await fetch(url, {method:'GET', mode:'cors'}); if(!res.ok) throw new Error(res.status); return res.text(); }
+  function parseXML(text){ return (new DOMParser()).parseFromString(text,'application/xml'); }
+  async function resolveVast(url, depth=0){
+    if(!url || depth>3) return null;
+    try {
+      const text = await fetchText(url);
+      const xml = parseXML(text);
+      if(!xml) return null;
+      const wrapper = xml.querySelector('Wrapper > VASTAdTagURI, VASTAdTagURI');
+      if(wrapper && wrapper.textContent && wrapper.textContent.trim()){
+        const next = wrapper.textContent.trim();
+        return await resolveVast(next, depth+1);
+      }
+      const mediaFiles = Array.from(xml.querySelectorAll('MediaFile')).map(node => ({ url: node.textContent.trim(), type: node.getAttribute('type') || '' }))
+                              .filter(m => m.url && !/javascript|vpaid/i.test(m.url));
+      const mp4 = mediaFiles.find(c => /mp4|video\/mp4/i.test(c.type) || /\.mp4(\?|$)/i.test(c.url));
+      if (mp4) return { kind:'mp4', url: mp4.url };
+      const hls = mediaFiles.find(c => /\.m3u8(\?|$)/i.test(c.url) || /application\/x-mpegURL/i.test(c.type));
+      if (hls) return { kind:'hls', url: hls.url };
+      return null;
+    } catch(e) { console.warn('resolveVast err', e); return null; }
+  }
+  function loadHlsJs(){
+    return new Promise((resolve,reject)=>{
+      if (window.Hls) return resolve(window.Hls);
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
+      s.onload = ()=> resolve(window.Hls);
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+  // no-seek protection for <video>
+  let modalKeyBlockHandler = null;
+  function blockModalSeekKeys(){
+    modalKeyBlockHandler = (e) => {
+      const blocked = ['ArrowLeft','ArrowRight','Home','End','PageUp','PageDown'];
+      if (blocked.includes(e.code)) e.preventDefault();
+    };
+    window.addEventListener('keydown', modalKeyBlockHandler, {capture:true});
+  }
+  function unblockModalSeekKeys(){ if (modalKeyBlockHandler){ window.removeEventListener('keydown', modalKeyBlockHandler, {capture:true}); modalKeyBlockHandler = null; } }
+  function attachNoSeekProtection(video){
+    let lastTime = 0;
+    const onTime = ()=>{ lastTime = Math.max(lastTime, video.currentTime); };
+    const onSeeking = ()=>{ if (Math.abs(video.currentTime - lastTime) > 0.2) video.currentTime = lastTime; };
+    const onLoaded = ()=>{};
+    const onContext = (e)=> e.preventDefault();
+    video.addEventListener('timeupdate', onTime);
+    video.addEventListener('seeking', onSeeking);
+    video.addEventListener('loadedmetadata', onLoaded);
+    video.addEventListener('contextmenu', onContext);
+    blockModalSeekKeys();
+    return ()=> {
+      video.removeEventListener('timeupdate', onTime);
+      video.removeEventListener('seeking', onSeeking);
+      video.removeEventListener('loadedmetadata', onLoaded);
+      video.removeEventListener('contextmenu', onContext);
+      unblockModalSeekKeys();
+    };
+  }
+
+  // grant +1 ad-spin credit to user (persisted)
+  async function grantAdSpin(uid){
+    try {
+      const userRef = db.collection('users').doc(uid);
+      await userRef.set({ adSpinCredits: firebase.firestore.FieldValue.increment(1) }, { merge:true });
+      // reflect locally too
+      userDocCached = userDocCached || {};
+      userDocCached.adSpinCredits = (Number(userDocCached.adSpinCredits || 0) + 1);
+      recomputeSpinsUI();
+      showToast('🎉 1 free spin rewarded — tap Spin Now to use it.');
+    } catch(e){ console.error('grantAdSpin err', e); showToast('Could not credit spin.'); }
+  }
+
+  // watch ad flow that grants a spin when completed:
+  async function watchAdForSpin(){
+    if (!auth || !auth.currentUser) { showToast('Please login to watch an ad and earn a spin.'); return; }
+    const uid = auth.currentUser.uid;
+    try {
+      // mark in-progress so reload doesn't mistakenly think it's complete
+      try { localStorage.setItem('ad_spin_in_progress', String(Date.now())); } catch(e){}
+
+      // try resolving VAST
+      let resolved = null;
+      try { resolved = await resolveVast(VAST_LINK); } catch(e){ resolved = null; }
+
+      // if we have ad player in DOM & resolved mp4/hls, prefer in-modal playback
+      if (adModal && adPlayer && resolved){
+        adModal.classList.remove('hidden');
+        adModal.style.display = 'flex';
+        adPlayer.pause();
+        adPlayer.removeAttribute('src');
+        let cleanup = null;
+        let finished = false;
+
+        if (resolved.kind === 'mp4'){
+          adPlayer.src = resolved.url;
+          adPlayer.load();
+          cleanup = attachNoSeekProtection(adPlayer);
+          const failTO = setTimeout(()=> {
+            if (adPlayer.readyState === 0 && !finished) {
+              // fallback
+              cleanup && cleanup();
+              adModal.classList.add('hidden'); adModal.style.display = 'none';
+              localStorage.removeItem('ad_spin_in_progress');
+              window.open(SMARTLINK, '_blank');
+            }
+          }, 8000);
+
+          const playPromise = adPlayer.play();
+          if (playPromise !== undefined) playPromise.catch(()=>{ clearTimeout(failTO); });
+
+          adPlayer.onended = async ()=> {
+            finished = true;
+            clearTimeout(failTO);
+            cleanup && cleanup();
+            adModal.classList.add('hidden'); adModal.style.display = 'none';
+            localStorage.removeItem('ad_spin_in_progress');
+            await grantAdSpin(uid);
+          };
+        } else if (resolved.kind === 'hls'){
+          const Hls = await loadHlsJs();
+          if (Hls && Hls.isSupported()){
+            const hls = new Hls();
+            hls.loadSource(resolved.url);
+            hls.attachMedia(adPlayer);
+            adPlayer.load();
+            cleanup = attachNoSeekProtection(adPlayer);
+            adPlayer.addEventListener('loadedmetadata', ()=> {
+              const p = adPlayer.play();
+              if (p !== undefined) p.catch(()=>{});
+            });
+            adPlayer.onended = async ()=> {
+              cleanup && cleanup();
+              adModal.classList.add('hidden'); adModal.style.display = 'none';
+              localStorage.removeItem('ad_spin_in_progress');
+              await grantAdSpin(uid);
+            };
+          } else {
+            adModal.classList.add('hidden'); adModal.style.display = 'none';
+            localStorage.removeItem('ad_spin_in_progress');
+            window.open(SMARTLINK,'_blank');
+            // fallback credit after 15s
+            setTimeout(async ()=> { await grantAdSpin(uid); }, 15000);
+          }
+        } else {
+          // resolved but unknown -> fallback
+          adModal.classList.add('hidden'); adModal.style.display = 'none';
+          localStorage.removeItem('ad_spin_in_progress');
+          window.open(SMARTLINK, '_blank');
+          setTimeout(async ()=> { await grantAdSpin(uid); }, 15000);
+        }
+
+      } else {
+        // fallback: open smartlink and consider 15s as "watched"
+        window.open(SMARTLINK, '_blank');
+        setTimeout(async ()=> {
+          // ensure that user is still logged in
+          if (auth && auth.currentUser) await grantAdSpin(auth.currentUser.uid);
+          try { localStorage.removeItem('ad_spin_in_progress'); } catch(e){}
+        }, 15000);
+      }
+    } catch(err){
+      console.error('watchAdForSpin err', err);
+      try { localStorage.removeItem('ad_spin_in_progress'); } catch(e){}
+      showToast('Failed to load ad. Try again later.');
+    }
+  }
+
+  // ---------- UI: add Watch Ad button into No-Spin modal (dynamically) ----------
+  function ensureNoSpinWatchButton(){
+    if (!noSpinModal) return;
+    if (noSpinModal.querySelector('#no-spin-watch-ad')) return; // already present
+    // create button element
+    const btn = document.createElement('button');
+    btn.id = 'no-spin-watch-ad';
+    btn.textContent = 'Watch Ad & Get 1 Free Spin';
+    btn.className = 'px-6 py-2 rounded-full bg-emerald-500 text-white font-semibold ml-3';
+    btn.addEventListener('click', () => {
+      // hide modal and start ad
+      if (noSpinModal) { noSpinModal.classList.add('hidden'); noSpinModal.style.display = 'none'; }
+      watchAdForSpin();
+    });
+    // insert button near close button
+    const container = noSpinModal.querySelector('div') || noSpinModal;
+    container.appendChild(btn);
+  }
+
+  // ---------- spin handler & DB transaction ----------
+  async function handleSpinClick(){
     if (spinning) return;
-    if (typeof auth === 'undefined' || !auth || !auth.currentUser) { showToast('Please login to spin.'); return; }
-    if (spinsAvailable <= 0) {
-      if (noSpinModal) { noSpinModal.classList.remove('hidden'); noSpinModal.style.display = 'flex'; }
+    if (typeof auth === 'undefined' || !auth || !auth.currentUser){ showToast('Please login to spin.'); return; }
+
+    // ensure we have up-to-date availability
+    recomputeSpinsUI();
+
+    // if no spins at all -> show modal w/ watch ad button
+    if (totalAvailable <= 0){
+      if (noSpinModal){
+        ensureNoSpinWatchButton();
+        noSpinModal.classList.remove('hidden');
+        noSpinModal.style.display = 'flex';
+      } else {
+        // fallback toast
+        showToast('No spins remaining. Complete challenges or watch an ad to earn 1 spin.');
+      }
       return;
     }
 
     spinning = true;
     if (spinBtn) spinBtn.disabled = true;
 
-    // optimistic decrement for immediate feedback
-    spinsAvailable = Math.max(0, spinsAvailable - 1);
-    if (spinCountEl) spinCountEl.textContent = `(${spinsAvailable})`;
+    // Determine whether this spin will consume an ad credit (only if no regular spins left)
+    const willConsumeAd = (regularAvailable <= 0 && adCredits > 0);
 
-    // pick prize: guaranteed first, else weighted random
+    // pick prize index:
     let idx;
-    if (guaranteedPrizes.length > 0) {
+    if (guaranteedPrizes.length > 0){
       idx = guaranteedPrizes.shift();
+    } else if (willConsumeAd){
+      // ad-earned spin: random weighted pick (we'll enforce reward = 0 later)
+      idx = weightedIndex(WEIGHTS);
     } else {
-      idx = weightedRandomIndex(WEIGHTS);
+      // a "regular" spin (either base daily or challenge-unlocked). We must limit true daily-base spins to only 10 or 0.
+      // We decide base-vs-bonus by checking if there is baseRemaining (from recomputeSpinsUI internal calculation).
+      // recomputeSpinsUI set regularAvailable = baseRemaining + bonusRemaining, but we need baseRemaining specifically:
+      let usedTotal = Number(userDocCached?.spinsUsedCount || 0);
+      let usedBase = Number(userDocCached?.spinsUsedBase || 0);
+      const prev = userDocCached?.spinsUsedDate || null;
+      let usedDateKey = null;
+      if (prev){
+        try { usedDateKey = (typeof prev.toDate === 'function') ? prev.toDate().toISOString().slice(0,10) : String(prev); }
+        catch(e) { usedDateKey = prev; }
+      }
+      if (usedDateKey !== todayKey()){
+        usedTotal = 0; usedBase = 0;
+      }
+      const baseRemaining = Math.max(0, BASE_FREE_SPINS - usedBase);
+      const bonusUsed = Math.max(0, usedTotal - usedBase);
+      // compute completedCount from current progressState
+      const goals = {
+        affiliateApproved: Number(document.querySelector('.challenge-card[data-key="affiliateApproved"]')?.dataset.goal || 10),
+        taskApproved: Number(document.querySelector('.challenge-card[data-key="taskApproved"]')?.dataset.goal || 10),
+        dataAmount: Number(document.querySelector('.challenge-card[data-key="dataAmount"]')?.dataset.goal || 1000),
+        airtimeAmount: Number(document.querySelector('.challenge-card[data-key="airtimeAmount"]')?.dataset.goal || 500)
+      };
+      const flags = [
+        (progressState.affiliateApproved || 0) >= goals.affiliateApproved,
+        (progressState.taskApproved || 0) >= goals.taskApproved,
+        (progressState.dataAmount || 0) >= goals.dataAmount,
+        (progressState.airtimeAmount || 0) >= goals.airtimeAmount
+      ];
+      const completedCount = flags.filter(Boolean).length;
+      const bonusRemaining = Math.max(0, completedCount - bonusUsed);
+
+      // if baseRemaining > 0, this consumes a daily base spin -> choose only among FREE_INDEXES
+      if (baseRemaining > 0){
+        // pick between indices mapping to ₦10 and ₦0 using FREE_WEIGHTS
+        idx = pickWeightedFromIndexes(FREE_INDEXES, FREE_WEIGHTS);
+      } else {
+        // otherwise it's a bonus spin (from challenges) -> use full weighted set
+        idx = weightedIndex(WEIGHTS);
+      }
     }
 
-    await spinToIndex(idx);
-    const amount = PRIZES[idx];
+    // play the wheel animation to chosen index
+    try {
+      await spinToIndex(idx);
+    } catch(err){ console.error('spin animation err', err); }
 
-    // update DB (balance + spinsUsedCount + spinsUsedDate)
+    // after animation, determine amount to credit
+    let prize = PRIZES[idx];
+    // if the spin consumed an ad-credit, prize must be 0 (ad spins yield 0 reward)
+    let amountToCredit = willConsumeAd ? 0 : prize;
+
+    // persist to Firestore: either consume adSpinCredits OR increment spinsUsedBase/spinsUsedCount and add balance
     try {
       const uid = auth.currentUser.uid;
       const userRef = db.collection('users').doc(uid);
       const today = todayKey();
       await db.runTransaction(async tx => {
         const snap = await tx.get(userRef);
-        if (!snap.exists) {
-          tx.set(userRef, {
-            balance: amount,
-            spinsUsedCount: 1,
-            spinsUsedDate: today,
+        let data = snap.exists ? snap.data() : {};
+
+        // determine server-side date key and reset counters if needed
+        let prevKey = null;
+        const prevDate = data.spinsUsedDate || null;
+        if (prevDate){
+          try { prevKey = (typeof prevDate.toDate === 'function') ? prevDate.toDate().toISOString().slice(0,10) : String(prevDate); }
+          catch(e){ prevKey = prevDate; }
+        }
+        if (prevKey !== today){
+          // reset daily counters for new day
+          data.spinsUsedBase = 0;
+          data.spinsUsedCount = 0;
+        }
+        const adCreditsServer = Number(data.adSpinCredits || 0);
+        const baseUsedServer = Number(data.spinsUsedBase || 0);
+        const totalUsedServer = Number(data.spinsUsedCount || 0);
+
+        if (willConsumeAd && adCreditsServer > 0){
+          // consume ad credit
+          tx.update(userRef, {
+            adSpinCredits: firebase.firestore.FieldValue.increment(-1),
+            balance: firebase.firestore.FieldValue.increment(Number(amountToCredit || 0)),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          }, { merge: true });
+          });
         } else {
-          const data = snap.data() || {};
-          const prev = data.spinsUsedDate || null;
-          let prevKey = null;
-          try { prevKey = prev && typeof prev.toDate === 'function' ? prev.toDate().toISOString().slice(0,10) : prev; } catch(e){ prevKey = prev; }
-          if (prevKey !== today) {
-            tx.update(userRef, {
-              balance: firebase.firestore.FieldValue.increment(amount),
-              spinsUsedCount: 1,
-              spinsUsedDate: today,
-              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+          // this is a regular spin usage: decide if it's consuming base or bonus
+          if (baseUsedServer < BASE_FREE_SPINS){
+            // consume base spin
+            if (!snap.exists){
+              tx.set(userRef, {
+                balance: Number(amountToCredit || 0),
+                spinsUsedCount: 1,
+                spinsUsedBase: 1,
+                spinsUsedDate: today,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              }, { merge: true });
+            } else {
+              tx.update(userRef, {
+                spinsUsedCount: firebase.firestore.FieldValue.increment(1),
+                spinsUsedBase: firebase.firestore.FieldValue.increment(1),
+                spinsUsedDate: today,
+                balance: firebase.firestore.FieldValue.increment(Number(amountToCredit || 0)),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              });
+            }
           } else {
-            tx.update(userRef, {
-              balance: firebase.firestore.FieldValue.increment(amount),
-              spinsUsedCount: firebase.firestore.FieldValue.increment(1),
-              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            // consume bonus spin (challenge unlocked)
+            if (!snap.exists){
+              tx.set(userRef, {
+                balance: Number(amountToCredit || 0),
+                spinsUsedCount: 1,
+                spinsUsedBase: 0,
+                spinsUsedDate: today,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              }, { merge: true });
+            } else {
+              tx.update(userRef, {
+                spinsUsedCount: firebase.firestore.FieldValue.increment(1),
+                spinsUsedDate: today,
+                balance: firebase.firestore.FieldValue.increment(Number(amountToCredit || 0)),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              });
+            }
           }
         }
       });
@@ -6839,70 +7128,94 @@ window.loadBanks = loadBanks;
       showToast('Error updating balance. See console.');
     }
 
-    // show win modal
-    if (winAmountEl) winAmountEl.textContent = `₦${amount}`;
-    if (amount === 1000 && winVerifiedImg) winVerifiedImg.classList.remove('hidden'); else if (winVerifiedImg) winVerifiedImg.classList.add('hidden');
+    // show win modal: if ad spin -> always show ₦0
+    const shownAmount = willConsumeAd ? 0 : prize;
+    if (winAmountEl) winAmountEl.textContent = `₦${shownAmount}`;
+    if (shownAmount === 1000 && winVerifiedImg) winVerifiedImg.classList.remove('hidden');
+    else if (winVerifiedImg) winVerifiedImg.classList.add('hidden');
     if (winModal) { winModal.classList.remove('hidden'); winModal.style.display = 'flex'; }
 
-    // live pill immediate update using displayName/email fallback
+    // live feed text immediate update
     if (auth.currentUser && liveText) {
       const who = (auth.currentUser.displayName || auth.currentUser.email || 'You').split('@')[0].toUpperCase();
-      liveText.textContent = `${who} won ₦${amount} cashback.`;
+      liveText.textContent = `${who} won ₦${shownAmount} cashback.`;
     }
 
-    // recompute UI (in case transaction/used counts differ)
+    // recompute UI after transaction
     recomputeSpinsUI();
 
     spinning = false;
     if (spinBtn) spinBtn.disabled = false;
+
+    // if the spin was ad-earned, mention that ad-spins return zero reward (explicit notification)
+    if (willConsumeAd) showToast('Note: Spins earned by watching an ad return ₦0.');
   }
 
-  // ---------- attach auth + init ----------
-  function init() {
+  // ---------- init: remove pointer animation, attach handlers ----------
+  function init(){
     // responsive canvas sizing
     setupCanvasHD();
     drawWheel(lastRotation);
     startLiveFeedDemo();
 
-    // events
+    // static pointer (stop bounce animation)
+    const pointer = document.querySelector('.pointer-arrow');
+    if (pointer) pointer.style.animation = 'none';
+
+    // hide spin count small badge
+    if (spinCountEl) spinCountEl.style.display = 'none';
+
+    // attach click
     if (spinBtn) spinBtn.addEventListener('click', handleSpinClick);
     if (winCloseBtn) winCloseBtn.addEventListener('click', ()=> { if (winModal) { winModal.classList.add('hidden'); winModal.style.display = 'none'; } });
     if (noSpinClose) noSpinClose.addEventListener('click', ()=> { if (noSpinModal) { noSpinModal.classList.add('hidden'); noSpinModal.style.display = 'none'; } });
 
     window.addEventListener('resize', () => { setupCanvasHD(); });
 
-    // If firebase isn't available, just run demo UI (no DB)
-    if (typeof auth === 'undefined' || !auth || typeof db === 'undefined' || !db) {
+    // add watch-ad button to noSpin modal ahead of time so it exists when modal shows
+    ensureNoSpinWatchButton();
+
+    // wire up optional ad modal close (if ad modal exists on the page)
+    if (closeAd && adPlayer){
+      closeAd.addEventListener('click', ()=> {
+        // user closed the ad early -> no reward, just hide
+        try { adPlayer.pause(); } catch(e){}
+        if (adModal) { adModal.classList.add('hidden'); adModal.style.display = 'none'; }
+        try { localStorage.removeItem('ad_spin_in_progress'); } catch(e){}
+      });
+    }
+
+    // if firebase not present -> demo only
+    if (typeof auth === 'undefined' || !auth || typeof db === 'undefined' || !db){
       console.warn('Firebase compat not found. Running demo-only UI.');
-      // demo progress so bars show something (optional)
-      progressState = { affiliateApproved: 0, taskApproved: 0, dataAmount: 0, airtimeAmount: 0 };
-      prevProgress = { ...progressState };
+      progressState = { affiliateApproved:0, taskApproved:0, dataAmount:0, airtimeAmount:0 };
+      prevProgress = {...progressState};
       recomputeSpinsUI();
       return;
     }
 
-    // auth listener -> attach realtime listeners for progress
+    // attach auth listener
     auth.onAuthStateChanged(user => {
       currentUser = user;
-      if (!user) {
-        // signed out
-        userDocCached = null; recomputeSpinsUI(); clearUnsubs(); return;
+      if (!user){
+        userDocCached = null;
+        recomputeSpinsUI();
+        clearUnsubs();
+        return;
       }
-
-      // listen to user doc
+      // subscribe to user doc
       const uRef = db.collection('users').doc(user.uid);
       const unsubUser = uRef.onSnapshot(snap => {
         userDocCached = snap.exists ? snap.data() : {};
         const username = (userDocCached && userDocCached.username) ? userDocCached.username : (user.displayName || (user.email || '').split('@')[0]);
-        attachRealtimeProgress(user.uid, username);
+        attachRealtimeProgress(user.uid);
         recomputeSpinsUI();
       }, err => {
         console.warn('user doc listener error', err);
-        // fallback to one-time read
+        // fallback read
         uRef.get().then(snap => {
           userDocCached = snap.exists ? snap.data() : {};
-          const username = (userDocCached && userDocCached.username) ? userDocCached.username : (user.displayName || (user.email || '').split('@')[0]);
-          attachRealtimeProgress(user.uid, username);
+          attachRealtimeProgress(user.uid);
           recomputeSpinsUI();
         }).catch(e => console.warn('user fetch failed', e));
       });
@@ -6910,15 +7223,13 @@ window.loadBanks = loadBanks;
     });
   }
 
-  // ---------- start ----------
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 
-  // ---------- debug helpers ----------
-  window.__spinDebug = { drawWheel, setupCanvasHD, recomputeSpinsUI, progressState, PRIZES, lastRotation, guaranteedPrizes };
+  // expose debug helpers
+  window.__spinIntegrated = { drawWheel, setupCanvasHD, recomputeSpinsUI, progressState, PRIZES, lastRotation, guaranteedPrizes };
 
 })();
-
-
 
 
 
