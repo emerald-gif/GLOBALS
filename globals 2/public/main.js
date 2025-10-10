@@ -213,6 +213,328 @@ firebase.auth().onAuthStateChanged(function (user) {
 
 
 
+
+
+
+
+
+
+
+
+/* ======= Robust Dashboard Performance & UX Fixes =======
+   - Safe lucide handling
+   - Stable switchTab (idempotent)
+   - Drawer open/close safe
+   - Lazy image fade-ins with IntersectionObserver throttled
+   - Saves/restores active tab & scroll pos
+   - Visibility handling to avoid "hung" UI after returning to tab
+   - Clean teardown on unload
+*/
+(function () {
+  'use strict';
+
+  // small helper for safe feature detection
+  const hasLucide = typeof window.lucide !== 'undefined' && typeof window.lucide.createIcons === 'function';
+  const rIC = window.requestIdleCallback || function (fn) { return setTimeout(fn, 200); };
+  const rAF = window.requestAnimationFrame || function (fn) { return setTimeout(fn, 16); };
+
+  let sections = null;
+  let observer = null;
+  let observedEls = [];
+  let currentActiveId = null;
+  let drawer = null;
+  let panel = null;
+  let backdrop = null;
+
+  // safe icon initialization (non-blocking)
+  function initIcons() {
+    try {
+      if (hasLucide) {
+        // call inside idle callback to avoid blocking initial paint
+        rIC(() => window.lucide.createIcons());
+      }
+    } catch (e) {
+      console.warn('lucide init failed', e);
+    }
+  }
+
+  // fade-in when images load (safe attach)
+  function attachImageFadeIn() {
+    const imgs = Array.from(document.querySelectorAll('img'));
+    imgs.forEach(img => {
+      // ensure initial opacity 0 in case CSS isn't set
+      if (!img.style.opacity) img.style.opacity = img.dataset.loaded ? '1' : '0';
+      if (img.complete && img.naturalWidth !== 0) {
+        img.style.opacity = '1';
+        img.dataset.loaded = 'true';
+      } else {
+        const onLoad = () => {
+          img.style.opacity = '1';
+          img.dataset.loaded = 'true';
+          img.removeEventListener('load', onLoad);
+        };
+        img.addEventListener('load', onLoad, { passive: true });
+      }
+    });
+  }
+
+  // idempotent tab switcher
+  function switchTab(id) {
+    try {
+      if (!sections) sections = Array.from(document.querySelectorAll('.tab-section'));
+      if (!sections.length) return;
+
+      if (currentActiveId === id) {
+        // ensure target is visible and scroll to top smoothly
+        const targetNow = document.getElementById(id);
+        if (targetNow) rAF(() => targetNow.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+        return;
+      }
+
+      const target = document.getElementById(id);
+      if (!target) return;
+
+      // hide others
+      sections.forEach(sec => sec.classList.add('hidden'));
+      // show target
+      target.classList.remove('hidden');
+      target.classList.add('animate-fadeIn'); // quick visible animation
+      rAF(() => target.classList.remove('animate-fadeIn'));
+
+      currentActiveId = id;
+      try { localStorage.setItem('activeTab', id); } catch (e) { /* storage may be disabled */ }
+
+      // smooth scroll to top of new section
+      rAF(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    } catch (err) {
+      console.error('switchTab error', err);
+    }
+  }
+
+  // safe open/close drawer API
+  function initDrawer() {
+    drawer = document.getElementById('servicesDrawer');
+    if (!drawer) return;
+
+    backdrop = drawer.querySelector('[data-backdrop]');
+    panel = drawer.querySelector('.drawer-panel');
+
+    // open
+    window.openServicesDrawer = function () {
+      if (!drawer) return;
+      drawer.classList.remove('hidden');
+      // ensure reflow then animate
+      rAF(() => {
+        if (backdrop) backdrop.classList.add('opacity-100');
+        if (panel) panel.classList.add('open');
+      });
+    };
+
+    // close handlers
+    const closeFn = () => {
+      if (!drawer) return;
+      if (backdrop) backdrop.classList.remove('opacity-100');
+      if (panel) panel.classList.remove('open');
+      // hide after animation
+      setTimeout(() => drawer.classList.add('hidden'), 300);
+    };
+
+    // attach close to elements that exist
+    Array.from(drawer.querySelectorAll('[data-close], [data-backdrop]')).forEach(el => {
+      el.addEventListener('click', closeFn, { passive: true });
+    });
+  }
+
+  // Observe elements for fade-in but keep observer light-weight
+  function initObserver() {
+    // don't re-init if already created
+    if (observer) return;
+
+    // small set of options to minimize work
+    const options = {
+      root: null,
+      rootMargin: '0px 0px 120px 0px',
+      threshold: 0.08
+    };
+
+    observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const el = entry.target;
+        if (entry.isIntersecting) {
+          el.classList.add('animate-fadeIn');
+          // stop observing element after animation applied
+          observer.unobserve(el);
+        }
+      });
+    }, options);
+
+    // target groups (cards, groups, and the tab-section containers)
+    const candidates = Array.from(document.querySelectorAll('.group, .grid > a, .tab-section, .w-10, .go-premium-banner'));
+    candidates.forEach(el => {
+      // avoid double-observing
+      if (!observedEls.includes(el)) {
+        try { observer.observe(el); observedEls.push(el); } catch (e) { /* ignore */ }
+      }
+    });
+  }
+
+  // store/restore scroll position
+  function attachScrollPersistence() {
+    // restore
+    try {
+      const pos = sessionStorage.getItem('scrollPos');
+      if (pos) window.scrollTo(0, parseInt(pos, 10));
+    } catch (e) { /* ignore */ }
+
+    // save on unload
+    window.addEventListener('beforeunload', () => {
+      try { sessionStorage.setItem('scrollPos', String(window.scrollY)); } catch (e) {}
+      // disconnect observer to free memory
+      try { if (observer) observer.disconnect(); } catch (e) {}
+    }, { passive: true });
+  }
+
+  // handle tab visibility to avoid "frozen" UI after returning
+  function initVisibilityHandler() {
+    let hiddenAt = null;
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        hiddenAt = Date.now();
+        // reduce CPU: pause heavy animations by adding a class
+        document.documentElement.classList.add('tab-inactive');
+      } else {
+        // user returned
+        document.documentElement.classList.remove('tab-inactive');
+
+        // if hidden for > 1.5s re-initialize light UI tasks to ensure responsiveness
+        if (hiddenAt && (Date.now() - hiddenAt) > 1500) {
+          // re-run icons and ensure active tab is shown
+          rIC(initIcons);
+          const stored = (function () {
+            try { return localStorage.getItem('activeTab'); } catch (e) { return null; }
+          }());
+          if (stored) {
+            // ensure the stored tab is visible ASAP
+            rAF(() => switchTab(stored));
+          } else if (currentActiveId) {
+            rAF(() => switchTab(currentActiveId));
+          }
+          // quick reflow to force CSS repaint and remove visual hang
+          document.body.getBoundingClientRect();
+        }
+        hiddenAt = null;
+      }
+    }, false);
+  }
+
+  // small defensive style tweak: stop some heavy CSS animations when inactive
+  function injectResumeCSS() {
+    // ensure style exists only once
+    if (document.getElementById('dashboard-performance-styles')) return;
+    const s = document.createElement('style');
+    s.id = 'dashboard-performance-styles';
+    s.textContent = `
+      /* reduce animations when tab inactive */
+      .tab-inactive * {
+        animation-play-state: paused !important;
+        transition: none !important;
+      }
+      /* quick fade-in animation */
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .animate-fadeIn {
+        animation: fadeIn 360ms ease-out both;
+      }
+      .tab-section {
+        scroll-behavior: smooth;
+        transition: opacity 0.38s ease, transform 0.28s ease;
+      }
+      .tab-section.hidden {
+        opacity: 0;
+        transform: translateY(10px);
+        pointer-events: none;
+      }
+      .shadow-md { box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important; }
+      .shadow-lg { box-shadow: 0 6px 18px rgba(0,0,0,0.08) !important; }
+      .shadow-xl { box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important; }
+    `;
+    document.head.appendChild(s);
+  }
+
+  // initialization sequence
+  function init() {
+    try {
+      sections = Array.from(document.querySelectorAll('.tab-section'));
+      // if activeTab in localStorage show it else keep first visible
+      let stored = null;
+      try { stored = localStorage.getItem('activeTab'); } catch (e) { stored = null; }
+      if (stored && document.getElementById(stored)) {
+        currentActiveId = stored;
+      } else {
+        // find first section not hidden, else pick the first available
+        const visible = sections.find(s => !s.classList.contains('hidden'));
+        currentActiveId = visible ? visible.id : (sections[0] ? sections[0].id : null);
+      }
+
+      // apply currentActiveId safely
+      if (currentActiveId) rAF(() => switchTab(currentActiveId));
+
+      initIcons();
+      attachImageFadeIn();
+      initDrawer();
+      initObserver();
+      attachScrollPersistence();
+      initVisibilityHandler();
+      injectResumeCSS();
+
+      // expose global switchTab (non-overwriting if user already has one)
+      if (!window.switchTab) window.switchTab = switchTab;
+      else {
+        // respect existing but keep our stable one accessible
+        window.__dashboard_switchTab_safe = switchTab;
+      }
+
+      // quick safety: if any heavy 3rd-party popup opened repeatedly, block it after first open
+      window.adOpened = false;
+    } catch (err) {
+      console.error('dashboard init error', err);
+    }
+  }
+
+  // run init on DOMContentLoaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    // already loaded
+    init();
+  }
+
+})();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		
 
 
@@ -6370,868 +6692,270 @@ window.loadBanks = loadBanks;
 
 
 
-
-/* ===== Integrated Spin + Ad-to-Spin Script (copy/replace your old spin script) ===== */
-(() => {
-  // ---------- CONFIG ----------
-  const BASE_FREE_SPINS = 2; // 2 free spins per day (daily)
-  const COIN_IMG = 'COIN.jpg';
-  const VERIFIED_IMG = 'VERIFIED.jpg';
-  const PRIZES = [10, 30, 20, 200, 5, 0, 100, 1000]; // same wheel layout as before
-  const WEIGHTS = [18, 12, 14, 2, 18, 20, 5, 1]; // default weighted probabilities
-  const SEGMENTS = PRIZES.length;
-  const ROTATIONS = 6;
-  const VAST_LINK = 'https://silkyspite.com/dFm.FkzMdRGUN/vPZhGFUX/geYmX9Su/Z-UKluk/PWTvYb2gNEzHAo2/N/zaQ/tBNNj/YB3rMaDXYw3kNAQr';
-  const SMARTLINK = 'https://www.revenuecpmgate.com/n945dxhe?key=84160f9954ff564239085356c5b84a78';
-  // free-spin-specific choices (only ₦0 and ₦10)
-  const FREE_VALUES = [10, 0];
-  // free-indexes (auto-detect)
-  const FREE_INDEXES = PRIZES.map((v, i) => FREE_VALUES.includes(v) ? i : -1).filter(i => i >= 0);
-  const FREE_WEIGHTS = [0.4, 0.6]; // 40% => ₦10, 60% => ₦0 (adjustable)
-
-  // ---------- DOM ----------
-  const canvas = document.getElementById('spin-canvas');
-  if (!canvas) { console.error('Spin canvas not found'); return; }
-  const ctx = canvas.getContext('2d');
-  const spinBtn = document.getElementById('spin-btn');
-  const spinCountEl = document.getElementById('spin-count');
-  const liveText = document.getElementById('live-text');
-  const liveFeedEl = document.getElementById('live-feed-items');
-  const winModal = document.getElementById('win-modal');
-  const winAmountEl = document.getElementById('win-amount');
-  const winVerifiedImg = document.getElementById('win-verified');
-  const winCloseBtn = document.getElementById('win-close');
-  const noSpinModal = document.getElementById('no-spin-modal');
-  const noSpinClose = document.getElementById('no-spin-close');
-  const toastEl = document.getElementById('spin-toast');
-  const toastTextEl = document.getElementById('spin-toast-text');
-  const challengeCards = Array.from(document.querySelectorAll('#daily-challenges .challenge-card'));
-
-  // watch-ad related DOM (from your watch ad UI — optional fallback to SMARTLINK if missing)
-  const adModal = document.getElementById('adModal');      // optional
-  const adPlayer = document.getElementById('adPlayer');    // optional <video> element
-  const closeAd = document.getElementById('closeAd');      // optional close button
-
-  // ---------- STATE ----------
-  let DPR = window.devicePixelRatio || 1;
-  let lastRotation = 0;
-  let spinning = false;
-  let currentUser = null;
-  let userDocCached = null;   // mirror of users doc for quick checks
-  let guaranteedPrizes = [];  // queue of prize indices from challenge completion
-  let progressState = { affiliateApproved:0, taskApproved:0, dataAmount:0, airtimeAmount:0 };
-  let prevProgress = {...progressState};
-  let unsubs = [];
-  let liveInterval = null;
-
-  // computed availability used elsewhere
-  let regularAvailable = 0; // base + challenge spins left (excluding ad credits)
-  let adCredits = 0;        // ad-earned spin credits in DB
-  let totalAvailable = 0;   // total (regular + adCredits)
-
-  // ---------- HELPERS ----------
-  function formatNaira(v){ return '₦' + Number(v).toFixed(2); }
-  const todayKey = () => new Date().toISOString().slice(0,10);
-  const startOfToday = () => { const d=new Date(); d.setHours(0,0,0,0); return d; };
-  const endOfToday = () => { const d=new Date(); d.setHours(23,59,59,999); return d; };
-
-  // choose weighted index from array of weights
-  function weightedIndex(weights){
-    const sum = weights.reduce((a,b)=>a+b,0);
-    let r = Math.random() * sum;
-    for (let i=0;i<weights.length;i++){
-      if (r < weights[i]) return i;
-      r -= weights[i];
-    }
-    return weights.length - 1;
-  }
-  // choose weighted among specific indexes with a parallel weights array (weights length matches indexes)
-  function pickWeightedFromIndexes(indexes, weights){
-    if (!indexes || indexes.length === 0) return 0;
-    const idx = weightedIndex(weights);
-    return indexes[idx];
-  }
-  function showToast(msg){
-    if (toastEl && toastTextEl){
-      toastTextEl.textContent = msg;
-      toastEl.style.display = 'block';
-      clearTimeout(toastEl._hideTO);
-      toastEl._hideTO = setTimeout(()=> toastEl.style.display = 'none', 3200);
-    } else {
-      try { console.log(msg); } catch(e){}
-    }
-  }
-
-  // ---------- preload images ----------
-  const coinImg = new Image(); coinImg.src = COIN_IMG;
-  const verifiedImg = new Image(); verifiedImg.src = VERIFIED_IMG;
-
-  // ---------- canvas setup & draw ----------
-  function setupCanvasHD(){
-    DPR = window.devicePixelRatio || 1;
-    const plate = canvas.parentElement;
-    const rect = plate.getBoundingClientRect();
-    const css = Math.max(220, Math.min(rect.width, rect.height));
-    canvas.style.width = css + 'px';
-    canvas.style.height = css + 'px';
-    canvas.width = Math.round(css * DPR);
-    canvas.height = Math.round(css * DPR);
-    ctx.setTransform(DPR,0,0,DPR,0,0);
-    drawWheel(lastRotation);
-  }
-
-  function drawWheel(rotationDeg = 0){
-    const cssW = canvas.clientWidth || parseInt(canvas.style.width || '320',10);
-    const cx = cssW/2, cy = cssW/2, r = Math.min(cssW, cssW)/2 - 12;
-    ctx.clearRect(0,0,cssW,cssW);
-    ctx.save();
-    ctx.translate(cx,cy);
-    ctx.rotate(rotationDeg * Math.PI/180);
-    ctx.translate(-cx,-cy);
-    const segAngle = 2 * Math.PI / SEGMENTS;
-    const colors = ['#ecfeff','#e6f7ff','#fff8e1','#f3f5ff','#fff0f6','#eef6ff','#fbfbfd','#f0fbff'];
-    for (let i=0;i<SEGMENTS;i++){
-      const start = -Math.PI/2 + i*segAngle;
-      const end = start + segAngle;
-      ctx.beginPath();
-      ctx.moveTo(cx,cy);
-      ctx.arc(cx,cy,r,start,end);
-      ctx.closePath();
-      ctx.fillStyle = colors[i % colors.length];
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(2,6,23,0.04)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      // amount label
-      const mid = (start + end)/2;
-      const labelR = r * 0.78;
-      const lx = cx + Math.cos(mid) * labelR;
-      const ly = cy + Math.sin(mid) * labelR;
-      ctx.save();
-      ctx.translate(lx, ly);
-      ctx.rotate(mid + Math.PI/2);
-      ctx.fillStyle = '#0f172a';
-      ctx.font = `${Math.max(11, Math.round(cssW * 0.035))}px Inter, system-ui`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(`₦${PRIZES[i]}`, 0, 0);
-      ctx.restore();
-      // coin image upright
-      if (coinImg && coinImg.complete){
-        const imgR = r * 0.56;
-        const ix = cx + Math.cos(mid) * imgR;
-        const iy = cy + Math.sin(mid) * imgR;
-        ctx.save();
-        ctx.translate(ix, iy);
-        ctx.rotate(-(rotationDeg * Math.PI/180)); // keep upright
-        const coinSize = Math.max(28, Math.round(cssW * 0.12));
-        ctx.drawImage(coinImg, -coinSize/2, -coinSize/2, coinSize, coinSize);
-        if (PRIZES[i] === 1000 && verifiedImg.complete){
-          const b = Math.round(coinSize * 0.45);
-          ctx.drawImage(verifiedImg, coinSize/4, coinSize/4, b, b);
-        }
-        ctx.restore();
-      }
-    }
-    // outer edge
-    ctx.beginPath();
-    ctx.arc(cx, cy, r + 6, 0, Math.PI*2);
-    ctx.strokeStyle = 'rgba(15,23,42,0.06)';
-    ctx.lineWidth = 10;
-    ctx.stroke();
-    // center button
-    ctx.beginPath();
-    ctx.arc(cx, cy, 48, 0, Math.PI*2);
-    ctx.fillStyle = '#fff';
-    ctx.fill();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = 'rgba(15,23,42,0.06)';
-    ctx.stroke();
-    ctx.fillStyle = '#0f172a';
-    ctx.font = '700 14px Inter, system-ui';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('SPIN', cx, cy - 6);
-    ctx.font = '600 12px Inter, system-ui';
-    ctx.fillText('NOW', cx, cy + 12);
-    ctx.restore();
-  }
-
-  // animate rotation
-  function animateTo(targetAbsolute, duration = 5200){
-    return new Promise(resolve => {
-      const start = performance.now();
-      const from = lastRotation;
-      const diff = targetAbsolute - from;
-      function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
-      function frame(now){
-        const t = Math.min(1, (now - start) / duration);
-        const v = from + diff * easeOutCubic(t);
-        drawWheel(v);
-        if (t < 1) requestAnimationFrame(frame);
-        else {
-          lastRotation = ((targetAbsolute % 360) + 360) % 360;
-          drawWheel(lastRotation);
-          resolve();
-        }
-      }
-      requestAnimationFrame(frame);
-    });
-  }
-
-  // ---------- progress & UI recompute ----------
-  function recomputeSpinsUI(){
-    // calculate completed flags from progressState (same thresholds used in original script)
-    const goals = {
-      affiliateApproved: Number(document.querySelector('.challenge-card[data-key="affiliateApproved"]')?.dataset.goal || 10),
-      taskApproved: Number(document.querySelector('.challenge-card[data-key="taskApproved"]')?.dataset.goal || 10),
-      dataAmount: Number(document.querySelector('.challenge-card[data-key="dataAmount"]')?.dataset.goal || 1000),
-      airtimeAmount: Number(document.querySelector('.challenge-card[data-key="airtimeAmount"]')?.dataset.goal || 500)
-    };
-    const flags = [
-      (progressState.affiliateApproved || 0) >= goals.affiliateApproved,
-      (progressState.taskApproved || 0) >= goals.taskApproved,
-      (progressState.dataAmount || 0) >= goals.dataAmount,
-      (progressState.airtimeAmount || 0) >= goals.airtimeAmount
-    ];
-    const completedCount = flags.filter(Boolean).length;
-
-    // handle user doc spinsUsed counts with daily-reset
-    let usedTotal = Number(userDocCached?.spinsUsedCount || 0);
-    let usedBase = Number(userDocCached?.spinsUsedBase || 0);
-    const prev = userDocCached?.spinsUsedDate || null;
-    let usedDateKey = null;
-    if (prev){
-      try { usedDateKey = (typeof prev.toDate === 'function') ? prev.toDate().toISOString().slice(0,10) : String(prev); }
-      catch(e) { usedDateKey = prev; }
-    }
-    if (usedDateKey !== todayKey()){
-      usedTotal = 0;
-      usedBase = 0;
-    }
-
-    // base remaining
-    const baseRemaining = Math.max(0, BASE_FREE_SPINS - usedBase);
-    const bonusUsed = Math.max(0, usedTotal - usedBase);
-    const bonusRemaining = Math.max(0, completedCount - bonusUsed);
-
-    regularAvailable = Math.max(0, baseRemaining + bonusRemaining);
-    adCredits = Number(userDocCached?.adSpinCredits || 0);
-    totalAvailable = regularAvailable + adCredits;
-
-    // hide the small spin-count (per your request). keep the button label simple.
-    if (spinCountEl) spinCountEl.style.display = 'none';
-
-    // update challenge progress UI
-    challengeCards.forEach(card => {
-      const key = card.dataset.key;
-      const goal = Number(card.dataset.goal || 1);
-      let val = 0;
-      if (key === 'affiliateApproved') val = progressState.affiliateApproved || 0;
-      else if (key === 'taskApproved') val = progressState.taskApproved || 0;
-      else if (key === 'dataAmount') val = progressState.dataAmount || 0;
-      else if (key === 'airtimeAmount') val = progressState.airtimeAmount || 0;
-      const percent = Math.min(100, (val / goal) * 100);
-      const bar = card.querySelector('.progress-bar');
-      const status = card.querySelector('.status-text');
-      if (bar) bar.style.width = percent + '%';
-      if (status) {
-        if (val >= goal) { status.textContent = 'Completed'; status.classList.remove('not-completed'); status.classList.add('completed'); }
-        else { status.textContent = 'Not completed'; status.classList.remove('completed'); status.classList.add('not-completed'); }
-      }
-    });
-  }
-
-  // ---------- realtime listeners for progress (firestore) ----------
-  function clearUnsubs(){ unsubs.forEach(u => { try { u(); } catch(e){} }); unsubs = []; }
-
-  function pushGuaranteedPrizeForChallenge(key){
-    const CHALLENGE_TO_PRIZE_INDEX = { affiliateApproved:0, taskApproved:2, dataAmount:1, airtimeAmount:6 };
-    const idx = CHALLENGE_TO_PRIZE_INDEX[key];
-    if (typeof idx === 'number') {
-      guaranteedPrizes.push(idx);
-      showToast('Challenge completed — next spin will award the challenge reward!');
-    }
-  }
-
-  function attachRealtimeProgress(uid){
-    clearUnsubs();
-    if (typeof db === 'undefined' || !db) { console.warn('db missing'); return; }
-
-    try {
-      const q = db.collection('affiliate_submissions').where('userId','==',uid).where('status','==','approved');
-      const unsub = q.onSnapshot(snap => {
-        let count = 0;
-        snap.forEach(d => { if (docIsToday(d.data())) count++; });
-        const prev = prevProgress.affiliateApproved || 0;
-        progressState.affiliateApproved = count;
-        if ((prev < 10) && (count >= 10)) pushGuaranteedPrizeForChallenge('affiliateApproved');
-        prevProgress.affiliateApproved = count;
-        recomputeSpinsUI();
-      }, err => console.warn('affiliate listener err', err));
-      unsubs.push(unsub);
-    } catch(e){ console.warn('attach affiliate err', e); }
-
-    try {
-      const q = db.collection('task_submissions').where('userId','==',uid).where('status','==','approved');
-      const unsub = q.onSnapshot(snap => {
-        let count = 0;
-        snap.forEach(d => { if (docIsToday(d.data())) count++; });
-        const prev = prevProgress.taskApproved || 0;
-        progressState.taskApproved = count;
-        if ((prev < 10) && (count >= 10)) pushGuaranteedPrizeForChallenge('taskApproved');
-        prevProgress.taskApproved = count;
-        recomputeSpinsUI();
-      }, err => console.warn('task listener err', err));
-      unsubs.push(unsub);
-    } catch(e){ console.warn('attach task err', e); }
-
-    try {
-      const q = db.collection('bill_submissions').where('userId','==',uid).where('processed','==',true);
-      const unsub = q.onSnapshot(snap => {
-        let dataSum = 0, airtimeSum = 0;
-        snap.forEach(d => {
-          const doc = d.data();
-          if (!docIsToday(doc)) return;
-          const t = (doc.type || 'airtime').toString().toLowerCase();
-          const amt = Number(doc.amount || 0);
-          if (t === 'data') dataSum += amt; else airtimeSum += amt;
-        });
-        const prevData = prevProgress.dataAmount || 0;
-        progressState.dataAmount = dataSum;
-        if ((prevData < 1000) && (dataSum >= 1000)) pushGuaranteedPrizeForChallenge('dataAmount');
-        prevProgress.dataAmount = dataSum;
-        const prevAirtime = prevProgress.airtimeAmount || 0;
-        progressState.airtimeAmount = airtimeSum;
-        if ((prevAirtime < 500) && (airtimeSum >= 500)) pushGuaranteedPrizeForChallenge('airtimeAmount');
-        prevProgress.airtimeAmount = airtimeSum;
-        recomputeSpinsUI();
-      }, err => console.warn('bills listener err', err));
-      unsubs.push(unsub);
-    } catch(e){ console.warn('attach bills err', e); }
-  }
-
-  // helper to check "doc is today"
-  const TIMESTAMP_CANDIDATES = ['createdAt','submittedAt','timestamp','time','submittedOn','created_on'];
-  function dateFromMaybe(v){
-    if (v == null) return null;
-    if (typeof v.toDate === 'function') { try { return v.toDate(); } catch(e) { return null; } }
-    if (v && typeof v.seconds === 'number') return new Date(v.seconds * 1000);
-    if (typeof v === 'number') return new Date(v);
-    try { return new Date(v); } catch(e) { return null; }
-  }
-  function docIsToday(data){
-    if (!data) return false;
-    for (const f of TIMESTAMP_CANDIDATES) {
-      if (!data[f]) continue;
-      const dt = dateFromMaybe(data[f]);
-      if (!dt || isNaN(dt.getTime())) continue;
-      if (dt >= startOfToday() && dt <= endOfToday()) return true;
-    }
-    return false;
-  }
-
-  // ---------- live feed demo ----------
-  function startLiveFeedDemo(){
-    const names = ['NOFISAT','ABUBAKAR','FATIMA','CHINEDU','SULEIMAN','GRACE','KINGSLEY','BOLA','AMINA','EMMA','SAMUEL','JOY','MUSA','HANNAH','RAFIQ','OLUWATOYIN','KELECHI','NNEKA','TOMI','RACHEL'];
-    const msgs = [];
-    for (let i=0;i<20;i++){
-      const n = names[i % names.length];
-      const a = PRIZES[Math.floor(Math.random()*PRIZES.length)];
-      msgs.push(`${n} won ₦${a} cashback.`);
-    }
-    let idx = 0;
-    if (liveText) liveText.textContent = msgs[0];
-    if (liveInterval) clearInterval(liveInterval);
-    liveInterval = setInterval(()=> {
-      idx = (idx + 1) % msgs.length;
-      if (liveText){
-        liveText.style.opacity = 0;
-        setTimeout(()=> {
-          liveText.textContent = msgs[idx];
-          liveText.style.opacity = 1;
-        }, 220);
-      }
-    }, 2500);
-  }
-
-  // ---------- spin math & animation ----------
-  async function spinToIndex(idx){
-    const segDeg = 360 / SEGMENTS;
-    const sliceCenter = -90 + (idx + 0.5) * segDeg;
-    const rotationDelta = -90 - sliceCenter;
-    const jitter = (Math.random() * (segDeg / 18)) - (segDeg / 36);
-    const total = ROTATIONS * 360 + rotationDelta + jitter;
-    const target = lastRotation + total;
-    await animateTo(target, 5200);
-    lastRotation = ((target % 360) + 360) % 360;
-  }
-
-  // ---------- watch-ad -> grant +1 spin integration ----------
-  // Minimal VAST resolver & HLS loader reused from your watch ad script
-  async function fetchText(url){ const res = await fetch(url, {method:'GET', mode:'cors'}); if(!res.ok) throw new Error(res.status); return res.text(); }
-  function parseXML(text){ return (new DOMParser()).parseFromString(text,'application/xml'); }
-  async function resolveVast(url, depth=0){
-    if(!url || depth>3) return null;
-    try {
-      const text = await fetchText(url);
-      const xml = parseXML(text);
-      if(!xml) return null;
-      const wrapper = xml.querySelector('Wrapper > VASTAdTagURI, VASTAdTagURI');
-      if(wrapper && wrapper.textContent && wrapper.textContent.trim()){
-        const next = wrapper.textContent.trim();
-        return await resolveVast(next, depth+1);
-      }
-      const mediaFiles = Array.from(xml.querySelectorAll('MediaFile')).map(node => ({ url: node.textContent.trim(), type: node.getAttribute('type') || '' }))
-                              .filter(m => m.url && !/javascript|vpaid/i.test(m.url));
-      const mp4 = mediaFiles.find(c => /mp4|video\/mp4/i.test(c.type) || /\.mp4(\?|$)/i.test(c.url));
-      if (mp4) return { kind:'mp4', url: mp4.url };
-      const hls = mediaFiles.find(c => /\.m3u8(\?|$)/i.test(c.url) || /application\/x-mpegURL/i.test(c.type));
-      if (hls) return { kind:'hls', url: hls.url };
-      return null;
-    } catch(e) { console.warn('resolveVast err', e); return null; }
-  }
-  function loadHlsJs(){
-    return new Promise((resolve,reject)=>{
-      if (window.Hls) return resolve(window.Hls);
-      const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
-      s.onload = ()=> resolve(window.Hls);
-      s.onerror = reject;
-      document.head.appendChild(s);
-    });
-  }
-  // no-seek protection for <video>
-  let modalKeyBlockHandler = null;
-  function blockModalSeekKeys(){
-    modalKeyBlockHandler = (e) => {
-      const blocked = ['ArrowLeft','ArrowRight','Home','End','PageUp','PageDown'];
-      if (blocked.includes(e.code)) e.preventDefault();
-    };
-    window.addEventListener('keydown', modalKeyBlockHandler, {capture:true});
-  }
-  function unblockModalSeekKeys(){ if (modalKeyBlockHandler){ window.removeEventListener('keydown', modalKeyBlockHandler, {capture:true}); modalKeyBlockHandler = null; } }
-  function attachNoSeekProtection(video){
-    let lastTime = 0;
-    const onTime = ()=>{ lastTime = Math.max(lastTime, video.currentTime); };
-    const onSeeking = ()=>{ if (Math.abs(video.currentTime - lastTime) > 0.2) video.currentTime = lastTime; };
-    const onLoaded = ()=>{};
-    const onContext = (e)=> e.preventDefault();
-    video.addEventListener('timeupdate', onTime);
-    video.addEventListener('seeking', onSeeking);
-    video.addEventListener('loadedmetadata', onLoaded);
-    video.addEventListener('contextmenu', onContext);
-    blockModalSeekKeys();
-    return ()=> {
-      video.removeEventListener('timeupdate', onTime);
-      video.removeEventListener('seeking', onSeeking);
-      video.removeEventListener('loadedmetadata', onLoaded);
-      video.removeEventListener('contextmenu', onContext);
-      unblockModalSeekKeys();
-    };
-  }
-
-  // grant +1 ad-spin credit to user (persisted)
-  async function grantAdSpin(uid){
-    try {
-      const userRef = db.collection('users').doc(uid);
-      await userRef.set({ adSpinCredits: firebase.firestore.FieldValue.increment(1) }, { merge:true });
-      // reflect locally too
-      userDocCached = userDocCached || {};
-      userDocCached.adSpinCredits = (Number(userDocCached.adSpinCredits || 0) + 1);
-      recomputeSpinsUI();
-      showToast('🎉 1 free spin rewarded — tap Spin Now to use it.');
-    } catch(e){ console.error('grantAdSpin err', e); showToast('Could not credit spin.'); }
-  }
-
-  // watch ad flow that grants a spin when completed:
-  async function watchAdForSpin(){
-    if (!auth || !auth.currentUser) { showToast('Please login to watch an ad and earn a spin.'); return; }
-    const uid = auth.currentUser.uid;
-    try {
-      // mark in-progress so reload doesn't mistakenly think it's complete
-      try { localStorage.setItem('ad_spin_in_progress', String(Date.now())); } catch(e){}
-
-      // try resolving VAST
-      let resolved = null;
-      try { resolved = await resolveVast(VAST_LINK); } catch(e){ resolved = null; }
-
-      // if we have ad player in DOM & resolved mp4/hls, prefer in-modal playback
-      if (adModal && adPlayer && resolved){
-        adModal.classList.remove('hidden');
-        adModal.style.display = 'flex';
-        adPlayer.pause();
-        adPlayer.removeAttribute('src');
-        let cleanup = null;
-        let finished = false;
-
-        if (resolved.kind === 'mp4'){
-          adPlayer.src = resolved.url;
-          adPlayer.load();
-          cleanup = attachNoSeekProtection(adPlayer);
-          const failTO = setTimeout(()=> {
-            if (adPlayer.readyState === 0 && !finished) {
-              // fallback
-              cleanup && cleanup();
-              adModal.classList.add('hidden'); adModal.style.display = 'none';
-              localStorage.removeItem('ad_spin_in_progress');
-              window.open(SMARTLINK, '_blank');
-            }
-          }, 8000);
-
-          const playPromise = adPlayer.play();
-          if (playPromise !== undefined) playPromise.catch(()=>{ clearTimeout(failTO); });
-
-          adPlayer.onended = async ()=> {
-            finished = true;
-            clearTimeout(failTO);
-            cleanup && cleanup();
-            adModal.classList.add('hidden'); adModal.style.display = 'none';
-            localStorage.removeItem('ad_spin_in_progress');
-            await grantAdSpin(uid);
-          };
-        } else if (resolved.kind === 'hls'){
-          const Hls = await loadHlsJs();
-          if (Hls && Hls.isSupported()){
-            const hls = new Hls();
-            hls.loadSource(resolved.url);
-            hls.attachMedia(adPlayer);
-            adPlayer.load();
-            cleanup = attachNoSeekProtection(adPlayer);
-            adPlayer.addEventListener('loadedmetadata', ()=> {
-              const p = adPlayer.play();
-              if (p !== undefined) p.catch(()=>{});
-            });
-            adPlayer.onended = async ()=> {
-              cleanup && cleanup();
-              adModal.classList.add('hidden'); adModal.style.display = 'none';
-              localStorage.removeItem('ad_spin_in_progress');
-              await grantAdSpin(uid);
-            };
-          } else {
-            adModal.classList.add('hidden'); adModal.style.display = 'none';
-            localStorage.removeItem('ad_spin_in_progress');
-            window.open(SMARTLINK,'_blank');
-            // fallback credit after 15s
-            setTimeout(async ()=> { await grantAdSpin(uid); }, 15000);
-          }
-        } else {
-          // resolved but unknown -> fallback
-          adModal.classList.add('hidden'); adModal.style.display = 'none';
-          localStorage.removeItem('ad_spin_in_progress');
-          window.open(SMARTLINK, '_blank');
-          setTimeout(async ()=> { await grantAdSpin(uid); }, 15000);
-        }
-
-      } else {
-        // fallback: open smartlink and consider 15s as "watched"
-        window.open(SMARTLINK, '_blank');
-        setTimeout(async ()=> {
-          // ensure that user is still logged in
-          if (auth && auth.currentUser) await grantAdSpin(auth.currentUser.uid);
-          try { localStorage.removeItem('ad_spin_in_progress'); } catch(e){}
-        }, 15000);
-      }
-    } catch(err){
-      console.error('watchAdForSpin err', err);
-      try { localStorage.removeItem('ad_spin_in_progress'); } catch(e){}
-      showToast('Failed to load ad. Try again later.');
-    }
-  }
-
-  // ---------- UI: add Watch Ad button into No-Spin modal (dynamically) ----------
-  function ensureNoSpinWatchButton(){
-    if (!noSpinModal) return;
-    if (noSpinModal.querySelector('#no-spin-watch-ad')) return; // already present
-    // create button element
-    const btn = document.createElement('button');
-    btn.id = 'no-spin-watch-ad';
-    btn.textContent = 'Watch Ad & Get 1 Free Spin';
-    btn.className = 'px-6 py-2 rounded-full bg-emerald-600 text-blue font-semibold ml-3';
-    btn.addEventListener('click', () => {
-      // hide modal and start ad
-      if (noSpinModal) { noSpinModal.classList.add('hidden'); noSpinModal.style.display = 'none'; }
-      watchAdForSpin();
-    });
-    // insert button near close button
-    const container = noSpinModal.querySelector('div') || noSpinModal;
-    container.appendChild(btn);
-  }
-
-  // ---------- spin handler & DB transaction ----------
-  async function handleSpinClick(){
-    if (spinning) return;
-    if (typeof auth === 'undefined' || !auth || !auth.currentUser){ showToast('Please login to spin.'); return; }
-
-    // ensure we have up-to-date availability
-    recomputeSpinsUI();
-
-    // if no spins at all -> show modal w/ watch ad button
-    if (totalAvailable <= 0){
-      if (noSpinModal){
-        ensureNoSpinWatchButton();
-        noSpinModal.classList.remove('hidden');
-        noSpinModal.style.display = 'flex';
-      } else {
-        // fallback toast
-        showToast('No spins remaining. Complete challenges or watch an ad to earn 1 spin.');
-      }
-      return;
-    }
-
-    spinning = true;
-    if (spinBtn) spinBtn.disabled = true;
-
-    // Determine whether this spin will consume an ad credit (only if no regular spins left)
-    const willConsumeAd = (regularAvailable <= 0 && adCredits > 0);
-
-    // pick prize index:
-    let idx;
-    if (guaranteedPrizes.length > 0){
-      idx = guaranteedPrizes.shift();
-    } else if (willConsumeAd){
-      // ad-earned spin: random weighted pick (we'll enforce reward = 0 later)
-      idx = weightedIndex(WEIGHTS);
-    } else {
-      // a "regular" spin (either base daily or challenge-unlocked). We must limit true daily-base spins to only 10 or 0.
-      // We decide base-vs-bonus by checking if there is baseRemaining (from recomputeSpinsUI internal calculation).
-      // recomputeSpinsUI set regularAvailable = baseRemaining + bonusRemaining, but we need baseRemaining specifically:
-      let usedTotal = Number(userDocCached?.spinsUsedCount || 0);
-      let usedBase = Number(userDocCached?.spinsUsedBase || 0);
-      const prev = userDocCached?.spinsUsedDate || null;
-      let usedDateKey = null;
-      if (prev){
-        try { usedDateKey = (typeof prev.toDate === 'function') ? prev.toDate().toISOString().slice(0,10) : String(prev); }
-        catch(e) { usedDateKey = prev; }
-      }
-      if (usedDateKey !== todayKey()){
-        usedTotal = 0; usedBase = 0;
-      }
-      const baseRemaining = Math.max(0, BASE_FREE_SPINS - usedBase);
-      const bonusUsed = Math.max(0, usedTotal - usedBase);
-      // compute completedCount from current progressState
-      const goals = {
-        affiliateApproved: Number(document.querySelector('.challenge-card[data-key="affiliateApproved"]')?.dataset.goal || 10),
-        taskApproved: Number(document.querySelector('.challenge-card[data-key="taskApproved"]')?.dataset.goal || 10),
-        dataAmount: Number(document.querySelector('.challenge-card[data-key="dataAmount"]')?.dataset.goal || 1000),
-        airtimeAmount: Number(document.querySelector('.challenge-card[data-key="airtimeAmount"]')?.dataset.goal || 500)
-      };
-      const flags = [
-        (progressState.affiliateApproved || 0) >= goals.affiliateApproved,
-        (progressState.taskApproved || 0) >= goals.taskApproved,
-        (progressState.dataAmount || 0) >= goals.dataAmount,
-        (progressState.airtimeAmount || 0) >= goals.airtimeAmount
-      ];
-      const completedCount = flags.filter(Boolean).length;
-      const bonusRemaining = Math.max(0, completedCount - bonusUsed);
-
-      // if baseRemaining > 0, this consumes a daily base spin -> choose only among FREE_INDEXES
-      if (baseRemaining > 0){
-        // pick between indices mapping to ₦10 and ₦0 using FREE_WEIGHTS
-        idx = pickWeightedFromIndexes(FREE_INDEXES, FREE_WEIGHTS);
-      } else {
-        // otherwise it's a bonus spin (from challenges) -> use full weighted set
-        idx = weightedIndex(WEIGHTS);
-      }
-    }
-
-    // play the wheel animation to chosen index
-    try {
-      await spinToIndex(idx);
-    } catch(err){ console.error('spin animation err', err); }
-
-    // after animation, determine amount to credit
-    let prize = PRIZES[idx];
-    // if the spin consumed an ad-credit, prize must be 0 (ad spins yield 0 reward)
-    let amountToCredit = willConsumeAd ? 0 : prize;
-
-    // persist to Firestore: either consume adSpinCredits OR increment spinsUsedBase/spinsUsedCount and add balance
-    try {
-      const uid = auth.currentUser.uid;
-      const userRef = db.collection('users').doc(uid);
-      const today = todayKey();
-      await db.runTransaction(async tx => {
-        const snap = await tx.get(userRef);
-        let data = snap.exists ? snap.data() : {};
-
-        // determine server-side date key and reset counters if needed
-        let prevKey = null;
-        const prevDate = data.spinsUsedDate || null;
-        if (prevDate){
-          try { prevKey = (typeof prevDate.toDate === 'function') ? prevDate.toDate().toISOString().slice(0,10) : String(prevDate); }
-          catch(e){ prevKey = prevDate; }
-        }
-        if (prevKey !== today){
-          // reset daily counters for new day
-          data.spinsUsedBase = 0;
-          data.spinsUsedCount = 0;
-        }
-        const adCreditsServer = Number(data.adSpinCredits || 0);
-        const baseUsedServer = Number(data.spinsUsedBase || 0);
-        const totalUsedServer = Number(data.spinsUsedCount || 0);
-
-        if (willConsumeAd && adCreditsServer > 0){
-          // consume ad credit
-          tx.update(userRef, {
-            adSpinCredits: firebase.firestore.FieldValue.increment(-1),
-            balance: firebase.firestore.FieldValue.increment(Number(amountToCredit || 0)),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        } else {
-          // this is a regular spin usage: decide if it's consuming base or bonus
-          if (baseUsedServer < BASE_FREE_SPINS){
-            // consume base spin
-            if (!snap.exists){
-              tx.set(userRef, {
-                balance: Number(amountToCredit || 0),
-                spinsUsedCount: 1,
-                spinsUsedBase: 1,
-                spinsUsedDate: today,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-              }, { merge: true });
-            } else {
-              tx.update(userRef, {
-                spinsUsedCount: firebase.firestore.FieldValue.increment(1),
-                spinsUsedBase: firebase.firestore.FieldValue.increment(1),
-                spinsUsedDate: today,
-                balance: firebase.firestore.FieldValue.increment(Number(amountToCredit || 0)),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-              });
-            }
-          } else {
-            // consume bonus spin (challenge unlocked)
-            if (!snap.exists){
-              tx.set(userRef, {
-                balance: Number(amountToCredit || 0),
-                spinsUsedCount: 1,
-                spinsUsedBase: 0,
-                spinsUsedDate: today,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-              }, { merge: true });
-            } else {
-              tx.update(userRef, {
-                spinsUsedCount: firebase.firestore.FieldValue.increment(1),
-                spinsUsedDate: today,
-                balance: firebase.firestore.FieldValue.increment(Number(amountToCredit || 0)),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-              });
-            }
-          }
-        }
-      });
-
-      // refresh local cache
-      const fresh = await db.collection('users').doc(auth.currentUser.uid).get();
-      userDocCached = fresh.exists ? fresh.data() : userDocCached;
-    } catch (err) {
-      console.error('spin update failed', err);
-      showToast('Error updating balance. See console.');
-    }
-
-    // show win modal: if ad spin -> always show ₦0
-    const shownAmount = willConsumeAd ? 0 : prize;
-    if (winAmountEl) winAmountEl.textContent = `₦${shownAmount}`;
-    if (shownAmount === 1000 && winVerifiedImg) winVerifiedImg.classList.remove('hidden');
-    else if (winVerifiedImg) winVerifiedImg.classList.add('hidden');
-    if (winModal) { winModal.classList.remove('hidden'); winModal.style.display = 'flex'; }
-
-    // live feed text immediate update
-    if (auth.currentUser && liveText) {
-      const who = (auth.currentUser.displayName || auth.currentUser.email || 'You').split('@')[0].toUpperCase();
-      liveText.textContent = `${who} won ₦${shownAmount} cashback.`;
-    }
-
-    // recompute UI after transaction
-    recomputeSpinsUI();
-
-    spinning = false;
-    if (spinBtn) spinBtn.disabled = false;
-
-    // if the spin was ad-earned, mention that ad-spins return zero reward (explicit notification)
-    if (willConsumeAd) showToast('Note: Spins earned by watching an ad return ₦0.');
-  }
-
-  // ---------- init: remove pointer animation, attach handlers ----------
-  function init(){
-    // responsive canvas sizing
-    setupCanvasHD();
-    drawWheel(lastRotation);
-    startLiveFeedDemo();
-
-    // static pointer (stop bounce animation)
-    const pointer = document.querySelector('.pointer-arrow');
-    if (pointer) pointer.style.animation = 'none';
-
-    // hide spin count small badge
-    if (spinCountEl) spinCountEl.style.display = 'none';
-
-    // attach click
-    if (spinBtn) spinBtn.addEventListener('click', handleSpinClick);
-    if (winCloseBtn) winCloseBtn.addEventListener('click', ()=> { if (winModal) { winModal.classList.add('hidden'); winModal.style.display = 'none'; } });
-    if (noSpinClose) noSpinClose.addEventListener('click', ()=> { if (noSpinModal) { noSpinModal.classList.add('hidden'); noSpinModal.style.display = 'none'; } });
-
-    window.addEventListener('resize', () => { setupCanvasHD(); });
-
-    // add watch-ad button to noSpin modal ahead of time so it exists when modal shows
-    ensureNoSpinWatchButton();
-
-    // wire up optional ad modal close (if ad modal exists on the page)
-    if (closeAd && adPlayer){
-      closeAd.addEventListener('click', ()=> {
-        // user closed the ad early -> no reward, just hide
-        try { adPlayer.pause(); } catch(e){}
-        if (adModal) { adModal.classList.add('hidden'); adModal.style.display = 'none'; }
-        try { localStorage.removeItem('ad_spin_in_progress'); } catch(e){}
-      });
-    }
-
-    // if firebase not present -> demo only
-    if (typeof auth === 'undefined' || !auth || typeof db === 'undefined' || !db){
-      console.warn('Firebase compat not found. Running demo-only UI.');
-      progressState = { affiliateApproved:0, taskApproved:0, dataAmount:0, airtimeAmount:0 };
-      prevProgress = {...progressState};
-      recomputeSpinsUI();
-      return;
-    }
-
-    // attach auth listener
-    auth.onAuthStateChanged(user => {
-      currentUser = user;
-      if (!user){
-        userDocCached = null;
-        recomputeSpinsUI();
-        clearUnsubs();
-        return;
-      }
-      // subscribe to user doc
-      const uRef = db.collection('users').doc(user.uid);
-      const unsubUser = uRef.onSnapshot(snap => {
-        userDocCached = snap.exists ? snap.data() : {};
-        const username = (userDocCached && userDocCached.username) ? userDocCached.username : (user.displayName || (user.email || '').split('@')[0]);
-        attachRealtimeProgress(user.uid);
-        recomputeSpinsUI();
-      }, err => {
-        console.warn('user doc listener error', err);
-        // fallback read
-        uRef.get().then(snap => {
-          userDocCached = snap.exists ? snap.data() : {};
-          attachRealtimeProgress(user.uid);
-          recomputeSpinsUI();
-        }).catch(e => console.warn('user fetch failed', e));
-      });
-      unsubs.push(unsubUser);
-    });
-  }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
-
-  // expose debug helpers
-  window.__spinIntegrated = { drawWheel, setupCanvasHD, recomputeSpinsUI, progressState, PRIZES, lastRotation, guaranteedPrizes };
-
+<!-- ====== spin and earn function ====== -->
+/* ====== Spin Wheel + Daily Challenge Script (Firebase compat) ====== */
+(() => {  
+  // ---------- CONFIG ----------  
+  const COIN_IMG = 'COIN.jpg';  
+  const VERIFIED_IMG = 'VERIFIED.jpg';  
+  const PRIZES = [10, 30, 20, 200, 5, 0, 100, 1000];   // wheel order  
+  const WEIGHTS = [18, 12, 14, 2, 18, 20, 5, 1];  
+  const SEGMENTS = PRIZES.length;  
+  const ROTATIONS = 6;  
+  const TIMESTAMP_CANDIDATES = ['createdAt','submittedAt','timestamp','time','submittedOn','created_on'];  
+  // Map challenge key -> prize index (so a completed challenge can queue a guaranteed spin)  
+  const CHALLENGE_TO_PRIZE_INDEX = {    
+    affiliateApproved: 0, // ₦10    
+    taskApproved: 2,      // ₦10    
+    dataAmount: 1,        // ₦0    
+    airtimeAmount: 6      // ₦0  
+  };  
+  // ---------- DOM ----------  
+  const canvas = document.getElementById('spin-canvas');  
+  if (!canvas) { console.error('Spin canvas not found'); return; }  
+  const ctx = canvas.getContext('2d');  
+  const spinBtn = document.getElementById('spin-btn');  
+  const spinCountEl = document.getElementById('spin-count');  
+  const liveText = document.getElementById('live-text');  
+  const liveFeedEl = document.getElementById('live-feed-items');  
+  const winModal = document.getElementById('win-modal');  
+  const winAmountEl = document.getElementById('win-amount');  
+  const winVerifiedImg = document.getElementById('win-verified');  
+  const winCloseBtn = document.getElementById('win-close');  
+  const noSpinModal = document.getElementById('no-spin-modal');  
+  const noSpinClose = document.getElementById('no-spin-close');  
+  const toastEl = document.getElementById('spin-toast');  
+  const toastTextEl = document.getElementById('spin-toast-text');  
+  const challengeCards = Array.from(document.querySelectorAll('#daily-challenges .challenge-card'));  
+  // ---------- STATE ----------  
+  let DPR = window.devicePixelRatio || 1;  
+  let lastRotation = 0;               // degrees  
+  let spinning = false;  
+  let currentUser = null;  
+  let userDocCached = null;  
+  let spinsAvailable = 0;  
+  let progressState = { affiliateApproved:0, taskApproved:0, dataAmount:0, airtimeAmount:0 };  
+  let prevProgress = { ...progressState };  
+  let unsubs = [];  
+  let liveInterval = null;  
+  let guaranteedPrizes = []; // queue of prize indices to force next spin to land on  
+  // ---------- HELPERS ----------  
+  const todayKey = () => new Date().toISOString().slice(0,10);  
+  const startOfToday = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };  
+  const endOfToday = () => { const d = new Date(); d.setHours(23,59,59,999); return d; };  
+  function dateFromMaybe(v) {    
+    if (v == null) return null;    
+    if (typeof v.toDate === 'function') { try { return v.toDate(); } catch(e) { return null; } }    
+    if (v && typeof v.seconds === 'number') return new Date(v.seconds * 1000);    
+    if (typeof v === 'number') return new Date(v);    
+    try { return new Date(v); } catch(e) { return null; }  
+  }  
+  function docIsToday(data){    
+    if (!data) return false;    
+    for (const f of TIMESTAMP_CANDIDATES) {      
+      if (!data[f]) continue;      
+      const dt = dateFromMaybe(data[f]);      
+      if (!dt || isNaN(dt.getTime())) continue;      
+      if (dt >= startOfToday() && dt <= endOfToday()) return true;    
+    }    
+    return false;  
+  }  
+  function weightedRandomIndex(weights){    
+    const sum = weights.reduce((a,b)=>a+b,0);    
+    let r = Math.random() * sum;    
+    for (let i=0;i<weights.length;i++){      
+      if (r < weights[i]) return i;      
+      r -= weights[i];    
+    }    
+    return weights.length - 1;  
+  }  
+  function showToast(msg){    
+    if (toastEl && toastTextEl) {      
+      toastTextEl.textContent = msg;      
+      toastEl.style.display = 'block';      
+      clearTimeout(toastEl._hideTO);      
+      toastEl._hideTO = setTimeout(()=> { toastEl.style.display = 'none'; }, 3200);    
+    } else { alert(msg); }  
+  }  
+  // ---------- preload images ----------  
+  const coinImg = new Image(); coinImg.src = COIN_IMG;  
+  const verifiedImg = new Image(); verifiedImg.src = VERIFIED_IMG;  
+  // ---------- responsive HD canvas setup ----------  
+  function setupCanvasHD() {    
+    DPR = window.devicePixelRatio || 1;    
+    // match plate size (canvas.parentElement is .wheel-plate)    
+    const plate = canvas.parentElement;    
+    const rect = plate.getBoundingClientRect();    
+    const css = Math.max(220, Math.min(rect.width, rect.height));    
+    canvas.style.width = css + 'px';    
+    canvas.style.height = css + 'px';    
+    canvas.width = Math.round(css * DPR);    
+    canvas.height = Math.round(css * DPR);    
+    // make drawing coordinates match CSS pixels    
+    ctx.setTransform(DPR,0,0,DPR,0,0);    
+    drawWheel(lastRotation);  
+  }  
+  // ---------- draw wheel ----------  
+  function drawWheel(rotationDeg = 0) {    
+    // use CSS pixels for layout    
+    const cssW = canvas.clientWidth || parseInt(canvas.style.width || '320',10);    
+    const cx = cssW / 2, cy = cssW / 2, r = Math.min(cssW, cssW)/2 - 12;    
+    ctx.clearRect(0,0,cssW,cssW);    
+    ctx.save();    
+    // rotate wheel around center    
+    ctx.translate(cx,cy);    
+    ctx.rotate(rotationDeg * Math.PI/180);    
+    ctx.translate(-cx,-cy);    
+    const segAngle = 2 * Math.PI / SEGMENTS;    
+    const colors = ['#ecfeff','#e6f7ff','#fff8e1','#f3f5ff','#fff0f6','#eef6ff','#fbfbfd','#f0fbff'];    
+    for (let i=0;i<SEGMENTS;i++){      
+      const start = -Math.PI/2 + i*segAngle;      
+      const end = start + segAngle;      
+      // slice      
+      ctx.beginPath();      
+      ctx.moveTo(cx,cy);      
+      ctx.arc(cx,cy,r,start,end);      
+      ctx.closePath();      
+      ctx.fillStyle = colors[i % colors.length];      
+      ctx.fill();      
+      ctx.strokeStyle = 'rgba(2,6,23,0.04)';      
+      ctx.lineWidth = 1;      
+      ctx.stroke();      
+      // amount label near rim      
+      const mid = (start + end) / 2;      
+      const labelR = r * 0.78;      
+      const lx = cx + Math.cos(mid) * labelR;      
+      const ly = cy + Math.sin(mid) * labelR;      
+      ctx.save();      
+      ctx.translate(lx, ly);      
+      ctx.rotate(mid + Math.PI/2);      
+      ctx.fillStyle = '#0f172a';      
+      ctx.font = `${Math.max(11, Math.round(cssW * 0.035))}px Inter, system-ui`;      
+      ctx.textAlign = 'center';      
+      ctx.textBaseline = 'middle';      
+      ctx.fillText(`₦${PRIZES[i]}`, 0, 0);      
+      ctx.restore();      
+      // coin image (upright)      
+      if (coinImg && coinImg.complete) {        
+        const imgR = r * 0.56;        
+        const ix = cx + Math.cos(mid) * imgR;        
+        const iy = cy + Math.sin(mid) * imgR;        
+        ctx.save();        
+        ctx.translate(ix, iy);        
+        ctx.rotate(-(rotationDeg * Math.PI/180)); // keep upright        
+        const coinSize = Math.max(28, Math.round(cssW * 0.12));        
+        ctx.drawImage(coinImg, -coinSize/2, -coinSize/2, coinSize, coinSize);        
+        // verified badge for 1000        
+        if (PRIZES[i] === 1000 && verifiedImg.complete) {          
+          const b = Math.round(coinSize * 0.45);          
+          ctx.drawImage(verifiedImg, coinSize/4, coinSize/4, b, b);        
+        }        
+        ctx.restore();      
+      }    
+    }    
+    // bold outer edge ring    
+    ctx.beginPath();    
+    ctx.arc(cx, cy, r + 6, 0, Math.PI*2);    
+    ctx.strokeStyle = 'rgba(15,23,42,0.06)';    
+    ctx.lineWidth = 10;    
+    ctx.stroke();    
+    // center button    
+    ctx.beginPath();    
+    ctx.arc(cx, cy, 48, 0, Math.PI*2);    
+    ctx.fillStyle = '#fff';    
+    ctx.fill();    
+    ctx.lineWidth = 2;    
+    ctx.strokeStyle = 'rgba(15,23,42,0.06)';    
+    ctx.stroke();    
+    ctx.fillStyle = '#0f172a';    
+    ctx.font = '700 14px Inter, system-ui';    
+    ctx.textAlign = 'center';    
+    ctx.textBaseline = 'middle';    
+    ctx.fillText('SPIN', cx, cy - 6);    
+    ctx.font = '600 12px Inter, system-ui';    
+    ctx.fillText('NOW', cx, cy + 12);    
+    ctx.restore();  
+  }  
+  
+  // ---------- easing animation ----------  
+  function animateTo(targetAbsolute, duration = 5200) {    
+    return new Promise(resolve => {      
+      const start = performance.now();      
+      const from = lastRotation;      
+      const diff = targetAbsolute - from;      
+      function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }      
+      function frame(now){        
+        const t = Math.min(1, (now - start) / duration);        
+        const v = from + diff * easeOutCubic(t);        
+        drawWheel(v);        
+        if (t < 1) requestAnimationFrame(frame);        
+        else {          
+          lastRotation = ((targetAbsolute % 360) + 360) % 360;          
+          drawWheel(lastRotation);          
+          resolve();        
+        }      
+      }      
+      requestAnimationFrame(frame);    
+    });  
+  }  
+  
+  // ---------- compute available spins & update UI ----------  
+  function recomputeSpinsUI(){    
+    const goals = {      
+      affiliateApproved: Number(document.querySelector('.challenge-card[data-key="affiliateApproved"]')?.dataset.goal || 10),      
+      taskApproved: Number(document.querySelector('.challenge-card[data-key="taskApproved"]')?.dataset.goal || 10),      
+      dataAmount: Number(document.querySelector('.challenge-card[data-key="dataAmount"]')?.dataset.goal || 1000),      
+      airtimeAmount: Number(document.querySelector('.challenge-card[data-key="airtimeAmount"]')?.dataset.goal || 500)    
+    };    
+    const flags = [      
+      (progressState.affiliateApproved || 0) >= goals.affiliateApproved,      
+      (progressState.taskApproved || 0) >= goals.taskApproved,      
+      (progressState.dataAmount || 0) >= goals.dataAmount,      
+      (progressState.airtimeAmount || 0) >= goals.airtimeAmount    
+    ];    
+    const completedCount = flags.filter(Boolean).length;    
+    const base = 1;    
+    let used = 0;    
+    let usedDateKey = null;    
+    if (userDocCached) {      
+      used = Number(userDocCached.spinsUsedCount || 0);      
+      const prev = userDocCached.spinsUsedDate || null;      
+      if (prev) {        
+        try { usedDateKey = (typeof prev.toDate === 'function') ? prev.toDate().toISOString().slice(0,10) : new Date(prev).toISOString().slice(0,10); }        
+        catch(e){ usedDateKey = prev; }      
+      }      
+      if (usedDateKey !== todayKey()) used = 0;    
+    }    
+    const newAvailable = Math.max(0, base + completedCount - used);    
+    if (newAvailable !== spinsAvailable) {      
+      spinsAvailable = newAvailable;      
+      if (spinCountEl) spinCountEl.textContent = `${spinsAvailable}`;      
+      if (spinCountEl) {        
+        spinCountEl.animate([{ transform:'scale(1)'},{ transform:'scale(1.18)'},{ transform:'scale(1)'}], { duration:350, easing:'ease-out' });      
+      }    
+    }    
+    challengeCards.forEach(card => {      
+      const key = card.dataset.key;      
+      const goal = Number(card.dataset.goal || 1);      
+      let val = 0;      
+      if (key === 'affiliateApproved') val = progressState.affiliateApproved || 0;      
+      else if (key === 'taskApproved') val = progressState.taskApproved || 0;      
+      else if (key === 'dataAmount') val = progressState.dataAmount || 0;      
+      else if (key === 'airtimeAmount') val = progressState.airtimeAmount || 0;      
+      const percent = Math.min(100, (val / goal) * 100);      
+      const bar = card.querySelector('.progress-bar');      
+      const status = card.querySelector('.status-text');      
+      if (bar) bar.style.width = percent + '%';      
+      if (status) {        
+        if (val >= goal) { status.textContent = 'Completed'; status.classList.remove('not-completed'); status.classList.add('completed'); }        
+        else { status.textContent = 'Not completed'; status.classList.remove('completed'); status.classList.add('not-completed'); }      
+      }    
+    });  
+  }  
+
+  // ---------- debug helpers ----------  
+  window.__spinDebug = { drawWheel, setupCanvasHD, recomputeSpinsUI, progressState, PRIZES, lastRotation, guaranteedPrizes };
 })();
-
-
 
 
 
