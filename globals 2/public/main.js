@@ -137,7 +137,7 @@ window.saveProfile = async function () {
 
   // update referral link
   document.getElementById("refLinkDisplay").value = 
-    `https://globals-myzv.onrender.com/signup.html?ref=${newUsername}`;
+    `https://globalstasks.name.ng/signup.html?ref=${newUsername}`;
 
   alert("Profile updated!");
 };
@@ -4309,7 +4309,7 @@ document.addEventListener("DOMContentLoaded", function () {
 // ========================
 // CONFIG
 // ========================
-const BASE_URL = "https://globals-myzv.onrender.com"; // your root link
+const BASE_URL = "https://globalstasks.name.ng"; // your root link
 
 // ========================
 // HELPERS
