@@ -64,7 +64,7 @@ auth.onAuthStateChanged(async (user) => {
     document.getElementById("fullName").value = data.fullName || "";
     document.getElementById("editEmail").value = data.email || "";
     document.getElementById("phoneNumber").value = data.phone || "";
-    document.getElementById("refLinkDisplay").value = `https://globals-myzv.onrender.com/signup.html?ref=${data.username}`;
+    document.getElementById("refLinkDisplay").value = `https://globalstasks.name.ng/signup.html?ref=${data.username}`;
     document.getElementById("joinDate").value = new Date(user.metadata.creationTime).toLocaleDateString();
   }
 
