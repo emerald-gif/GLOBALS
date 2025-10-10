@@ -6947,7 +6947,7 @@ window.loadBanks = loadBanks;
     const btn = document.createElement('button');
     btn.id = 'no-spin-watch-ad';
     btn.textContent = 'Watch Ad & Get 1 Free Spin';
-    btn.className = 'px-6 py-2 rounded-full bg-emerald-500 text-white font-semibold ml-3';
+    btn.className = 'px-6 py-2 rounded-full bg-emerald-600 text-blue font-semibold ml-3';
     btn.addEventListener('click', () => {
       // hide modal and start ad
       if (noSpinModal) { noSpinModal.classList.add('hidden'); noSpinModal.style.display = 'none'; }
