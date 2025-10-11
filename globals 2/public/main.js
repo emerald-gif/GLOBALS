@@ -4048,9 +4048,26 @@ window.activateTab = function(tabId) {
   // highlight nav-btn
   const allNavBtns = document.querySelectorAll('.nav-btn');
   allNavBtns.forEach(btn => btn.classList.remove('active-nav'));
-
   const activeBtn = document.getElementById(`nav-${tabId}`);
   if (activeBtn) activeBtn.classList.add('active-nav');
+
+  // ---------- LAZY INIT ----------
+  const activeSection = document.getElementById(tabId);
+  if (!activeSection.dataset.loaded) {
+    switch(tabId) {
+      case 'aff2_root':
+        initaff2_root();
+        break;
+      case 'payment':
+        initPayment();
+        break;
+      case 'taskSection':
+        inittaskSection();
+        break;
+      // add other tabs here as you wrap them
+    }
+    activeSection.dataset.loaded = "true";
+  }
 };
 
 // ---------- Sidebar close ----------
