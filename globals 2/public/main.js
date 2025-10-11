@@ -2075,7 +2075,8 @@ firebase.auth().onAuthStateChanged((user) => {
 
 // ---------- Helpers ----------
 
-
+function initTaskSection() {
+	
 function generateProofUploadFields(count) {
   let html = '';
   for (let i = 1; i <= count; i++) {
@@ -2558,7 +2559,7 @@ async function showTaskSubmissionDetailsUser(submissionId) {
   }
 }
 
-
+}
 
 
 
@@ -4055,14 +4056,14 @@ window.activateTab = function(tabId) {
   const activeSection = document.getElementById(tabId);
   if (!activeSection.dataset.loaded) {
     switch(tabId) {
-      case 'aff2_root':
-        initaff2_root();
-        break;
+      case 'watchAdsSection':   // match the ID in your HTML
+  initWatchAdsSection();
+  break;
       case 'payment':
-        initPayment();
+        initPaymentSection();
         break;
       case 'taskSection':
-        inittaskSection();
+        initTaskSection();
         break;
       // add other tabs here as you wrap them
     }
@@ -5855,10 +5856,15 @@ auth.onAuthStateChanged(async user => {
 
 
 
+// ----------------------
+// Payment Section Module
+// ----------------------
 
+// DOM elements
 const paymentTxListEl = document.getElementById("transactionList");
 const paymentTxFilterEl = document.getElementById("transactionFilter");
 
+// State
 let paymentTransactions = [];
 let paymentRenderedCount = 0;
 const PAYMENT_PAGE_SIZE = 10;
@@ -5867,6 +5873,7 @@ const PAYMENT_PAGE_SIZE = 10;
 // Format helpers
 // ----------------------
 function fmtNaira(n) { return "₦" + Number(n||0).toLocaleString(); }
+
 function parseTimestamp(val){
   if(!val) return null;
   if(typeof val.toDate==="function") return val.toDate();
@@ -5875,6 +5882,7 @@ function parseTimestamp(val){
   if(typeof val==="string"){const d=new Date(val);return isNaN(d.getTime())?null:d;}
   return null;
 }
+
 function formatAmount(amount){ return fmtNaira(amount); }
 function formatDatePretty(d){ return d?d.toLocaleString():"—"; }
 
@@ -5960,20 +5968,20 @@ function startPaymentListener(){
 }
 
 // ----------------------
-// Init Payment section
+// Init Payment section (lazy load)
 // ----------------------
 function initPaymentSection(){
+  const user = firebase.auth().currentUser;
+  if(!user) return; // exit if no user
+
   startPaymentListener();
   paymentTxFilterEl?.addEventListener("change",applyPaymentFilter);
+
+  console.log("Payment section initialized");
 }
 
-// ----------------------
-// Start after auth ready
-// ----------------------
-firebase.auth().onAuthStateChanged(user=>{
-  if(user) initPaymentSection();
-});
-
+// Expose globally so activateTab can call it
+window.initPaymentSection = initPaymentSection;
 
 
 
@@ -6637,7 +6645,7 @@ window.loadBanks = loadBanks;
   - Safe if Firebase isn't initialized (localStorage fallback)
 */
 
-(function () {
+function initWatchAdsSection() {
   'use strict';
 
   // ====== CONFIG ======
@@ -7260,8 +7268,9 @@ async function rewardUser(uid, cardId) {
 
   }); // DOMContentLoaded end
 
-})();
 
+}
+window.initWatchAdsSection = initWatchAdsSection;
 
 
 
