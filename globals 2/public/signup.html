@@ -21,7 +21,7 @@
 <body class="flex items-center justify-center min-h-screen px-4">
   <div class="w-full max-w-md glass p-6 rounded-2xl">
     <div class="mb-6 text-center">
-      <img src="VERIFIED.jpg" alt="Globals Logo" class="mx-auto h-16 w-16 mb-2">
+      <img src="GLOBALS.jpg" alt="Globals Logo" class="mx-auto h-16 w-16 mb-2">
       <h2 class="text-2xl font-extrabold text-blue-700">Create Account</h2>
       <p class="text-sm text-gray-600 mt-2">Enter your details to create account — Signup is free.</p>
     </div>
@@ -341,7 +341,27 @@ if (exists) {
         submitBtn.textContent = originalText;
       }
     });
+
+
+     // --------- Prefill referral from URL ----------
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const ref = params.get('ref'); // get "ref" parameter
+  if (ref) {
+    const refInput = document.getElementById('referrer');
+    if (refInput) {
+      refInput.value = ref;
+    }
+  }
+})();
+
+
+
+    
   </script>
+
+  
 </body>
 </html>
+
 
