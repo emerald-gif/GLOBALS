@@ -3987,74 +3987,229 @@
 
 <!-- GLOBALS AI Help Center Section -->
 
-<!-- 🌐 GLOBALS AI HELP CENTER -->
-<div id="aiHelpCenter" class="tab-section hidden bg-gradient-to-b from-sky-50 via-white to-indigo-50 min-h-screen flex flex-col">
+<!-- GLOBALS AI Help Center Section (UPDATED) -->
+<div id="aiHelpCenter" class="tab-section hidden bg-gray-50 min-h-screen flex flex-col">
 
-  <!-- 🔙 Back Button -->
-  <button onclick="activateTab('contactus')" 
-    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4 px-4 pt-4">
+  <!-- Back Button -->
+  <button onclick="activateTab('contactus')"
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
     </svg>
     Back
   </button>
 
-  <!-- 🧠 Header -->
-  <div class="px-4 py-3 bg-white text-blue-600 font-semibold text-lg flex items-center gap-2 shadow-sm border-b border-gray-200">
+  <!-- Header -->
+  <div class="p-3 bg-white text-blue-600 font-semibold text-lg flex items-center gap-2 shadow-sm border-b border-gray-200">
     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m2 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M9 12h6m2 0a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
     AI Help Center
   </div>
 
-  <!-- ⚡ Quick Topics -->
-  <div class="grid grid-cols-2 gap-3 p-4">
-    <button onclick="openAiTopic('aiContent')" class="ai-topic-btn">🧠 AI Content</button>
-    <button onclick="openAiTopic('paymentHelp')" class="ai-topic-btn">💳 Payment Steps</button>
-    <button onclick="openAiTopic('withdrawalHelp')" class="ai-topic-btn">🏧 Withdrawals</button>
-    <button onclick="openAiTopic('taskHelp')" class="ai-topic-btn">✅ Task Guide</button>
-    <button onclick="openAiTopic('ebookHelp')" class="ai-topic-btn">📚 Buy eBook</button>
-    <button onclick="openAiTopic('referralHelp')" class="ai-topic-btn">👥 Referral Info</button>
-    <button onclick="openAiTopic('chat')" class="ai-topic-btn col-span-2 bg-blue-600 text-white hover:bg-blue-700 transition">
-      💬 Start Conversation
+  <!-- Categories -->
+  <div class="grid grid-cols-2 gap-3 p-3">
+    <!-- AI Content -->
+    <button onclick="openAiTopic('aiContent')"
+      class="bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-50 transition text-sm relative">
+      <span class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-l-md"></span>
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24"
+        stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 8v4l3 3m6 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      AI Content
+    </button>
+
+    <!-- Payment Steps -->
+    <button onclick="openAiTopic('paymentHelp')"
+      class="bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-50 transition text-sm relative">
+      <span class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-l-md"></span>
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24"
+        stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 8c-4.418 0-8 1.79-8 4v4h16v-4c0-2.21-3.582-4-8-4z" />
+      </svg>
+      Payment Steps
+    </button>
+
+    <!-- Withdrawal Steps -->
+    <button onclick="openAiTopic('withdrawalHelp')"
+      class="bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-50 transition text-sm relative">
+      <span class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-l-md"></span>
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24"
+        stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M17 9V7a5 5 0 00-10 0v2m-2 4h14v4H5v-4z" />
+      </svg>
+      Withdrawal Steps
+    </button>
+
+    <!-- Task Guide -->
+    <button onclick="openAiTopic('taskHelp')"
+      class="bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-50 transition text-sm relative">
+      <span class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-l-md"></span>
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24"
+        stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M9 12l2 2 4-4M7 12l5 5 7-7" />
+      </svg>
+      Task Guide
+    </button>
+
+    <!-- Buy eBook Steps -->
+    <button onclick="openAiTopic('ebookHelp')"
+      class="bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-50 transition text-sm relative">
+      <span class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-l-md"></span>
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24"
+        stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 20l9-5-9-5-9 5 9 5z" />
+      </svg>
+      Buy eBook Steps
+    </button>
+
+    <!-- Referral & Team -->
+    <button onclick="openAiTopic('referralHelp')"
+      class="bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-50 transition text-sm relative">
+      <span class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-l-md"></span>
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24"
+        stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M17 20h5v-2a4 4 0 00-4-4h-1M7 20H2v-2a4 4 0 014-4h1M12 11a4 4 0 100-8 4 4 0 000 8z" />
+      </svg>
+      Referral & Team
+    </button>
+
+    <!-- Start Conversation -->
+    <button onclick="openAiTopic('chat')"
+      class="bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-50 transition text-sm relative">
+      <span class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-l-md"></span>
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24"
+        stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 5.523-4.477 10-10 10S1 17.523 1 12 5.477 2 11 2c5.523 0 10 4.477 10 10z" />
+      </svg>
+      Start Conversation
     </button>
   </div>
 
-  <!-- 📘 Static Guides -->
-  <div id="guideContainer" class="hidden mx-4 mb-4 bg-white border border-gray-200 rounded-2xl shadow-sm p-4 text-gray-700 text-sm leading-relaxed"></div>
+  <!-- Static Guide Container -->
+  <div id="guideContainer" class="p-3 hidden bg-white rounded-lg shadow-sm border border-gray-200"></div>
 
-  <!-- 💬 Chat Container -->
-  <div id="chatContainer" class="fixed inset-0 bg-white flex flex-col hidden transform translate-y-full transition-transform duration-300 z-50">
-
-    <!-- Header -->
+  <!-- Conversation Area (Chat overlay) -->
+  <div id="chatContainer"
+    class="fixed inset-0 bg-white flex flex-col hidden transform translate-y-full transition-transform duration-300 z-50">
+    <!-- Chat Header -->
     <div class="flex items-center gap-3 p-3 bg-blue-600 text-white sticky top-0 z-10 shadow">
-      <button onclick="closeChat()" class="p-1 rounded-full bg-white/20 hover:bg-white/30 text-lg">←</button>
+      <button onclick="closeChat()" aria-label="Close chat"
+        class="p-1 rounded-full bg-white/20 hover:bg-white/30 text-white">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
       <div class="flex items-center gap-2">
-        <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center font-semibold text-sm">G</div>
+        <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center font-semibold text-sm">G
+        </div>
         <div>
           <div class="font-semibold text-sm">Globals Support</div>
-          <div class="text-xs text-green-300">● Online</div>
+          <div id="globals-status" class="text-xs text-green-300">● Online</div>
         </div>
       </div>
     </div>
 
     <!-- Messages -->
-    <div id="chatMessages" class="flex-1 overflow-y-auto p-3 bg-gray-50 space-y-2"></div>
+    <div id="chatMessages" class="flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50"></div>
 
-    <!-- Input -->
-    <div class="p-2 flex items-center gap-2 border-t bg-white">
-      <input id="userMessage" type="text" class="flex-1 p-2 rounded-full border border-gray-300 focus:outline-none text-xs" placeholder="Type a message..." />
-      <button onclick="sendMessage()" class="bg-blue-600 text-white px-3 py-1.5 rounded-full text-xs hover:opacity-90 transition">Send</button>
+    <!-- Input Bar -->
+    <div class="p-2 flex items-center gap-2 border-t bg-white rounded-t-md">
+      <input id="userMessage" type="text"
+        class="flex-1 p-2 rounded-full border border-gray-300 focus:outline-none text-xs" placeholder="Type a message..." />
+      <button onclick="sendMessage()"
+        class="bg-blue-600 text-white px-3 py-1.5 rounded-full text-xs hover:opacity-90 transition">Send</button>
     </div>
   </div>
 </div>
 
-<!-- 💡 Style for quick topic buttons -->
-<style>
-.ai-topic-btn {
-  @apply bg-white border border-gray-200 rounded-lg p-3 text-sm flex items-center justify-center hover:bg-gray-50 transition font-medium;
-}
-</style>
+<!-- Small helper script (non-destructive — won't override if you already have these functions) -->
+<script>
+  (function () {
+    const guideKeys = ['aiContent', 'paymentHelp', 'withdrawalHelp', 'taskHelp', 'ebookHelp', 'referralHelp'];
+
+    if (typeof window.openAiTopic === 'undefined') {
+      window.openAiTopic = function (topic) {
+        const guideContainer = document.getElementById('guideContainer');
+        const chatContainer = document.getElementById('chatContainer');
+
+        // Open chat view
+        if (topic === 'chat') {
+          if (!chatContainer) return;
+          // show overlay
+          chatContainer.classList.remove('hidden');
+          // trigger animation: remove translate-y-full -> translate-y-0
+          setTimeout(() => {
+            chatContainer.classList.remove('translate-y-full');
+            chatContainer.classList.add('translate-y-0');
+          }, 10);
+
+          // focus input
+          setTimeout(() => {
+            const input = document.getElementById('userMessage');
+            if (input) input.focus();
+            // greet using local fallback if available
+            if (typeof appendAssistantBubble === 'function' && typeof localAssistantResponse === 'function') {
+              appendAssistantBubble(localAssistantResponse('hi'));
+            }
+          }, 120);
+          return;
+        }
+
+        // Show static guide
+        if (guideKeys.includes(topic) && guideContainer) {
+          guideContainer.innerHTML = (typeof GUIDES !== 'undefined' && GUIDES[topic]) ? GUIDES[topic] : 'No info found.';
+          guideContainer.classList.remove('hidden');
+
+          // hide chat overlay if open
+          if (chatContainer && !chatContainer.classList.contains('hidden')) {
+            // animate hide
+            chatContainer.classList.add('translate-y-full');
+            setTimeout(() => chatContainer.classList.add('hidden'), 300);
+          }
+          // scroll guide into view on small screens
+          setTimeout(() => guideContainer.scrollIntoView({ behavior: 'smooth' }), 40);
+          return;
+        }
+
+        // Fallback: if topic isn't known, try opening as chat
+        if (topic === undefined || topic === null) {
+          openAiTopic('chat');
+        }
+      };
+    }
+
+    if (typeof window.closeChat === 'undefined') {
+      window.closeChat = function () {
+        const chatContainer = document.getElementById('chatContainer');
+        if (!chatContainer) return;
+        // animate down then hide
+        chatContainer.classList.add('translate-y-full');
+        setTimeout(() => chatContainer.classList.add('hidden'), 300);
+      };
+    }
+
+    // Minimal activateTab fallback if your app doesn't provide it
+    if (typeof window.activateTab === 'undefined') {
+      window.activateTab = function (tabId) {
+        document.querySelectorAll('.tab-section').forEach(el => el.classList.add('hidden'));
+        const el = document.getElementById(tabId);
+        if (el) el.classList.remove('hidden');
+      };
+    }
+  })();
+</script>
 
 
 
