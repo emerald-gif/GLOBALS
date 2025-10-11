@@ -3776,12 +3776,12 @@ function showTapSection(tab) {
     return "₦" + n.toLocaleString();
   }
   function coerceNumber(val) {
-    if (val == null) return 0;
-    if (typeof val === "number") return isFinite(val) ? val : 0;
-    var s = String(val).replace(/[₦,\s]/g, "");
-    var n = Number(s);
-    return isFinite(n) ? n : 0;
-  }
+  if (val == null) return 0;
+  if (typeof val === "number") return isFinite(val) ? val : 0;
+  var s = String(val).replace(/[₦,\s]/g, "");
+  var n = parseFloat(s);   // <-- parseFloat to preserve decimals
+  return isFinite(n) ? n : 0;
+}
   function isVisible(el) {
     if (!el || !d.contains(el)) return false;
     return el.getClientRects().length > 0 && !(d.hidden);
@@ -3789,29 +3789,31 @@ function showTapSection(tab) {
 
   // animateNumber (cancellable)
   function animateNumber(el, from, to, duration) {
-    if (!el) return;
-    if (!isVisible(el) || duration <= 0) {
-      el.textContent = fmtNaira(to);
-      return;
-    }
-    if (el.__rafId) cancelAnimationFrame(el.__rafId);
-    var start = performance.now();
-    var diff = to - from;
-    var D = Math.max(200, duration || 800);
-
-    function step(t) {
-      var p = Math.min((t - start) / D, 1);
-      var eased = 1 - Math.pow(1 - p, 3);
-      var val = Math.round(from + diff * eased);
-      el.textContent = fmtNaira(val);
-      if (p < 1) {
-        el.__rafId = requestAnimationFrame(step);
-      } else {
-        el.__rafId = null;
-      }
-    }
-    el.__rafId = requestAnimationFrame(step);
+  if (!el) return;
+  if (!isVisible(el) || duration <= 0) {
+    el.textContent = fmtNaira(to);
+    return;
   }
+  if (el.__rafId) cancelAnimationFrame(el.__rafId);
+  var start = performance.now();
+  var diff = to - from;
+  var D = Math.max(200, duration || 800);
+
+  function step(t) {
+    var p = Math.min((t - start) / D, 1);
+    var eased = 1 - Math.pow(1 - p, 3);
+    // preserve 2 decimals
+    var val = from + diff * eased;
+    el.textContent = "₦" + val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (p < 1) {
+      el.__rafId = requestAnimationFrame(step);
+    } else {
+      el.__rafId = null;
+    }
+  }
+
+  el.__rafId = requestAnimationFrame(step);
+}
 
   // controller
   var ctrl = {
@@ -4429,26 +4431,39 @@ auth.onAuthStateChanged(async user => {
 // ========================
 // CARD UI
 // ========================
-function generateReferralCard(user){
-  const initials = (user.username || "U").slice(0,1).toUpperCase();
+function generateReferralCard(user) {
+  const initials = (user.username || "U").slice(0, 1).toUpperCase();
   const amount = user.premium ? 500 : 0;
 
   return `
-    <div class="bg-white rounded-2xl shadow-md p-4 flex items-center justify-between hover:shadow-lg transition">
-      <div class="flex items-center gap-3">
-        ${
-          user.profile
-            ? `<img src="${user.profile}" class="w-10 h-10 rounded-full object-cover" alt="${user.username}">`
-            : `<div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-semibold">${initials}</div>`
+    <div class="bg-white/80 backdrop-blur-md rounded-3xl shadow-lg p-4 flex items-center justify-between gap-4 hover:shadow-2xl transition duration-300 ease-in-out">
+      <!-- Left: Avatar & Info -->
+      <div class="flex items-center gap-4">
+        ${user.profile
+          ? `<img src="${user.profile}" class="w-12 h-12 rounded-full object-cover border-2 border-indigo-500" alt="${user.username}">`
+          : `<div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-lg border-2 border-indigo-300">${initials}</div>`
         }
-        <div>
-          <p class="font-semibold text-sm">${user.username}</p>
-          <p class="text-[11px] text-gray-500">${user.premium ? "Premium" : "Signed up"}</p>
+        <div class="flex flex-col">
+          <p class="font-semibold text-gray-900 text-sm md:text-base">${user.username}</p>
+          <span class="inline-flex items-center gap-1 text-xs md:text-sm font-medium ${
+            user.premium ? "text-indigo-600" : "text-gray-500"
+          }">
+            ${user.premium 
+              ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Premium` 
+              : "Signed up"
+            }
+          </span>
         </div>
       </div>
-      <div class="text-right">
-        <p class="font-bold ${amount>0 ? "text-green-600" : "text-gray-400"}">${money(amount)}</p>
-        <p class="text-[11px] text-gray-400">Commission</p>
+
+      <!-- Right: Commission -->
+      <div class="flex flex-col items-end justify-center gap-1">
+        <span class="px-3 py-1 rounded-full text-sm md:text-base font-semibold ${
+          amount > 0 ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-400"
+        } transition-all duration-300">
+          ${money(amount)}
+        </span>
+        <span class="text-[10px] md:text-xs text-gray-400">Commission</span>
       </div>
     </div>
   `;
