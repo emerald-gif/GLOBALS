@@ -6659,7 +6659,7 @@ function initWatchAdsSection() {
   const db = (window.firebase && typeof firebase.firestore === 'function') ? firebase.firestore() : null;
 
   // ====== DOM READY ======
-  document.addEventListener('DOMContentLoaded', () => {
+  
 
     // ====== ELEMENTS (guarded) ======
     const adsGrid = document.getElementById('adsGrid');
