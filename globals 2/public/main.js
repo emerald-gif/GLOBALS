@@ -4056,13 +4056,21 @@ window.activateTab = function(tabId) {
       case 'watchAdsSection':   // match the ID in your HTML
   initWatchAdsSection();
   break;
+
+			
       case 'payment':
         initPaymentSection();
         break;
+
+			
       case 'taskSection':
         initTaskSection();
         break;
 
+case 'referrals':
+    initReferralTab(); // only run referral logic when tab opens
+    break;
+			
 			case 'aff2_root':
   AffiliateV2.init(); // only initialize when the tab is active
   break;
@@ -4305,69 +4313,70 @@ function openTerms() {
 // ========================
 // FIREBASE BINDINGS
 // ========================
-auth.onAuthStateChanged(async user => {
-  if (!user) return;
 
-  // get current user's username (referrer)
-  const userDoc = await db.collection("users").doc(user.uid).get();
-  const data = userDoc.data() || {};
-  const username = (data.username || "user").toString();
 
-  // Build referral link
-  const referralLink = `${BASE_URL}/signup.html?ref=${encodeURIComponent(username)}`;
-  const inputA = document.getElementById("teamRefLink");
-  const inputB = document.getElementById("teamRefLinkVisible");
-  if (inputA) inputA.value = referralLink;
-  if (inputB) inputB.value = referralLink;
 
-  // Load referrals
-  const invitedSnap = await db.collection("users").where("referrer", "==", username).get();
+function initReferralTab() {
+  auth.onAuthStateChanged(async user => {
+    if (!user) return;
 
-  let invitedCount = 0;
-  let rewardedCount = 0;
+    // get current user's username (referrer)
+    const userDoc = await db.collection("users").doc(user.uid).get();
+    const data = userDoc.data() || {};
+    const username = (data.username || "user").toString();
 
-  const container = document.getElementById("referralList");
-  if (container) container.innerHTML = "";
+    // Build referral link
+    const referralLink = `${BASE_URL}/signup.html?ref=${encodeURIComponent(username)}`;
+    const inputA = document.getElementById("teamRefLink");
+    const inputB = document.getElementById("teamRefLinkVisible");
+    if (inputA) inputA.value = referralLink;
+    if (inputB) inputB.value = referralLink;
 
-  // Process each referral
-  const creditTasks = [];
-  invitedSnap.forEach((docSnap) => {
-    const u = docSnap.data();
-    invitedCount += 1;
+    // Load referrals
+    const invitedSnap = await db.collection("users").where("referrer", "==", username).get();
 
-    const isPremium = !!u.is_Premium;
-    const alreadyCredited = !!u.referralBonusCredited;
+    let invitedCount = 0;
+    let rewardedCount = 0;
+    const container = document.getElementById("referralList");
+    if (container) container.innerHTML = "";
 
-    if (isPremium) rewardedCount += 1;
+    const creditTasks = [];
+    invitedSnap.forEach((docSnap) => {
+      const u = docSnap.data();
+      invitedCount += 1;
 
-    // UI card (purely visual; not tied to balance)
-    if (container) {
-      container.innerHTML += generateReferralCard({
-        username: u.username || (u.name || "User"),
-        email: u.email || "",
-        profile: u.profile || "",
-        premium: isPremium
-      });
+      const isPremium = !!u.is_Premium;
+      const alreadyCredited = !!u.referralBonusCredited;
+
+      if (isPremium) rewardedCount += 1;
+
+      // UI card
+      if (container) {
+        container.innerHTML += generateReferralCard({
+          username: u.username || (u.name || "User"),
+          email: u.email || "",
+          profile: u.profile || "",
+          premium: isPremium
+        });
+      }
+
+      if (isPremium && !alreadyCredited) {
+        creditTasks.push(processReferralCreditTx(docSnap.id, user.uid));
+      }
+    });
+
+    if (creditTasks.length) {
+      try { await Promise.all(creditTasks); } catch(e) { console.error("Credit errors:", e); }
     }
 
-    // 👇 Credit in a single transaction (atomic + idempotent)
-    if (isPremium && !alreadyCredited) {
-      creditTasks.push(processReferralCreditTx(docSnap.id, user.uid));
-    }
+    // Update counters
+    const invitedCountEl = document.getElementById("invitedCount");
+    const rewardedCountEl = document.getElementById("rewardedCount");
+    if (invitedCountEl) invitedCountEl.innerText = invitedCount;
+    if (rewardedCountEl) rewardedCountEl.innerText = rewardedCount;
   });
-
-  // Wait for all credits to finish
-  if (creditTasks.length) {
-    try { await Promise.all(creditTasks); } catch(e) { console.error("Credit errors:", e); }
-  }
-
-  // Update counters
-  const invitedCountEl = document.getElementById("invitedCount");
-  const rewardedCountEl = document.getElementById("rewardedCount");
-  if (invitedCountEl) invitedCountEl.innerText = invitedCount;
-  if (rewardedCountEl) rewardedCountEl.innerText = rewardedCount;
-});
-
+}
+		
 // ========================
 // CARD UI
 // ========================
