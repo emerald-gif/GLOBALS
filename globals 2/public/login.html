@@ -17,7 +17,7 @@
 <body class="bg-gradient-to-br from-blue-100 to-blue-300 min-h-screen flex items-center justify-center p-4">    
   <div class="w-full max-w-md mx-auto p-6 rounded-2xl shadow-xl glass fade-in">    
     <div class="flex justify-center mb-4">    
-      <img src="VERIFIED.jpg" alt="Globals Logo" class="h-14 w-auto">    
+      <img src="GLOBALS.jpg" alt="Globals Logo" class="h-14 w-auto">    
     </div>  
     <h2 class="text-2xl font-bold text-center text-blue-800 mb-6">Welcome Back 👋</h2>    
     <form id="loginForm" class="space-y-4">    
@@ -35,7 +35,14 @@
       <div class="text-right">    
         <a href="forgot-password.html" class="text-sm text-blue-600 hover:underline">Forgot password?</a>    
       </div>    
-      <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold text-lg">Login</button>
+     
+      <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold text-lg flex items-center justify-center space-x-2">
+  <span id="loginBtnText">Login</span>
+  <span id="loginBtnSpinner" class="hidden animate-spin">
+    <i data-lucide="loader" class="w-5 h-5"></i>
+  </span>
+</button>
+      
     </form>    
     <p class="mt-4 text-center text-sm text-gray-600">    
       Don’t have an account? <a href="signup.html" class="text-blue-600 hover:underline font-medium">Register here</a>    
@@ -62,79 +69,94 @@
   </script>    
 
   <script>    
-    document.addEventListener('DOMContentLoaded', () => {    
-      if (window.lucide) lucide.createIcons();    
+document.addEventListener('DOMContentLoaded', () => {    
+  if (window.lucide) lucide.createIcons();    
 
-      const loginForm = document.getElementById('loginForm');    
-      const loginEmail = document.getElementById('loginEmail');    
-      const loginPassword = document.getElementById('loginPassword');    
-      const loginEmailError = document.getElementById('loginEmailError');    
-      const loginPasswordError = document.getElementById('loginPasswordError');    
-      const loginTogglePassword = document.getElementById('loginTogglePassword');    
+  const loginForm = document.getElementById('loginForm');    
+  const loginEmail = document.getElementById('loginEmail');    
+  const loginPassword = document.getElementById('loginPassword');    
+  const loginEmailError = document.getElementById('loginEmailError');    
+  const loginPasswordError = document.getElementById('loginPasswordError');    
+  const loginTogglePassword = document.getElementById('loginTogglePassword');    
+  const loginBtn = document.getElementById('loginBtn');    
+  const loginBtnText = document.getElementById('loginBtnText');    
+  const loginBtnSpinner = document.getElementById('loginBtnSpinner');    
 
-      // input error toggle    
-      loginEmail.addEventListener('input', () => {    
-        loginEmailError.classList.toggle('hidden', loginEmail.validity.valid && loginEmail.value.trim() !== '');    
-      });    
-      loginPassword.addEventListener('input', () => {    
-        loginPasswordError.classList.toggle('hidden', loginPassword.value.trim() !== '');    
-      });    
+  // input error toggle    
+  loginEmail.addEventListener('input', () => {    
+    loginEmailError.classList.toggle('hidden', loginEmail.validity.valid && loginEmail.value.trim() !== '');    
+  });    
+  loginPassword.addEventListener('input', () => {    
+    loginPasswordError.classList.toggle('hidden', loginPassword.value.trim() !== '');    
+  });    
 
-      // eye toggle    
-      loginTogglePassword.addEventListener('click', () => {    
-        const showing = loginPassword.type === 'text';    
-        loginPassword.type = showing ? 'password' : 'text';    
-        loginTogglePassword.innerHTML = showing    
-          ? '<i data-lucide="eye-off" class="w-5 h-5"></i>'    
-          : '<i data-lucide="eye" class="w-5 h-5"></i>';    
-        if (window.lucide) lucide.createIcons();    
-      });    
+  // eye toggle    
+  loginTogglePassword.addEventListener('click', () => {    
+    const showing = loginPassword.type === 'text';    
+    loginPassword.type = showing ? 'password' : 'text';    
+    loginTogglePassword.innerHTML = showing    
+      ? '<i data-lucide="eye-off" class="w-5 h-5"></i>'    
+      : '<i data-lucide="eye" class="w-5 h-5"></i>';    
+    if (window.lucide) lucide.createIcons();    
+  });    
 
-      // submit    
-      loginForm.addEventListener('submit', async (e) => {    
-        e.preventDefault();    
-        loginEmailError.classList.add('hidden');    
-        loginPasswordError.classList.add('hidden');    
+  // submit    
+  loginForm.addEventListener('submit', async (e) => {    
+    e.preventDefault();    
+    loginEmailError.classList.add('hidden');    
+    loginPasswordError.classList.add('hidden');    
 
-        const email = loginEmail.value.trim();    
-        const password = loginPassword.value;    
+    const email = loginEmail.value.trim();    
+    const password = loginPassword.value;    
 
-        if (!loginEmail.validity.valid || !email) {    
-          loginEmailError.classList.remove('hidden');    
-          return;    
-        }    
-        if (!password) {    
-          loginPasswordError.classList.remove('hidden');    
-          return;    
-        }    
+    if (!loginEmail.validity.valid || !email) {    
+      loginEmailError.classList.remove('hidden');    
+      return;    
+    }    
+    if (!password) {    
+      loginPasswordError.classList.remove('hidden');    
+      return;    
+    }    
 
-        try {    
-          const userCred = await auth.signInWithEmailAndPassword(email, password);    
-          const uid = userCred.user.uid;    
+    // ✅ Show spinner and disable button
+    loginBtn.disabled = true;    
+    loginBtnText.textContent = 'Logging in';    
+    loginBtnSpinner.classList.remove('hidden');    
 
-          // ✅ check verification status from Firestore    
-          const doc = await db.collection("users").doc(uid).get();    
-          if (!doc.exists) {    
-            alert("❌ User record not found. Please sign up again.");    
-            return;    
-          }    
-          const data = doc.data();    
-          if (!data.verified) {    
-            alert("⚠️ Your account is not verified yet. Please enter the code sent to your email.");    
-            window.location.href = `verify.html?uid=${uid}&email=${encodeURIComponent(data.email)}`;    
-          } else {    
-            window.location.href = 'dashboard.html';    
-          }    
-        } catch (err) {    
-          let msg = 'Login failed. Please try again.';    
-          if (err.code === 'auth/user-not-found') msg = 'No account found with this email.';    
-          else if (err.code === 'auth/wrong-password') msg = 'Incorrect password. Try again.';    
-          else if (err.code === 'auth/invalid-email') msg = 'Invalid email address.';    
-          alert('❌ ' + msg);    
-          console.error('Login failed:', err);    
-        }    
-      });    
-    });    
-  </script>  
+    try {    
+      const userCred = await auth.signInWithEmailAndPassword(email, password);    
+      const uid = userCred.user.uid;    
+
+      // check verification status from Firestore    
+      const doc = await db.collection("users").doc(uid).get();    
+      if (!doc.exists) {    
+        alert("❌ User record not found. Please sign up again.");    
+        throw new Error('User record missing');    
+      }    
+
+      const data = doc.data();    
+      if (!data.verified) {    
+        alert("⚠️ Your account is not verified yet. Please enter the code sent to your email.");    
+        window.location.href = `verify.html?uid=${uid}&email=${encodeURIComponent(data.email)}`;    
+      } else {    
+        window.location.href = 'dashboard.html';    
+      }    
+    } catch (err) {    
+      let msg = 'Login failed. Please try again.';    
+      if (err.code === 'auth/user-not-found') msg = 'No account found with this email.';    
+      else if (err.code === 'auth/wrong-password') msg = 'Incorrect password. Try again.';    
+      else if (err.code === 'auth/invalid-email') msg = 'Invalid email address.';    
+      alert('❌ ' + msg);    
+      console.error('Login failed:', err);    
+
+      // restore button state
+      loginBtn.disabled = false;    
+      loginBtnText.textContent = 'Login';    
+      loginBtnSpinner.classList.add('hidden');    
+    }    
+  });    
+});    
+</script>
 </body>
 </html>
+
