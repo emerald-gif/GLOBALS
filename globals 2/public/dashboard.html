@@ -940,18 +940,15 @@
 
 <!-- ================= WATCH ADS DASHBOARD + PLAYER (FULL) ================= -->
 
-<section id="watchAdsSection" class="tab-section hidden relative w-full py-16 bg-gradient-to-br from-indigo-50 via-white to-indigo-100 overflow-hidden">  
-
+<section id="watchAdsSection" class="tab-section hidden relative w-full pt-4 pb-10 bg-gradient-to-br from-indigo-50 via-white to-indigo-100 overflow-hidden">
   <!-- 🌟 Back Button -->
-  <div class="flex justify-start px-6 mb-6">
-    <button onclick="activateTab('dashboard')"  
-      class="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 font-medium bg-white/80 border border-indigo-100 shadow-sm rounded-xl px-4 py-2 backdrop-blur-md transition-all hover:shadow-md">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">  
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />  
-      </svg>  
-      Back
-    </button>
-  </div>
+  <button onclick="activateTab('dashboard')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
 
   <!-- gradient blur bg -->
   <div class="absolute inset-0 pointer-events-none">
@@ -965,7 +962,7 @@
       Watch Ads & Earn  
     </h2>  
     <p class="text-gray-600 mt-2 text-sm md:text-base">  
-      Watch short video ads and earn instant rewards — watched ads reset each day so you can come back and watch more. 
+      Watch short video ads and earn instant rewards — watched ads reset on reloads so you can come back and watch more. 
     </p>  
   </div>  
 
@@ -990,9 +987,24 @@
     <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">  
       <div class="text-xs text-gray-500">Ad Income (total)</div>  
       <div id="statAdTotal" class="text-lg font-semibold text-gray-900">₦0.00</div>  
-    </div>  
+    </div> 
+	  <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
+  <div class="text-xs text-gray-500">Bonus Balance</div>
+  <div class="text-lg font-semibold text-emerald-700">₦0.00</div>
+	  </div>
+	  
   </div>  
 
+
+
+     <div class="relative max-w-6xl mx-auto px-6 mb-4 mt-8">
+  <h3 class="text-xl font-semibold text-indigo-800 flex items-center gap-2">
+    <i data-lucide="play-circle" class="w-5 h-5 text-indigo-600"></i>
+    Available Ads
+  </h3>
+  <div class="h-[2px] bg-gradient-to-r from-indigo-500 via-purple-400 to-transparent mt-2 rounded-full"></div>
+</div>
+	
   <!-- ad cards grid -->
   <div class="relative max-w-6xl mx-auto px-6">  
     <div id="adsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>  
