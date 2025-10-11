@@ -321,8 +321,82 @@ app.post('/webhook/paystack', async (req, res) => {
 
 
 
+/* =======================
+   AI CHAT ROUTE (Globals AI Help Center)
+   ======================= */
+app.post("/api/ai-chat", async (req, res) => {
+  try {
+    const { message, history } = req.body || {};
+    if (!message) {
+      return res.status(400).json({ error: "Missing message" });
+    }
 
-/* Catch-all route (serve dashboard) */
+    const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+    if (!OPENAI_API_KEY) {
+      console.warn("⚠ OPENAI_API_KEY not set in environment!");
+      // Graceful fallback response (frontend will use local help after this)
+      return res.json({
+        reply:
+          "👋 Hi there! Our AI assistant is temporarily offline. Please try again later or contact human support."
+      });
+    }
+
+    // Build conversation context
+    const systemPrompt =
+      "You are the Globals Nigeria support assistant. Respond ONLY about platform-related topics such as Payments, Withdrawals, Tasks, Referrals, Ads, Account/Login, Transactions, Spin, Premium, and Troubleshooting. Be concise, helpful, and friendly.";
+
+    const messages = [
+      { role: "system", content: systemPrompt },
+      ...(Array.isArray(history) ? history.slice(-12) : []),
+      { role: "user", content: message }
+    ];
+
+    const payload = {
+      model: "gpt-4o-mini",
+      messages,
+      temperature: 0.2,
+      max_tokens: 600
+    };
+
+    const response = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        timeout: 15000
+      }
+    );
+
+    const aiReply =
+      response.data?.choices?.[0]?.message?.content?.trim() ||
+      "Sorry, I couldn't get that right now.";
+
+    return res.json({ reply: aiReply });
+  } catch (err) {
+    console.error("AI chat error:", err.response?.data || err.message || err);
+    return res.status(500).json({ error: "AI chat failed" });
+  }
+});
+
+
+
+
+
+
+
+
+
+// ... other API routes (withdrawal, verify-payment, etc.)
+
+// ✅ ADD THIS BLOCK (AI CHAT ROUTE)
+app.post("/api/ai-chat", async (req, res) => {
+  // ... code from Step 1 above ...
+});
+
+// ✅ Keep this last (do not move)
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "dashboard.html"));
 });
@@ -330,5 +404,6 @@ app.get("*", (req, res) => {
 /* Start server */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
 
 
