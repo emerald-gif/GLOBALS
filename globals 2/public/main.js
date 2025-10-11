@@ -1521,13 +1521,11 @@ function goToPinSetup() {
 
 
 
-/* ---------- CONFIG ---------- */
-/* IMPORTANT: For temporary local assistant we leave the API key empty.
-   Do NOT store a secret OpenAI API key in client-side JS for production.
-*/
-const OPENAI_KEY = process.env.OPENAI_API_KEY; // <-- leave empty for local fallback
+/* ---------- ENV KEY SETUP ---------- */
+const OPENAI_API_KEY = window?.ENV?.OPENAI_API_KEY || ""; // Render injects this securely
 
-/* ---------- GUIDE CONTENT (HTML strings) ---------- */
+
+/* ---------- GUIDE CONTENT ---------- */
 const GUIDES = {
   paymentHelp: `
     <h3 class="font-semibold text-lg mb-2">💵 Payment Steps</h3>
@@ -1535,96 +1533,87 @@ const GUIDES = {
       <li>Open Dashboard → Payment → Deposit.</li>
       <li>Choose a payment method (Card, Bank transfer, USSD).</li>
       <li>Enter the amount and follow the payment provider UI.</li>
-      <li>After payment, your funds should reflect in your balance. If not, upload proof or contact support with the transaction ID.</li>
+      <li>After payment, your funds should reflect in your balance. If not, upload proof or contact support.</li>
     </ol>
-    <p class="mt-2 text-xs text-gray-500">Tip: Double-check the account details shown on the deposit screen before sending money.</p>
+    <p class="mt-2 text-xs text-gray-500">Tip: Always double-check payment account details before sending money.</p>
   `,
   withdrawalHelp: `
     <h3 class="font-semibold text-lg mb-2">🏧 Withdrawal Steps</h3>
     <ol class="list-decimal ml-5 space-y-1 text-sm">
       <li>Open Dashboard → Withdraw.</li>
-      <li>Enter withdrawal amount and choose the saved bank account.</li>
-      <li>Confirm with your withdrawal PIN (set one in Settings if you haven't).</li>
-      <li>Processing time: usually 1-3 business days depending on bank.</li>
+      <li>Enter amount and choose your saved bank account.</li>
+      <li>Confirm with your PIN.</li>
+      <li>Processing time: 1–3 business days.</li>
     </ol>
-    <p class="mt-2 text-xs text-gray-500">If a withdrawal fails, check your account details and try again or contact support.</p>
+    <p class="mt-2 text-xs text-gray-500">If it fails, check your account details or contact support.</p>
   `,
   taskHelp: `
     <h3 class="font-semibold text-lg mb-2">✅ Task Guide</h3>
     <ol class="list-decimal ml-5 space-y-1 text-sm">
-      <li>Open the Tasks page and read the full instruction for each task.</li>
-      <li>Complete the task exactly as described (attach proof/screenshots if required).</li>
-      <li>Submit proof and wait for verification (approvals may take some hours).</li>
-      <li>Approved tasks credit your balance automatically.</li>
+      <li>Go to the Tasks page.</li>
+      <li>Read each task carefully and complete it exactly as described.</li>
+      <li>Submit proof if required, then wait for approval.</li>
     </ol>
-    <p class="mt-2 text-xs text-gray-500">Make sure screenshots include your Globals username where required.</p>
+    <p class="mt-2 text-xs text-gray-500">Approved tasks credit automatically after review.</p>
   `,
   ebookHelp: `
-    <h3 class="font-semibold text-lg mb-2">📚 Buy eBook Steps</h3>
+    <h3 class="font-semibold text-lg mb-2">📚 eBook Purchase</h3>
     <ol class="list-decimal ml-5 space-y-1 text-sm">
-      <li>Go to the eBook store page in the app.</li>
-      <li>Select the eBook and press Buy.</li>
-      <li>Complete payment through the payment modal.</li>
-      <li>After payment, a download link or "My Purchases" entry will appear.</li>
+      <li>Go to the eBook Store in the app.</li>
+      <li>Select an eBook and tap Buy.</li>
+      <li>Pay via Card, Bank or Wallet.</li>
+      <li>Access it from “My Purchases.”</li>
     </ol>
-    <p class="mt-2 text-xs text-gray-500">If the download isn't available, check "My Purchases" or contact support.</p>
-  `,
-  aiContent: `
-    <h3 class="font-semibold text-lg mb-2">🧠 AI Content (What it can do)</h3>
-    <ul class="list-disc ml-5 space-y-1 text-sm">
-      <li>Write captions, summarize text, or suggest task ideas related to Globals.</li>
-      <li>Answer how-to questions about Payments, Withdrawals, Tasks, Referrals and eBooks.</li>
-      <li>Will NOT answer unrelated general knowledge questions in this temporary mode.</li>
-    </ul>
   `,
   referralHelp: `
     <h3 class="font-semibold text-lg mb-2">👥 Referral & Team</h3>
     <ul class="list-disc ml-5 space-y-1 text-sm">
       <li>1st level commission: ₦1,700 per referred user.</li>
-      <li>2nd level commission: ₦500 per referred user.</li>
-      <li>Share your referral link from the Team / Referral screen.</li>
+      <li>2nd level: ₦500 per referred user.</li>
+      <li>Share your referral link on social media or with friends.</li>
+    </ul>
+  `,
+  aiContent: `
+    <h3 class="font-semibold text-lg mb-2">🧠 AI Support Info</h3>
+    <ul class="list-disc ml-5 space-y-1 text-sm">
+      <li>Answers platform-related questions: Payments, Withdrawals, Tasks, eBooks, Referrals.</li>
+      <li>Summarizes text or writes short messages related to Globals.</li>
     </ul>
   `
 };
 
 
-
-function showElement(id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); }
-function hideElement(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
-
-/* ---------- Chat UI functions ---------- */
+/* ---------- CHAT FUNCTIONS ---------- */
 function appendUserBubble(msg) {
   const chat = document.getElementById("chatMessages");
   const safe = escapeHtml(msg).replace(/\n/g, '<br/>');
-  chat.insertAdjacentHTML('beforeend',
-    `<div class="flex justify-end">
-       <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 rounded-2xl max-w-xs text-sm shadow-md">${safe}</div>
-     </div>`);
+  chat.insertAdjacentHTML('beforeend', `
+    <div class="flex justify-end mb-3 animate-fade-in">
+      <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 rounded-2xl max-w-xs text-sm shadow">${safe}</div>
+    </div>`);
   chat.scrollTop = chat.scrollHeight;
 }
 
 function appendAssistantBubble(html) {
   const chat = document.getElementById("chatMessages");
-  // html is expected to be safe or a sanitized string (we sanitize AI replies before passing)
-  chat.insertAdjacentHTML('beforeend',
-    `<div class="flex justify-start">
-       <div class="bg-white border p-3 rounded-2xl max-w-xs text-sm shadow-md">${html}</div>
-     </div>`);
+  chat.insertAdjacentHTML('beforeend', `
+    <div class="flex justify-start mb-3 animate-fade-in">
+      <div class="bg-white border p-3 rounded-2xl max-w-xs text-sm shadow text-gray-800">${html}</div>
+    </div>`);
   chat.scrollTop = chat.scrollHeight;
 }
 
 function showTypingIndicator() {
   const chat = document.getElementById("chatMessages");
-  const typingId = "typing-indicator";
-  if (document.getElementById(typingId)) return; // prevent duplicates
-  chat.insertAdjacentHTML('beforeend',
-    `<div id="${typingId}" class="flex justify-start">
-       <div class="bg-white border px-4 py-2 rounded-2xl max-w-xs text-sm shadow-md flex gap-1">
-         <span class="dot w-2 h-2 bg-gray-500 rounded-full animate-bounce"></span>
-         <span class="dot w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-150"></span>
-         <span class="dot w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-300"></span>
-       </div>
-     </div>`);
+  if (document.getElementById("typing-indicator")) return;
+  chat.insertAdjacentHTML('beforeend', `
+    <div id="typing-indicator" class="flex justify-start mb-3">
+      <div class="bg-white border p-3 rounded-2xl shadow flex gap-1">
+        <span class="dot w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
+        <span class="dot w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></span>
+        <span class="dot w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-300"></span>
+      </div>
+    </div>`);
   chat.scrollTop = chat.scrollHeight;
 }
 
@@ -1633,112 +1622,30 @@ function hideTypingIndicator() {
   if (el) el.remove();
 }
 
-/* ---------- Tab activation (keeps your nav hiding logic) ---------- */
-function activateTab(tabId) {
-  document.querySelectorAll('.tab-section').forEach(t => t.classList.add('hidden'));
-  const currentTab = document.getElementById(tabId);
-  if (currentTab) currentTab.classList.remove('hidden');
 
-  const topNavbar = document.getElementById("topNavbar");
-  const bottomNav = document.getElementById("bottomNav");
-  const backArrowBar = document.getElementById("backArrowBar");
-
-  const hideAllNav = (tabId === "aiHelpCenter");
-  if (topNavbar) topNavbar.style.display = hideAllNav ? "none" : "flex";
-  if (bottomNav) bottomNav.style.display = hideAllNav ? "none" : "flex";
-  if (backArrowBar) backArrowBar.classList.toggle("hidden", !hideAllNav);
-}
-
-/* ---------- Open a topic (chat or static guides) ---------- */
-function openAiTopic(topic) {
-  hideElement("guideContainer");
-  hideElement("chatContainer");
-  const chatMessages = document.getElementById("chatMessages");
-  if (chatMessages) chatMessages.innerHTML = "";
-
-  if (topic === "chat") {
-    const chat = document.getElementById("chatContainer");
-    if (chat) {
-      // make it visible first
-      chat.classList.remove("hidden");
-      // let CSS handle the slide-up animation
-      setTimeout(() => chat.classList.remove("translate-y-full"), 10);
-    }
-
-    const defaultHTML = `
-      <div>
-        <div class="font-medium mb-2">Hi — I'm the Globals assistant. I can help with Payments, Withdrawals, Tasks, eBooks and Referrals.</div>
-        <div class="text-sm mb-2">Try typing a question, or tap one of these quick topics:</div>
-        <div class="flex gap-2 flex-wrap">
-          <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('paymentHelp')">Payment Steps</button>
-          <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('withdrawalHelp')">Withdrawal Steps</button>
-          <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('taskHelp')">Task Guide</button>
-          <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('ebookHelp')">Buy eBook</button>
-        </div>
-      </div>`;
-    appendAssistantBubble(defaultHTML);
-    document.getElementById("userMessage")?.focus();
-    return;
-  }
-
-  const html = GUIDES[topic] || "<div class='text-sm'>No guide available.</div>";
-  const container = document.getElementById("guideContainer");
-  if (container) {
-    container.innerHTML = `<div class="bg-white p-4 rounded-lg shadow">${html}</div>`;
-    showElement("guideContainer");
-  }
-}
-
-function closeChat() {
-  const chat = document.getElementById("chatContainer");
-  if (chat) {
-    chat.classList.add("translate-y-full");
-    setTimeout(() => chat.classList.add("hidden"), 300);
-  }
-}
-
-
-/* ---------- Suggestion click ---------- */
-function suggestionClick(topic) {
-  appendUserBubble(topicLabel(topic));
-  const html = GUIDES[topic] || "<div class='text-sm'>No guide available.</div>";
-  appendAssistantBubble(html);
-}
-
-function topicLabel(topic) {
-  switch (topic) {
-    case 'paymentHelp': return "Payment Steps";
-    case 'withdrawalHelp': return "Withdrawal Steps";
-    case 'taskHelp': return "Task Guide";
-    case 'ebookHelp': return "Buy eBook Steps";
-    case 'aiContent': return "AI Content";
-    default: return topic;
-  }
-}
-
-/* ---------- Send message ---------- */
+/* ---------- SEND MESSAGE ---------- */
 async function sendMessage() {
   const input = document.getElementById("userMessage");
-  const msg = input ? input.value.trim() : '';
+  const msg = input?.value.trim();
   if (!msg) return;
-  if (input) input.value = "";
 
+  input.value = "";
   appendUserBubble(msg);
   showTypingIndicator();
 
-  const delay = Math.floor(Math.random() * (5000 - 3000 + 1)) + 3000;
+  const delay = Math.floor(Math.random() * (3000 - 1500 + 1)) + 1500;
 
   setTimeout(async () => {
     hideTypingIndicator();
 
+    // fallback if no key
     if (!OPENAI_API_KEY) {
-      const replyHtml = localAssistantResponse(msg);
-      appendAssistantBubble(replyHtml);
+      appendAssistantBubble(localAssistantResponse(msg));
       return;
     }
 
     try {
-      const systemPrompt = "You are the Globals support assistant. Only answer platform-related questions: Payments, Withdrawals, Tasks, eBooks, Referrals. If the user's question is unrelated, ask them if they meant one of those topics.";
+      const systemPrompt = "You are the Globals Nigeria support assistant. Answer only platform-related topics: Payments, Withdrawals, Tasks, Referrals, eBooks. Be concise and friendly.";
 
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -1758,74 +1665,91 @@ async function sendMessage() {
 
       const data = await res.json();
       const reply = data?.choices?.[0]?.message?.content || "I couldn't understand that.";
-      // sanitize AI reply before inserting into DOM
-      appendAssistantBubble( escapeHtml(reply).replace(/\n/g, '<br/>') );
+      appendAssistantBubble(escapeHtml(reply).replace(/\n/g, '<br/>'));
+
     } catch (err) {
-      appendAssistantBubble(`<div class="text-red-500">❌ Error contacting AI. Showing local help instead.</div>`);
+      appendAssistantBubble(`<div class='text-red-500 text-sm'>⚠️ AI error. Switching to local help.</div>`);
       appendAssistantBubble(localAssistantResponse(msg));
     }
-
   }, delay);
 }
 
-/* ---------- Local assistant (fallback rules) ---------- */
-/* ---------- Local assistant (fallback rules with greetings) ---------- */
-function localAssistantResponse(userText) {
-  const t = (userText || '').toLowerCase().trim();
 
-  // greetings detection
-  const greetings = ["hi", "hey", "hello", "good morning", "good afternoon", "good evening"];
-  if (greetings.some(g => t.startsWith(g))) {
+/* ---------- FALLBACK RESPONSES ---------- */
+function localAssistantResponse(text) {
+  const t = text.toLowerCase();
+  if (["hi", "hey", "hello"].some(x => t.startsWith(x))) {
     return `
-      <div class="text-sm">
-        👋 Hi there! How can I help you today?  
-        <div class="mt-2 flex gap-2 flex-wrap">
-          <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('paymentHelp')">Payment Steps</button>
-          <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('withdrawalHelp')">Withdrawal Steps</button>
-          <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('taskHelp')">Task Guide</button>
-          <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('ebookHelp')">Buy eBook</button>
-        </div>
+      👋 Hi there! How can I help today?<br>
+      <div class="mt-2 flex gap-2 flex-wrap">
+        <button onclick="suggestionClick('paymentHelp')" class="px-3 py-1 rounded-lg border text-sm">Payments</button>
+        <button onclick="suggestionClick('withdrawalHelp')" class="px-3 py-1 rounded-lg border text-sm">Withdrawals</button>
+        <button onclick="suggestionClick('taskHelp')" class="px-3 py-1 rounded-lg border text-sm">Tasks</button>
+        <button onclick="suggestionClick('ebookHelp')" class="px-3 py-1 rounded-lg border text-sm">eBooks</button>
       </div>`;
   }
 
-  // same keyword checks you already have …
-  const payKeywords = ["pay", "payment", "deposit", "card", "transfer", "ussd"];
-  const withKeywords = ["withdraw", "withdrawal", "cash out", "payout", "bank"];
-  const taskKeywords = ["task", "tasks", "earn", "complete", "job", "install"];
-  const ebookKeywords = ["ebook", "book", "buy ebook", "download ebook"];
-  const referralKeywords = ["referral", "refer", "referal", "team", "commission"];
+  const map = {
+    paymentHelp: ["pay", "payment", "deposit"],
+    withdrawalHelp: ["withdraw", "withdrawal", "bank"],
+    taskHelp: ["task", "earn", "complete"],
+    ebookHelp: ["ebook", "book"],
+    referralHelp: ["refer", "referral", "team"]
+  };
 
-  if (payKeywords.some(k => t.includes(k))) return GUIDES.paymentHelp;
-  if (withKeywords.some(k => t.includes(k))) return GUIDES.withdrawalHelp;
-  if (taskKeywords.some(k => t.includes(k))) return GUIDES.taskHelp;
-  if (ebookKeywords.some(k => t.includes(k))) return GUIDES.ebookHelp;
-  if (referralKeywords.some(k => t.includes(k))) return GUIDES.referralHelp;
+  for (const [key, keywords] of Object.entries(map)) {
+    if (keywords.some(k => t.includes(k))) return GUIDES[key];
+  }
 
-  // fallback
   return `
-    <div class="text-sm">
-      I couldn't find an exact match for that. Did you mean one of these?
-      <div class="mt-2 flex gap-2 flex-wrap">
-        <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('paymentHelp')">Payment Steps</button>
-        <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('withdrawalHelp')">Withdrawal Steps</button>
-        <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('taskHelp')">Task Guide</button>
-        <button class="px-3 py-1 rounded-lg border text-sm" onclick="suggestionClick('ebookHelp')">Buy eBook</button>
-      </div>
+    I didn’t find that topic. Try one of these:
+    <div class="mt-2 flex gap-2 flex-wrap">
+      <button onclick="suggestionClick('paymentHelp')" class="px-3 py-1 rounded-lg border text-sm">Payments</button>
+      <button onclick="suggestionClick('withdrawalHelp')" class="px-3 py-1 rounded-lg border text-sm">Withdrawals</button>
+      <button onclick="suggestionClick('taskHelp')" class="px-3 py-1 rounded-lg border text-sm">Tasks</button>
     </div>`;
 }
 
-/* ---------- extra UX: Enter to send ---------- */
+
+/* ---------- UTILS ---------- */
+function suggestionClick(topic) {
+  appendUserBubble(topicLabel(topic));
+  appendAssistantBubble(GUIDES[topic] || "No info found.");
+}
+function topicLabel(topic) {
+  const labels = {
+    paymentHelp: "Payment Steps",
+    withdrawalHelp: "Withdrawal Steps",
+    taskHelp: "Task Guide",
+    ebookHelp: "Buy eBook",
+    referralHelp: "Referral & Team"
+  };
+  return labels[topic] || topic;
+}
+function escapeHtml(t) {
+  const div = document.createElement("div");
+  div.innerText = t;
+  return div.innerHTML;
+}
+
+/* ---------- SEND WITH ENTER ---------- */
 document.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById("userMessage");
-  if (input) {
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        sendMessage();
-      }
-    });
-  }
+  input?.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
 });
+
+
+
+
+
+
+
+
 
 
 
