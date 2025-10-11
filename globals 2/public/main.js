@@ -3012,10 +3012,7 @@ async function showTaskSubmissionDetailsUser(submissionId) {
     console.log('[AFF2] destroyed');
   }
 
-  // auto-init on DOM ready
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
-
-  // expose a tiny API for control/debug
+    // expose a tiny API for control/debug
   const api = { init, destroy, openJob: openJobDetail_correct, id: state.instanceId };
   window.__AFF2_INSTANCE__ = api; // single global reference
   window.AffiliateV2 = api; // small convenience alias
@@ -4065,6 +4062,10 @@ window.activateTab = function(tabId) {
       case 'taskSection':
         initTaskSection();
         break;
+
+			case 'aff2_root':
+  AffiliateV2.init(); // only initialize when the tab is active
+  break;
       // add other tabs here as you wrap them
     }
     activeSection.dataset.loaded = "true";
