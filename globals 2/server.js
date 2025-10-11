@@ -314,6 +314,57 @@ app.post('/webhook/paystack', async (req, res) => {
   }
 });
 
+
+
+
+/* =======================
+   AI CUSTOMER SUPPORT CHAT
+   ======================= */
+app.post("/api/ai-chat", async (req, res) => {
+  try {
+    const { message, history } = req.body || {};
+    if (!message) {
+      return res.status(400).json({ error: "Missing message" });
+    }
+
+    const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+    if (!OPENAI_API_KEY) {
+      console.warn("⚠ OPENAI_API_KEY not set, falling back to default response");
+      return res.json({
+        reply: "Hi there! 👋 Our agents are currently unavailable. Please try again later or leave a message."
+      });
+    }
+
+    const payload = {
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "You are a friendly customer support assistant for Globals Nigeria. Respond politely and helpfully." },
+        ...(history || []),
+        { role: "user", content: message }
+      ],
+      temperature: 0.7
+    };
+
+    const aiResp = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      payload,
+      { headers: { "Authorization": `Bearer ${OPENAI_API_KEY}` } }
+    );
+
+    const aiMessage = aiResp.data?.choices?.[0]?.message?.content?.trim() || "Sorry, I couldn’t get that.";
+
+    res.json({ reply: aiMessage });
+
+  } catch (err) {
+    console.error("AI chat error:", err.response?.data || err.message || err);
+    res.status(500).json({ error: "AI chat failed" });
+  }
+});
+
+
+
+
+
 /* Catch-all route (serve dashboard) */
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "dashboard.html"));
@@ -322,3 +373,4 @@ app.get("*", (req, res) => {
 /* Start server */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
