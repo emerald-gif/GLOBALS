@@ -1521,48 +1521,49 @@ function goToPinSetup() {
 
 
 
-/* ---------- ENV KEY SETUP ---------- */
-const OPENAI_API_KEY = window?.ENV?.OPENAI_API_KEY || ""; // Render injects this securely
 
 
-/* ---------- GUIDE CONTENT ---------- */
+
+
+		  
+<!-- Chat + guide script (Replace any old script block) -->
+
+/* Globals AI Chat v2 - frontend
+   - Server proxy at /api/ai-chat
+   - Local fallback if server fails
+*/
+
+const CHAT_API = '/api/ai-chat'; // server-side proxy
+const chatHistory = [];         // small local history (kept short)
+
+// GUIDES (ebook removed)
 const GUIDES = {
   paymentHelp: `
     <h3 class="font-semibold text-lg mb-2">💵 Payment Steps</h3>
     <ol class="list-decimal ml-5 space-y-1 text-sm">
       <li>Open Dashboard → Payment → Deposit.</li>
-      <li>Choose a payment method (Card, Bank transfer, USSD).</li>
-      <li>Enter the amount and follow the payment provider UI.</li>
-      <li>After payment, your funds should reflect in your balance. If not, upload proof or contact support.</li>
+      <li>Choose your method (Card, Bank transfer, USSD).</li>
+      <li>Enter amount and follow the payment provider UI.</li>
+      <li>If funds don't reflect: upload proof or contact support (Transactions → Upload proof).</li>
     </ol>
-    <p class="mt-2 text-xs text-gray-500">Tip: Always double-check payment account details before sending money.</p>
+    <p class="mt-2 text-xs text-gray-500">Tip: Double-check account details before sending money.</p>
   `,
   withdrawalHelp: `
     <h3 class="font-semibold text-lg mb-2">🏧 Withdrawal Steps</h3>
     <ol class="list-decimal ml-5 space-y-1 text-sm">
       <li>Open Dashboard → Withdraw.</li>
-      <li>Enter amount and choose your saved bank account.</li>
+      <li>Enter amount and choose a saved bank account.</li>
       <li>Confirm with your PIN.</li>
-      <li>Processing time: 1–3 business days.</li>
+      <li>Processing usually 1–3 business days.</li>
     </ol>
-    <p class="mt-2 text-xs text-gray-500">If it fails, check your account details or contact support.</p>
+    <p class="mt-2 text-xs text-gray-500">If it fails, check account details or contact support with transaction ID.</p>
   `,
   taskHelp: `
     <h3 class="font-semibold text-lg mb-2">✅ Task Guide</h3>
     <ol class="list-decimal ml-5 space-y-1 text-sm">
-      <li>Go to the Tasks page.</li>
-      <li>Read each task carefully and complete it exactly as described.</li>
-      <li>Submit proof if required, then wait for approval.</li>
-    </ol>
-    <p class="mt-2 text-xs text-gray-500">Approved tasks credit automatically after review.</p>
-  `,
-  ebookHelp: `
-    <h3 class="font-semibold text-lg mb-2">📚 eBook Purchase</h3>
-    <ol class="list-decimal ml-5 space-y-1 text-sm">
-      <li>Go to the eBook Store in the app.</li>
-      <li>Select an eBook and tap Buy.</li>
-      <li>Pay via Card, Bank or Wallet.</li>
-      <li>Access it from “My Purchases.”</li>
+      <li>Go to Tasks → Read instructions carefully.</li>
+      <li>Complete exactly as described and submit proof if required.</li>
+      <li>Wait for approval — approved tasks credit automatically.</li>
     </ol>
   `,
   referralHelp: `
@@ -1570,179 +1571,254 @@ const GUIDES = {
     <ul class="list-disc ml-5 space-y-1 text-sm">
       <li>1st level commission: ₦1,700 per referred user.</li>
       <li>2nd level: ₦500 per referred user.</li>
-      <li>Share your referral link on social media or with friends.</li>
+      <li>Share your referral link from the Team page.</li>
     </ul>
   `,
   aiContent: `
-    <h3 class="font-semibold text-lg mb-2">🧠 AI Support Info</h3>
+    <h3 class="font-semibold text-lg mb-2">🧠 AI Support</h3>
+    <p class="text-sm">Ask about Payments, Withdrawals, Tasks, Referrals, Account issues, Transactions, Watch Ads, Spin, or Premium.</p>
+    <div class="mt-3 text-sm">
+      <p><strong>Quick FAQ</strong></p>
+      <ul class="list-disc ml-5 mt-2">
+        <li>How to deposit? — Dashboard → Payment → Deposit.</li>
+        <li>Why didn't my withdrawal go through? — Check account details & transaction history.</li>
+        <li>How many ads can I watch? — Ads reset per policy; watch page shows limits.</li>
+      </ul>
+    </div>
+  `,
+  accountHelp: `
+    <h3 class="font-semibold text-lg mb-2">🔐 Account & Login</h3>
     <ul class="list-disc ml-5 space-y-1 text-sm">
-      <li>Answers platform-related questions: Payments, Withdrawals, Tasks, eBooks, Referrals.</li>
-      <li>Summarizes text or writes short messages related to Globals.</li>
+      <li>Forgot password? Use the "Forgot password" link on login to reset via email/phone.</li>
+      <li>To update profile picture or name: My Profile → Edit.</li>
+      <li>For PIN issues, go to Settings → Security.</li>
+    </ul>
+  `,
+  transactionsHelp: `
+    <h3 class="font-semibold text-lg mb-2">📂 Transactions</h3>
+    <p class="text-sm">Go to Transactions to see deposits, withdrawals, and purchases. Tap any item to see details and upload proofs.</p>
+  `,
+  adsHelp: `
+    <h3 class="font-semibold text-lg mb-2">🎬 Watch Ads</h3>
+    <ul class="list-disc ml-5 space-y-1 text-sm">
+      <li>If a video doesn't play, try switching network or clear cache and retry.</li>
+      <li>Ad credits appear after completion; if missing, tap "report" on the ad card with a screenshot.</li>
+    </ul>
+  `,
+  spinHelp: `
+    <h3 class="font-semibold text-lg mb-2">🎡 Spin & Rewards</h3>
+    <p class="text-sm">Daily spin resets per user policy. Boosts or extra spins come from packages or promotions.</p>
+  `,
+  premiumHelp: `
+    <h3 class="font-semibold text-lg mb-2">👑 Premium</h3>
+    <p class="text-sm">Go Premium to unlock boosted tasks, more ads, priority support, and deposit bonuses.</p>
+  `,
+  errorsHelp: `
+    <h3 class="font-semibold text-lg mb-2">🛠 Troubleshooting</h3>
+    <ul class="list-disc ml-5 space-y-1 text-sm">
+      <li>App not responding? Clear cache or reload the page.</li>
+      <li>Payment failed? Verify your bank details & transaction ID, then contact support.</li>
+      <li>Still stuck? Send a message in chat and include screenshots (attach via Upload button).</li>
     </ul>
   `
 };
 
-
-/* ---------- CHAT FUNCTIONS ---------- */
-function appendUserBubble(msg) {
+// DOM helpers
+function appendUserBubble(msg){
   const chat = document.getElementById("chatMessages");
-  const safe = escapeHtml(msg).replace(/\n/g, '<br/>');
-  chat.insertAdjacentHTML('beforeend', `
-    <div class="flex justify-end mb-3 animate-fade-in">
-      <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 rounded-2xl max-w-xs text-sm shadow">${safe}</div>
-    </div>`);
+  const safe = escapeHtml(msg).replace(/\n/g,'<br/>');
+  chat.insertAdjacentHTML('beforeend', `<div class="flex justify-end mb-3 animate-fade-in"><div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 rounded-2xl max-w-xs text-sm shadow">${safe}</div></div>`);
   chat.scrollTop = chat.scrollHeight;
 }
-
-function appendAssistantBubble(html) {
+function appendAssistantBubble(html){
   const chat = document.getElementById("chatMessages");
-  chat.insertAdjacentHTML('beforeend', `
-    <div class="flex justify-start mb-3 animate-fade-in">
-      <div class="bg-white border p-3 rounded-2xl max-w-xs text-sm shadow text-gray-800">${html}</div>
-    </div>`);
+  chat.insertAdjacentHTML('beforeend', `<div class="flex justify-start mb-3 animate-fade-in"><div class="bg-white border p-3 rounded-2xl max-w-xs text-sm shadow text-gray-800">${html}</div></div>`);
   chat.scrollTop = chat.scrollHeight;
 }
-
-function showTypingIndicator() {
+function showTypingIndicator(){
   const chat = document.getElementById("chatMessages");
   if (document.getElementById("typing-indicator")) return;
-  chat.insertAdjacentHTML('beforeend', `
-    <div id="typing-indicator" class="flex justify-start mb-3">
-      <div class="bg-white border p-3 rounded-2xl shadow flex gap-1">
-        <span class="dot w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
-        <span class="dot w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></span>
-        <span class="dot w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-300"></span>
-      </div>
-    </div>`);
+  chat.insertAdjacentHTML('beforeend', `<div id="typing-indicator" class="flex justify-start mb-3"><div class="bg-white border p-3 rounded-2xl shadow flex gap-1"><span class="dot w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span><span class="dot w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></span><span class="dot w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-300"></span></div></div>`);
   chat.scrollTop = chat.scrollHeight;
 }
+function hideTypingIndicator(){ const el = document.getElementById("typing-indicator"); if (el) el.remove(); }
+function escapeHtml(t){ const div = document.createElement('div'); div.innerText = t; return div.innerHTML; }
 
-function hideTypingIndicator() {
-  const el = document.getElementById("typing-indicator");
-  if (el) el.remove();
-}
-
-
-/* ---------- SEND MESSAGE ---------- */
-async function sendMessage() {
-  const input = document.getElementById("userMessage");
-  const msg = input?.value.trim();
-  if (!msg) return;
-
-  input.value = "";
-  appendUserBubble(msg);
-  showTypingIndicator();
-
-  const delay = Math.floor(Math.random() * (3000 - 1500 + 1)) + 1500;
-
-  setTimeout(async () => {
-    hideTypingIndicator();
-
-    // fallback if no key
-    if (!OPENAI_API_KEY) {
-      appendAssistantBubble(localAssistantResponse(msg));
-      return;
-    }
-
-    try {
-      const systemPrompt = "You are the Globals Nigeria support assistant. Answer only platform-related topics: Payments, Withdrawals, Tasks, Referrals, eBooks. Be concise and friendly.";
-
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${OPENAI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: msg }
-          ],
-          max_tokens: 400
-        }),
-      });
-
-      const data = await res.json();
-      const reply = data?.choices?.[0]?.message?.content || "I couldn't understand that.";
-      appendAssistantBubble(escapeHtml(reply).replace(/\n/g, '<br/>'));
-
-    } catch (err) {
-      appendAssistantBubble(`<div class='text-red-500 text-sm'>⚠️ AI error. Switching to local help.</div>`);
-      appendAssistantBubble(localAssistantResponse(msg));
-    }
-  }, delay);
-}
-
-
-/* ---------- FALLBACK RESPONSES ---------- */
-function localAssistantResponse(text) {
-  const t = text.toLowerCase();
-  if (["hi", "hey", "hello"].some(x => t.startsWith(x))) {
+// small local fallback responder
+function localAssistantResponse(text){
+  const t = (text || '').toLowerCase();
+  if (["hi","hello","hey"].some(x=>t.startsWith(x))) {
     return `
-      👋 Hi there! How can I help today?<br>
+      👋 Hi! How can I help? <br/>
       <div class="mt-2 flex gap-2 flex-wrap">
         <button onclick="suggestionClick('paymentHelp')" class="px-3 py-1 rounded-lg border text-sm">Payments</button>
         <button onclick="suggestionClick('withdrawalHelp')" class="px-3 py-1 rounded-lg border text-sm">Withdrawals</button>
         <button onclick="suggestionClick('taskHelp')" class="px-3 py-1 rounded-lg border text-sm">Tasks</button>
-        <button onclick="suggestionClick('ebookHelp')" class="px-3 py-1 rounded-lg border text-sm">eBooks</button>
-      </div>`;
+        <button onclick="suggestionClick('referralHelp')" class="px-3 py-1 rounded-lg border text-sm">Referral</button>
+      </div>
+    `;
   }
 
   const map = {
-    paymentHelp: ["pay", "payment", "deposit"],
-    withdrawalHelp: ["withdraw", "withdrawal", "bank"],
-    taskHelp: ["task", "earn", "complete"],
-    ebookHelp: ["ebook", "book"],
-    referralHelp: ["refer", "referral", "team"]
+    paymentHelp: ["pay","payment","deposit","topup"],
+    withdrawalHelp: ["withdraw","withdrawal","bank"],
+    taskHelp: ["task","earn","complete"],
+    referralHelp: ["refer","referral","team","invite"],
+    adsHelp: ["ad","ads","watch"],
+    spinHelp: ["spin","wheel"],
+    premiumHelp: ["premium","go premium"],
+    accountHelp: ["login","password","account","pin"],
+    transactionsHelp: ["transaction","transactions","receipt","history"],
+    errorsHelp: ["error","bug","issue","problem"]
   };
 
-  for (const [key, keywords] of Object.entries(map)) {
-    if (keywords.some(k => t.includes(k))) return GUIDES[key];
+  for (const [key, kws] of Object.entries(map)) {
+    if (kws.some(k => t.includes(k))) return GUIDES[key];
   }
 
   return `
-    I didn’t find that topic. Try one of these:
+    I didn't find that topic. Try one of these:
     <div class="mt-2 flex gap-2 flex-wrap">
       <button onclick="suggestionClick('paymentHelp')" class="px-3 py-1 rounded-lg border text-sm">Payments</button>
       <button onclick="suggestionClick('withdrawalHelp')" class="px-3 py-1 rounded-lg border text-sm">Withdrawals</button>
       <button onclick="suggestionClick('taskHelp')" class="px-3 py-1 rounded-lg border text-sm">Tasks</button>
-    </div>`;
+    </div>
+  `;
 }
 
-
-/* ---------- UTILS ---------- */
-function suggestionClick(topic) {
+// show static guides
+function suggestionClick(topic){
   appendUserBubble(topicLabel(topic));
   appendAssistantBubble(GUIDES[topic] || "No info found.");
 }
-function topicLabel(topic) {
+function topicLabel(topic){
   const labels = {
     paymentHelp: "Payment Steps",
     withdrawalHelp: "Withdrawal Steps",
     taskHelp: "Task Guide",
-    ebookHelp: "Buy eBook",
-    referralHelp: "Referral & Team"
+    referralHelp: "Referral & Team",
+    accountHelp: "Account Help",
+    transactionsHelp: "Transactions",
+    adsHelp: "Watch Ads",
+    spinHelp: "Spin & Rewards",
+    premiumHelp: "Premium",
+    errorsHelp: "Troubleshooting",
+    aiContent: "AI Support"
   };
   return labels[topic] || topic;
 }
-function escapeHtml(t) {
-  const div = document.createElement("div");
-  div.innerText = t;
-  return div.innerHTML;
+
+/* ---------- Chat send (server proxy) ---------- */
+async function sendMessage() {
+  const input = document.getElementById("userMessage");
+  const msg = (input?.value || '').trim();
+  if (!msg) return;
+  input.value = '';
+  appendUserBubble(msg);
+  showTypingIndicator();
+
+  // push to local history (keep last ~8)
+  chatHistory.push({ role: 'user', content: msg });
+  if (chatHistory.length > 16) chatHistory.splice(0, chatHistory.length - 16);
+
+  try {
+    const res = await fetch(CHAT_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, history: chatHistory })
+    });
+
+    const payload = await res.json();
+    hideTypingIndicator();
+
+    if (!res.ok) {
+      console.warn('AI service error', payload);
+      throw new Error(payload?.error || 'AI service error');
+    }
+
+    const reply = payload?.reply || payload?.message || '';
+    if (!reply) {
+      throw new Error('Empty AI reply');
+    }
+
+    appendAssistantBubble(escapeHtml(reply).replace(/\n/g,'<br/>'));
+    chatHistory.push({ role: 'assistant', content: reply });
+    if (chatHistory.length > 16) chatHistory.splice(0, chatHistory.length - 16);
+
+  } catch (err) {
+    console.error('Chat error', err);
+    hideTypingIndicator();
+    appendAssistantBubble(`<div class='text-red-500 text-sm'>⚠️ AI unavailable — showing local help.</div>`);
+    const fallback = localAssistantResponse(msg);
+    appendAssistantBubble(fallback);
+    chatHistory.push({ role: 'assistant', content: fallback });
+  }
 }
 
-/* ---------- SEND WITH ENTER ---------- */
-document.addEventListener('DOMContentLoaded', () => {
-  const input = document.getElementById("userMessage");
-  input?.addEventListener("keydown", e => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      sendMessage();
-    }
-  });
-});
+/* ---------- Open topic / guide / chat overlay helpers ---------- */
+(function(){
+  const guideKeys = Object.keys(GUIDES);
 
+  window.openAiTopic = function(topic){
+    const guideContainer = document.getElementById('guideContainer');
+    const chatContainer = document.getElementById('chatContainer');
+
+    if (topic === 'chat') {
+      if (!chatContainer) return;
+      chatContainer.classList.remove('hidden');
+      setTimeout(()=> {
+        chatContainer.classList.remove('translate-y-full');
+        chatContainer.classList.add('translate-y-0');
+      }, 10);
+      setTimeout(()=> {
+        const input = document.getElementById('userMessage');
+        if (input) input.focus();
+        appendAssistantBubble(localAssistantResponse('hi'));
+      }, 120);
+      return;
+    }
+
+    if (guideKeys.includes(topic) && guideContainer) {
+      guideContainer.innerHTML = GUIDES[topic] || 'No info found.';
+      guideContainer.classList.remove('hidden');
+      if (chatContainer && !chatContainer.classList.contains('hidden')) {
+        chatContainer.classList.add('translate-y-full');
+        setTimeout(()=> chatContainer.classList.add('hidden'), 300);
+      }
+      setTimeout(()=> guideContainer.scrollIntoView({behavior:'smooth'}), 40);
+      return;
+    }
+
+    // fallback open chat
+    openAiTopic('chat');
+  };
+
+  window.closeChat = function(){
+    const chatContainer = document.getElementById('chatContainer');
+    if (!chatContainer) return;
+    chatContainer.classList.add('translate-y-full');
+    setTimeout(()=> chatContainer.classList.add('hidden'), 300);
+  };
+
+  // minimal activateTab fallback if not present
+  if (typeof window.activateTab === 'undefined') {
+    window.activateTab = function(tabId){
+      document.querySelectorAll('.tab-section').forEach(el=>el.classList.add('hidden'));
+      const el = document.getElementById(tabId);
+      if (el) el.classList.remove('hidden');
+    };
+  }
+
+  // attach UI handlers
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('sendBtn')?.addEventListener('click', sendMessage);
+    const input = document.getElementById('userMessage');
+    input?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); sendMessage(); }
+    });
+  });
+})();
+ 
 
 
 
