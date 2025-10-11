@@ -44,6 +44,7 @@ tabBtns.forEach((btn) => {
 
 
                                            // AUTH CHECK AND DISPLAY USER INFO / ME NAV BAR INFO
+
 auth.onAuthStateChanged(async (user) => {
   if (!user) return window.location.href = "login.html";
 
@@ -51,103 +52,25 @@ auth.onAuthStateChanged(async (user) => {
   const userDoc = await db.collection("users").doc(uid).get();
   const data = userDoc.data();
 
-  // ✅ ME SECTION: Show Profile Username & Picture
-  const profileUsername = document.getElementById("profileUsername");
-  const profilePicPreview = document.getElementById("profilePicPreview");
-  if (profileUsername) profileUsername.textContent = `@${data.username || ""}`;
-  if (profilePicPreview && data.profilePicture) profilePicPreview.src = data.profilePicture;
+  // Display data
+  document.getElementById("userId").value = uid;
+  document.getElementById("editUsername").value = data.username || "";
+  document.getElementById("fullName").value = data.fullName || "";
+  document.getElementById("editEmail").value = data.email || "";
+  document.getElementById("phoneNumber").value = data.phone || "";
+  document.getElementById("refLinkDisplay").value = `https://globalstasks.name.ng/signup.html?ref=${data.username}`;
+  document.getElementById("joinDate").value = new Date(user.metadata.creationTime).toLocaleDateString();
 
-  // ✅ MY PROFILE FORM SECTION
-  if (document.getElementById("userId")) {
-    document.getElementById("userId").value = uid;
-    document.getElementById("editUsername").value = data.username || "";
-    document.getElementById("fullName").value = data.fullName || "";
-    document.getElementById("editEmail").value = data.email || "";
-    document.getElementById("phoneNumber").value = data.phone || "";
-    document.getElementById("refLinkDisplay").value = `https://globalstasks.name.ng/signup.html?ref=${data.username}`;
-    document.getElementById("joinDate").value = new Date(user.metadata.creationTime).toLocaleDateString();
-  }
-
-  // ✅ Upload profile picture
-  const profilePicUpload = document.getElementById("profilePicUpload");
-  if (profilePicUpload) {
-    profilePicUpload.onchange = async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const storageRef = firebase.storage().ref(`profilePics/${uid}`);
-      await storageRef.put(file);
-      const url = await storageRef.getDownloadURL();
-
-      await db.collection("users").doc(uid).update({ profilePicture: url });
-      if (profilePicPreview) profilePicPreview.src = url;
-      alert("Profile picture updated successfully!");
-    };
-  }
+  // Profile picture
+  const pic = document.getElementById("profilePicPreview");
+  if (data.profilePicture) pic.src = data.profilePicture;
 });
 
-// ✅ Toggle Edit / Save
-const editToggleBtn = document.getElementById("editToggleBtn");
-const saveBtn = document.getElementById("saveBtn");
-
-const fullName = document.getElementById("fullName");
-const username = document.getElementById("editUsername");
-const fullNameLabel = document.getElementById("fullNameLabel");
-const usernameLabel = document.getElementById("usernameLabel");
-
-if (editToggleBtn) {
-  editToggleBtn.onclick = () => {
-    fullName.disabled = false;
-    username.disabled = false;
-
-    // highlight labels in blue
-    fullNameLabel.classList.remove("text-gray-600");
-    fullNameLabel.classList.add("text-blue-600");
-    usernameLabel.classList.remove("text-gray-600");
-    usernameLabel.classList.add("text-blue-600");
-
-    saveBtn.classList.remove("hidden");
-    editToggleBtn.classList.add("hidden");
-  };
-}
-
-// ✅ Save Profile
-window.saveProfile = async function () {
-  const user = auth.currentUser;
-  if (!user) return;
-
-  const newFullName = fullName.value.trim();
-  const newUsername = username.value.trim();
-
-  await db.collection("users").doc(user.uid).update({
-    fullName: newFullName,
-    username: newUsername,
-  });
-
-  // reset to view mode
-  fullName.disabled = true;
-  username.disabled = true;
-  fullNameLabel.classList.remove("text-blue-600");
-  fullNameLabel.classList.add("text-gray-600");
-  usernameLabel.classList.remove("text-blue-600");
-  usernameLabel.classList.add("text-gray-600");
-
-  saveBtn.classList.add("hidden");
-  editToggleBtn.classList.remove("hidden");
-
-  // update referral link
-  document.getElementById("refLinkDisplay").value = 
-    `https://globalstasks.name.ng/signup.html?ref=${newUsername}`;
-
-  alert("Profile updated!");
-};
-// ✅ Copy to Clipboard Helper
-window.copyToClipboard = function (inputId) {
-  const input = document.getElementById(inputId);
+// Copy to clipboard helper
+window.copyToClipboard = function (id) {
+  const input = document.getElementById(id);
   if (!input) return;
-  navigator.clipboard.writeText(input.value).then(() => {
-    alert("Copied!");
-  });
+  navigator.clipboard.writeText(input.value).then(() => alert("Copied!"));
 };
 
 
