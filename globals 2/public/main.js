@@ -1525,7 +1525,7 @@ function goToPinSetup() {
 /* IMPORTANT: For temporary local assistant we leave the API key empty.
    Do NOT store a secret OpenAI API key in client-side JS for production.
 */
-const OPENAI_API_KEY = ""; // <-- leave empty for local fallback
+const OPENAI_KEY = process.env.OPENAI_API_KEY; // <-- leave empty for local fallback
 
 /* ---------- GUIDE CONTENT (HTML strings) ---------- */
 const GUIDES = {
