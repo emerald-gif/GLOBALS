@@ -7266,7 +7266,7 @@ async function rewardUser(uid, cardId) {
       handleWatchClick
     };
 
-  }); // DOMContentLoaded end
+   // DOMContentLoaded end
 
 
 }
