@@ -4080,6 +4080,11 @@ window.activateTab = function(tabId) {
         
         break;
 
+
+			case 'checkin-screen':
+                  initCheckinSection();
+              break;
+
       // add other tabs here as you wrap them
     }
     activeSection.dataset.loaded = "true";
@@ -8000,8 +8005,8 @@ try {
 /* ====== FIRESTORE REF ====== */
 
 
-/* ===============================   DAILY CHECK-IN SCRIPT (single block)   - Paste to replace old check-in JS  ================================ */
-/* ====== FIRESTORE REF ====== */
+function initCheckinSection() {
+
 function cyclesRef(uid) {
   return db.collection('checkins').doc(uid).collection('cycles');
 }
@@ -8396,7 +8401,8 @@ function startCheckinListener() {
 }
 
 /* initialize */
-startCheckinListener();
+  startCheckinListener();
+}
 
 
 
