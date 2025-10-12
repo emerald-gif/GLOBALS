@@ -278,6 +278,10 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
 // -----------------------------
 // Works with firebase v8 (namespaced): firebase.auth(), firebase.firestore()
 
+
+
+
+		
 let transactionsCache = [];
 let txUnsubscribe = null; // hold unsubscribe for current listener
 let activeCollectionName = null; // which collection we ended up using
@@ -607,22 +611,27 @@ function addTransactionLive(tx) {
 /* ----------------------
    Transaction nav click to hide red dot
    ---------------------- */
-document.addEventListener("DOMContentLoaded", () => {
-document.getElementById("nav-transaction")?.addEventListener("click", () => {
-    const txDot = document.getElementById("txDot");
-    if (txDot) txDot.classList.add("hidden");
+function initTransactionSection() {
+  console.log("💳 Transaction section initializing...");
 
-    const user = firebase.auth().currentUser;
-    if (user) {
-      firebase.firestore().collection('users').doc(user.uid)
-        .update({ lastTxReadAt: firebase.firestore.FieldValue.serverTimestamp() })
-        .catch(console.error);
-    }
-  });
-});
+  const navTx = document.getElementById("nav-transaction");
+  if (navTx) {
+    navTx.addEventListener("click", () => {
+      const txDot = document.getElementById("txDot");
+      if (txDot) txDot.classList.add("hidden");
 
+      const user = firebase.auth().currentUser;
+      if (user) {
+        firebase.firestore().collection('users').doc(user.uid)
+          .update({ lastTxReadAt: firebase.firestore.FieldValue.serverTimestamp() })
+          .catch(console.error);
+      }
+    });
+  }
 
-
+  // Start transactions listener for current user
+  initTransactionsForCurrentUser();
+}
                              // PAYMENT PIN 
 
 
@@ -4084,6 +4093,11 @@ window.activateTab = function(tabId) {
 			case 'checkin-screen':
                   initCheckinSection();
               break;
+
+
+			case 'transactions-screen':
+  initTransactionSection();
+  break;
 
       // add other tabs here as you wrap them
     }
