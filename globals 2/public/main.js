@@ -4040,6 +4040,7 @@ window.switchTab = function(tabId) {
 };
 
 // ---------- activateTab ----------
+// ---------- activateTab ----------
 window.activateTab = function(tabId) {
   switchTab(tabId);
 
@@ -4054,26 +4055,31 @@ window.activateTab = function(tabId) {
   if (!activeSection.dataset.loaded) {
     switch(tabId) {
       case 'watchAdsSection':   // match the ID in your HTML
-  initWatchAdsSection();
-  break;
+        initWatchAdsSection();
+        break;
 
-			
       case 'payment':
         initPaymentSection();
         break;
 
-			
       case 'taskSection':
         initTaskSection();
         break;
 
-case 'referrals':
-    initReferralTab(); // only run referral logic when tab opens
-    break;
-			
-			case 'aff2_root':
-  AffiliateV2.init(); // only initialize when the tab is active
-  break;
+      case 'team':
+        initReferralTab(); // only run referral logic when tab opens
+        break;
+
+      case 'aff2_root':
+        AffiliateV2.init(); // only initialize when the tab is active
+        break;
+
+      case 'daily-spin-section': // <-- ID of your spin section in HTML
+        
+          spinSystemInit(); // initialize the spin system lazily
+        
+        break;
+
       // add other tabs here as you wrap them
     }
     activeSection.dataset.loaded = "true";
@@ -6359,278 +6365,219 @@ window.loadBanks = loadBanks;
 
 
 
-<!-- ====== spin and earn function ====== -->
 
-
-
-
-<!-- ====== spin and earn function ====== -->
 /* ====== Spin Wheel + Daily Challenge Script (Firebase compat) ====== */
-(() => {  
-  // ---------- CONFIG ----------  
-  const COIN_IMG = 'COIN.jpg';  
-  const VERIFIED_IMG = 'VERIFIED.jpg';  
-  const PRIZES = [10, 30, 20, 200, 5, 0, 100, 1000];   // wheel order  
-  const WEIGHTS = [18, 12, 14, 2, 18, 20, 5, 1];  
-  const SEGMENTS = PRIZES.length;  
-  const ROTATIONS = 6;  
-  const TIMESTAMP_CANDIDATES = ['createdAt','submittedAt','timestamp','time','submittedOn','created_on'];  
-  // Map challenge key -> prize index (so a completed challenge can queue a guaranteed spin)  
-  const CHALLENGE_TO_PRIZE_INDEX = {    
-    affiliateApproved: 0, // ₦10    
-    taskApproved: 2,      // ₦10    
-    dataAmount: 1,        // ₦0    
-    airtimeAmount: 6      // ₦0  
-  };  
-  // ---------- DOM ----------  
-  const canvas = document.getElementById('spin-canvas');  
-  if (!canvas) { console.error('Spin canvas not found'); return; }  
-  const ctx = canvas.getContext('2d');  
-  const spinBtn = document.getElementById('spin-btn');  
-  const spinCountEl = document.getElementById('spin-count');  
-  const liveText = document.getElementById('live-text');  
-  const liveFeedEl = document.getElementById('live-feed-items');  
-  const winModal = document.getElementById('win-modal');  
-  const winAmountEl = document.getElementById('win-amount');  
-  const winVerifiedImg = document.getElementById('win-verified');  
-  const winCloseBtn = document.getElementById('win-close');  
-  const noSpinModal = document.getElementById('no-spin-modal');  
-  const noSpinClose = document.getElementById('no-spin-close');  
-  const toastEl = document.getElementById('spin-toast');  
-  const toastTextEl = document.getElementById('spin-toast-text');  
-  const challengeCards = Array.from(document.querySelectorAll('#daily-challenges .challenge-card'));  
-  // ---------- STATE ----------  
-  let DPR = window.devicePixelRatio || 1;  
-  let lastRotation = 0;               // degrees  
-  let spinning = false;  
-  let currentUser = null;  
-  let userDocCached = null;  
-  let spinsAvailable = 0;  
-  let progressState = { affiliateApproved:0, taskApproved:0, dataAmount:0, airtimeAmount:0 };  
-  let prevProgress = { ...progressState };  
-  let unsubs = [];  
-  let liveInterval = null;  
-  let guaranteedPrizes = []; // queue of prize indices to force next spin to land on  
-  // ---------- HELPERS ----------  
-  const todayKey = () => new Date().toISOString().slice(0,10);  
-  const startOfToday = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };  
-  const endOfToday = () => { const d = new Date(); d.setHours(23,59,59,999); return d; };  
-  function dateFromMaybe(v) {    
-    if (v == null) return null;    
-    if (typeof v.toDate === 'function') { try { return v.toDate(); } catch(e) { return null; } }    
-    if (v && typeof v.seconds === 'number') return new Date(v.seconds * 1000);    
-    if (typeof v === 'number') return new Date(v);    
-    try { return new Date(v); } catch(e) { return null; }  
-  }  
-  function docIsToday(data){    
-    if (!data) return false;    
-    for (const f of TIMESTAMP_CANDIDATES) {      
-      if (!data[f]) continue;      
-      const dt = dateFromMaybe(data[f]);      
-      if (!dt || isNaN(dt.getTime())) continue;      
-      if (dt >= startOfToday() && dt <= endOfToday()) return true;    
-    }    
-    return false;  
-  }  
-  function weightedRandomIndex(weights){    
-    const sum = weights.reduce((a,b)=>a+b,0);    
-    let r = Math.random() * sum;    
-    for (let i=0;i<weights.length;i++){      
-      if (r < weights[i]) return i;      
-      r -= weights[i];    
-    }    
-    return weights.length - 1;  
-  }  
-  function showToast(msg){    
-    if (toastEl && toastTextEl) {      
-      toastTextEl.textContent = msg;      
-      toastEl.style.display = 'block';      
-      clearTimeout(toastEl._hideTO);      
-      toastEl._hideTO = setTimeout(()=> { toastEl.style.display = 'none'; }, 3200);    
-    } else { alert(msg); }  
-  }  
-  // ---------- preload images ----------  
-  const coinImg = new Image(); coinImg.src = COIN_IMG;  
-  const verifiedImg = new Image(); verifiedImg.src = VERIFIED_IMG;  
-  // ---------- responsive HD canvas setup ----------  
-  function setupCanvasHD() {    
-    DPR = window.devicePixelRatio || 1;    
-    // match plate size (canvas.parentElement is .wheel-plate)    
-    const plate = canvas.parentElement;    
-    const rect = plate.getBoundingClientRect();    
-    const css = Math.max(220, Math.min(rect.width, rect.height));    
-    canvas.style.width = css + 'px';    
-    canvas.style.height = css + 'px';    
-    canvas.width = Math.round(css * DPR);    
-    canvas.height = Math.round(css * DPR);    
-    // make drawing coordinates match CSS pixels    
-    ctx.setTransform(DPR,0,0,DPR,0,0);    
-    drawWheel(lastRotation);  
-  }  
-  // ---------- draw wheel ----------  
-  function drawWheel(rotationDeg = 0) {    
-    // use CSS pixels for layout    
-    const cssW = canvas.clientWidth || parseInt(canvas.style.width || '320',10);    
-    const cx = cssW / 2, cy = cssW / 2, r = Math.min(cssW, cssW)/2 - 12;    
-    ctx.clearRect(0,0,cssW,cssW);    
-    ctx.save();    
-    // rotate wheel around center    
-    ctx.translate(cx,cy);    
-    ctx.rotate(rotationDeg * Math.PI/180);    
-    ctx.translate(-cx,-cy);    
-    const segAngle = 2 * Math.PI / SEGMENTS;    
-    const colors = ['#ecfeff','#e6f7ff','#fff8e1','#f3f5ff','#fff0f6','#eef6ff','#fbfbfd','#f0fbff'];    
-    for (let i=0;i<SEGMENTS;i++){      
-      const start = -Math.PI/2 + i*segAngle;      
-      const end = start + segAngle;      
-      // slice      
-      ctx.beginPath();      
-      ctx.moveTo(cx,cy);      
-      ctx.arc(cx,cy,r,start,end);      
-      ctx.closePath();      
-      ctx.fillStyle = colors[i % colors.length];      
-      ctx.fill();      
-      ctx.strokeStyle = 'rgba(2,6,23,0.04)';      
-      ctx.lineWidth = 1;      
-      ctx.stroke();      
-      // amount label near rim      
-      const mid = (start + end) / 2;      
-      const labelR = r * 0.78;      
-      const lx = cx + Math.cos(mid) * labelR;      
-      const ly = cy + Math.sin(mid) * labelR;      
-      ctx.save();      
-      ctx.translate(lx, ly);      
-      ctx.rotate(mid + Math.PI/2);      
-      ctx.fillStyle = '#0f172a';      
-      ctx.font = `${Math.max(11, Math.round(cssW * 0.035))}px Inter, system-ui`;      
-      ctx.textAlign = 'center';      
-      ctx.textBaseline = 'middle';      
-      ctx.fillText(`₦${PRIZES[i]}`, 0, 0);      
-      ctx.restore();      
-      // coin image (upright)      
-      if (coinImg && coinImg.complete) {        
-        const imgR = r * 0.56;        
-        const ix = cx + Math.cos(mid) * imgR;        
-        const iy = cy + Math.sin(mid) * imgR;        
-        ctx.save();        
-        ctx.translate(ix, iy);        
-        ctx.rotate(-(rotationDeg * Math.PI/180)); // keep upright        
-        const coinSize = Math.max(28, Math.round(cssW * 0.12));        
-        ctx.drawImage(coinImg, -coinSize/2, -coinSize/2, coinSize, coinSize);        
-        // verified badge for 1000        
-        if (PRIZES[i] === 1000 && verifiedImg.complete) {          
-          const b = Math.round(coinSize * 0.45);          
-          ctx.drawImage(verifiedImg, coinSize/4, coinSize/4, b, b);        
-        }        
-        ctx.restore();      
-      }    
-    }    
-    // bold outer edge ring    
-    ctx.beginPath();    
-    ctx.arc(cx, cy, r + 6, 0, Math.PI*2);    
-    ctx.strokeStyle = 'rgba(15,23,42,0.06)';    
-    ctx.lineWidth = 10;    
-    ctx.stroke();    
-    // center button    
-    ctx.beginPath();    
-    ctx.arc(cx, cy, 48, 0, Math.PI*2);    
-    ctx.fillStyle = '#fff';    
-    ctx.fill();    
-    ctx.lineWidth = 2;    
-    ctx.strokeStyle = 'rgba(15,23,42,0.06)';    
-    ctx.stroke();    
-    ctx.fillStyle = '#0f172a';    
-    ctx.font = '700 14px Inter, system-ui';    
-    ctx.textAlign = 'center';    
-    ctx.textBaseline = 'middle';    
-    ctx.fillText('SPIN', cx, cy - 6);    
-    ctx.font = '600 12px Inter, system-ui';    
-    ctx.fillText('NOW', cx, cy + 12);    
-    ctx.restore();  
-  }  
-  
-  // ---------- easing animation ----------  
-  function animateTo(targetAbsolute, duration = 5200) {    
-    return new Promise(resolve => {      
-      const start = performance.now();      
-      const from = lastRotation;      
-      const diff = targetAbsolute - from;      
-      function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }      
-      function frame(now){        
-        const t = Math.min(1, (now - start) / duration);        
-        const v = from + diff * easeOutCubic(t);        
-        drawWheel(v);        
-        if (t < 1) requestAnimationFrame(frame);        
-        else {          
-          lastRotation = ((targetAbsolute % 360) + 360) % 360;          
-          drawWheel(lastRotation);          
-          resolve();        
-        }      
-      }      
-      requestAnimationFrame(frame);    
-    });  
-  }  
-  
-  // ---------- compute available spins & update UI ----------  
-  function recomputeSpinsUI(){    
-    const goals = {      
-      affiliateApproved: Number(document.querySelector('.challenge-card[data-key="affiliateApproved"]')?.dataset.goal || 10),      
-      taskApproved: Number(document.querySelector('.challenge-card[data-key="taskApproved"]')?.dataset.goal || 10),      
-      dataAmount: Number(document.querySelector('.challenge-card[data-key="dataAmount"]')?.dataset.goal || 1000),      
-      airtimeAmount: Number(document.querySelector('.challenge-card[data-key="airtimeAmount"]')?.dataset.goal || 500)    
-    };    
-    const flags = [      
-      (progressState.affiliateApproved || 0) >= goals.affiliateApproved,      
-      (progressState.taskApproved || 0) >= goals.taskApproved,      
-      (progressState.dataAmount || 0) >= goals.dataAmount,      
-      (progressState.airtimeAmount || 0) >= goals.airtimeAmount    
-    ];    
-    const completedCount = flags.filter(Boolean).length;    
-    const base = 1;    
-    let used = 0;    
-    let usedDateKey = null;    
-    if (userDocCached) {      
-      used = Number(userDocCached.spinsUsedCount || 0);      
-      const prev = userDocCached.spinsUsedDate || null;      
-      if (prev) {        
-        try { usedDateKey = (typeof prev.toDate === 'function') ? prev.toDate().toISOString().slice(0,10) : new Date(prev).toISOString().slice(0,10); }        
-        catch(e){ usedDateKey = prev; }      
-      }      
-      if (usedDateKey !== todayKey()) used = 0;    
-    }    
-    const newAvailable = Math.max(0, base + completedCount - used);    
-    if (newAvailable !== spinsAvailable) {      
-      spinsAvailable = newAvailable;      
-      if (spinCountEl) spinCountEl.textContent = `${spinsAvailable}`;      
-      if (spinCountEl) {        
-        spinCountEl.animate([{ transform:'scale(1)'},{ transform:'scale(1.18)'},{ transform:'scale(1)'}], { duration:350, easing:'ease-out' });      
-      }    
-    }    
-    challengeCards.forEach(card => {      
-      const key = card.dataset.key;      
-      const goal = Number(card.dataset.goal || 1);      
-      let val = 0;      
-      if (key === 'affiliateApproved') val = progressState.affiliateApproved || 0;      
-      else if (key === 'taskApproved') val = progressState.taskApproved || 0;      
-      else if (key === 'dataAmount') val = progressState.dataAmount || 0;      
-      else if (key === 'airtimeAmount') val = progressState.airtimeAmount || 0;      
-      const percent = Math.min(100, (val / goal) * 100);      
-      const bar = card.querySelector('.progress-bar');      
-      const status = card.querySelector('.status-text');      
-      if (bar) bar.style.width = percent + '%';      
-      if (status) {        
-        if (val >= goal) { status.textContent = 'Completed'; status.classList.remove('not-completed'); status.classList.add('completed'); }        
-        else { status.textContent = 'Not completed'; status.classList.remove('completed'); status.classList.add('not-completed'); }      
-      }    
-    });  
-  }  
-
-  // ---------- debug helpers ----------  
-  window.__spinDebug = { drawWheel, setupCanvasHD, recomputeSpinsUI, progressState, PRIZES, lastRotation, guaranteedPrizes };
-})();
 
 
 
+<!-- ====== Spin & Earn Script (Fixed Rules + Daily Limit) ====== -->
+
+function spinSystemInit() {
+  // ---------- CONFIG ----------
+  const COIN_IMG = 'COIN.jpg';
+  const VERIFIED_IMG = 'VERIFIED.jpg';
+  const PRIZES = [0, 10, 0, 10, 0, 10, 0, 30]; // max 30
+  const SEGMENTS = PRIZES.length;
+  const ROTATIONS = 6;
+  const TIMESTAMP_CANDIDATES = ['createdAt','submittedAt','timestamp','time','submittedOn','created_on'];
+
+  const CHALLENGE_TO_PRIZE_INDEX = {
+    affiliateApproved: 7,
+    taskApproved: 7,
+    dataAmount: 1,
+    airtimeAmount: 0
+  };
+
+  // ---------- DOM ----------
+  const canvas = document.getElementById('spin-canvas');
+  if (!canvas) return console.error('Spin canvas not found');
+  const ctx = canvas.getContext('2d');
+  const spinBtn = document.getElementById('spin-btn');
+  const spinCountEl = document.getElementById('spin-count');
+  const winModal = document.getElementById('win-modal');
+  const winAmountEl = document.getElementById('win-amount');
+  const winCloseBtn = document.getElementById('win-close');
+  const noSpinModal = document.getElementById('no-spin-modal');
+  const noSpinClose = document.getElementById('no-spin-close');
+  const toastEl = document.getElementById('spin-toast');
+  const toastTextEl = document.getElementById('spin-toast-text');
+
+  // ---------- STATE ----------
+  let DPR = window.devicePixelRatio || 1;
+  let lastRotation = 0;
+  let spinning = false;
+  let currentUser = null;
+  let userDocCached = null;
+  let spinsAvailable = 0;
+  let guaranteedPrizes = [];
+
+  // ---------- HELPERS ----------
+  const todayKey = () => new Date().toISOString().slice(0,10);
+
+  function showToast(msg){
+    if(toastEl && toastTextEl){ 
+      toastTextEl.textContent = msg; 
+      toastEl.style.display='block';
+      clearTimeout(toastEl._hideTO);
+      toastEl._hideTO = setTimeout(()=>{ toastEl.style.display='none'; }, 3000);
+    } else alert(msg);
+  }
+
+  // ---------- canvas setup ----------
+  function setupCanvasHD() {
+    DPR = window.devicePixelRatio || 1;
+    const plate = canvas.parentElement;
+    const rect = plate.getBoundingClientRect();
+    const css = Math.max(220, Math.min(rect.width, rect.height));
+    canvas.style.width = css+'px';
+    canvas.style.height = css+'px';
+    canvas.width = Math.round(css*DPR);
+    canvas.height = Math.round(css*DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    drawWheel(lastRotation);
+  }
+
+  function drawWheel(rotationDeg=0){
+    const cssW = canvas.clientWidth || 300;
+    const cx = cssW/2, cy=cssW/2, r = cssW/2-12;
+    ctx.clearRect(0,0,cssW,cssW);
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate(rotationDeg*Math.PI/180);
+    ctx.translate(-cx,-cy);
+
+    const segAngle = 2*Math.PI/SEGMENTS;
+    const colors = ['#ecfeff','#e6f7ff','#fff8e1','#f3f5ff','#fff0f6','#eef6ff','#fbfbfd','#f0fbff'];
+    for(let i=0;i<SEGMENTS;i++){
+      const start = -Math.PI/2 + i*segAngle;
+      const end = start + segAngle;
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,end); ctx.closePath();
+      ctx.fillStyle = colors[i%colors.length]; ctx.fill();
+      ctx.strokeStyle='rgba(2,6,23,0.05)'; ctx.lineWidth=1; ctx.stroke();
+      const mid = (start+end)/2;
+      const lx = cx+Math.cos(mid)*r*0.75;
+      const ly = cy+Math.sin(mid)*r*0.75;
+      ctx.save(); ctx.translate(lx,ly); ctx.rotate(mid+Math.PI/2);
+      ctx.fillStyle='#0f172a';
+      ctx.font=`${Math.max(11, Math.round(cssW*0.035))}px Inter`;
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillText(`₦${PRIZES[i]}`,0,0);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  function animateTo(targetAbsolute,duration=4200){
+    return new Promise(resolve=>{
+      const start=performance.now();
+      const from=lastRotation;
+      const diff=targetAbsolute-from;
+      function easeOut(t){ return 1 - Math.pow(1-t,3); }
+      function frame(now){
+        const t=Math.min(1,(now-start)/duration);
+        const v = from+diff*easeOut(t);
+        drawWheel(v);
+        if(t<1) requestAnimationFrame(frame);
+        else { lastRotation=((targetAbsolute%360)+360)%360; resolve(); }
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
+  // ---------- recompute spins ----------
+  function recomputeSpinsUI(){
+    const base = 1;
+    let used = 0;
+    let usedDateKey = null;
+    if(userDocCached){
+      used = Number(userDocCached.spinsUsedCount || 0);
+      const prev = userDocCached.spinsUsedDate || null;
+      try { usedDateKey = prev && typeof prev.toDate==='function' ? prev.toDate().toISOString().slice(0,10) : prev; } 
+      catch(e){ usedDateKey = prev; }
+      if(usedDateKey !== todayKey()) used = 0;
+    }
+    spinsAvailable = Math.max(0, base - used);
+    if(spinCountEl) spinCountEl.textContent = `(${spinsAvailable})`;
+  }
+
+  // ---------- SPIN ----------
+  async function spinToIndex(idx){
+    const segDeg = 360/SEGMENTS;
+    const rotation = 360*ROTATIONS + (360 - (idx * segDeg + segDeg/2));
+    await animateTo(rotation,4200);
+  }
+
+  async function handleSpinClick(){
+    if(spinning) return;
+    if(!firebase.auth().currentUser){ showToast('Please log in.'); return; }
+    if(spinsAvailable<=0){ noSpinModal?.classList.remove('hidden'); return; }
+
+    spinning=true;
+    spinBtn.disabled=true;
+    spinsAvailable--;
+
+    // determine prize
+    let idx;
+    if(guaranteedPrizes.length>0) idx = guaranteedPrizes.shift();
+    else {
+      const spinType = document.querySelector('input[name="spin-type"]:checked')?.value || 'free';
+      if(spinType === 'airtime') idx = CHALLENGE_TO_PRIZE_INDEX.airtimeAmount;
+      else if(spinType === 'data') idx = [0,1][Math.floor(Math.random()*2)];
+      else if(spinType === 'free') idx = [0,1][Math.floor(Math.random()*2)];
+      else idx = [1,3,7][Math.floor(Math.random()*3)]; // tasks, affiliate etc
+    }
+
+    await spinToIndex(idx);
+    const amount = PRIZES[idx];
+
+    try{
+      const uid = firebase.auth().currentUser.uid;
+      const userRef = firebase.firestore().collection('users').doc(uid);
+      await firebase.firestore().runTransaction(async tx=>{
+        const snap = await tx.get(userRef);
+        const today = todayKey();
+        if(!snap.exists) tx.set(userRef,{balance:amount,spinsUsedCount:1,spinsUsedDate:today},{merge:true});
+        else {
+          const data = snap.data();
+          const last = data.spinsUsedDate;
+          const lastKey = last && typeof last.toDate==='function' ? last.toDate().toISOString().slice(0,10) : last;
+          if(lastKey !== today){
+            tx.update(userRef,{
+              balance:firebase.firestore.FieldValue.increment(amount),
+              spinsUsedCount:1,
+              spinsUsedDate:today
+            });
+          } else {
+            tx.update(userRef,{
+              balance:firebase.firestore.FieldValue.increment(amount),
+              spinsUsedCount:firebase.firestore.FieldValue.increment(1)
+            });
+          }
+        }
+      });
+    }catch(err){ console.error(err); showToast('Spin update failed.'); }
+
+    if(winAmountEl) winAmountEl.textContent = `₦${amount}`;
+    winModal?.classList.remove('hidden');
+    spinning=false;
+    spinBtn.disabled=false;
+  }
+
+  // ---------- INIT ----------
+  setupCanvasHD();
+  window.addEventListener('resize', setupCanvasHD);
+  if(spinBtn) spinBtn.addEventListener('click', handleSpinClick);
+  if(winCloseBtn) winCloseBtn.addEventListener('click', ()=> winModal?.classList.add('hidden'));
+  if(noSpinClose) noSpinClose.addEventListener('click', ()=> noSpinModal?.classList.add('hidden'));
+
+  firebase.auth().onAuthStateChanged(async user=>{
+    currentUser = user;
+    if(!user){ userDocCached=null; recomputeSpinsUI(); return; }
+    const ref = firebase.firestore().collection('users').doc(user.uid);
+    ref.onSnapshot(snap=>{ userDocCached=snap.data(); recomputeSpinsUI(); });
+  });
+}
 
 
 
