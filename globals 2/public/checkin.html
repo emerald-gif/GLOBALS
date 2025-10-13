@@ -1,398 +1,447 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Daily Check-In | Globals</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
-  
-  <!-- ✅ Firebase SDK -->
+
+  <!-- ✅ Firebase SDK (compat version) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
-  <!-- ✅ Your main Firebase config file -->
-  <script defer src="main.js"></script>
-</head>
+  <!-- ✅ Lucide Icons -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.264.0/dist/lucide.min.js"></script>
 
+  <!-- ✅ Your Main JS (firebase config inside) -->
+  <script src="main.js"></script>
+</head>
 <body class="bg-gradient-to-br from-[#f8fafc] via-[#ffffff] to-[#f1f5f9] p-6 min-h-screen">
 
   <!-- ================= CHECK-IN SECTION ================= -->
-  
+  <div id="checkin-screen" class="tab-section min-h-screen bg-gradient-to-br from-[#f8fafc] via-[#ffffff] to-[#f1f5f9] p-6">
+    <!-- 🔹 Header -->
+    <div class="flex items-center justify-between mb-8">
+      <button onclick="activateTab('dashboard')" class="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition font-medium">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        Back
+      </button>
+      <h2 class="text-[1.75rem] font-extrabold text-gray-800 tracking-tight bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
+        Daily Check-In Rewards
+      </h2>
+    </div>
 
+    <!-- 💰 Info Banner -->
+    <div class="max-w-3xl mx-auto mb-8 p-5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-indigo-100 shadow-sm flex items-center justify-between">
+      <div>
+        <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">🎉 Check-in Streak Rewards</h3>
+        <p class="text-sm text-gray-500 mt-1">Check in for 7 days straight & earn <span class="font-semibold text-indigo-600">₦300</span> bonus credited directly to your balance.</p>
+      </div>
+    </div>
 
+    <!-- 📅 Check-In Calendar -->
+    <div id="checkin-container" class="max-w-4xl mx-auto space-y-10">
+      <div id="checkin-cards" class="grid grid-cols-7 gap-3 justify-items-center"></div>
 
+      <!-- 🚀 Check-In Button -->
+      <div class="text-center">
+        <button id="checkin-btn" class="px-10 py-4 rounded-2xl relative overflow-hidden font-semibold shadow-lg bg-gradient-to-r from-indigo-500 via-blue-600 to-purple-600 hover:scale-105 hover:shadow-indigo-500/30 active:scale-95 transition-all transform">
+          <span class="relative z-10 text-white flex items-center justify-center gap-2">🚀 Check In</span>
+          <div class="absolute inset-0 bg-gradient-to-r from-blue-400/30 to-purple-500/30 blur-xl opacity-40"></div>
+        </button>
+        <p class="text-xs text-gray-400 mt-2">You can check in once every day.</p>
+      </div>
+    </div>
 
+    <!-- 📜 Reward History -->
+    <div id="checkin-history" class="mt-14 max-w-2xl mx-auto">
+      <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        Reward History
+      </h3>
+      <div id="history-list" class="space-y-3 text-sm text-gray-600">
+        <!-- Rewards injected by JS -->
+      </div>
+    </div>
+  </div>
 
-
-<div id="checkin-screen" class="tab-section  min-h-screen bg-gradient-to-br from-[#f8fafc] via-[#ffffff] to-[#f1f5f9] p-6">    
-  <!-- 🔹 Header -->    
-  <div class="flex items-center justify-between mb-8">    
-    <button onclick="activateTab('dashboard')"     
-      class="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition font-medium">    
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"    
-           viewBox="0 0 24 24" stroke="currentColor">    
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"    
-              d="M15 19l-7-7 7-7" />    
-      </svg>    
-      Back    
-    </button>  
-    <h2 class="text-[1.75rem] font-extrabold text-gray-800 tracking-tight bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">    
-      Daily Check-In Rewards    
-    </h2>    
-  </div>    
-
-  <!-- 💰 Info Banner -->    
-  <div class="max-w-3xl mx-auto mb-8 p-5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-indigo-100 shadow-sm flex items-center justify-between">    
-    <div>    
-      <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">    
-        🎉 Check-in Streak Rewards    
-      </h3>    
-      <p class="text-sm text-gray-500 mt-1">checkin for 7 days straight & earn <span class="font-semibold text-indigo-600">₦300</span> bonus credited directly to your balance.</p>    
-    </div>    
-  </div>    
-
-  <!-- 📅 Check-In Calendar -->    
-  <div id="checkin-container" class="max-w-4xl mx-auto space-y-10">    
-    <div id="checkin-cards" class="grid grid-cols-7 gap-3 justify-items-center">    
-      <!-- Cards injected by JS -->    
-    </div>  
-
-    <!-- 🚀 Check-In Button -->    
-    <div class="text-center">    
-      <button id="checkin-btn"    
-        class="px-10 py-4 rounded-2xl relative overflow-hidden font-semibold shadow-lg     
-               bg-gradient-to-r from-indigo-500 via-blue-600 to-purple-600     
-               hover:scale-105 hover:shadow-indigo-500/30 active:scale-95 transition-all transform">    
-        <span class="relative z-10 text-white flex items-center justify-center gap-2">    
-          🚀 Check In    
-        </span>    
-        <div class="absolute inset-0 bg-gradient-to-r from-blue-400/30 to-purple-500/30 blur-xl opacity-40"></div>    
-      </button>    
-      <p class="text-xs text-gray-400 mt-2">You can check in once every day.</p>    
-    </div>    
-  </div>    
-
-  <!-- 📜 Reward History -->    
-  <div id="checkin-history" class="mt-14 max-w-2xl mx-auto">    
-    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">    
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600" fill="none"    
-           viewBox="0 0 24 24" stroke="currentColor">    
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"    
-              d="M5 13l4 4L19 7" />    
-      </svg>    
-      Reward History    
-    </h3>    
-    <div id="history-list" class="space-y-3 text-sm text-gray-600">    
-      <!-- Rewards injected by JS -->    
-    </div>    
-  </div>    
-</div>
-
-
-<style>
-  /* 🗓️ Calendar Day Card */
-  #checkin-cards .day-card {
-    width: 52px;
-    height: 64px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background: white;
-    border-radius: 16px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #475569;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-    transition: all 0.3s ease;
-    cursor: pointer;
-    position: relative;
-  }
-
-  #checkin-cards .day-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 6px 20px rgba(99,102,241,0.2);
-  }
-
-  /* ✅ Checked Day */
-  #checkin-cards .day-card.checked {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    color: white;
-    font-weight: 700;
-    box-shadow: 0 6px 22px rgba(99,102,241,0.25);
-  }
-  #checkin-cards .day-card.checked::after {
-    content: "✓";
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    font-size: 12px;
-    font-weight: bold;
-    color: white;
-  }
-
-  /* 🔵 Today Indicator */
-  #checkin-cards .day-card.today {
-    border: 2px solid #3b82f6;
-    font-weight: 700;
-    color: #1e3a8a;
-  }
-
-  /* ✨ Fade Animation */
-  @keyframes fadeSlideUp {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-  }
-  #checkin-screen {
-    animation: fadeSlideUp 0.6s ease-out;
-  }
-
-  /* 🎇 Subtle Glow */
-  #checkin-btn:hover::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at center, rgba(255,255,255,0.2), transparent 70%);
-    z-index: 0;
-    transition: opacity 0.4s ease;
-  }
-</style>
-
-
-
-
-
-  
+  <style>
+    /* 🗓️ Calendar Day Card */
+    #checkin-cards .day-card { width: 52px; height: 64px; display: flex; flex-direction: column; justify-content: center; align-items: center; background: white; border-radius: 16px; font-size: 13px; font-weight: 600; color: #475569; box-shadow: 0 4px 12px rgba(0,0,0,0.04); transition: all 0.3s ease; cursor: pointer; position: relative; }
+    #checkin-cards .day-card:hover { transform: translateY(-6px); box-shadow: 0 6px 20px rgba(99,102,241,0.2); }
+    #checkin-cards .day-card.checked { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; font-weight: 700; box-shadow: 0 6px 22px rgba(99,102,241,0.25); }
+    #checkin-cards .day-card.checked::after { content: "✓"; position: absolute; top: 6px; right: 6px; font-size: 12px; font-weight: bold; color: white; }
+    #checkin-cards .day-card.today { border: 2px solid #3b82f6; font-weight: 700; color: #1e3a8a; }
+    @keyframes fadeSlideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    #checkin-screen { animation: fadeSlideUp 0.6s ease-out; }
+    #checkin-btn:hover::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at center, rgba(255,255,255,0.2), transparent 70%); z-index: 0; transition: opacity 0.4s ease; }
+  </style>
 
 
 <script>
-/* =============================== DAILY CHECK-IN SCRIPT ================================ */
-// ====== FIRESTORE REF ======
-function cyclesRef(uid) {
-  return db.collection('checkins').doc(uid).collection('cycles');
-}
 
-// ====== UTILITIES ======
-// local YYYY-MM-DD string
-function todayStrLocal() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
 
-function dayDiff(startDateStr, dateStr) {
-  if (!startDateStr || !dateStr) return 0;
-  const [sy, sm, sd] = startDateStr.split('-').map(Number);
-  const [ty, tm, td] = dateStr.split('-').map(Number);
-  const s = new Date(sy, sm - 1, sd);
-  const t = new Date(ty, tm - 1, td);
-  return Math.floor((t - s) / (1000 * 60 * 60 * 24));
-}
+// ======================== DAILY CHECK-IN SCRIPT ========================
 
-function ordinal(n) {
-  return ['1st','2nd','3rd','4th','5th','6th','7th'][n-1] || `${n}th`;
-}
+document.addEventListener("DOMContentLoaded", () => {
+  if (window.lucide) lucide.createIcons();
 
-// ====== CARD BUILDER ======
-function makeCard({status='future', day=1, amountLabel='', isLast=false}) {
-  const card = document.createElement('div');
-  card.className = 'flex flex-col items-center justify-center rounded-xl p-2 bg-white text-gray-800 shadow-md';
-  card.style.width = '60px';
-  card.style.height = '80px';
-  card.style.fontSize = '12px';
+  const auth = firebase.auth();
+  const db = firebase.firestore();
 
-  // status styles
-  if (status === 'checked') {
-    card.style.background = '#dcfce7';
-    card.style.color = '#065f46';
-  } else if (status === 'missed') {
-    card.style.background = '#fee2e2';
-    card.style.color = '#991b1b';
-  } else if (status === 'today') {
-    card.style.background = '#3b82f6';
-    card.style.color = 'white';
-  } else {
-    card.style.background = '#f1f5f9';
-    card.style.color = '#475569';
+  // ===== Firestore reference =====
+  function cyclesRef(uid) {
+    return db.collection('checkins').doc(uid).collection('cycles');
   }
 
-  // amount
-  const amt = document.createElement('div');
-  amt.className = 'text-xs font-bold';
-  amt.textContent = amountLabel;
-
-  // circle
-  const circle = document.createElement('div');
-  circle.style.width = '20px';
-  circle.style.height = '20px';
-  circle.style.borderRadius = '999px';
-  circle.style.display = 'flex';
-  circle.style.alignItems = 'center';
-  circle.style.justifyContent = 'center';
-  circle.style.margin = '4px 0';
-
-  if (status === 'checked') {
-    circle.style.background = '#10b981';
-    circle.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17L4 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-  } else if (status === 'missed') {
-    circle.style.background = '#ef4444';
-    circle.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6L18 18" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-  } else if (status === 'today') {
-    circle.style.background = '#facc15';
-    circle.innerHTML = `<div style="width:6px;height:6px;border-radius:999px;background:white"></div>`;
-  } else {
-    circle.style.background = '#cbd5e1';
+  // ===== Utilities =====
+  function todayStrLocal() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   }
 
-  const dayLabel = document.createElement('div');
-  dayLabel.className = 'text-xs font-medium';
-  dayLabel.textContent = `Day ${day}`;
-
-  card.appendChild(amt);
-  card.appendChild(circle);
-  card.appendChild(dayLabel);
-  return card;
-}
-
-// ====== RENDER CHECK-IN ======
-function renderCheckin(cycleDocSnap) {
-  const cardsDiv = document.getElementById('checkin-cards');
-  const btn = document.getElementById('checkin-btn');
-  if (!cardsDiv || !btn) return;
-
-  if (!cycleDocSnap) {
-    cardsDiv.innerHTML = '';
-    btn.disabled = true;
-    btn.textContent = 'Loading...';
-    btn.classList.add('opacity-50', 'cursor-not-allowed');
-    return;
+  function dayDiff(startDateStr, dateStr) {
+    if (!startDateStr || !dateStr) return 0;
+    const [sy, sm, sd] = startDateStr.split('-').map(Number);
+    const [ty, tm, td] = dateStr.split('-').map(Number);
+    const s = new Date(sy, sm - 1, sd);
+    const t = new Date(ty, tm - 1, td);
+    return Math.floor((t - s) / (1000 * 60 * 60 * 24));
   }
 
-  const d = cycleDocSnap.data();
-  const start = d && d.cycleStartDate ? d.cycleStartDate : todayStrLocal();
-  const daysArr = Array.isArray(d.days) ? d.days.concat() : Array(7).fill(false);
-  const status = d.status || 'processing';
-  const today = todayStrLocal();
-  const diff = dayDiff(start, today);
+  // ===== Card builder =====
+  function makeCard({ status = 'future', day = 1, amountLabel = '', isLast = false }) {
+    const card = document.createElement('div');
+    card.className = 'flex flex-col items-center justify-center rounded-xl p-2 shadow-md';
+    card.style.width = '60px';
+    card.style.height = '80px';
+    card.style.fontSize = '12px';
+    
+    // status styles
+    if (status === 'checked') {
+      card.style.background = '#dcfce7';
+      card.style.color = '#065f46';
+    } else if (status === 'missed') {
+      card.style.background = '#fee2e2';
+      card.style.color = '#991b1b';
+    } else if (status === 'today') {
+      card.style.background = '#3b82f6';
+      card.style.color = 'white';
+    } else {
+      card.style.background = '#f1f5f9';
+      card.style.color = '#475569';
+    }
 
-  cardsDiv.innerHTML = '';
+    // amount label
+    const amt = document.createElement('div');
+    amt.className = 'text-xs font-bold';
+    amt.textContent = amountLabel;
 
-  for (let i = 0; i < 7; i++) {
-    let s = 'future';
-    if (i < diff) s = (daysArr[i] === true) ? 'checked' : 'missed';
-    else if (i === diff) s = (daysArr[i] === true) ? 'checked' : 'today';
-    if (diff > 6 && status !== 'processing') s = (daysArr[i] === true) ? 'checked' : 'missed';
-    const isLast = (i === 6);
-    cardsDiv.appendChild(makeCard({
-      status: s,
-      day: i + 1,
-      amountLabel: isLast ? '₦300' : '₦50',
-      isLast
-    }));
+    // circle
+    const circle = document.createElement('div');
+    circle.style.width = '20px';
+    circle.style.height = '20px';
+    circle.style.borderRadius = '999px';
+    circle.style.display = 'flex';
+    circle.style.alignItems = 'center';
+    circle.style.justifyContent = 'center';
+    circle.style.margin = '4px 0';
+    
+    if (status === 'checked') {
+      circle.style.background = '#10b981';
+      circle.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17L4 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    } else if (status === 'missed') {
+      circle.style.background = '#ef4444';
+      circle.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6L18 18" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    } else if (status === 'today') {
+      circle.style.background = '#facc15';
+      circle.innerHTML = `<div style="width:6px;height:6px;border-radius:999px;background:white"></div>`;
+    } else {
+      circle.style.background = '#cbd5e1';
+    }
+
+    const dayLabel = document.createElement('div');
+    dayLabel.className = 'text-xs font-medium';
+    dayLabel.textContent = `Day ${day}`;
+
+    card.appendChild(amt);
+    card.appendChild(circle);
+    card.appendChild(dayLabel);
+
+    return card;
   }
 
-  // button logic
-  const isWithinCycle = (diff >= 0 && diff <= 6 && status === 'processing');
-  const alreadyCheckedToday = (diff >= 0 && diff <= 6 && daysArr[diff] === true);
-  const shouldEnable = (isWithinCycle && !alreadyCheckedToday);
+  // ===== Render check-in UI =====
+  function renderCheckin(cycleDocSnap) {
+    const cardsDiv = document.getElementById('checkin-cards');
+    const btn = document.getElementById('checkin-btn');
+    if (!cardsDiv || !btn) return;
 
-  btn.disabled = !shouldEnable;
-  btn.classList.toggle('opacity-50', btn.disabled);
-  btn.classList.toggle('cursor-not-allowed', btn.disabled);
-  btn.textContent = btn.disabled ? (status === 'processing' && alreadyCheckedToday ? 'Checked' : 'Unavailable') : 'Check In';
-}
-
-// ====== HISTORY LIST ======
-function renderHistoryList(items) {
-  const hist = document.getElementById('history-list');
-  if (!hist) return;
-  hist.innerHTML = '';
-  if (!items || items.length === 0) {
-    hist.innerHTML = '<p class="text-gray-400 italic">No history yet</p>';
-    return;
-  }
-  items.forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'p-4 rounded-2xl shadow-xl backdrop-blur-lg bg-white/6 border border-green-400/20 flex items-center justify-between animate-slide-in';
-    div.innerHTML = `<div>
-        <div style="font-weight:700;color:#bbf7d0">₦${item.rewardAmount}</div>
-        <div style="font-size:12px;color:#94a3b8">${item.date}</div>
-      </div>
-      <div style="font-weight:700;color:#10b981">RECEIVED</div>`;
-    hist.appendChild(div);
-  });
-}
-
-// ====== HISTORY LISTENER ======
-function startHistoryListener(uid) {
-  if (!uid) return;
-  cyclesRef(uid).orderBy('cycleStartDate','desc')
-    .onSnapshot(qs => {
-      const items = [];
-      qs.forEach(doc => {
-        const d = doc.data();
-        if (d.status === 'received') {
-          items.push({
-            rewardAmount: d.rewardAmount || 300,
-            date: d.updatedAt && d.updatedAt.toDate ? d.updatedAt.toDate().toLocaleString() : (d.cycleStartDate || todayStrLocal())
-          });
-        }
-      });
-      renderHistoryList(items);
-    }, err => {
-      console.error('History listener error:', err);
-    });
-}
-
-// ====== INITIALIZE CHECK-IN LISTENER ======
-function startCheckinListener() {
-  let _autoCycleInterval = null;
-  let _creatingTodayCycle = false;
-
-  firebase.auth().onAuthStateChanged(async user => {
-    if (!user) {
-      if (_autoCycleInterval) { clearInterval(_autoCycleInterval); _autoCycleInterval = null; }
+    if (!cycleDocSnap) {
+      cardsDiv.innerHTML = '';
+      btn.disabled = true;
+      btn.textContent = 'Loading...';
+      btn.classList.add('opacity-50', 'cursor-not-allowed');
       return;
     }
-    const uid = user.uid;
 
-    // ensure at least one cycle exists on login
-    try { await ensureCycleExists(uid); } catch (err) { console.error('ensureCycleExists error', err); }
+    const d = cycleDocSnap.data();
+    const start = d && d.cycleStartDate ? d.cycleStartDate : todayStrLocal();
+    const daysArr = Array.isArray(d.days) ? d.days.concat() : Array(7).fill(false);
+    const status = d.status || 'processing';
+    const today = todayStrLocal();
+    const diff = dayDiff(start, today);
 
-    // latest-cycle listener for UI + button
-    cyclesRef(uid).orderBy('cycleStartDate','desc').limit(1)
-      .onSnapshot(async qs => {
-        if (qs.empty) return;
-        const doc = qs.docs[0];
-        renderCheckin(doc);
+    cardsDiv.innerHTML = '';
+    for (let i = 0; i < 7; i++) {
+      let s = 'future';
+      if (i < diff) s = (daysArr[i] === true) ? 'checked' : 'missed';
+      else if (i === diff) s = (daysArr[i] === true) ? 'checked' : 'today';
+      if (diff > 6 && status !== 'processing') s = (daysArr[i] === true) ? 'checked' : 'missed';
 
-        const btn = document.getElementById('checkin-btn');
-        if (btn) btn.onclick = () => handleCheckInPress(doc);
-      }, err => console.error('latest-cycle listener error:', err));
+      const isLast = (i === 6);
+      cardsDiv.appendChild(makeCard({
+        status: s,
+        day: i + 1,
+        amountLabel: isLast ? '₦300' : '₦50',
+        isLast
+      }));
+    }
 
-    // history listener
-    startHistoryListener(uid);
+    // button logic
+    const isWithinCycle = (diff >= 0 && diff <= 6 && status === 'processing');
+    const alreadyCheckedToday = (diff >= 0 && diff <= 6 && daysArr[diff] === true);
+    const shouldEnable = (isWithinCycle && !alreadyCheckedToday);
 
-    // polling to auto-create next cycle at local midnight (every 15s)
-    _autoCycleInterval = setInterval(() => createNextCycleIfNeeded(uid), 15000);
-    createNextCycleIfNeeded(uid);
-  });
-}
+    btn.disabled = !shouldEnable;
+    btn.classList.toggle('opacity-50', btn.disabled);
+    btn.classList.toggle('cursor-not-allowed', btn.disabled);
+    btn.textContent = btn.disabled ? (status === 'processing' && alreadyCheckedToday ? 'Checked' : 'Unavailable') : 'Check In';
+  }
 
-// start listeners
-startCheckinListener();
+  // ===== Handle check-in button press =====
+  async function handleCheckInPress(cycleDocSnap) {
+    if (!cycleDocSnap) return;
+    try {
+      const uid = firebase.auth().currentUser?.uid;
+      if (!uid) return;
+
+      const d = cycleDocSnap.data();
+      const diff = dayDiff(d.cycleStartDate, todayStrLocal());
+      if (diff < 0 || diff > 6) return;
+      if (d.days && d.days[diff]) return;
+
+      const btn = document.getElementById('checkin-btn');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Checking...';
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+
+      const arr = Array.isArray(d.days) ? [...d.days] : Array(7).fill(false);
+      arr[diff] = true;
+
+      await cyclesRef(uid).doc(cycleDocSnap.id).update({
+        days: arr,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      alert('✅ Check-in Successful');
+
+      if (diff === 6) {
+        await finalizeCycle(uid, cycleDocSnap.id);
+      }
+
+    } catch (err) {
+      console.error('handleCheckInPress error', err);
+      const btn = document.getElementById('checkin-btn');
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Check In';
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+    }
+  }
+
+  // ===== Finalize cycle =====
+  async function finalizeCycle(uid, cycleId) {
+    try {
+      if (!uid || !cycleId) return;
+      const ref = cyclesRef(uid).doc(cycleId);
+      await db.runTransaction(async t => {
+        const snap = await t.get(ref);
+        if (!snap.exists) return;
+        const d = snap.data();
+        const success = Array.isArray(d.days) && d.days.every(x => x === true);
+        if (success) {
+          const userRef = db.collection('users').doc(uid);
+          const userSnap = await t.get(userRef);
+          const oldBal = userSnap.exists ? userSnap.data().balance || 0 : 0;
+          const newBal = oldBal + (d.rewardAmount || 300);
+          t.update(userRef, { balance: newBal, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+          t.update(ref, { status: 'received', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+
+          // update UI
+          const balEl1 = document.getElementById('balance-display');
+          const balEl2 = document.getElementById('balance-amount');
+          if (balEl1) balEl1.textContent = `₦${newBal}`;
+          if (balEl2) balEl2.textContent = `₦${newBal}`;
+        } else {
+          t.update(ref, { status: 'failed', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        }
+      });
+    } catch (err) {
+      console.error('finalizeCycle error', err);
+    }
+  }
+
+  // ===== History render =====
+  function renderHistoryList(items) {
+    const hist = document.getElementById('history-list');
+    if (!hist) return;
+    hist.innerHTML = '';
+    if (!items || items.length === 0) {
+      hist.innerHTML = '<p class="text-gray-400 italic">No history yet</p>';
+      return;
+    }
+    items.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'p-4 rounded-2xl shadow-xl backdrop-blur-lg bg-white/6 border border-green-400/20 flex items-center justify-between';
+      div.innerHTML = `
+        <div>
+          <div style="font-weight:700;color:#bbf7d0">₦${item.rewardAmount}</div>
+          <div style="font-size:12px;color:#94a3b8">${item.date}</div>
+        </div>
+        <div style="font-weight:700;color:#10b981">RECEIVED</div>
+      `;
+      hist.appendChild(div);
+    });
+  }
+
+  function startHistoryListener(uid) {
+    if (!uid) return;
+    cyclesRef(uid).orderBy('cycleStartDate', 'desc')
+      .onSnapshot(qs => {
+        const items = [];
+        qs.forEach(doc => {
+          const d = doc.data();
+          if (d.status === 'received') {
+            items.push({
+              rewardAmount: d.rewardAmount || 300,
+              date: d.updatedAt?.toDate?.().toLocaleString() || d.cycleStartDate || todayStrLocal()
+            });
+          }
+        });
+        renderHistoryList(items);
+      }, err => console.error('History listener error:', err));
+  }
+
+  // ===== Ensure cycle exists =====
+  async function ensureCycleExists(uid) {
+    if (!uid) return;
+    const snap = await cyclesRef(uid).orderBy('cycleStartDate', 'desc').limit(1).get();
+    if (snap.empty) {
+      const today = todayStrLocal();
+      await cyclesRef(uid).doc(today).set({
+        cycleStartDate: today,
+        days: Array(7).fill(false),
+        status: 'processing',
+        rewardAmount: 300,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      return;
+    }
+    const doc = snap.docs[0];
+    const d = doc.data();
+    const today = todayStrLocal();
+    if (d.status !== 'processing' && dayDiff(d.cycleStartDate, today) >= 7) {
+      await cyclesRef(uid).doc(today).set({
+        cycleStartDate: today,
+        days: Array(7).fill(false),
+        status: 'processing',
+        rewardAmount: 300,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+  }
+
+  // ===== Start check-in listener =====
+  function startCheckinListener() {
+    let autoInterval = null;
+
+    auth.onAuthStateChanged(async user => {
+      if (!user) {
+        if (autoInterval) clearInterval(autoInterval);
+        return;
+      }
+
+      const uid = user.uid;
+      await ensureCycleExists(uid);
+
+      cyclesRef(uid).orderBy('cycleStartDate','desc').limit(1)
+        .onSnapshot(async qs => {
+          if (qs.empty) return;
+          const doc = qs.docs[0];
+          renderCheckin(doc);
+          const btn = document.getElementById('checkin-btn');
+          if (btn) btn.onclick = () => handleCheckInPress(doc);
+        });
+
+      startHistoryListener(uid);
+
+      autoInterval = setInterval(() => createNextCycleIfNeeded(uid), 15 * 1000);
+      createNextCycleIfNeeded(uid);
+    });
+  }
+
+  // ===== Auto-create next cycle =====
+  let _creatingTodayCycle = false;
+  async function createNextCycleIfNeeded(uid) {
+    if (!uid || _creatingTodayCycle) return;
+    try {
+      const qs = await cyclesRef(uid).orderBy('cycleStartDate','desc').limit(1).get();
+      const today = todayStrLocal();
+      if (qs.empty || (qs.docs[0].data().status !== 'processing' && dayDiff(qs.docs[0].data().cycleStartDate, today) >= 7)) {
+        const proc = await cyclesRef(uid).where('status','==','processing').limit(1).get();
+        if (!proc.empty) return;
+        _creatingTodayCycle = true;
+        await cyclesRef(uid).doc(today).set({
+          cycleStartDate: today,
+          days: Array(7).fill(false),
+          status: 'processing',
+          rewardAmount: 300,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        _creatingTodayCycle = false;
+      }
+    } catch (err) {
+      console.error('createNextCycleIfNeeded error', err);
+      _creatingTodayCycle = false;
+    }
+  }
+
+  startCheckinListener();
+});
+
+  
 </script>
 
 
-    
+
 
 
   
+  
 </body>
-
-</ht
-
-
+</html>
