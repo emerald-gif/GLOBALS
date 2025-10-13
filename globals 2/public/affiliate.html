@@ -84,12 +84,17 @@ const db = firebase.firestore();
     </div>
 
     <!-- 🧩 Tasks Grid -->
-    <section id="aff2_jobsGridSection">
-      <div id="aff2_grid" class="grid grid-cols-2 gap-4"></div>
-    </section>
+    <!-- 🧩 Tasks Grid -->
+<div id="aff2_jobsContainer">
+  <section id="aff2_jobsGridSection">
+    <div id="aff2_grid" class="grid grid-cols-2 gap-4"></div>
+  </section>
+</div>
 
-    <!-- 📝 Job Details -->
-    <div id="aff2_jobDetailScreen" class="aff2-hidden px-4 py-6"></div>
+<!-- 📝 Job Details -->
+<div id="aff2_jobDetailScreen" class="aff2-hidden px-4 py-6">
+  <div id="aff2_jobDetailContent"></div>
+</div>
 
     <!-- ✅ Finished Tasks -->
     <div id="aff2_finishedScreen" class="aff2-hidden px-4 py-8 bg-gray-50 min-h-[60vh]">
@@ -585,3 +590,4 @@ const db = firebase.firestore();
 </body>
 
 </html>
+
