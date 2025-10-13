@@ -2,42 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Affiliate task| Globals</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
 
-  <title>Globals | Affiliate Tasks</title>
-
-  <!-- 📱 Favicon -->
-  <link rel="shortcut icon" href="GLOBALS.jpg" type="image/jpg">
-
-  <!-- 💅 Styles -->
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
-
-  <!-- 📊 JS Libraries -->
-  <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- 🎨 Optional: Dashboard floating shapes -->
-  <style>
-    .float-shape { position:absolute; border-radius:999px; filter: blur(18px); opacity:.9; animation: floaty 7s ease-in-out infinite; pointer-events:none; }
-    .shape-1 { width:160px; height:160px; left:-40px; top:-40px; background:linear-gradient(135deg,#06b6d4,#7c3aed); }
-    .shape-2 { width:120px; height:120px; right:-30px; top:120px; background:linear-gradient(135deg,#34d399,#60a5fa); animation-duration:9s; }
-    @keyframes floaty { 0%{transform:translateY(0)}50%{transform:translateY(12px)}100%{transform:translateY(0)} }
-    @media (min-width:900px){ #sidebar{transform:translateX(0) !important; position:relative;} #overlay{display:none!important;} }
-  </style>
-
-
-</head>
-  
-  <!-- ✅ Firebase SDK -->
+  <!-- ✅ Firebase SDK (compat version) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
 
-  <!-- ✅ Your main Firebase config -->
-  
-<script src="main.js"></script>
+  <!-- ✅ Lucide Icons -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.264.0/dist/lucide.min.js"></script>
+
+  <!-- ✅ Your Main JS (firebase config inside) -->
+  <script src="main.js"></script>
+</head>
 
 
 
@@ -595,3 +574,4 @@
 
 </body>
 </html>
+
