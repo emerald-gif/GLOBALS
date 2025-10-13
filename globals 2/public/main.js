@@ -908,10 +908,13 @@ function goToPinSetup() {
   const fileInputCamera = document.getElementById('fileInputCamera');
   const fileInputGallery = document.getElementById('fileInputGallery');
 
-  if (!overlay || !sheet || !fileInputCamera || !fileInputGallery) {
-    console.error('[drawer] Required drawer DOM nodes missing. Make sure HTML snippet is present.');
-    return;
-  }
+  
+    const drawer = document.getElementById('drawer');
+if (drawer) {
+  initDrawer(drawer);
+} else {
+  console.warn('Drawer not found on this page — skipping init.');
+}
 
   let currentOriginalInput = null;
   let previouslyFocused = null;
