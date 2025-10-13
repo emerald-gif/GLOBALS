@@ -849,7 +849,7 @@
       </a>
 
       <!-- 🎬 Watch Ads & Earn -->
-      <a href="#buy-earn" onclick="activateTab('watchAdsSection')" 
+      <a href="watchads.html" 
          class="group relative rounded-3xl overflow-hidden bg-white border border-gray-100 
                 p-6 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]">
         <div class="flex items-center gap-3 mb-3">
@@ -908,131 +908,7 @@
 
 <!-- ================= WATCH ADS DASHBOARD + PLAYER (FULL) ================= -->
 
-<section id="watchAdsSection" class="tab-section hidden relative w-full pt-4 pb-10 bg-gradient-to-br from-indigo-50 via-white to-indigo-100 overflow-hidden">
-  <!-- 🌟 Back Button -->
-  <button onclick="activateTab('dashboard')" 
-    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-    </svg>
-    Back
-  </button>
-
-  <!-- gradient blur bg -->
-  <div class="absolute inset-0 pointer-events-none">
-    <div class="absolute -top-24 -left-32 w-96 h-96 bg-indigo-400/20 blur-3xl rounded-full"></div>  
-    <div class="absolute bottom-0 right-0 w-[500px] h-[500px] bg-purple-300/20 blur-3xl rounded-full"></div>  
-  </div>  
-
-  <!-- title -->
-  <div class="relative max-w-6xl mx-auto px-6 mb-6 text-center">  
-    <h2 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-indigo-800 to-indigo-600 bg-clip-text text-transparent">  
-      Watch Ads & Earn  
-    </h2>  
-    <p class="text-gray-600 mt-2 text-sm md:text-base">  
-      Watch short video ads and earn instant rewards — watched ads reset on reloads so you can come back and watch more. 
-    </p>  
-  </div>  
-
-  <!-- top stats -->
-  <div class="relative max-w-4xl mx-auto mb-8 grid grid-cols-2 sm:grid-cols-5 gap-4 px-6">  
-    <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">  
-      <div class="text-xs text-gray-500">Clicked</div>  
-      <div id="statClicked" class="text-lg font-semibold text-indigo-700">0</div>  
-    </div>  
-    <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">  
-      <div class="text-xs text-gray-500">Completed</div>  
-      <div id="statCompleted" class="text-lg font-semibold text-green-700">0</div>  
-    </div>  
-    <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">  
-      <div class="text-xs text-gray-500">Skipped</div>  
-      <div id="statAbandoned" class="text-lg font-semibold text-rose-600">0</div>  
-    </div>  
-    <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">  
-      <div class="text-xs text-gray-500">Ad Income (today)</div>  
-      <div id="statIncome" class="text-lg font-semibold text-blue-700">₦0.00</div>  
-    </div>  
-    <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">  
-      <div class="text-xs text-gray-500">Ad Income (total)</div>  
-      <div id="statAdTotal" class="text-lg font-semibold text-gray-900">₦0.00</div>  
-    </div> 
-	  <div class="rounded-2xl bg-white/70 border border-indigo-100 backdrop-blur-xl p-4 text-center shadow-sm">
-  <div class="text-xs text-gray-500">Bonus Balance</div>
-  <div class="text-lg font-semibold text-emerald-700">₦0.00</div>
-	  </div>
-	  
-  </div>  
-
-
-
-     <div class="relative max-w-6xl mx-auto px-6 mb-4 mt-8">
-  <h3 class="text-xl font-semibold text-indigo-800 flex items-center gap-2">
-    <i data-lucide="play-circle" class="w-5 h-5 text-indigo-600"></i>
-    Available Ads
-  </h3>
-  <div class="h-[2px] bg-gradient-to-r from-indigo-500 via-purple-400 to-transparent mt-2 rounded-full"></div>
-</div>
-	
-  <!-- ad cards grid -->
-  <div class="relative max-w-6xl mx-auto px-6">  
-    <div id="adsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>  
-  </div>  
-</section>  
-
-<!-- ad modal -->
-<div id="adModal" class="fixed inset-0 hidden z-60 bg-black/60 flex items-center justify-center" aria-hidden="true">
-  <div class="bg-white rounded-3xl shadow-xl overflow-hidden max-w-2xl w-[92%] relative">
-    <button id="closeAd" class="absolute top-3 right-3 bg-gray-100 hover:bg-gray-200 p-2 rounded-full z-30" aria-label="Close ad">
-      <i data-lucide="x" class="w-5 h-5 text-gray-600"></i>
-    </button>
-
-    <!-- progress + time (read-only) -->
-    <div id="videoProgressWrap" class="px-6 pt-6 pb-3">
-      <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-        <div id="videoProgress" class="h-full w-0 bg-indigo-600 transition-all duration-150"></div>
-      </div>
-      <div class="flex justify-between mt-2 text-xs text-slate-500">
-        <div id="videoTimeLabel">00:00 / 00:00</div>
-        <div id="videoRemainingLabel"></div>
-      </div>
-    </div>
-
-    <!-- player area with fallback overlay + spinner -->
-    <div class="px-6 pb-6 relative flex justify-center items-center">
-      <video id="adPlayer" class="w-full rounded-lg bg-black" playsinline preload="metadata" aria-label="Ad player"></video>
-
-      <!-- friendly fallback message (script expects id="adFallbackMessage") -->
-      <div id="adFallbackMessage" class="absolute inset-0 flex items-center justify-center bg-black/80 text-white text-sm rounded-lg hidden">
-        No ad available. Please try again later.
-      </div>
-
-      <!-- spinner shown while loading (script may hide it) -->
-      <div id="adSpinner" class="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div class="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    </div>
-  </div>  
-</div>
-
-
-<div id="toastContainer" class="fixed top-6 right-6 z-50 flex flex-col gap-2"></div>
-
-		
-
-
-		
-<style>
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-6px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .animate-fadeIn { animation: fadeIn 0.6s ease-in-out; }
-
-  /* ensure the modal video area keeps aspect and doesn't overflow on very small screens */
-  #adModal video { max-height: 60vh; object-fit: cover; border-radius: 10px; }
-</style>
-
-
+    
 
 
 		
