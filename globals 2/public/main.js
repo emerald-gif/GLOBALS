@@ -7077,172 +7077,356 @@ function startCheckinListener() {
 
 
 
-
-
-
-
-
-
-
 /* ============================
-   Tab-suspend / instant-return loader
-   - suspend expensive listeners while hidden
-   - show a quick loader on return (12s)
+   Visibility & Suspend Manager
+   (Paste after firebase init and db available)
    ============================ */
+const VisibilityManager = (function () {
+  console.log("[VM] VisibilityManager loaded");
 
-(function(){
-  // Global registry where modules push their unsubscribe/stop logic
-  window._appUnsubscribers = window._appUnsubscribers || [];
+  // Polyfill requestIdleCallback
+  const ric = window.requestIdleCallback || function (cb) { return setTimeout(() => cb({ timeRemaining: () => 0 }), 1); };
+  const cancelRic = window.cancelIdleCallback || function (id) { clearTimeout(id); };
 
-  // Modules should call this to register how to clean up their listeners/intervals
-  window.registerUnsubscriber = function(fn){
-    if (typeof fn === 'function') window._appUnsubscribers.push(fn);
-  };
+  // Internal collections
+  const _suspendCallbacks = new Set(); // functions to call when suspending
+  const _resumeCallbacks = new Set();  // functions to call when resuming
+  const _unsubscribers = new Set();    // functions that stop listeners (usually unsub functions)
+  const _resumeTimeouts = new Map();   // cycle id -> timeout id (for cleanup)
 
-  // Call to run all registered unsubscriber functions (and clear registry)
-  function unsubscribeAll() {
-    try {
-      while (window._appUnsubscribers && window._appUnsubscribers.length) {
-        const u = window._appUnsubscribers.pop();
-        try { u(); } catch(e){ console.warn('unsub error', e); }
-      }
-    } catch(e){ console.error('unsubscribeAll error', e); }
+  let _isSuspended = false;
+  let _loaderEl = null;
+  let _resumeInProgress = false;
+  const RESUME_FALLBACK_MS = 12000; // 12 seconds fallback
+
+  // Quick loader DOM (very lightweight)
+  function ensureLoader() {
+    if (_loaderEl) return _loaderEl;
+    const el = document.createElement("div");
+    el.id = "vm-quick-loader";
+    // Minimal inline style - blue spinner + translucent backdrop but NOT fully blocking
+    el.style.position = "fixed";
+    el.style.inset = "0";
+    el.style.display = "none";
+    el.style.alignItems = "center";
+    el.style.justifyContent = "center";
+    el.style.zIndex = 9999;
+    el.style.pointerEvents = "none"; // let clicks pass through if needed
+    // backdrop (subtle)
+    el.innerHTML = `
+      <div style="pointer-events:none; display:flex; align-items:center; justify-content:center; width:100%; height:100%;">
+        <div style="backdrop-filter: blur(2px); background: rgba(255,255,255,0.35); padding:18px; border-radius:12px; box-shadow:0 6px 24px rgba(2,6,23,0.08); display:flex; gap:12px; align-items:center;">
+          <svg class="vm-spinner" width="20" height="20" viewBox="0 0 50 50" style="flex:0 0 auto;">
+            <circle cx="25" cy="25" r="20" stroke="#3b82f6" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="31.4 31.4"></circle>
+          </svg>
+          <div style="font-size:14px;color:#0f172a; font-weight:600;">Reconnecting...</div>
+        </div>
+      </div>
+    `;
+    // small CSS animation (inserted inline)
+    const style = document.createElement("style");
+    style.textContent = `
+      @keyframes vm-rot { to { transform: rotate(360deg); } }
+      #vm-quick-loader .vm-spinner { animation: vm-rot 1s linear infinite; transform-origin: center; }
+    `;
+    document.head.appendChild(style);
+    document.body.appendChild(el);
+    _loaderEl = el;
+    return el;
   }
 
-  // Create a fast loader overlay (minimal DOM / fast paint)
-  const overlay = document.createElement('div');
-  overlay.id = 'instantReturnLoader';
-  Object.assign(overlay.style, {
-    position: 'fixed',
-    inset: '0',
-    display: 'none',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: '999999',
-    pointerEvents: 'auto',
-    transition: 'opacity 80ms linear',
-    opacity: '0',
-    // keep it light so UI still faintly shows:
-    background: 'rgba(255,255,255,0.6)',
-    backdropFilter: 'blur(4px)'
-  });
-  overlay.innerHTML = `
-    <div style="text-align:center; font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial;">
-      <div style="width:48px;height:48px;border-radius:50%;border:6px solid #cfe6ff;border-top-color:#2563eb;margin:0 auto; animation:__spin 0.6s linear infinite;"></div>
-      <div style="margin-top:10px;font-weight:600;color:#0f172a">Reconnecting…</div>
-    </div>
-  `;
-  document.body && document.body.appendChild(overlay);
-  const style = document.createElement('style');
-  style.textContent = '@keyframes __spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}';
-  document.head && document.head.appendChild(style);
-
-  let hideTimeout = null;
-  function showOverlay() {
-    if (!overlay) return;
-    overlay.style.display = 'flex';
-    requestAnimationFrame(()=> overlay.style.opacity = '1');
-    // ensure hide after 12s
-    clearTimeout(hideTimeout);
-    hideTimeout = setTimeout(hideOverlay, 12000);
-    console.log('[Globals] overlay shown — suspending heavy work.');
-  }
-  function hideOverlay() {
-    if (!overlay) return;
-    overlay.style.opacity = '0';
-    setTimeout(()=> overlay.style.display = 'none', 100);
-    clearTimeout(hideTimeout);
-    console.log('[Globals] overlay hidden.');
-  }
-
-  // Which modules to suspend/resume: each module should export a start/stop or we use a pattern
-  // We'll call unsubscribeAll() on hide, and call resumeAppWork() on show which reinitializes modules.
-
-  // You must ensure each listener/interval you create pushes an unsubscriber via registerUnsubscriber(...)
-  // Example for setInterval:
-  // const id = setInterval(...); registerUnsubscriber(()=> clearInterval(id));
-  //
-  // Example for firebase.onSnapshot:
-  // const unsub = query.onSnapshot(...); registerUnsubscriber(unsub);
-  //
-  // For modules with startX functions, we call them again on resume:
-  function resumeAppWork() {
-    // Reinitialize modules that you want active when visible.
-    // IMPORTANT: put function names that exist in your app here.
-    try {
-      // Examples: replace or add your actual init function names
-      if (typeof startCheckinListener === 'function') startCheckinListener();
-      if (typeof initTransactionsForCurrentUser === 'function') initTransactionsForCurrentUser();
-      if (typeof AffiliateV2 === 'object' && typeof AffiliateV2.init === 'function') AffiliateV2.init();
-      // add other starts here (ads, spin, tasks)...
-    } catch (e) { console.error('resumeAppWork error', e); }
-  }
-
-  // Suspend: stop listeners/intervals and small cleanup to keep main thread idle
-  function suspendAppWork() {
-    try {
-      // Call all registered unsubscribers
-      unsubscribeAll();
-
-      // Also cancel any heavy animation frames if you keep references to them in global vars
-      if (window._heavyRafId) { try { cancelAnimationFrame(window._heavyRafId); window._heavyRafId = null; } catch(e){} }
-    } catch (e) { console.error('suspendAppWork error', e); }
-  }
-
-  // When tab becomes hidden: suspend work quickly
-  function handleHidden() {
-    // Mark time for debugging if needed
-    window._lastHiddenAt = performance.now();
-    // Suspend heavy work immediately
-    suspendAppWork();
-    console.log('[Globals] Tab hidden — suspended listeners/intervals.');
-  }
-
-  // When tab becomes visible: show overlay, resume work
-  let returning = false;
-  function handleVisible() {
-    if (returning) return;
-    returning = true;
-    // show overlay instantly
-    showOverlay();
-
-    // very small delay to allow overlay paint, then resume app work
+  function showLoader() {
+    ensureLoader();
+    // show quickly on next animation frame
     requestAnimationFrame(() => {
-      // Reattach listeners/intervals
-      resumeAppWork();
-
-      // hide overlay once resumed (we still leave 12s hard timeout)
-      setTimeout(() => {
-        hideOverlay();
-        returning = false;
-      }, 700); // hide shortly after resume; overlay still guaranteed to be hidden after 12s if longer
+      if (_loaderEl) {
+        _loaderEl.style.display = "flex";
+      }
     });
   }
+  function hideLoader() {
+    if (_loaderEl) {
+      _loaderEl.style.display = "none";
+    }
+  }
 
-  // Hook events: visibilitychange + focus/blur to be extra fast
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) handleHidden(); else handleVisible();
-  }, {passive:true});
+  // Register/unregister helpers
+  function registerSuspend(fn) {
+    if (typeof fn === "function") _suspendCallbacks.add(fn);
+    return () => _suspendCallbacks.delete(fn);
+  }
+  function registerResume(fn) {
+    if (typeof fn === "function") _resumeCallbacks.add(fn);
+    return () => _resumeCallbacks.delete(fn);
+  }
+  function registerUnsubscriber(fn) {
+    // Accept either a function or an unsubscribe function or a wrapper returning an unsubscribe
+    if (typeof fn === "function") _unsubscribers.add(fn);
+    return () => { if (typeof fn === "function") _unsubscribers.delete(fn); };
+  }
 
-  window.addEventListener('blur', () => {
-    // some browsers fire blur when switching windows; suspend as well
-    handleHidden();
-  }, {passive:true});
-  window.addEventListener('focus', () => {
-    // focus normally follows visibilitychange but we duplicate to be robust
-    handleVisible();
-  }, {passive:true});
+  // Clear and call all unsubscribe functions
+  function runUnsubscribers() {
+    _unsubscribers.forEach(un => {
+      try { un(); } catch (e) { console.error("[VM] unsub error", e); }
+    });
+    _unsubscribers.clear();
+  }
 
-  // Optionally allow manual control via dev console:
-  window.__suspendAppWork = suspendAppWork;
-  window.__resumeAppWork = resumeAppWork;
-  window.__showReturnLoader = showOverlay;
-  window.__hideReturnLoader = hideOverlay;
+  // Suspend: run suspend callbacks, clear intervals/listeners etc.
+  function suspendApp(reason = "hidden") {
+    if (_isSuspended) return;
+    console.log("[VM] Suspending app (reason):", reason);
+    _isSuspended = true;
+    _resumeInProgress = false;
+    // Call suspend callbacks (fast)
+    _suspendCallbacks.forEach(cb => {
+      try { cb(); } catch (e) { console.error("[VM] suspend cb error", e); }
+    });
+    // Call unsubscribers to stop firebase listeners / intervals
+    runUnsubscribers();
+    // keep loader hidden while suspended (we only show loader on return)
+    hideLoader();
+  }
 
-  console.log('[Globals] tab-suspend/return-loader init done.');
+  // Resume: show loader immediately, run resume callbacks (re-attach minimal listeners)
+  async function resumeApp() {
+    if (!_isSuspended && !_resumeInProgress) {
+      // If not suspended, nothing to do
+      return;
+    }
+    if (_resumeInProgress) {
+      console.log("[VM] Resume already in progress");
+      return;
+    }
+    console.log("[VM] Resuming app (start)");
+    _resumeInProgress = true;
+    showLoader();
+
+    // A safety/fallback timeout in case resume hangs
+    const fallbackId = setTimeout(() => {
+      console.warn("[VM] Resume fallback timeout reached - hiding loader");
+      hideLoader();
+      _resumeInProgress = false;
+      _isSuspended = false;
+    }, RESUME_FALLBACK_MS);
+
+    // Call resume callbacks (they should re-create listeners and return a Promise if async)
+    const promises = [];
+    _resumeCallbacks.forEach(cb => {
+      try {
+        const ret = cb();
+        if (ret && typeof ret.then === "function") promises.push(ret);
+      } catch (e) { console.error("[VM] resume cb error", e); }
+    });
+
+    try {
+      // Wait for all resume promises or a short idle window
+      if (promises.length) {
+        await Promise.race([ Promise.all(promises), new Promise(res => setTimeout(res, 750)) ]);
+      } else {
+        // give a tiny idle frame for sync reattachment (avoid long blocking)
+        await new Promise(res => ric(res));
+      }
+    } catch (e) {
+      console.error("[VM] Error during resume wait:", e);
+    } finally {
+      clearTimeout(fallbackId);
+      hideLoader();
+      _resumeInProgress = false;
+      _isSuspended = false;
+      console.log("[VM] Resumed");
+    }
+  }
+
+  // Visibility handlers
+  function onVisibilityChange() {
+    if (document.hidden) {
+      suspendApp("visibility:hidden");
+    } else {
+      // very quick detection start
+      // we schedule resume on next RAF to allow DOM to paint loader
+      requestAnimationFrame(() => resumeApp());
+    }
+  }
+  function onWindowBlur() { suspendApp("window:blur"); }
+  function onWindowFocus() {
+    // resume on focus too (some browsers may not fire visibilitychange consistently)
+    requestAnimationFrame(() => resumeApp());
+  }
+
+  // Wrappers for typical APIs
+
+  // wrapInterval(fn, ms) => returns { id, stop } and registers unsubscriber automatically
+  function wrapInterval(fn, ms) {
+    if (typeof fn !== "function") throw new Error("wrapInterval requires function");
+    const id = setInterval(fn, ms);
+    const stop = () => clearInterval(id);
+    registerUnsubscriber(stop);
+    // also register suspend callback to clear it (in case unregister wasn't called)
+    registerSuspend(() => { try { clearInterval(id); } catch (e) {} });
+    return { id, stop };
+  }
+
+  // wrapSnapshot: wraps firebase onSnapshot query and registers its unsubscribe automatically.
+  // qFactory is a function that returns a Query (db => db.collection(...))
+  // onChange receives snapshot; returns the unsubscribe function.
+  function wrapSnapshot(qFactory, onChange, onError) {
+    if (typeof qFactory !== "function") throw new Error("wrapSnapshot requires qFactory");
+    // The resume callback must re-create the snapshot and capture unsubscribe
+    let unsub = null;
+    function attachOnce() {
+      try {
+        const q = qFactory(db); // assumes `db` available in outer scope (your app has it)
+        if (!q || typeof q.onSnapshot !== "function") {
+          console.warn("[VM] Invalid query returned by qFactory");
+          return;
+        }
+        unsub = q.onSnapshot(snapshot => {
+          try { onChange(snapshot); } catch (e) { console.error("[VM] snapshot onChange error", e); }
+        }, err => {
+          console.error("[VM] snapshot error:", err);
+          if (typeof onError === "function") onError(err);
+        });
+        // register to unsubscriber set so that suspendApp clears it
+        registerUnsubscriber(() => { try { unsub && unsub(); } catch (e) {} });
+      } catch (e) {
+        console.error("[VM] wrapSnapshot attach error", e);
+      }
+    }
+
+    // Register resume callback: attaches snapshot and returns a promise that resolves when attached (sync)
+    const resumeCB = () => {
+      // If there's already an active unsub (maybe someone else created it), run it first to ensure fresh
+      try { if (unsub) { try { unsub(); } catch (e){} unsub = null; } } catch (e) {}
+      attachOnce();
+      // no async work needed from our resume point of view; return undefined or a resolved promise.
+      return Promise.resolve();
+    };
+    // Register suspend callback to call unsub
+    registerSuspend(() => { try { unsub && unsub(); } catch (e) { console.error(e); } unsub = null; });
+
+    registerResume(resumeCB);
+
+    // Initially attach if not suspended
+    if (!document.hidden && !window._vm_initial_attach_done) {
+      attachOnce();
+      window._vm_initial_attach_done = true;
+    }
+    return () => { try { unsub && unsub(); } catch (e){} unsub = null; };
+  }
+
+  // wrapRAF: a requestAnimationFrame loop that will be paused/resumed automatically
+  function wrapRAF(loopFn) {
+    if (typeof loopFn !== "function") throw new Error("wrapRAF requires function");
+    let rafId = null;
+    let running = false;
+    function frame(time) {
+      try { loopFn(time); } catch (e) { console.error("[VM] RAF loop error", e); }
+      if (running) rafId = requestAnimationFrame(frame);
+    }
+    function start() {
+      if (running) return;
+      running = true;
+      rafId = requestAnimationFrame(frame);
+      registerUnsubscriber(stop);
+    }
+    function stop() {
+      running = false;
+      if (rafId !== null) { try { cancelAnimationFrame(rafId); } catch (e) {} rafId = null; }
+    }
+    // Register suspend/resume automatic handlers
+    registerSuspend(() => stop());
+    registerResume(() => { start(); return Promise.resolve(); });
+    // Start immediately if visible
+    if (!document.hidden) start();
+    return { start, stop };
+  }
+
+  // Utility: schedule heavyWork via requestIdleCallback, fallback to setTimeout
+  function scheduleHeavyWork(fn) {
+    if (typeof fn !== "function") return;
+    const id = ric(deadline => {
+      try { fn(deadline); } catch (e) { console.error("[VM] heavy work error", e); }
+    });
+    return () => cancelRic(id);
+  }
+
+  // Public API
+  function init() {
+    // attach handlers only once
+    if (init._done) return;
+    init._done = true;
+    document.addEventListener("visibilitychange", onVisibilityChange, { passive: true });
+    window.addEventListener("blur", onWindowBlur, { passive: true });
+    window.addEventListener("focus", onWindowFocus, { passive: true });
+    console.log("[VM] Visibility listeners attached");
+    // If page starts hidden, we immediately suspend
+    if (document.hidden) suspendApp("initial-hidden");
+  }
+
+  function destroy() {
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+    window.removeEventListener("blur", onWindowBlur);
+    window.removeEventListener("focus", onWindowFocus);
+    runUnsubscribers();
+    _suspendCallbacks.clear();
+    _resumeCallbacks.clear();
+    hideLoader();
+    console.log("[VM] destroyed");
+  }
+
+  // Expose API
+  return {
+    init,
+    destroy,
+    registerSuspend,      // registerSuspend(fn) -> called when suspending
+    registerResume,       // registerResume(fn) -> called when resuming; may return Promise
+    registerUnsubscriber, // registerUnsubscriber(fn) -> fn will be invoked to stop listeners
+    wrapInterval,
+    wrapSnapshot,
+    wrapRAF,
+    scheduleHeavyWork,
+    showLoader,
+    hideLoader,
+    isSuspended: () => _isSuspended,
+  };
 })();
 
+// auto-init (safe)
+if (document.readyState === "complete" || document.readyState === "interactive") {
+  try { VisibilityManager.init(); } catch(e) { console.error("[VM] init error", e); }
+} else {
+  document.addEventListener("DOMContentLoaded", () => { try { VisibilityManager.init(); } catch(e) { console.error("[VM] init error", e); } });
+}
 
+/* ============================
+   USAGE EXAMPLES (convert your code to use these)
+   - Replace plain setInterval with wrapInterval
+   - Replace firebase onSnapshot direct attaches with wrapSnapshot
+   - Replace RAF loops with wrapRAF
+   - Register any heavy long-running tasks to be scheduled with scheduleHeavyWork
+   ============================ */
+
+// Example: convert an interval you had
+// const { id, stop } = wrapInterval(()=>{ console.log('tick'); }, 15000);
+// -> previously you used setInterval(...)
+
+// Example for firebase snapshot:
+// const stopListener = VisibilityManager.wrapSnapshot(
+//   (dbLocal) => dbLocal.collection('checkins').doc(uid).collection('cycles').orderBy('cycleStartDate','desc').limit(1),
+//   (snapshot) => { /* render ... */ },
+//   (err) => console.error(err)
+// );
+// // stopListener() can be called manually too
+
+// Example for RAF loops:
+// const loop = VisibilityManager.wrapRAF((t) => { /* animation frame work */ });
+// // loop.start() & loop.stop() available if you need to control manually
+
+// Example: register a custom suspend/resume callback if you have special teardown/attach logic
+// VisibilityManager.registerSuspend(()=>{ console.log('custom suspend'); });
+// VisibilityManager.registerResume(()=>{ console.log('custom resume'); return Promise.resolve(); });
 
 
 
