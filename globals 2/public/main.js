@@ -7085,7 +7085,84 @@ function startCheckinListener() {
 
 
 
+// === 🔄 GLOBAL RETURN-TO-FOCUS LOADER (Fintech Style) ===
+(function () {
+  let loaderTimeout = null;
 
+  // 🪙 Create overlay (hidden by default)
+  const overlay = document.createElement("div");
+  overlay.id = "returnLoader";
+  overlay.className = `
+    fixed inset-0 flex flex-col items-center justify-center
+    bg-gradient-to-br from-[#eef2ff] via-[#f8fafc] to-[#e0e7ff]
+    z-[9999] hidden transition-all duration-500
+  `;
+  overlay.innerHTML = `
+    <div class="flex flex-col items-center gap-5 animate-fadeIn">
+      <!-- Coin animation -->
+      <div class="relative w-16 h-16">
+        <div class="absolute inset-0 rounded-full bg-gradient-to-tr from-yellow-400 to-amber-500 animate-spin-slow shadow-lg"></div>
+        <div class="absolute inset-[6px] rounded-full bg-white flex items-center justify-center font-extrabold text-2xl text-amber-500 shadow-inner">
+          ₦
+        </div>
+      </div>
+
+      <!-- Text -->
+      <p class="text-gray-700 font-semibold text-lg">Re-syncing your dashboard...</p>
+      <p class="text-gray-400 text-sm">Please wait a moment while we update everything</p>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // 🌀 Keyframe animations (custom CSS injection)
+  const style = document.createElement("style");
+  style.textContent = `
+    @keyframes spin-slow {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .animate-spin-slow {
+      animation: spin-slow 4s linear infinite;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeIn {
+      animation: fadeIn 1s ease-out;
+    }
+  `;
+  document.head.appendChild(style);
+
+  // 🧠 Detect when the tab is active again
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      // When user returns to the tab
+      overlay.classList.remove("hidden");
+
+      console.log("[Globals] Tab reactivated — showing re-sync loader...");
+
+      // Optional refresh logic — you can re-init modules here
+      try {
+        if (typeof AffiliateV2?.init === "function") AffiliateV2.init();
+        if (typeof initDashboard === "function") initDashboard();
+      } catch (err) {
+        console.warn("Optional re-init skipped:", err);
+      }
+
+      // Hide loader after 12s
+      clearTimeout(loaderTimeout);
+      loaderTimeout = setTimeout(() => {
+        overlay.classList.add("hidden");
+        console.log("[Globals] Re-sync loader hidden");
+      }, 12000);
+    } else {
+      // If user leaves again, stop any pending hide
+      clearTimeout(loaderTimeout);
+    }
+  });
+})();
 
 
 
