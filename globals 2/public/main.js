@@ -7084,86 +7084,73 @@ function startCheckinListener() {
 
 
 
-
-// === 🔄 GLOBAL RETURN-TO-FOCUS LOADER (Fintech Style) ===
+// === 🔄 SIMPLE RETURN-TO-FOCUS RELOAD OVERLAY ===
 (function () {
   let loaderTimeout = null;
 
-  // 🪙 Create overlay (hidden by default)
+  // Create loader overlay
   const overlay = document.createElement("div");
   overlay.id = "returnLoader";
-  overlay.className = `
-    fixed inset-0 flex flex-col items-center justify-center
-    bg-gradient-to-br from-[#eef2ff] via-[#f8fafc] to-[#e0e7ff]
-    z-[9999] hidden transition-all duration-500
-  `;
-  overlay.innerHTML = `
-    <div class="flex flex-col items-center gap-5 animate-fadeIn">
-      <!-- Coin animation -->
-      <div class="relative w-16 h-16">
-        <div class="absolute inset-0 rounded-full bg-gradient-to-tr from-yellow-400 to-amber-500 animate-spin-slow shadow-lg"></div>
-        <div class="absolute inset-[6px] rounded-full bg-white flex items-center justify-center font-extrabold text-2xl text-amber-500 shadow-inner">
-          ₦
-        </div>
-      </div>
+  overlay.style.position = "fixed";
+  overlay.style.inset = "0";
+  overlay.style.background = "rgba(255, 255, 255, 0.92)";
+  overlay.style.display = "none";
+  overlay.style.zIndex = "999999";
+  overlay.style.backdropFilter = "blur(8px)";
+  overlay.style.alignItems = "center";
+  overlay.style.justifyContent = "center";
+  overlay.style.flexDirection = "column";
+  overlay.style.fontFamily = "system-ui, sans-serif";
 
-      <!-- Text -->
-      <p class="text-gray-700 font-semibold text-lg">Re-syncing your dashboard...</p>
-      <p class="text-gray-400 text-sm">Please wait a moment while we update everything</p>
+  // Spinner + text
+  overlay.innerHTML = `
+    <div style="text-align:center;">
+      <div style="width:60px;height:60px;border:6px solid #c7d2fe;border-top-color:#2563eb;border-radius:50%;margin:auto;animation:spin 1s linear infinite;"></div>
+      <p style="margin-top:16px;font-size:15px;color:#1e3a8a;font-weight:600;">Refreshing your dashboard...</p>
     </div>
   `;
 
+  // Add to DOM
   document.body.appendChild(overlay);
 
-  // 🌀 Keyframe animations (custom CSS injection)
+  // Spinner animation (inject style)
   const style = document.createElement("style");
   style.textContent = `
-    @keyframes spin-slow {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    .animate-spin-slow {
-      animation: spin-slow 4s linear infinite;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(15px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .animate-fadeIn {
-      animation: fadeIn 1s ease-out;
+    @keyframes spin { 
+      0% { transform: rotate(0deg); } 
+      100% { transform: rotate(360deg); } 
     }
   `;
   document.head.appendChild(style);
 
-  // 🧠 Detect when the tab is active again
+  // Handle tab visibility changes
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
-      // When user returns to the tab
-      overlay.classList.remove("hidden");
+      // When user comes back
+      overlay.style.display = "flex";
+      console.log("[Globals] Tab reactivated — showing loader");
 
-      console.log("[Globals] Tab reactivated — showing re-sync loader...");
-
-      // Optional refresh logic — you can re-init modules here
+      // Optional: reload logic
       try {
         if (typeof AffiliateV2?.init === "function") AffiliateV2.init();
         if (typeof initDashboard === "function") initDashboard();
+        if (typeof startCheckinListener === "function") startCheckinListener();
       } catch (err) {
-        console.warn("Optional re-init skipped:", err);
+        console.warn("Optional module re-init failed:", err);
       }
 
-      // Hide loader after 12s
+      // Hide loader after 12 seconds
       clearTimeout(loaderTimeout);
       loaderTimeout = setTimeout(() => {
-        overlay.classList.add("hidden");
-        console.log("[Globals] Re-sync loader hidden");
+        overlay.style.display = "none";
+        console.log("[Globals] Loader hidden");
       }, 12000);
     } else {
-      // If user leaves again, stop any pending hide
+      // If user leaves, clear pending hide
       clearTimeout(loaderTimeout);
     }
   });
 })();
-
 
 
 
