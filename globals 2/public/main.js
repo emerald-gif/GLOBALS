@@ -1494,17 +1494,6 @@ async function sendMessage() {
 
                                               // 🔄 Load and display selected language on page load(LANGUAGE SECTION)
 
-document.addEventListener("DOMContentLoaded", () => {
-  const storedLang = localStorage.getItem("preferredLanguage") || "English";
-  document.getElementById("currentLanguage").textContent = storedLang;
-});
-
-// 🌐 Select Language
-window.selectLanguage = function(language) {
-  localStorage.setItem("preferredLanguage", language);
-  document.getElementById("currentLanguage").textContent = language;
-  alert(`Language changed to ${language}.`);
-};
 
 
 
@@ -1516,23 +1505,6 @@ window.selectLanguage = function(language) {
 
 
                                                                     //MYSTERY BOX FUCTION
-
-
-function startMysteryBoxPlay() {
-  // You can add payment or balance check here later
-  alert("Payment logic will go here. Proceeding to pick a box.");
-}
-
-function openBox(boxNumber) {
-  const rewards = [0, 200, 300, 500];
-  const reward = rewards[Math.floor(Math.random() * rewards.length)];
-  document.getElementById("rewardAmount").textContent = `₦${reward}`;
-  document.getElementById("boxResultPopup").classList.remove("hidden");
-}
-
-function closeBoxPopup() {
-  document.getElementById("boxResultPopup").classList.add("hidden");
-}
 
 
 
@@ -3202,59 +3174,6 @@ window.copyTelegramMessage = copyTelegramMessage;
 
 
 
-                                                 // GLOBALS TAP FUNCTION
-												 
-												 
-
-let coinCount = 0;
-let coinValue = 0.01;
-
-function handleTap() {
-  const coinImg = document.getElementById('tap-coin');
-  coinImg.classList.add('shake');
-
-  setTimeout(() => {
-    coinImg.classList.remove('shake');
-  }, 400);
-
-  coinCount++;
-  document.getElementById('coin-count').innerText = coinCount;
-  document.getElementById('naira-value').innerText = (coinCount * coinValue).toFixed(2);
-}
-
-function toggleExchange() {
-  const exchangeBox = document.getElementById('exchange-options');
-  exchangeBox.classList.toggle('hidden');
-}
-function openExchangeModal() {
-  document.getElementById('exchangeModal').classList.remove('hidden');
-}
-
-function closeExchangeModal() {
-  document.getElementById('exchangeModal').classList.add('hidden');
-}
-
-function exchangeCoins(amount) {
-  if (coinCount >= amount) {
-    coinCount -= amount;
-    const nairaGained = (amount / 20).toFixed(2); // Example conversion
-    alert(`✅ You’ve exchanged ${amount} coins for ₦${nairaGained}!`);
-    document.getElementById('coin-count').innerText = coinCount;
-    document.getElementById('naira-value').innerText = (coinCount * coinValue).toFixed(2);
-    closeExchangeModal();
-  } else {
-    alert("❌ Not enough coins to exchange!");
-  }
-}
-
-function showTapSection(tab) {
-  const sections = ['tasks', 'skill', 'boost', 'ranking'];
-  sections.forEach(id => {
-    document.getElementById(`tap-section-${id}`).classList.add('hidden');
-  });
-  document.getElementById(`tap-section-${tab}`).classList.remove('hidden');
-}
-
 
 
 
@@ -3949,8 +3868,19 @@ function openTerms() {
 
 
 
+// ========================
+// REFERRAL INIT (runs only once per reload)
+// ========================
+let referralTabLoaded = false; // ✅ Added flag
+
 function initReferralTab() {
-  auth.onAuthStateChanged(async user => {
+  if (referralTabLoaded) {
+    console.log("Referral tab already loaded, skipping reload");
+    return; // 🚫 Prevent auto re-fetching again
+  }
+  referralTabLoaded = true; // ✅ Mark as loaded once
+
+  auth.onAuthStateChanged(async (user) => {
     if (!user) return;
 
     // get current user's username (referrer)
@@ -3965,7 +3895,7 @@ function initReferralTab() {
     if (inputA) inputA.value = referralLink;
     if (inputB) inputB.value = referralLink;
 
-    // Load referrals
+    // Load referrals (one-time snapshot)
     const invitedSnap = await db.collection("users").where("referrer", "==", username).get();
 
     let invitedCount = 0;
@@ -3977,19 +3907,16 @@ function initReferralTab() {
     invitedSnap.forEach((docSnap) => {
       const u = docSnap.data();
       invitedCount += 1;
-
       const isPremium = !!u.is_Premium;
       const alreadyCredited = !!u.referralBonusCredited;
-
       if (isPremium) rewardedCount += 1;
 
-      // UI card
       if (container) {
         container.innerHTML += generateReferralCard({
           username: u.username || (u.name || "User"),
           email: u.email || "",
           profile: u.profile || "",
-          premium: isPremium
+          premium: isPremium,
         });
       }
 
@@ -3999,7 +3926,11 @@ function initReferralTab() {
     });
 
     if (creditTasks.length) {
-      try { await Promise.all(creditTasks); } catch(e) { console.error("Credit errors:", e); }
+      try {
+        await Promise.all(creditTasks);
+      } catch (e) {
+        console.error("Credit errors:", e);
+      }
     }
 
     // Update counters
@@ -4007,8 +3938,11 @@ function initReferralTab() {
     const rewardedCountEl = document.getElementById("rewardedCount");
     if (invitedCountEl) invitedCountEl.innerText = invitedCount;
     if (rewardedCountEl) rewardedCountEl.innerText = rewardedCount;
+
+    console.log("Referral data loaded once");
   });
 }
+
 		
 // ========================
 // CARD UI
@@ -4761,12 +4695,12 @@ function resetAffiliateForm() {
 
 
 
-// === Fetch and Display Jobs (FAST + LIVE) ===
+// === Fetch and Display Jobs (Reload Only, Not Live) ===
 function fetchAndDisplayUserJobs() {
   const jobList = document.getElementById("jobList");
   jobList.innerHTML = "<p class='text-center text-gray-500'>Loading your jobs...</p>";
 
-  firebase.auth().onAuthStateChanged((user) => {
+  firebase.auth().onAuthStateChanged(async (user) => {
     if (!user) {
       jobList.innerHTML = '<p class="text-center text-gray-500">Please log in to see your posted jobs.</p>';
       return;
@@ -4774,6 +4708,42 @@ function fetchAndDisplayUserJobs() {
 
     const uid = user.uid;
     let allJobs = [];
+
+    // --- 🔹 Helper: Count approved submissions
+    async function getApprovedCount(collection, jobId) {
+      const snap = await firebase.firestore()
+        .collection(collection)
+        .where("jobId", "==", jobId)
+        .where("status", "==", "approved")
+        .get();
+      return snap.size;
+    }
+
+    // --- 🔹 Fetch all tasks
+    const taskSnap = await firebase.firestore()
+      .collection("tasks")
+      .where("postedBy.uid", "==", uid)
+      .orderBy("postedAt", "desc")
+      .get();
+
+    for (const doc of taskSnap.docs) {
+      const job = { ...doc.data(), id: doc.id, type: "task" };
+      job.completed = await getApprovedCount("task_submissions", job.id);
+      allJobs.push(job);
+    }
+
+    // --- 🔹 Fetch all affiliate jobs
+    const affiliateSnap = await firebase.firestore()
+      .collection("affiliateJobs")
+      .where("postedBy.uid", "==", uid)
+      .orderBy("postedAt", "desc")
+      .get();
+
+    for (const doc of affiliateSnap.docs) {
+      const job = { ...doc.data(), id: doc.id, type: "affiliate" };
+      job.completed = await getApprovedCount("affiliate_submissions", job.id);
+      allJobs.push(job);
+    }
 
     // --- 🔹 Render Function
     function renderJobs() {
@@ -4785,63 +4755,12 @@ function fetchAndDisplayUserJobs() {
       jobList.innerHTML = allJobs.map(job => renderJobCard(job)).join("");
     }
 
-    // --- 🔹 Helper to add/replace job in array
-    function upsertJob(job) {
-      const i = allJobs.findIndex(j => j.id === job.id && j.type === job.type);
-      if (i > -1) {
-        allJobs[i] = job;
-      } else {
-        allJobs.push(job);
-      }
-    }
-
-    // --- 🔹 Watch Completed Submissions
-    function watchCompletedCount(collection, job) {
-      firebase.firestore().collection(collection)
-        .where("jobId", "==", job.id)
-        .onSnapshot(subSnap => {
-          job.completed = subSnap.size;
-          upsertJob(job);
-          renderJobs();
-        });
-    }
-
-    // --- 🔹 Listen to Tasks (live)
-    firebase.firestore().collection("tasks")
-      .where("postedBy.uid", "==", uid)
-      .orderBy("postedAt", "desc")
-      .onSnapshot(snapshot => {
-        snapshot.docChanges().forEach(change => {
-          if (change.type === "added" || change.type === "modified") {
-            const job = { ...change.doc.data(), id: change.doc.id, type: "task" };
-            watchCompletedCount("task_submissions", job);
-            upsertJob(job);
-          } else if (change.type === "removed") {
-            allJobs = allJobs.filter(j => !(j.id === change.doc.id && j.type === "task"));
-          }
-        });
-        renderJobs();
-      });
-
-    // --- 🔹 Listen to Affiliate Jobs (live)
-    firebase.firestore().collection("affiliateJobs")
-      .where("postedBy.uid", "==", uid)
-      .orderBy("postedAt", "desc")
-      .onSnapshot(snapshot => {
-        snapshot.docChanges().forEach(change => {
-          if (change.type === "added" || change.type === "modified") {
-            const job = { ...change.doc.data(), id: change.doc.id, type: "affiliate" };
-            watchCompletedCount("affiliate_submissions", job);
-            upsertJob(job);
-          } else if (change.type === "removed") {
-            allJobs = allJobs.filter(j => !(j.id === change.doc.id && j.type === "affiliate"));
-          }
-        });
-        renderJobs();
-      });
+    renderJobs();
   });
 }
 
+
+									 
 // === Job Card ===
 function renderJobCard(job) {
   const status = job.status || "on review";
@@ -4888,23 +4807,25 @@ function renderJobCard(job) {
 // === Job Details Page (LIVE) ===
 function checkJobDetails(jobId, jobType) {
   const collection = jobType === "task" ? "tasks" : "affiliateJobs";
+  const subCollection = jobType === "task" ? "task_submissions" : "affiliate_submissions";
 
   firebase.firestore().collection(collection).doc(jobId)
-    .onSnapshot(doc => {
+    .get()
+    .then(async (doc) => {
       if (!doc.exists) return;
-
       const job = { ...doc.data(), id: doc.id, type: jobType };
 
-      // watch completed count live
-      firebase.firestore().collection(jobType === "task" ? "task_submissions" : "affiliate_submissions")
+      // ✅ Count only approved submissions
+      const approvedSnap = await firebase.firestore()
+        .collection(subCollection)
         .where("jobId", "==", job.id)
-        .onSnapshot(subSnap => {
-          job.completed = subSnap.size;
-          renderJobDetails(job);
-        });
-    });
+        .where("status", "==", "approved")
+        .get();
+      job.completed = approvedSnap.size;
 
-  activateTab("jobDetailsSection");
+      renderJobDetails(job);
+      activateTab("jobDetailsSection");
+    });
 }
 
 // === Render Job Details ===
@@ -5174,109 +5095,92 @@ async function ensureUserState(uid) {
 }
 
 // Listen realtime and FILTER OUT notifications with timestamp <= clearedAt
-async function listenForNotifications(uid) {
-  if (unsubscribeNotif) {
-    unsubscribeNotif();
-    unsubscribeNotif = null;
-  }
-
+// Fetch notifications once — on reload only
+async function fetchNotificationsOnce(uid) {
   await ensureUserState(uid);
 
-  unsubscribeNotif = db.collection('notifications')
-    .orderBy('timestamp', 'desc')
-    .onSnapshot(async snapshot => {
-      try {
-        const stateDoc = await db.collection('notification_user_state').doc(uid).get();
-        const joinedAtServer = (stateDoc.exists && stateDoc.data().joinedAt)
-          ? stateDoc.data().joinedAt.toDate()
-          : new Date();
-        const lastReadAtServer = (stateDoc.exists && stateDoc.data().lastReadAt)
-          ? stateDoc.data().lastReadAt.toDate()
-          : new Date(0);
-        const clearedAtServer = (stateDoc.exists && stateDoc.data().clearedAt)
-          ? stateDoc.data().clearedAt.toDate()
-          : new Date(0);
+  try {
+    const stateDoc = await db.collection('notification_user_state').doc(uid).get();
+    const joinedAtServer = (stateDoc.exists && stateDoc.data().joinedAt)
+      ? stateDoc.data().joinedAt.toDate()
+      : new Date();
+    const lastReadAtServer = (stateDoc.exists && stateDoc.data().lastReadAt)
+      ? stateDoc.data().lastReadAt.toDate()
+      : new Date(0);
+    const clearedAtServer = (stateDoc.exists && stateDoc.data().clearedAt)
+      ? stateDoc.data().clearedAt.toDate()
+      : new Date(0);
 
-        // effective times prefer client-side override (instant UX), fallback to server values
-        const effectiveLastReadAt = lastReadAtOverride || lastReadAtServer || new Date(0);
-        const effectiveClearedAt = lastClearedAtOverride || clearedAtServer || new Date(0);
+    const effectiveLastReadAt = lastReadAtOverride || lastReadAtServer || new Date(0);
+    const effectiveClearedAt = lastClearedAtOverride || clearedAtServer || new Date(0);
 
-        const notifDot = document.getElementById('notifDot');
-        const notifPopup = document.getElementById('notifPopup');
-        const notifMessage = document.getElementById('notifMessage');
-        const notifList = document.getElementById('notificationList');
-        const banner = document.getElementById('notifBanner');
-        const bannerText = document.getElementById('notifBannerText');
+    const notifDot = document.getElementById('notifDot');  
+    const notifPopup = document.getElementById('notifPopup');  
+    const notifMessage = document.getElementById('notifMessage');  
+    const notifList = document.getElementById('notificationList');  
+    const banner = document.getElementById('notifBanner');  
+    const bannerText = document.getElementById('notifBannerText');
 
-        let unreadCount = 0;
-        if (notifList) notifList.innerHTML = '';
+    let unreadCount = 0;
+    if (notifList) notifList.innerHTML = '';
 
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          const ts = data.timestamp;
-          const tsDate = ts ? ts.toDate() : null;
+    const snapshot = await db.collection('notifications')
+      .orderBy('timestamp', 'desc')
+      .get();
 
-          // skip notifications older than the user's join time
-          if (tsDate && tsDate <= joinedAtServer) return;
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const ts = data.timestamp;
+      const tsDate = ts ? ts.toDate() : null;
 
-          // Option B: skip notifications that are <= effectiveClearedAt (they are hidden/deleted for this user)
-          if (tsDate && tsDate <= effectiveClearedAt) return;
+      if (tsDate && tsDate <= joinedAtServer) return;
+      if (tsDate && tsDate <= effectiveClearedAt) return;
 
-          // unread = newer than lastReadAt (effective)
-          const isUnread = tsDate ? (tsDate > effectiveLastReadAt) : false;
-          if (isUnread) unreadCount++;
+      const isUnread = tsDate ? (tsDate > effectiveLastReadAt) : false;
+      if (isUnread) unreadCount++;
 
-          // render simple card (no profile pic)
-          if (notifList) {
-            const dateStr = tsDate ? timeAgo(tsDate) : 'Just now';
-            const card = document.createElement('div');
-            card.className = `bg-white rounded-xl p-4 shadow-md border-l-4 ${isUnread ? 'border-blue-400' : 'border-gray-200'} animate-fade-in`;
-            card.innerHTML = `
-              <p class="text-gray-800 font-semibold truncate">${escapeHtml(data.title || 'No Title')}</p>
-              <p class="text-sm text-gray-600 mt-1 truncate">${escapeHtml(data.message || '')}</p>
-              <p class="text-xs text-gray-500 mt-2">${escapeHtml(dateStr)}</p>
-            `;
-            notifList.appendChild(card);
-          }
-        });
-
-        lastUnreadCount = unreadCount;
-
-        // nav dot
-        if (notifDot) notifDot.classList.toggle('hidden', unreadCount === 0);
-
-        // popup under bell
-        if (notifPopup && notifMessage) {
-          if (unreadCount > 0) {
-            notifMessage.textContent = `You have ${unreadCount} new notification${unreadCount > 1 ? 's' : ''}`;
-            notifPopup.classList.remove('hidden');
-          } else {
-            notifPopup.classList.add('hidden');
-          }
-        }
-
-        // banner on dashboard
-        if (banner && bannerText) {
-          if (unreadCount > 0) {
-            bannerText.textContent = `You have ${unreadCount} unread message${unreadCount > 1 ? 's' : ''}`;
-            banner.classList.remove('hidden');
-          } else {
-            banner.classList.add('hidden');
-          }
-        }
-
-        // empty state
-        if (notifList && notifList.children.length === 0) {
-          notifList.innerHTML = `<p class="text-gray-400 text-center py-8">No notifications yet.</p>`;
-        }
-
-      } catch (err) {
-        console.error("onSnapshot processing error:", err);
+      if (notifList) {
+        const dateStr = tsDate ? timeAgo(tsDate) : 'Just now';
+        const card = document.createElement('div');
+        card.className = `bg-white rounded-xl p-4 shadow-md border-l-4 ${isUnread ? 'border-blue-400' : 'border-gray-200'} animate-fade-in`;
+        card.innerHTML = `
+          <p class="text-gray-800 font-semibold truncate">${escapeHtml(data.title || 'No Title')}</p>
+          <p class="text-sm text-gray-600 mt-1 truncate">${escapeHtml(data.message || '')}</p>
+          <p class="text-xs text-gray-500 mt-2">${escapeHtml(dateStr)}</p>
+        `;
+        notifList.appendChild(card);
       }
-    }, err => {
-      console.error("notifications onSnapshot error:", err);
     });
+
+    lastUnreadCount = unreadCount;
+
+    if (notifDot) notifDot.classList.toggle('hidden', unreadCount === 0);
+    if (notifPopup && notifMessage) {
+      if (unreadCount > 0) {
+        notifMessage.textContent = `You have ${unreadCount} new notification${unreadCount > 1 ? 's' : ''}`;
+        notifPopup.classList.remove('hidden');
+      } else {
+        notifPopup.classList.add('hidden');
+      }
+    }
+    if (banner && bannerText) {
+      if (unreadCount > 0) {
+        bannerText.textContent = `You have ${unreadCount} unread message${unreadCount > 1 ? 's' : ''}`;
+        banner.classList.remove('hidden');
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+    if (notifList && notifList.children.length === 0) {
+      notifList.innerHTML = `<p class="text-gray-400 text-center py-8">No notifications yet.</p>`;
+    }
+
+  } catch (err) {
+    console.error("fetchNotificationsOnce error:", err);
+  }
 }
+
+	
 
 // Mark as read (keeps functionality for opening the tab) — does NOT clear/hide
 async function markNotificationsAsRead(uid) {
@@ -5469,20 +5373,15 @@ auth.onAuthStateChanged(async user => {
   if (user) {
     try {
       await ensureUserState(user.uid);
-      listenForNotifications(user.uid);
+      await fetchNotificationsOnce(user.uid);  // ✅ Fetch once on reload
     } catch (err) {
       console.error("Error initializing notifications for user:", err);
     }
   } else {
-    if (unsubscribeNotif) {
-      unsubscribeNotif();
-      unsubscribeNotif = null;
-    }
     lastReadAtOverride = null;
     lastClearedAtOverride = null;
   }
 });
-
 
 
 
