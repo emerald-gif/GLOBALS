@@ -7084,72 +7084,162 @@ function startCheckinListener() {
 
 
 
-// === 🔄 SIMPLE RETURN-TO-FOCUS RELOAD OVERLAY ===
-(function () {
-  let loaderTimeout = null;
+/* ============================
+   Tab-suspend / instant-return loader
+   - suspend expensive listeners while hidden
+   - show a quick loader on return (12s)
+   ============================ */
 
-  // Create loader overlay
-  const overlay = document.createElement("div");
-  overlay.id = "returnLoader";
-  overlay.style.position = "fixed";
-  overlay.style.inset = "0";
-  overlay.style.background = "rgba(255, 255, 255, 0.92)";
-  overlay.style.display = "none";
-  overlay.style.zIndex = "999999";
-  overlay.style.backdropFilter = "blur(8px)";
-  overlay.style.alignItems = "center";
-  overlay.style.justifyContent = "center";
-  overlay.style.flexDirection = "column";
-  overlay.style.fontFamily = "system-ui, sans-serif";
+(function(){
+  // Global registry where modules push their unsubscribe/stop logic
+  window._appUnsubscribers = window._appUnsubscribers || [];
 
-  // Spinner + text
+  // Modules should call this to register how to clean up their listeners/intervals
+  window.registerUnsubscriber = function(fn){
+    if (typeof fn === 'function') window._appUnsubscribers.push(fn);
+  };
+
+  // Call to run all registered unsubscriber functions (and clear registry)
+  function unsubscribeAll() {
+    try {
+      while (window._appUnsubscribers && window._appUnsubscribers.length) {
+        const u = window._appUnsubscribers.pop();
+        try { u(); } catch(e){ console.warn('unsub error', e); }
+      }
+    } catch(e){ console.error('unsubscribeAll error', e); }
+  }
+
+  // Create a fast loader overlay (minimal DOM / fast paint)
+  const overlay = document.createElement('div');
+  overlay.id = 'instantReturnLoader';
+  Object.assign(overlay.style, {
+    position: 'fixed',
+    inset: '0',
+    display: 'none',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: '999999',
+    pointerEvents: 'auto',
+    transition: 'opacity 80ms linear',
+    opacity: '0',
+    // keep it light so UI still faintly shows:
+    background: 'rgba(255,255,255,0.6)',
+    backdropFilter: 'blur(4px)'
+  });
   overlay.innerHTML = `
-    <div style="text-align:center;">
-      <div style="width:60px;height:60px;border:6px solid #c7d2fe;border-top-color:#2563eb;border-radius:50%;margin:auto;animation:spin 1s linear infinite;"></div>
-      <p style="margin-top:16px;font-size:15px;color:#1e3a8a;font-weight:600;">Refreshing your dashboard...</p>
+    <div style="text-align:center; font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial;">
+      <div style="width:48px;height:48px;border-radius:50%;border:6px solid #cfe6ff;border-top-color:#2563eb;margin:0 auto; animation:__spin 0.6s linear infinite;"></div>
+      <div style="margin-top:10px;font-weight:600;color:#0f172a">Reconnecting…</div>
     </div>
   `;
+  document.body && document.body.appendChild(overlay);
+  const style = document.createElement('style');
+  style.textContent = '@keyframes __spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}';
+  document.head && document.head.appendChild(style);
 
-  // Add to DOM
-  document.body.appendChild(overlay);
+  let hideTimeout = null;
+  function showOverlay() {
+    if (!overlay) return;
+    overlay.style.display = 'flex';
+    requestAnimationFrame(()=> overlay.style.opacity = '1');
+    // ensure hide after 12s
+    clearTimeout(hideTimeout);
+    hideTimeout = setTimeout(hideOverlay, 12000);
+    console.log('[Globals] overlay shown — suspending heavy work.');
+  }
+  function hideOverlay() {
+    if (!overlay) return;
+    overlay.style.opacity = '0';
+    setTimeout(()=> overlay.style.display = 'none', 100);
+    clearTimeout(hideTimeout);
+    console.log('[Globals] overlay hidden.');
+  }
 
-  // Spinner animation (inject style)
-  const style = document.createElement("style");
-  style.textContent = `
-    @keyframes spin { 
-      0% { transform: rotate(0deg); } 
-      100% { transform: rotate(360deg); } 
-    }
-  `;
-  document.head.appendChild(style);
+  // Which modules to suspend/resume: each module should export a start/stop or we use a pattern
+  // We'll call unsubscribeAll() on hide, and call resumeAppWork() on show which reinitializes modules.
 
-  // Handle tab visibility changes
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) {
-      // When user comes back
-      overlay.style.display = "flex";
-      console.log("[Globals] Tab reactivated — showing loader");
+  // You must ensure each listener/interval you create pushes an unsubscriber via registerUnsubscriber(...)
+  // Example for setInterval:
+  // const id = setInterval(...); registerUnsubscriber(()=> clearInterval(id));
+  //
+  // Example for firebase.onSnapshot:
+  // const unsub = query.onSnapshot(...); registerUnsubscriber(unsub);
+  //
+  // For modules with startX functions, we call them again on resume:
+  function resumeAppWork() {
+    // Reinitialize modules that you want active when visible.
+    // IMPORTANT: put function names that exist in your app here.
+    try {
+      // Examples: replace or add your actual init function names
+      if (typeof startCheckinListener === 'function') startCheckinListener();
+      if (typeof initTransactionsForCurrentUser === 'function') initTransactionsForCurrentUser();
+      if (typeof AffiliateV2 === 'object' && typeof AffiliateV2.init === 'function') AffiliateV2.init();
+      // add other starts here (ads, spin, tasks)...
+    } catch (e) { console.error('resumeAppWork error', e); }
+  }
 
-      // Optional: reload logic
-      try {
-        if (typeof AffiliateV2?.init === "function") AffiliateV2.init();
-        if (typeof initDashboard === "function") initDashboard();
-        if (typeof startCheckinListener === "function") startCheckinListener();
-      } catch (err) {
-        console.warn("Optional module re-init failed:", err);
-      }
+  // Suspend: stop listeners/intervals and small cleanup to keep main thread idle
+  function suspendAppWork() {
+    try {
+      // Call all registered unsubscribers
+      unsubscribeAll();
 
-      // Hide loader after 12 seconds
-      clearTimeout(loaderTimeout);
-      loaderTimeout = setTimeout(() => {
-        overlay.style.display = "none";
-        console.log("[Globals] Loader hidden");
-      }, 12000);
-    } else {
-      // If user leaves, clear pending hide
-      clearTimeout(loaderTimeout);
-    }
-  });
+      // Also cancel any heavy animation frames if you keep references to them in global vars
+      if (window._heavyRafId) { try { cancelAnimationFrame(window._heavyRafId); window._heavyRafId = null; } catch(e){} }
+    } catch (e) { console.error('suspendAppWork error', e); }
+  }
+
+  // When tab becomes hidden: suspend work quickly
+  function handleHidden() {
+    // Mark time for debugging if needed
+    window._lastHiddenAt = performance.now();
+    // Suspend heavy work immediately
+    suspendAppWork();
+    console.log('[Globals] Tab hidden — suspended listeners/intervals.');
+  }
+
+  // When tab becomes visible: show overlay, resume work
+  let returning = false;
+  function handleVisible() {
+    if (returning) return;
+    returning = true;
+    // show overlay instantly
+    showOverlay();
+
+    // very small delay to allow overlay paint, then resume app work
+    requestAnimationFrame(() => {
+      // Reattach listeners/intervals
+      resumeAppWork();
+
+      // hide overlay once resumed (we still leave 12s hard timeout)
+      setTimeout(() => {
+        hideOverlay();
+        returning = false;
+      }, 700); // hide shortly after resume; overlay still guaranteed to be hidden after 12s if longer
+    });
+  }
+
+  // Hook events: visibilitychange + focus/blur to be extra fast
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) handleHidden(); else handleVisible();
+  }, {passive:true});
+
+  window.addEventListener('blur', () => {
+    // some browsers fire blur when switching windows; suspend as well
+    handleHidden();
+  }, {passive:true});
+  window.addEventListener('focus', () => {
+    // focus normally follows visibilitychange but we duplicate to be robust
+    handleVisible();
+  }, {passive:true});
+
+  // Optionally allow manual control via dev console:
+  window.__suspendAppWork = suspendAppWork;
+  window.__resumeAppWork = resumeAppWork;
+  window.__showReturnLoader = showOverlay;
+  window.__hideReturnLoader = hideOverlay;
+
+  console.log('[Globals] tab-suspend/return-loader init done.');
 })();
 
 
@@ -7162,6 +7252,4 @@ function startCheckinListener() {
 
 
 
-
-    
-
+	
