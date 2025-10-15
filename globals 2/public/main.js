@@ -5258,7 +5258,9 @@ async function submitWithdrawal() {
 
 
 
-
+document.addEventListener('DOMContentLoaded', async () => {
+  try { await loadBanks(); } catch (e) { console.error('loadBanks threw', e); }
+});
 
 
 
