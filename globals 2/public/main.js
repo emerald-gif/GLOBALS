@@ -4745,6 +4745,13 @@ auth.onAuthStateChanged(async user => {
 // GLOBALS Payment Transactions (Static Fetch)
 // ============================================
 
+
+
+
+// ============================================
+// GLOBALS Payment Transactions (Static Fetch)
+// ============================================
+
 const paymentTxListEl = document.getElementById("transactionList");
 const paymentTxFilterEl = document.getElementById("transactionFilter");
 let paymentTransactionsAll = [];
@@ -4946,7 +4953,6 @@ function initPaymentSection() {
 }
 
 window.initPaymentSection = initPaymentSection;
-
 
 
 
