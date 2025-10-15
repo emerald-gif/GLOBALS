@@ -113,98 +113,103 @@ app.post("/api/verify-account", async (req, res) => {
   }
 });
 
+
+
+
 /* =======================
    REQUEST WITHDRAWAL (auth + PIN check)
    ======================= */
 
 
-
 /* =======================
-   REQUEST WITHDRAWAL (Firebase Only – No Paystack)
+   REQUEST WITHDRAWAL (Manual - No Paystack)
    ======================= */
 app.post("/api/request-withdrawal", async (req, res) => {
   try {
-    // ✅ 1) Verify ID token
+    // ✅ 1) Verify Firebase ID token
     let decoded;
     try {
       decoded = await verifyIdTokenFromHeaderOrBody(req);
     } catch (tokenErr) {
       console.warn('request-withdrawal token error', tokenErr.message);
-      return res.status(401).json({ status: "fail", message: "Authentication failed" });
+      return res.status(401).json({ status: "fail", message: tokenErr.message });
     }
-    const uid = decoded.uid;
-    if (!uid) return res.status(401).json({ status: "fail", message: "Invalid token (no uid)" });
 
-    // ✅ 2) Validate request body
+    const uid = decoded.uid;
+    if (!uid) return res.status(401).json({ status: "fail", message: "Invalid user token" });
+
+    // ✅ 2) Validate inputs
     const { accNum, bankCode, account_name, amount, pin } = req.body || {};
     if (!accNum || !bankCode || !account_name || !amount || !pin) {
       return res.status(400).json({ status: "fail", message: "Missing required fields" });
     }
+
     const amtNum = Number(amount);
     if (!isFinite(amtNum) || amtNum <= 0) {
       return res.status(400).json({ status: "fail", message: "Invalid amount" });
     }
 
-    // ✅ 3) Fetch user & check PIN
+    // ✅ 3) Get user data
     const userRef = dbAdmin.collection("users").doc(uid);
     const userSnap = await userRef.get();
     if (!userSnap.exists) {
       return res.status(404).json({ status: "fail", message: "User not found" });
     }
+
     const userData = userSnap.data() || {};
 
+    // ✅ 4) PIN verification
     if (!userData.pin) {
-      return res.status(400).json({ status: "fail", message: "Set your payment pin first" });
+      return res.status(400).json({ status: "fail", message: "Please set your PIN first" });
     }
     if (String(userData.pin) !== String(pin)) {
       return res.status(400).json({ status: "fail", message: "Invalid PIN" });
     }
 
-    // ✅ 4) Check balance
+    // ✅ 5) Check balance
     const balance = Number(userData.balance) || 0;
     if (amtNum > balance) {
       return res.status(400).json({ status: "fail", message: "Insufficient balance" });
     }
 
-    // ✅ 5) Deduct balance and record transactions
+    // ✅ 6) Create manual withdrawal record
+    const withdrawRef = dbAdmin.collection("Withdraw").doc();
+    const transactionRef = dbAdmin.collection("Transactions").doc();
+
+    const payload = {
+      userId: uid,
+      account_number: accNum,
+      bank_code: bankCode,
+      account_name,
+      amount: amtNum,
+      status: "processing",
+      type: "Withdraw",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    // ✅ 7) Firestore Transaction
     await dbAdmin.runTransaction(async (tx) => {
       const uSnap = await tx.get(userRef);
-      const current = (uSnap.exists && Number(uSnap.data().balance)) ? Number(uSnap.data().balance) : 0;
-      if (amtNum > current) throw new Error("Insufficient balance (race condition)");
+      const curBal = Number(uSnap.data()?.balance || 0);
+      if (curBal < amtNum) throw new Error("Insufficient balance");
 
-      tx.update(userRef, { balance: current - amtNum });
+      // deduct balance
+      tx.update(userRef, { balance: curBal - amtNum });
 
-      // --- Create Withdraw request ---
-      const withdrawRef = dbAdmin.collection("Withdraw").doc();
-      tx.set(withdrawRef, {
-        userId: uid,
-        accNum,
-        bankCode,
-        account_name,
-        amount: amtNum,
-        status: "processing",
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-
-      // --- Log to Transactions collection ---
-      const txRef = dbAdmin.collection("Transaction").doc();
-      tx.set(txRef, {
-        userId: uid,
-        type: "Withdraw",
-        amount: amtNum,
-        accNum,
-        bankCode,
-        account_name,
-        status: "processing",
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
-      });
+      // save withdrawal + transaction
+      tx.set(withdrawRef, payload);
+      tx.set(transactionRef, payload);
     });
 
-    return res.json({ status: "success", message: "Withdrawal request recorded and is being processed." });
+    // ✅ 8) Response to frontend
+    return res.json({
+      status: "success",
+      message: "Withdrawal request submitted successfully! It’s now under review.",
+    });
 
   } catch (err) {
-    console.error("request-withdrawal error", err.message || err);
-    return res.status(500).json({ status: "fail", message: "Server error during withdrawal" });
+    console.error("manual-withdrawal error:", err.message || err);
+    return res.status(500).json({ status: "fail", message: "Server error while submitting withdrawal." });
   }
 });
 
@@ -329,6 +334,7 @@ app.get("*", (req, res) => {
 /* Start server */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
 
 
 
