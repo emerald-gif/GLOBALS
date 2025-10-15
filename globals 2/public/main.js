@@ -2814,6 +2814,15 @@ window.copyTelegramMessage = copyTelegramMessage;
 
 
 
+
+
+
+
+
+// EARNING Swiper Function
+
+
+
 (function (w, d) {
   // Prevent multiple instances
   if (w.__balanceCtrl && typeof w.__balanceCtrl.stop === "function") w.__balanceCtrl.stop();
@@ -2943,9 +2952,6 @@ window.copyTelegramMessage = copyTelegramMessage;
                                                        
 														 
 
-
-
-                                                              // EARNING Swiper Function
 
 
 
@@ -4152,81 +4158,91 @@ function resetAffiliateForm() {
 
 
 
-// === Fetch and Display Jobs (Reload Only, Not Live) ===
-function fetchAndDisplayUserJobs() {
+// === Fetch and Display User Jobs (One-time reload only, No Snapshot) ===
+async function fetchAndDisplayUserJobs() {
   const jobList = document.getElementById("jobList");
   jobList.innerHTML = "<p class='text-center text-gray-500'>Loading your jobs...</p>";
 
-  firebase.auth().onAuthStateChanged(async (user) => {
-    if (!user) {
-      jobList.innerHTML = '<p class="text-center text-gray-500">Please log in to see your posted jobs.</p>';
-      return;
-    }
+  const user = firebase.auth().currentUser || await new Promise(resolve => {
+    firebase.auth().onAuthStateChanged(resolve);
+  });
 
-    const uid = user.uid;
-    let allJobs = [];
+  if (!user) {
+    jobList.innerHTML = '<p class="text-center text-gray-500">Please log in to see your posted jobs.</p>';
+    return;
+  }
 
-    // --- 🔹 Helper: Count approved submissions
-    async function getApprovedCount(collection, jobId) {
+  const uid = user.uid;
+  let allJobs = [];
+
+  // 🔹 Helper to count approved submissions (no snapshot)
+  async function getApprovedCount(collection, jobId) {
+    try {
       const snap = await firebase.firestore()
         .collection(collection)
         .where("jobId", "==", jobId)
         .where("status", "==", "approved")
         .get();
       return snap.size;
+    } catch (e) {
+      console.error("getApprovedCount error:", e);
+      return 0;
     }
+  }
 
-    // --- 🔹 Fetch all tasks
-    const taskSnap = await firebase.firestore()
-      .collection("tasks")
-      .where("postedBy.uid", "==", uid)
-      .orderBy("postedAt", "desc")
-      .get();
+  // 🔹 Fetch all tasks posted by this user
+  const taskSnap = await firebase.firestore()
+    .collection("tasks")
+    .where("postedBy.uid", "==", uid)
+    .orderBy("postedAt", "desc")
+    .get();
 
-    for (const doc of taskSnap.docs) {
-      const job = { ...doc.data(), id: doc.id, type: "task" };
-      job.completed = await getApprovedCount("task_submissions", job.id);
-      allJobs.push(job);
+  for (const doc of taskSnap.docs) {
+    const job = { ...doc.data(), id: doc.id, type: "task" };
+    job.completed = await getApprovedCount("task_submissions", job.id);
+    allJobs.push(job);
+  }
+
+  // 🔹 Fetch all affiliate jobs posted by this user
+  const affiliateSnap = await firebase.firestore()
+    .collection("affiliateJobs")
+    .where("postedBy.uid", "==", uid)
+    .orderBy("postedAt", "desc")
+    .get();
+
+  for (const doc of affiliateSnap.docs) {
+    const job = { ...doc.data(), id: doc.id, type: "affiliate" };
+    job.completed = await getApprovedCount("affiliate_submissions", job.id);
+    allJobs.push(job);
+  }
+
+  // 🔹 Sort by date (newest first)
+  allJobs.sort((a, b) => (b.postedAt?.toMillis?.() || 0) - (a.postedAt?.toMillis?.() || 0));
+
+  // 🔹 Render all jobs
+  renderJobs(allJobs);
+
+  function renderJobs(jobs) {
+    if (!jobs.length) {
+      jobList.innerHTML = '<p class="text-center text-gray-500">You haven\'t posted any jobs yet.</p>';
+      return;
     }
-
-    // --- 🔹 Fetch all affiliate jobs
-    const affiliateSnap = await firebase.firestore()
-      .collection("affiliateJobs")
-      .where("postedBy.uid", "==", uid)
-      .orderBy("postedAt", "desc")
-      .get();
-
-    for (const doc of affiliateSnap.docs) {
-      const job = { ...doc.data(), id: doc.id, type: "affiliate" };
-      job.completed = await getApprovedCount("affiliate_submissions", job.id);
-      allJobs.push(job);
-    }
-
-    // --- 🔹 Render Function
-    function renderJobs() {
-      if (!allJobs.length) {
-        jobList.innerHTML = '<p class="text-center text-gray-500">You haven\'t posted any jobs yet.</p>';
-        return;
-      }
-      allJobs.sort((a, b) => (b.postedAt?.toMillis?.() || 0) - (a.postedAt?.toMillis?.() || 0));
-      jobList.innerHTML = allJobs.map(job => renderJobCard(job)).join("");
-    }
-
-    renderJobs();
-  });
+    jobList.innerHTML = jobs.map(job => renderJobCard(job)).join("");
+  }
 }
 
-
-									 
-// === Job Card ===
+// === Render Job Card ===
 function renderJobCard(job) {
   const status = job.status || "on review";
   const statusColor = status === "approved" ? "bg-green-100 text-green-700"
-                   : status === "rejected" ? "bg-red-100 text-red-700"
-                   : "bg-yellow-100 text-yellow-700";
+    : status === "rejected" ? "bg-red-100 text-red-700"
+    : "bg-yellow-100 text-yellow-700";
 
   const jobTypeLabel = job.type === "task" ? "Task" : "Affiliate";
   const logo = job.type === "affiliate" ? job.campaignLogoURL : job.screenshotURL;
+  const totalWorkers = job.numWorkers || 0;
+  const completed = job.completed || 0;
+  const progress = totalWorkers ? Math.round((completed / totalWorkers) * 100) : 0;
 
   return `
     <div class="p-5 rounded-2xl bg-white shadow-md border border-gray-200 hover:shadow-lg transition">
@@ -4241,9 +4257,14 @@ function renderJobCard(job) {
         ${logo ? `<img src="${logo}" class="w-14 h-14 rounded-lg object-cover border" />` : ""}
         <div>
           <p class="text-sm text-gray-500">${jobTypeLabel} • ${job.category || "Uncategorized"}</p>
-          <p class="text-sm text-gray-700"><span class="font-semibold">Workers:</span> ${job.completed || 0}/${job.numWorkers || 0}</p>
+          <p class="text-sm text-gray-700"><span class="font-semibold">Workers:</span> ${completed}/${totalWorkers}</p>
         </div>
       </div>
+
+      <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+        <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width:${progress}%;"></div>
+      </div>
+      <p class="text-xs text-gray-500 mt-1">${progress}% completed</p>
 
       <div class="grid grid-cols-2 gap-4 text-sm text-gray-700 mt-3">
         <div><span class="font-semibold">Cost:</span> ₦${job.total || 0}</div>
@@ -4252,7 +4273,7 @@ function renderJobCard(job) {
       </div>
 
       <div class="mt-4">
-        <button onclick="checkJobDetails('${job.id}', '${job.type}')" 
+        <button onclick="checkJobDetails('${job.id}', '${job.type}')"
           class="w-full py-2 px-4 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700 transition">
           View Details
         </button>
@@ -4261,33 +4282,31 @@ function renderJobCard(job) {
   `;
 }
 
-// === Job Details Page (LIVE) ===
-function checkJobDetails(jobId, jobType) {
+// === Check Job Details (fetch once, no listener) ===
+async function checkJobDetails(jobId, jobType) {
   const collection = jobType === "task" ? "tasks" : "affiliateJobs";
   const subCollection = jobType === "task" ? "task_submissions" : "affiliate_submissions";
 
-  firebase.firestore().collection(collection).doc(jobId)
-    .get()
-    .then(async (doc) => {
-      if (!doc.exists) return;
-      const job = { ...doc.data(), id: doc.id, type: jobType };
+  const doc = await firebase.firestore().collection(collection).doc(jobId).get();
+  if (!doc.exists) return;
 
-      // ✅ Count only approved submissions
-      const approvedSnap = await firebase.firestore()
-        .collection(subCollection)
-        .where("jobId", "==", job.id)
-        .where("status", "==", "approved")
-        .get();
-      job.completed = approvedSnap.size;
+  const job = { ...doc.data(), id: doc.id, type: jobType };
+  const approvedSnap = await firebase.firestore()
+    .collection(subCollection)
+    .where("jobId", "==", job.id)
+    .where("status", "==", "approved")
+    .get();
+  job.completed = approvedSnap.size;
 
-      renderJobDetails(job);
-      activateTab("jobDetailsSection");
-    });
+  renderJobDetails(job);
+  activateTab("jobDetailsSection");
 }
 
 // === Render Job Details ===
 function renderJobDetails(job) {
-  const progress = job.numWorkers ? Math.round((job.completed / job.numWorkers) * 100) : 0;
+  const totalWorkers = job.numWorkers || 0;
+  const completed = job.completed || 0;
+  const progress = totalWorkers ? Math.round((completed / totalWorkers) * 100) : 0;
 
   let content = `
     ${job.campaignLogoURL || job.screenshotURL ? `<img src="${job.campaignLogoURL || job.screenshotURL}" class="w-full h-48 object-cover rounded-xl" />` : ""}
@@ -4297,13 +4316,13 @@ function renderJobDetails(job) {
     <div class="mt-3 grid grid-cols-2 gap-4 text-sm text-gray-700">
       <div><span class="font-semibold">Cost:</span> ₦${job.total || 0}</div>
       <div><span class="font-semibold">Worker Pay:</span> ₦${job.workerEarn || job.workerPay || 0}</div>
-      <div><span class="font-semibold">Completed:</span> ${job.completed}/${job.numWorkers || 0}</div>
+      <div><span class="font-semibold">Completed:</span> ${completed}/${totalWorkers}</div>
       <div><span class="font-semibold">Posted:</span> ${job.postedAt?.toDate().toLocaleString() || "—"}</div>
     </div>
 
     <div class="mt-3">
       <div class="w-full bg-gray-200 rounded-full h-2">
-        <div class="bg-blue-600 h-2 rounded-full" style="width: ${progress}%"></div>
+        <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: ${progress}%"></div>
       </div>
       <p class="text-xs text-gray-500 mt-1">${progress}% completed</p>
     </div>
@@ -4328,12 +4347,18 @@ function renderJobDetails(job) {
   document.getElementById("jobDetailsContent").innerHTML = content;
 }
 
-// === Go Back to Jobs List ===
+// === Back Button ===
 function goBackToJobs() {
   activateTab("myJobsSection");
 }
 
+// === Init ===
 document.addEventListener("DOMContentLoaded", fetchAndDisplayUserJobs);
+
+
+
+
+
 
 
 
