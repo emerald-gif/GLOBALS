@@ -1468,19 +1468,29 @@ function initTaskSection() {
 
     // one-time fetch of progress count (no snapshot)
     firebase.firestore()
-      .collection("task_submissions")
-      .where("taskId", "==", jobId)
-      .where("status", "==", "approved")
-      .get()
-      .then(querySnapshot => {
-        const done = querySnapshot.size;
-        rate.textContent = `Progress: ${done} / ${total}`;
-      })
-      .catch(err => {
-        console.error("Failed to read progress for", jobId, err);
-        rate.textContent = `Progress: 0 / ${total}`;
-      });
+  .collection("task_submissions")
+  .where("taskId", "==", jobId)
+  .where("status", "==", "approved")
+  .get()
+  .then(querySnapshot => {
+    const done = querySnapshot.size;
+    rate.textContent = `Progress: ${done} / ${total}`;
 
+    // ✅ If the worker limit is reached, remove the card instantly
+    if (total > 0 && done >= total) {
+      console.log(`Task ${jobId} reached max workers (${done}/${total}) — removing.`);
+      card.remove(); // instantly hide from user
+      return;
+    }
+  })
+  .catch(err => {
+    console.error("Failed to read progress for", jobId, err);
+    rate.textContent = `Progress: 0 / ${total}`;
+  });
+
+
+
+	  
     const button = document.createElement("button");
     button.textContent = "View Task";
     button.className = "mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2 rounded-lg shadow-sm transition";
@@ -1723,29 +1733,33 @@ async function showTaskSubmissionDetailsUser(submissionId) {
   const title = sub.cachedTitle || "Untitled Task";
 
   const modal = document.createElement("div");
-  modal.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50";
-  modal.innerHTML = `
-    <div class="bg-white rounded-xl shadow-lg p-6 w-96 max-h-[90vh] overflow-y-auto">
-      <h2 class="text-lg font-bold mb-3">Submission Details</h2>
+modal.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50";
+modal.innerHTML = `
+  <div class="bg-white rounded-xl shadow-lg p-6 w-96 max-h-[90vh] overflow-y-auto relative">
+    <h2 class="text-lg font-bold mb-3">Submission Details</h2>
 
-      <p class="text-sm"><strong>Job Title:</strong> ${title}</p>
-      <p class="text-sm"><strong>Status:</strong> ${sub.status}</p>
-      <p class="text-sm"><strong>Earned:</strong> ₦${sub.workerEarn || 0}</p>
-      <p class="text-sm"><strong>Submitted At:</strong> ${sub.submittedAt?.toDate?.().toLocaleString() || "—"}</p>
-      <p class="text-sm"><strong>Extra Proof:</strong> ${sub.extraProof || "—"}</p>
+    <p class="text-sm"><strong>Job Title:</strong> ${title}</p>
+    <p class="text-sm"><strong>Status:</strong> ${sub.status}</p>
+    <p class="text-sm"><strong>Earned:</strong> ₦${sub.workerEarn || 0}</p>
+    <p class="text-sm"><strong>Submitted At:</strong> ${sub.submittedAt?.toDate?.().toLocaleString() || "—"}</p>
+    <p class="text-sm"><strong>Extra Proof:</strong> ${sub.extraProof || "—"}</p>
 
-      ${(sub.proofImages || []).map(url => `
-        <div class="mt-3">
-          <p class="text-sm font-medium text-gray-700 mb-1">Uploaded Proof:</p>
-          <img src="${url}" alt="Proof" class="rounded-lg border w-full mb-2">
-        </div>
-      `).join("")}
-
-      <div class="mt-4 flex justify-end">
-        <button class="closeModalUser px-4 py-2 bg-blue-600 text-white rounded-lg">Close</button>
+    ${(sub.proofImages || []).map(url => `
+      <div class="mt-3">
+        <p class="text-sm font-medium text-gray-700 mb-1">Uploaded Proof:</p>
+        <img src="${url}" 
+             alt="Proof" 
+             class="rounded-lg border w-full max-h-60 object-contain mb-2" />
       </div>
+    `).join("")}
+
+    <div class="mt-4 flex justify-end sticky bottom-0 bg-white pt-3">
+      <button class="closeModalUser px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700">
+        Close
+      </button>
     </div>
-  `;
+  </div>
+`;
 
   document.body.appendChild(modal);
   modal.querySelector(".closeModalUser").addEventListener("click", () => modal.remove());
