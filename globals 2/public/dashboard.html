@@ -2679,24 +2679,22 @@
 
 
 <!-- 📜 Transaction History Screen -->
-<div id="transactions-screen" class="tab-section hidden min-h-screen bg-gray-50">
+<!-- 📜 Transaction History Screen -->
+<div id="transactions-screen" class="tab-section hidden min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
 
-<button onclick="activateTab('dashboard')" 
-    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-    </svg>
-    Back
-  </button>
-	
-  <!-- Header -->
-  <div class="bg-white px-4 py-4 shadow-sm flex items-center justify-between">
-    <h2 class="text-xl font-semibold text-gray-900">Transactions</h2>
+  <div class="flex items-center justify-between px-4 py-4">
+    <button onclick="activateTab('dashboard')" 
+      class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      Back
+    </button>
+    <h2 class="text-xl font-semibold text-blue-800">Transactions</h2>
   </div>
 
   <!-- Filters -->
-  <div class="bg-white px-4 py-3 border-b flex gap-3">
-    <!-- Category Dropdown -->
+  <div class="bg-white px-4 py-3 border-b flex gap-3 sticky top-0 z-10">
     <select id="category-filter" class="flex-1 px-3 py-2 rounded-xl border text-sm text-gray-700 focus:ring-2 focus:ring-blue-500">
       <option>All</option>
       <option>Airtime</option>
@@ -2708,7 +2706,6 @@
       <option>TV</option>
     </select>
 
-    <!-- Status Dropdown -->
     <select id="status-filter" class="flex-1 px-3 py-2 rounded-xl border text-sm text-gray-700 focus:ring-2 focus:ring-blue-500">
       <option>All</option>
       <option>successful</option>
@@ -2717,44 +2714,33 @@
     </select>
   </div>
 
-  <!-- Transactions List -->
-  <div id="transactions-list" class="p-3 space-y-3">
-    <!-- JS will inject cards here -->
-  </div>
+  <!-- List -->
+  <div id="transactions-list" class="p-4 space-y-3"></div>
 
-  <!-- Empty State -->
+  <!-- Empty -->
   <div id="transactions-empty" class="hidden flex flex-col items-center justify-center py-16 text-center">
     <img src="https://cdn-icons-png.flaticon.com/512/4076/4076549.png"
          alt="No Transactions" class="w-24 h-24 opacity-60 mb-4">
     <p class="text-gray-600 text-base font-medium">No Transactions Yet</p>
-    <p class="text-gray-400 text-sm">Your history will appear here once you start using services.</p>
+    <p class="text-gray-400 text-sm">Your history will appear here once you start using Globals services.</p>
   </div>
 </div>
 
 <!-- 📑 Transaction Details Screen -->
-<div id="transaction-details-screen" class="tab-section hidden min-h-screen bg-gray-50">
-  <div class="bg-white px-4 py-4 shadow flex items-center justify-between">
-
-	  
+<div id="transaction-details-screen" class="tab-section hidden min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
+  <div class="flex items-center justify-between px-4 py-4">
     <button onclick="activateTab('transactions-screen')" 
-    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-    </svg>
-    Back
-  </button>
-
-	  
-    <h2 class="text-lg font-semibold text-gray-900">Transaction Details</h2>
+      class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      Back
+    </button>
+    <h2 class="text-lg font-semibold text-blue-800">Transaction Details</h2>
   </div>
 
-  <div id="transaction-details-content" class="p-6 space-y-4">
-    <!-- JS will inject details here -->
-  </div>
+  <div id="transaction-details-content" class="p-6 space-y-4"></div>
 </div>
-
-
-
 
 
 
