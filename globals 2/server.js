@@ -212,20 +212,20 @@ app.post("/api/request-withdrawal", async (req, res) => {
 
 
 
-
 /* =======================
-   DEPOSIT: verify-payment
+   DEPOSIT: verify-payment (with Firestore records)
    ======================= */
 app.post("/api/verify-payment", async (req, res) => {
   try {
-    // decode token (header preferred, fallback to body.idToken)
+    // ✅ Verify Firebase token
     let decoded;
     try {
       decoded = await verifyIdTokenFromHeaderOrBody(req);
     } catch (tokenErr) {
-      console.warn('verify-payment token error', tokenErr.message, tokenErr.detail || '');
+      console.warn("verify-payment token error", tokenErr.message, tokenErr.detail || "");
       return res.status(401).json({ status: "fail", message: tokenErr.message });
     }
+
     const uid = decoded.uid;
     if (!uid) return res.status(401).json({ status: "fail", message: "Invalid token (no uid)" });
 
@@ -235,52 +235,90 @@ app.post("/api/verify-payment", async (req, res) => {
       return res.status(400).json({ status: "fail", message: "Invalid reference or amount" });
     }
 
-    // verify transaction with Paystack
-    const verifyResp = await axios.get(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
-      headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` }
-    });
+    // ✅ Verify transaction with Paystack
+    const verifyResp = await axios.get(
+      `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
+      { headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` } }
+    );
 
     const paymentData = verifyResp.data?.data;
     if (!paymentData || paymentData.status !== "success") {
-      console.warn('verify-payment: paystack says not success', paymentData || {});
-      return res.status(400).json({ status: "fail", message: "Payment not successful", detail: paymentData || null });
+      console.warn("verify-payment: paystack says not success", paymentData || {});
+      return res
+        .status(400)
+        .json({ status: "fail", message: "Payment not successful", detail: paymentData || null });
     }
 
     const paidNaira = Number(paymentData.amount) / 100;
 
-    // Prevent double-processing — transactional write
+    // ✅ Write to Firestore: payments + Deposit + Transaction + update balance
     const paymentDocRef = dbAdmin.collection("payments").doc(reference);
+    const depositRef = dbAdmin.collection("Deposit").doc();
+    const transactionRef = dbAdmin.collection("Transaction").doc();
+    const userRef = dbAdmin.collection("users").doc(uid);
+
     await dbAdmin.runTransaction(async (tx) => {
       const pSnap = await tx.get(paymentDocRef);
-      if (pSnap.exists) return;
-      const userRef = dbAdmin.collection("users").doc(uid);
+      if (pSnap.exists) return; // prevent double-processing
+
+      // Current balance
       const userSnap = await tx.get(userRef);
       let currentBalance = 0;
       if (userSnap.exists) {
         const cur = userSnap.data().balance;
-        currentBalance = (typeof cur === "number") ? cur : Number(cur) || 0;
+        currentBalance = typeof cur === "number" ? cur : Number(cur) || 0;
       }
+
       const newBalance = currentBalance + paidNaira;
 
+      // ✅ Update balance
+      tx.set(userRef, { balance: newBalance }, { merge: true });
+
+      // ✅ Add Deposit record
+      tx.set(depositRef, {
+        userId: uid,
+        amount: paidNaira,
+        status: "successful",
+        reference,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // ✅ Add Transaction record
+      tx.set(transactionRef, {
+        userId: uid,
+        amount: paidNaira,
+        type: "Deposit",
+        status: "successful",
+        reference,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // ✅ Add to payments record (for traceability)
       tx.set(paymentDocRef, {
         reference,
         uid,
         amount: paidNaira,
         status: "verified",
         paystack: paymentData,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
-
-      tx.set(userRef, { balance: newBalance }, { merge: true });
     });
 
     return res.json({ status: "success" });
-
   } catch (err) {
     console.error("verify-payment error:", err.response?.data || err.message || err);
-    return res.status(500).json({ status: "fail", message: "Server error verifying payment", detail: err.response?.data || err.message || null });
+    return res.status(500).json({
+      status: "fail",
+      message: "Server error verifying payment",
+      detail: err.response?.data || err.message || null,
+    });
   }
 });
+
+
+
+
+
 
 /* =======================
    PAYSTACK WEBHOOK (optional redundancy)
@@ -320,6 +358,7 @@ app.get("*", (req, res) => {
 /* Start server */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
 
 
 
