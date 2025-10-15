@@ -5149,16 +5149,22 @@ async function verifyAccount() {
 
 /* SUBMIT WITHDRAWAL */
 async function submitWithdrawal() {
-  const accNum = (document.getElementById('withdrawAccountNumber')?.value || '').toString().trim();
-  const bankCode = (document.getElementById('withdrawBankSelect')?.value || '').toString().trim();
-  const accountName = (document.getElementById('withdrawAccountName')?.value || '').trim();
-  const amount = parseInt(document.getElementById('withdrawAmount')?.value || '0', 10);
-  // support both withdrawPin or withdrawPassword id (legacy)
-  const pinEl = document.getElementById('withdrawPin') || document.getElementById('withdrawPassword');
-  const pin = (pinEl?.value || '').toString().trim();
+  const accNum = (document.getElementById('withdrawAccountNumber')?.value || '').trim();
+const bankSelect = document.getElementById('withdrawBankSelect');
+const bankCode = (bankSelect?.value || '').trim();
+const bankName = bankSelect?.options[bankSelect.selectedIndex]?.text || '';
 
-  if (!accNum || !bankCode || !amount || !pin || amount < 1000) { alert('Please fill all fields correctly (min ₦1000)'); return; }
+const accountName = (document.getElementById('accountNameDisplay')?.innerText || '')
+  .replace('✅ ', '')
+  .trim();
+const amount = parseInt(document.getElementById('withdrawAmount')?.value || '0', 10);
+const pinEl = document.getElementById('withdrawPin') || document.getElementById('withdrawPassword');
+const pin = (pinEl?.value || '').trim();
 
+if (!accNum || !bankName || !accountName || !amount || amount < 1000 || !pin) {
+  alert('⚠️ Please fill all fields correctly (min ₦1000)');
+  return;
+}
   const user = await ensureFirebaseUser();
   if (!user) { alert('You must be signed in to withdraw.'); return; }
 
@@ -5173,7 +5179,7 @@ async function submitWithdrawal() {
     const resp = await fetch('/api/request-withdrawal', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
-      body: JSON.stringify({ accNum, bankCode, account_name: accountName, amount, pin })
+      body: JSON.stringify({ accNum, bankCode, bankName, account_name: accountName, amount, pin })
     });
     const data = await resp.json().catch(()=>null);
     debugLog('request-withdrawal response', resp.status, data);
