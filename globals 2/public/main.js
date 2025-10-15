@@ -1418,6 +1418,64 @@ function initTaskSection() {
     });
   }
 
+
+
+
+// ---------- Task Card Renderer ----------
+function createTaskCard(jobId, jobData) {
+  const taskContainer = document.getElementById("task-jobs");
+  if (!taskContainer) return;
+
+  const card = document.createElement("div");
+  card.className = `
+    flex gap-4 p-4 rounded-2xl shadow-md border border-gray-200 bg-white
+    hover:shadow-lg transition duration-300 mb-4 items-center
+  `;
+
+  const image = document.createElement("img");
+  image.src = jobData.screenshotURL || "https://via.placeholder.com/80";
+  image.alt = "Task Preview";
+  image.className = "w-20 h-20 rounded-xl object-cover";
+
+  const content = document.createElement("div");
+  content.className = "flex-1";
+
+  const title = document.createElement("h2");
+  title.textContent = jobData.title || "Untitled Task";
+  title.className = "text-lg font-semibold text-gray-800";
+
+  const meta = document.createElement("p");
+  meta.className = "text-sm text-gray-500 mt-1";
+  meta.textContent = `${jobData.category || ""} • ${jobData.subCategory || ""}`;
+
+  const earn = document.createElement("p");
+  earn.textContent = `Earn: ₦${jobData.workerEarn || 0}`;
+  earn.className = "text-sm text-green-600 font-semibold mt-1";
+
+  const button = document.createElement("button");
+  button.textContent = "View Task";
+  button.className = `
+    mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2
+    rounded-lg shadow-sm transition
+  `;
+  button.addEventListener("click", () => showTaskDetails(jobId, jobData));
+
+  content.appendChild(title);
+  content.appendChild(meta);
+  content.appendChild(earn);
+  content.appendChild(button);
+
+  card.appendChild(image);
+  card.appendChild(content);
+
+  taskContainer.appendChild(card);
+}
+
+
+
+
+
+	
   // ---------- One-time task fetch ----------
   async function fetchTasksOnce() {
     try {
