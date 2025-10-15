@@ -229,71 +229,48 @@ app.post("/api/request-withdrawal", async (req, res) => {
 /* =======================
    DEPOSIT: verify-payment
    ======================= */
-app.post("/api/verify-payment", async (req, res) => {
+app.post("/api/verify-account", async (req, res) => {
+  const { accNum, bankCode } = req.body || {};
+  if (!accNum || !bankCode) {
+    return res.status(400).json({ status: "fail", error: "Missing account number or bank code" });
+  }
+
   try {
-    // decode token (header preferred, fallback to body.idToken)
-    let decoded;
-    try {
-      decoded = await verifyIdTokenFromHeaderOrBody(req);
-    } catch (tokenErr) {
-      console.warn('verify-payment token error', tokenErr.message, tokenErr.detail || '');
-      return res.status(401).json({ status: "fail", message: tokenErr.message });
-    }
-    const uid = decoded.uid;
-    if (!uid) return res.status(401).json({ status: "fail", message: "Invalid token (no uid)" });
-
-    const { reference, amount } = req.body || {};
-    const amountNum = Number(amount);
-    if (!reference || !isFinite(amountNum) || amountNum <= 0) {
-      return res.status(400).json({ status: "fail", message: "Invalid reference or amount" });
-    }
-
-    // verify transaction with Paystack
-    const verifyResp = await axios.get(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
-      headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` }
+    const response = await axios.get("https://api.paystack.co/bank/resolve", {
+      headers: {
+        Authorization: `Bearer ${PAYSTACK_SECRET}`,
+        "Content-Type": "application/json",
+      },
+      params: {
+        account_number: accNum,
+        bank_code: bankCode,
+      },
+      timeout: 10000, // 10s timeout for safety
     });
 
-    const paymentData = verifyResp.data?.data;
-    if (!paymentData || paymentData.status !== "success") {
-      console.warn('verify-payment: paystack says not success', paymentData || {});
-      return res.status(400).json({ status: "fail", message: "Payment not successful", detail: paymentData || null });
+    if (response.data && response.data.status && response.data.data) {
+      const accountName = response.data.data.account_name;
+      console.log(`✅ Verified account: ${accountName}`);
+      return res.json({ status: "success", account_name: accountName });
+    } else {
+      console.warn("❌ Paystack verify failed:", response.data);
+      return res.json({ status: "fail", error: "Account not found" });
     }
-
-    const paidNaira = Number(paymentData.amount) / 100;
-
-    // Prevent double-processing — transactional write
-    const paymentDocRef = dbAdmin.collection("payments").doc(reference);
-    await dbAdmin.runTransaction(async (tx) => {
-      const pSnap = await tx.get(paymentDocRef);
-      if (pSnap.exists) return;
-      const userRef = dbAdmin.collection("users").doc(uid);
-      const userSnap = await tx.get(userRef);
-      let currentBalance = 0;
-      if (userSnap.exists) {
-        const cur = userSnap.data().balance;
-        currentBalance = (typeof cur === "number") ? cur : Number(cur) || 0;
-      }
-      const newBalance = currentBalance + paidNaira;
-
-      tx.set(paymentDocRef, {
-        reference,
-        uid,
-        amount: paidNaira,
-        status: "verified",
-        paystack: paymentData,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-
-      tx.set(userRef, { balance: newBalance }, { merge: true });
-    });
-
-    return res.json({ status: "success" });
-
   } catch (err) {
-    console.error("verify-payment error:", err.response?.data || err.message || err);
-    return res.status(500).json({ status: "fail", message: "Server error verifying payment", detail: err.response?.data || err.message || null });
+    console.error("❌ verify-account error:", err.response?.data || err.message);
+    return res.status(500).json({
+      status: "fail",
+      error: "Account verification failed",
+      detail: err.response?.data || err.message,
+    });
   }
 });
+
+
+
+
+
+
 
 /* =======================
    PAYSTACK WEBHOOK (optional redundancy)
@@ -340,6 +317,7 @@ app.get("*", (req, res) => {
 /* Start server */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
 
 
 
