@@ -144,8 +144,8 @@ app.post("/api/request-withdrawal", async (req, res) => {
     }
 
     const amtNum = Number(amount);
-    if (!isFinite(amtNum) || amtNum < 1000) {
-      return res.status(400).json({ status: "fail", message: "Minimum withdrawal is ₦1000" });
+    if (!isFinite(amtNum) || amtNum < 500) {
+      return res.status(400).json({ status: "fail", message: "Minimum withdrawal is ₦500" });
     }
 
     // ✅ 3. Get user data
@@ -320,6 +320,7 @@ app.get("*", (req, res) => {
 /* Start server */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
 
 
 
