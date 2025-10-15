@@ -5071,49 +5071,46 @@ function handleDeposit() {
 
 /* BANKS & ACCOUNT VERIFY */
 
- /* ---------- Robust loadBanks (retry + better UI) ---------- */
+
+
+
+/* BANKS & ACCOUNT VERIFY */
 async function loadBanks() {
   const bankSelect = document.getElementById('withdrawBankSelect');
   if (!bankSelect) return;
-
   bankSelect.disabled = true;
   bankSelect.innerHTML = `<option>Loading Banks...</option>`;
 
-  try {
-    // 🔹 Always fetch from your own backend (no external fallback)
-    const res = await fetch('/api/get-banks', { cache: 'no-store' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+  const urls = ['/api/get-banks', location.origin + '/api/get-banks', 'https://globalstasks.name.ng/api/get-banks'];
+  let banks = null;
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) { debugLog('banks fetch non-ok', url, res.status); continue; }
+      const json = await res.json().catch(()=>null);
+      if (Array.isArray(json)) banks = json;
+      else if (json && Array.isArray(json.data)) banks = json.data;
+      if (banks && banks.length) { debugLog('banks loaded from', url, banks.length); break; }
+    } catch (err) { debugLog('banks fetch error', url, err); }
+  }
 
-    // 🔹 Normalize data (Paystack returns { data: [...] })
-    const banks = Array.isArray(data)
-      ? data
-      : (Array.isArray(data.data) ? data.data : []);
-
-    if (!banks.length) {
-      throw new Error('Empty bank list');
-    }
-
-    // 🔹 Populate dropdown
-    bankSelect.innerHTML = `<option value="">Select Bank</option>`;
-    banks.forEach(bank => {
-      const opt = document.createElement('option');
-      opt.value = bank.code;
-      opt.textContent = bank.name || bank.bank_name || 'Unknown Bank';
-      bankSelect.appendChild(opt);
-    });
-
-    bankSelect.disabled = false;
-    console.log(`✅ Loaded ${banks.length} banks from Paystack.`);
-  } catch (err) {
-    console.error('❌ loadBanks error:', err);
+  if (!banks) {
     bankSelect.innerHTML = `<option>Error loading banks</option>`;
     bankSelect.disabled = false;
+    console.error('All bank fetch attempts failed.');
+    return;
   }
+
+  bankSelect.innerHTML = `<option value="">Select Bank</option>`;
+  banks.forEach(bank => {
+    const option = document.createElement('option');
+    option.value = bank.code;
+    option.text = bank.name || bank.bank_name || 'Unknown';
+    bankSelect.appendChild(option);
+  });
+  bankSelect.disabled = false;
 }
 
-
-/* ---------- Robust verifyAccount ---------- */
 let _verifyAccountTimer = null;
 async function verifyAccount() {
   const accEl = document.getElementById('withdrawAccountNumber');
@@ -5122,126 +5119,118 @@ async function verifyAccount() {
   const nameDisplay = document.getElementById('accountNameDisplay');
   if (!accEl || !bankEl || !nameStatus || !nameDisplay) return;
 
-  const accNum = accEl.value.trim();
-  const bankCode = bankEl.value.trim();
-  if (accNum.length < 10 || !bankCode) {
-    nameStatus.classList.add('hidden');
-    nameDisplay.classList.add('hidden');
-    return;
-  }
+  const accNum = (accEl.value || '').toString().trim();
+  const bankCode = (bankEl.value || '').toString().trim();
+  if (accNum.length < 10 || !bankCode) { nameStatus.classList.add('hidden'); nameDisplay.classList.add('hidden'); return; }
 
   nameStatus.classList.remove('hidden');
   nameDisplay.classList.add('hidden');
-  nameDisplay.innerText = "";
 
-  try {
-    const res = await fetch('/api/verify-account', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accNum, bankCode })
-    });
-
-    const data = await res.json();
-    if (res.ok && data.status === 'success' && data.account_name) {
-      nameStatus.classList.add('hidden');
-      nameDisplay.innerText = `✅ ${data.account_name}`;
-      nameDisplay.classList.remove('hidden');
-    } else {
-      nameStatus.classList.add('hidden');
-      nameDisplay.innerText = '❌ Account not found';
-      nameDisplay.classList.remove('hidden');
-    }
-  } catch (err) {
-    console.error('verifyAccount error:', err);
-    nameStatus.classList.add('hidden');
-    nameDisplay.innerText = '❌ Verification error';
-    nameDisplay.classList.remove('hidden');
+  const candidates = ['/api/verify-account', location.origin + '/api/verify-account', 'https://globalstasks.name.ng/api/verify-account'];
+  let ok = false;
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accNum, bankCode }) });
+      if (!res.ok) { debugLog('verify-account non-ok', url, res.status); continue; }
+      const data = await res.json().catch(()=>null);
+      if (!data) { debugLog('verify-account empty json', url); continue; }
+      if (data.status === 'success' && data.account_name) {
+        nameDisplay.innerText = `✅ ${data.account_name}`;
+        nameDisplay.classList.remove('hidden'); ok = true; break;
+      } else {
+        nameDisplay.innerText = '❌ Account not found'; nameDisplay.classList.remove('hidden'); ok = true; break;
+      }
+    } catch (err) { debugLog('verify-account fetch error', url, err); continue; }
   }
+
+  if (!ok) { nameDisplay.innerText = '❌ Error verifying account'; nameDisplay.classList.remove('hidden'); debugLog('verify-account: all attempts failed'); }
+  nameStatus.classList.add('hidden');
 }
 
-
-	  
-/* ---------- Improved submitWithdrawal (calls server only) ---------- */
+/* SUBMIT WITHDRAWAL */
 async function submitWithdrawal() {
-  // sanitize number input (commas etc.)
-  const rawAmt = (document.getElementById('withdrawAmount')?.value || '').toString().trim();
-  const amount = Number(rawAmt.replace(/[^\d.-]/g,'')); // allow numeric + decimal
-  const accNum = (document.getElementById('withdrawAccountNumber')?.value || '').toString().replace(/\D/g,'').trim();
+  const accNum = (document.getElementById('withdrawAccountNumber')?.value || '').toString().trim();
   const bankCode = (document.getElementById('withdrawBankSelect')?.value || '').toString().trim();
-  const rawName = (document.getElementById('accountNameDisplay')?.innerText || '').replace('✅ ','').trim();
-  const accountName = rawName;
+  const accountName = (document.getElementById('withdrawAccountName')?.value || '').trim();
+  const accountName = rawName.trim();
+  const amount = parseInt(document.getElementById('withdrawAmount')?.value || '0', 10);
+  // support both withdrawPin or withdrawPassword id (legacy)
   const pinEl = document.getElementById('withdrawPin') || document.getElementById('withdrawPassword');
   const pin = (pinEl?.value || '').toString().trim();
 
-  if (!accNum || !bankCode || !accountName || !pin || !isFinite(amount)) {
-    alert('Please fill all fields correctly (account, bank, name, pin, amount).');
-    return;
-  }
-
-  // enforce minimum
-  if (amount < 1000) {
-    alert('Minimum withdrawal is ₦1,000.');
-    return;
-  }
+  if (!accNum || !bankCode || !amount || !pin || amount < 1000) { alert('Please fill all fields correctly (min ₦1000)'); return; }
 
   const user = await ensureFirebaseUser();
-  if (!user) {
-    alert('You must be signed in to withdraw.');
-    return;
-  }
+  if (!user) { alert('You must be signed in to withdraw.'); return; }
 
-  // fetch idToken reliably
   let idToken = null;
   try { idToken = await user.getIdToken(true); } catch (err) { console.warn('Could not get idToken', err); }
   if (!idToken) { alert('Authentication failed. Please sign out and sign in again.'); return; }
 
-  const withdrawBtn = document.querySelector('#withdrawFundsSection button') || document.querySelector('#withdrawFundsSection button[onclick="submitWithdrawal()"]');
-  if (withdrawBtn) {
-    withdrawBtn.disabled = true;
-    withdrawBtn.dataset.prev = withdrawBtn.innerHTML;
-    withdrawBtn.innerHTML = 'Processing...';
-  }
+  const withdrawBtn = document.querySelector('#withdrawFundsSection button[onclick="submitWithdrawal()"]') || document.querySelector('#withdrawFundsSection button');
+  if (withdrawBtn) { withdrawBtn.disabled = true; withdrawBtn.dataset.prev = withdrawBtn.innerHTML; withdrawBtn.innerHTML = 'Processing...'; }
 
   try {
     const resp = await fetch('/api/request-withdrawal', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
-      body: JSON.stringify({
-        accNum, bankCode, account_name: accountName, amount, pin
-      })
+      body: JSON.stringify({ accNum, bankCode, account_name: accountName, amount, pin })
     });
-
     const data = await resp.json().catch(()=>null);
-    console.log('request-withdrawal response', resp.status, data);
-
-    if (resp.ok && data && (data.status === 'success' || data.result === 'ok')) {
-      alert('✅ Withdrawal request submitted — it is under review by admin.');
-      // optionally redirect or refresh balance area only
+    debugLog('request-withdrawal response', resp.status, data);
+    if (resp.ok && data && data.status === 'success') {
+      alert('✅ Withdrawal successful! The transfer was initiated.');
       window.location.reload();
     } else {
-      const msg = data && (data.message || data.error) ? (data.message || data.error) : `Withdrawal failed (HTTP ${resp.status})`;
+      const msg = (data && (data.message || data.error)) ? (data.message || data.error) : `Withdrawal failed (HTTP ${resp.status})`;
       alert('❌ Withdrawal failed: ' + msg);
-      console.warn('withdraw failed detail', data);
     }
   } catch (err) {
     console.error('submitWithdrawal error', err);
     alert('❌ Error submitting withdrawal. Try again later.');
   } finally {
-    if (withdrawBtn) {
-      withdrawBtn.disabled = false;
-      withdrawBtn.innerHTML = withdrawBtn.dataset.prev || 'Withdraw Now';
-      delete withdrawBtn.dataset.prev;
-    }
+    if (withdrawBtn) { withdrawBtn.disabled = false; withdrawBtn.innerHTML = withdrawBtn.dataset.prev || 'Withdraw Now'; }
   }
-}       
+}
 
-
-
-
+/* DOM listeners */
 document.addEventListener('DOMContentLoaded', async () => {
-  try { await loadBanks(); } catch (e) { console.error('loadBanks threw', e); }
+  try { await loadBanks(); } catch(e) { debugLog('loadBanks threw', e); }
+
+  // auto-fill deposit email
+  const auth = await waitForFirebaseAuth(7000);
+  const depositEl = () => document.getElementById('depositEmail');
+  if (auth) {
+    try {
+      auth.onAuthStateChanged(user => { const el = depositEl(); if (el) el.value = user ? (user.email || '') : ''; });
+      const cur = auth.currentUser; if (cur && depositEl()) depositEl().value = cur.email || '';
+    } catch(e) { debugLog('auth attach error', e); }
+  } else {
+    // fallback attempt
+    setTimeout(async () => {
+      const a = await waitForFirebaseAuth(7000);
+      if (a) {
+        a.onAuthStateChanged(user => { const el = depositEl(); if (el) el.value = user ? (user.email || '') : ''; });
+        try { const cur = a.currentUser; if (cur && depositEl()) depositEl().value = cur.email || ''; } catch(e){}
+      }
+    }, 1000);
+  }
+
+  // attach verify listeners
+  const accEl = document.getElementById('withdrawAccountNumber');
+  const bankEl = document.getElementById('withdrawBankSelect');
+  if (accEl) {
+    accEl.addEventListener('blur', verifyAccount);
+    accEl.addEventListener('input', () => { if (_verifyAccountTimer) clearTimeout(_verifyAccountTimer); _verifyAccountTimer = setTimeout(verifyAccount, 700); });
+  }
+  if (bankEl) bankEl.addEventListener('change', verifyAccount);
 });
 
+/* expose functions used by inline onclick attributes */
+window.handleDeposit = handleDeposit;
+window.submitWithdrawal = submitWithdrawal;
+window.verifyAccount = verifyAccount;
+window.loadBanks = loadBanks;
 
 
 
