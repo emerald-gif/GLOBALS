@@ -5140,84 +5140,52 @@ async function verifyAccount() {
 }
 
 /* SUBMIT WITHDRAWAL */
+
+
+
 async function submitWithdrawal() {
-  const accNum = (document.getElementById('withdrawAccountNumber')?.value || '').trim();
-  const bankCode = (document.getElementById('withdrawBankSelect')?.value || '').trim();
+  const accNum = (document.getElementById('withdrawAccountNumber')?.value || '').toString().trim();
+  const bankCode = (document.getElementById('withdrawBankSelect')?.value || '').toString().trim();
   const rawName = (document.getElementById('accountNameDisplay')?.innerText || '').replace('✅ ', '');
   const accountName = rawName.trim();
   const amount = parseInt(document.getElementById('withdrawAmount')?.value || '0', 10);
   const pinEl = document.getElementById('withdrawPin') || document.getElementById('withdrawPassword');
-  const pin = (pinEl?.value || '').trim();
+  const pin = (pinEl?.value || '').toString().trim();
 
-  if (!accNum || !bankCode || !amount || !pin || amount < 1000) {
-    alert('Please fill all fields correctly (min ₦1000)');
-    return;
-  }
+  if (!accNum || !bankCode || !amount || !pin || amount < 1000) { alert('Please fill all fields correctly (min ₦1000)'); return; }
 
   const user = await ensureFirebaseUser();
-  if (!user) {
-    alert('You must be signed in to withdraw.');
-    return;
-  }
+  if (!user) { alert('You must be signed in to withdraw.'); return; }
 
   let idToken = null;
   try { idToken = await user.getIdToken(true); } catch (err) { console.warn('Could not get idToken', err); }
-  if (!idToken) {
-    alert('Authentication failed. Please sign out and sign in again.');
-    return;
-  }
+  if (!idToken) { alert('Authentication failed. Please sign out and sign in again.'); return; }
 
   const withdrawBtn = document.querySelector('#withdrawFundsSection button[onclick="submitWithdrawal()"]') || document.querySelector('#withdrawFundsSection button');
-  if (withdrawBtn) {
-    withdrawBtn.disabled = true;
-    withdrawBtn.dataset.prev = withdrawBtn.innerHTML;
-    withdrawBtn.innerHTML = 'Processing...';
-  }
+  if (withdrawBtn) { withdrawBtn.disabled = true; withdrawBtn.dataset.prev = withdrawBtn.innerHTML; withdrawBtn.innerHTML = 'Processing...'; }
 
   try {
     const resp = await fetch('/api/request-withdrawal', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + idToken
-      },
-      body: JSON.stringify({
-        accNum,
-        bankCode,
-        account_name: accountName,
-        amount,
-        pin
-      })
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+      body: JSON.stringify({ accNum, bankCode, account_name: accountName, amount, pin })
     });
-
-    const data = await resp.json().catch(() => null);
+    const data = await resp.json().catch(()=>null);
     debugLog('request-withdrawal response', resp.status, data);
-
     if (resp.ok && data && data.status === 'success') {
-      alert('✅ Withdrawal request sent successfully! Your request is being processed.');
+      alert('✅ Withdrawal request submitted successfully! It is now under review.');
       window.location.reload();
     } else {
-      const msg = (data && (data.message || data.error))
-        ? (data.message || data.error)
-        : `Withdrawal failed (HTTP ${resp.status})`;
+      const msg = (data && (data.message || data.error)) ? (data.message || data.error) : `Withdrawal failed (HTTP ${resp.status})`;
       alert('❌ Withdrawal failed: ' + msg);
     }
   } catch (err) {
     console.error('submitWithdrawal error', err);
     alert('❌ Error submitting withdrawal. Try again later.');
   } finally {
-    if (withdrawBtn) {
-      withdrawBtn.disabled = false;
-      withdrawBtn.innerHTML = withdrawBtn.dataset.prev || 'Withdraw Now';
-    }
+    if (withdrawBtn) { withdrawBtn.disabled = false; withdrawBtn.innerHTML = withdrawBtn.dataset.prev || 'Withdraw Now'; }
   }
 }
-
-
-
-
-
-
 
 
 
