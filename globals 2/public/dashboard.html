@@ -2592,7 +2592,7 @@
 <!-- Withdrawal Section -->
 <div id="withdrawFundsSection" class="tab-section hidden p-6 max-w-md mx-auto rounded-xl shadow-lg bg-white mt-8 space-y-6">
 
-  <button onclick="activateTab('payment')"
+  <button onclick="activateTab('payment')" 
     class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -2602,35 +2602,34 @@
 
   <h2 class="text-2xl font-bold text-center text-gray-800">Withdraw Funds</h2>
 
+  <!-- ✅ Account Number -->
   <input id="withdrawAccountNumber" type="number" placeholder="Account Number"
     class="w-full px-4 py-2 border rounded-lg" />
 
+  <!-- ✅ Bank Select -->
   <select id="withdrawBankSelect"
     class="w-full px-4 py-2 border rounded-lg bg-white text-gray-700">
     <option value="">Loading Banks...</option>
   </select>
 
-  <!-- user-provided account name instead of verified name -->
-  <input id="withdrawAccountName" type="text" placeholder="Account Name (enter account holder name)"
-    class="w-full px-4 py-2 border rounded-lg" />
-
+  <!-- ✅ Verification Status (shows fetched name) -->
   <div id="accountNameStatus" class="text-sm text-blue-600 hidden">🔄 Verifying Account...</div>
-  <!-- we won't populate accountNameDisplay automatically any more -->
   <div id="accountNameDisplay" class="text-sm text-green-600 hidden"></div>
 
+  <!-- ✅ Withdrawal Amount -->
   <input id="withdrawAmount" type="number" placeholder="Amount (min ₦1000)"
     class="w-full px-4 py-2 border rounded-lg" />
 
-  <!-- PIN input (was password) -->
+  <!-- ✅ Payment PIN -->
   <input id="withdrawPin" type="password" placeholder="Enter your 4-digit payment PIN"
     class="w-full px-4 py-2 border rounded-lg" />
 
+  <!-- ✅ Withdraw Button -->
   <button onclick="submitWithdrawal()"
     class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-xl font-semibold transition">
     Withdraw Now
   </button>
 </div>
-
 
 
 
