@@ -116,31 +116,36 @@ app.post("/api/verify-account", async (req, res) => {
 /* =======================
    REQUEST WITHDRAWAL (auth + PIN check)
    ======================= */
+
+
+
+/* =======================
+   REQUEST WITHDRAWAL (Firebase Only – No Paystack)
+   ======================= */
 app.post("/api/request-withdrawal", async (req, res) => {
   try {
-    // 1) verify id token (header preferred)
+    // ✅ 1) Verify ID token
     let decoded;
     try {
       decoded = await verifyIdTokenFromHeaderOrBody(req);
     } catch (tokenErr) {
-      const code = tokenErr.code === 'NO_TOKEN' ? 401 : 401;
-      console.warn('request-withdrawal token error', tokenErr.message, tokenErr.detail || '');
-      return res.status(code).json({ status: "fail", message: tokenErr.message });
+      console.warn('request-withdrawal token error', tokenErr.message);
+      return res.status(401).json({ status: "fail", message: "Authentication failed" });
     }
     const uid = decoded.uid;
     if (!uid) return res.status(401).json({ status: "fail", message: "Invalid token (no uid)" });
 
-    // 2) validate body
+    // ✅ 2) Validate request body
     const { accNum, bankCode, account_name, amount, pin } = req.body || {};
     if (!accNum || !bankCode || !account_name || !amount || !pin) {
-      return res.status(400).json({ status: "fail", message: "Missing required withdrawal fields" });
+      return res.status(400).json({ status: "fail", message: "Missing required fields" });
     }
     const amtNum = Number(amount);
     if (!isFinite(amtNum) || amtNum <= 0) {
       return res.status(400).json({ status: "fail", message: "Invalid amount" });
     }
 
-    // 3) read user doc
+    // ✅ 3) Fetch user & check PIN
     const userRef = dbAdmin.collection("users").doc(uid);
     const userSnap = await userRef.get();
     if (!userSnap.exists) {
@@ -148,81 +153,67 @@ app.post("/api/request-withdrawal", async (req, res) => {
     }
     const userData = userSnap.data() || {};
 
-    // 4) PIN check
     if (!userData.pin) {
-      return res.status(400).json({ status: "fail", message: "Set payment pin first" });
+      return res.status(400).json({ status: "fail", message: "Set your payment pin first" });
     }
     if (String(userData.pin) !== String(pin)) {
       return res.status(400).json({ status: "fail", message: "Invalid PIN" });
     }
 
-    // 5) balance check
+    // ✅ 4) Check balance
     const balance = Number(userData.balance) || 0;
     if (amtNum > balance) {
       return res.status(400).json({ status: "fail", message: "Insufficient balance" });
     }
 
-    // 6) Create transfer recipient on Paystack
-    const recipientResp = await axios.post("https://api.paystack.co/transferrecipient", {
-      type: "nuban",
-      name: account_name,
-      account_number: accNum,
-      bank_code: bankCode,
-      currency: "NGN"
-    }, {
-      headers: { Authorization: `Bearer ${PAYSTACK_SECRET}`, 'Content-Type': 'application/json' }
-    });
+    // ✅ 5) Deduct balance and record transactions
+    await dbAdmin.runTransaction(async (tx) => {
+      const uSnap = await tx.get(userRef);
+      const current = (uSnap.exists && Number(uSnap.data().balance)) ? Number(uSnap.data().balance) : 0;
+      if (amtNum > current) throw new Error("Insufficient balance (race condition)");
 
-    if (!recipientResp.data || !recipientResp.data.status) {
-      console.error('recipient creation failed', recipientResp.data || {});
-      return res.status(400).json({ status: "fail", message: "Recipient creation failed", detail: recipientResp.data || null });
-    }
-    const recipient_code = recipientResp.data.data.recipient_code;
+      tx.update(userRef, { balance: current - amtNum });
 
-    // 7) Initiate transfer
-    const transferResp = await axios.post("https://api.paystack.co/transfer", {
-      source: "balance",
-      reason: "User Withdrawal",
-      amount: Math.round(amtNum * 100),
-      recipient: recipient_code
-    }, {
-      headers: { Authorization: `Bearer ${PAYSTACK_SECRET}`, 'Content-Type': 'application/json' }
-    });
-
-    if (transferResp.data && transferResp.data.status) {
-      // 8) Deduct balance
-      // Use a transaction for safety
-      await dbAdmin.runTransaction(async (tx) => {
-        const uSnap = await tx.get(userRef);
-        const current = (uSnap.exists && Number(uSnap.data().balance)) ? Number(uSnap.data().balance) : 0;
-        if (amtNum > current) {
-          throw new Error('Insufficient balance (race condition)');
-        }
-        tx.update(userRef, { balance: current - amtNum });
-        // Optionally record withdrawal transaction
-        const withdrawalsRef = dbAdmin.collection('withdrawals').doc();
-        tx.set(withdrawalsRef, {
-          uid,
-          accNum,
-          bankCode,
-          account_name,
-          amount: amtNum,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          paystack: transferResp.data
-        });
+      // --- Create Withdraw request ---
+      const withdrawRef = dbAdmin.collection("Withdraw").doc();
+      tx.set(withdrawRef, {
+        userId: uid,
+        accNum,
+        bankCode,
+        account_name,
+        amount: amtNum,
+        status: "processing",
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
       });
 
-      return res.json({ status: "success", message: "Transfer initiated", paystack: transferResp.data });
-    } else {
-      console.error('transfer failed', transferResp.data || {});
-      return res.status(400).json({ status: "fail", message: transferResp.data?.message || "Transfer failed", detail: transferResp.data || null });
-    }
+      // --- Log to Transactions collection ---
+      const txRef = dbAdmin.collection("Transaction").doc();
+      tx.set(txRef, {
+        userId: uid,
+        type: "Withdraw",
+        amount: amtNum,
+        accNum,
+        bankCode,
+        account_name,
+        status: "processing",
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    });
+
+    return res.json({ status: "success", message: "Withdrawal request recorded and is being processed." });
 
   } catch (err) {
-    console.error('request-withdrawal error', err.response?.data || err.message || err);
-    return res.status(500).json({ status: "fail", message: "Server error during withdrawal", detail: err.response?.data || err.message || null });
+    console.error("request-withdrawal error", err.message || err);
+    return res.status(500).json({ status: "fail", message: "Server error during withdrawal" });
   }
 });
+
+
+
+
+
+
+
 
 /* =======================
    DEPOSIT: verify-payment
@@ -321,69 +312,6 @@ app.post('/webhook/paystack', async (req, res) => {
 
 
 
-/* =======================
-   AI CHAT ROUTE (Globals AI Help Center)
-   ======================= */
-app.post("/api/ai-chat", async (req, res) => {
-  try {
-    const { message, history } = req.body || {};
-    if (!message) {
-      return res.status(400).json({ error: "Missing message" });
-    }
-
-    const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-    if (!OPENAI_API_KEY) {
-      console.warn("⚠ OPENAI_API_KEY not set in environment!");
-      // Graceful fallback response (frontend will use local help after this)
-      return res.json({
-        reply:
-          "👋 Hi there! Our AI assistant is temporarily offline. Please try again later or contact human support."
-      });
-    }
-
-    // Build conversation context
-    const systemPrompt =
-      "You are the Globals Nigeria support assistant. Respond ONLY about platform-related topics such as Payments, Withdrawals, Tasks, Referrals, Ads, Account/Login, Transactions, Spin, Premium, and Troubleshooting. Be concise, helpful, and friendly.";
-
-    const messages = [
-      { role: "system", content: systemPrompt },
-      ...(Array.isArray(history) ? history.slice(-12) : []),
-      { role: "user", content: message }
-    ];
-
-    const payload = {
-      model: "gpt-4o-mini",
-      messages,
-      temperature: 0.2,
-      max_tokens: 600
-    };
-
-    const response = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        timeout: 15000
-      }
-    );
-
-    const aiReply =
-      response.data?.choices?.[0]?.message?.content?.trim() ||
-      "Sorry, I couldn't get that right now.";
-
-    return res.json({ reply: aiReply });
-  } catch (err) {
-    console.error("AI chat error:", err.response?.data || err.message || err);
-    return res.status(500).json({ error: "AI chat failed" });
-  }
-});
-
-
-
-
 
 
 
@@ -391,10 +319,7 @@ app.post("/api/ai-chat", async (req, res) => {
 
 // ... other API routes (withdrawal, verify-payment, etc.)
 
-// ✅ ADD THIS BLOCK (AI CHAT ROUTE)
-app.post("/api/ai-chat", async (req, res) => {
-  // ... code from Step 1 above ...
-});
+
 
 // ✅ Keep this last (do not move)
 app.get("*", (req, res) => {
@@ -404,6 +329,7 @@ app.get("*", (req, res) => {
 /* Start server */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
 
 
 
