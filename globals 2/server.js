@@ -174,7 +174,7 @@ app.post("/api/request-withdrawal", async (req, res) => {
 
     // ✅ 6) Create manual withdrawal record
     const withdrawRef = dbAdmin.collection("Withdraw").doc();
-    const transactionRef = dbAdmin.collection("Transactions").doc();
+    const transactionRef = dbAdmin.collection("Transaction").doc();
 
     const payload = {
       userId: uid,
@@ -334,6 +334,7 @@ app.get("*", (req, res) => {
 /* Start server */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
 
 
 
