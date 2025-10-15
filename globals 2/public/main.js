@@ -278,18 +278,22 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
    TRANSACTIONS (Static One-Time Fetch Version)
    ========================== */
 
+
+
+
+/* ==========================
+   TRANSACTIONS (Static Fetch Only)
+   ========================== */
+
 let transactionsCache = [];
 let activeCollectionName = null;
 
-// DOM
 const txListEl = document.getElementById("transactions-list");
 const txEmptyEl = document.getElementById("transactions-empty");
 const categoryEl = document.getElementById("category-filter");
 const statusEl = document.getElementById("status-filter");
 
-function safeLog(...args) { console.log("[TX-STATIC]", ...args); }
-
-/* ---------- Helper functions ---------- */
+/* ---------- Helpers ---------- */
 function parseTimestamp(val) {
   if (!val) return null;
   if (typeof val === "object" && typeof val.toDate === "function") return val.toDate();
@@ -312,10 +316,9 @@ function formatAmount(amount) {
   return `₦${n.toFixed(2)}`;
 }
 
-/* ---------- Render Card ---------- */
+/* ---------- Render Cards ---------- */
 function cardHtml(tx) {
-  const tsFields = tx.timestamp || tx.createdAt || tx.time || tx.created_at || null;
-  const date = parseTimestamp(tsFields);
+  const ts = parseTimestamp(tx.timestamp || tx.createdAt || tx.time);
   const amountClass =
     tx.status === "successful"
       ? "text-green-600"
@@ -329,7 +332,7 @@ function cardHtml(tx) {
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm font-semibold text-gray-900">${tx.type || "Unknown"}</p>
-          <p class="text-xs text-gray-400 mt-1">${formatDatePretty(date)}</p>
+          <p class="text-xs text-gray-400 mt-1">${formatDatePretty(ts)}</p>
         </div>
         <div class="text-right">
           <p class="text-base font-bold ${amountClass}">${formatAmount(tx.amount)}</p>
@@ -353,52 +356,47 @@ function renderTransactions(list) {
   txListEl.innerHTML = list.map(tx => cardHtml(tx)).join("");
 }
 
-/* ---------- Details ---------- */
+/* ---------- Open Details ---------- */
 function openTransactionDetails(id) {
   const tx = transactionsCache.find(t => t.id === id);
   if (!tx) return;
-  const tsFields = tx.timestamp || tx.createdAt || tx.time || tx.created_at || null;
-  const date = parseTimestamp(tsFields);
+
+  const ts = parseTimestamp(tx.timestamp || tx.createdAt || tx.time);
+  const amountClass =
+    tx.status === "successful"
+      ? "text-green-600"
+      : tx.status === "failed"
+      ? "text-red-600"
+      : "text-yellow-600";
+
+  // Extra info for Withdraw type
+  let extraHTML = "";
+  if ((tx.type || "").toLowerCase() === "withdraw") {
+    extraHTML = `
+      <div class="border-t pt-4 mt-4 space-y-2">
+        <h3 class="font-semibold text-gray-800 text-sm">Bank Details</h3>
+        <div class="flex justify-between text-sm"><span>Bank:</span><span>${tx.bankName || "—"}</span></div>
+        <div class="flex justify-between text-sm"><span>Account Name:</span><span>${tx.account_name || "—"}</span></div>
+        <div class="flex justify-between text-sm"><span>Account Number:</span><span>${tx.accNum || "—"}</span></div>
+      </div>
+    `;
+  }
 
   document.getElementById("transaction-details-content").innerHTML = `
-    <div class="bg-white rounded-2xl p-6 shadow-sm space-y-4">
-      <div class="flex justify-between"><span>Type</span><span>${tx.type}</span></div>
-      <div class="flex justify-between"><span>Amount</span><span>${formatAmount(tx.amount)}</span></div>
-      <div class="flex justify-between"><span>Status</span><span>${tx.status}</span></div>
-      <div class="flex justify-between"><span>Date</span><span>${formatDatePretty(date)}</span></div>
-      <div class="flex justify-between"><span>ID</span><span>${tx.id}</span></div>
+    <div class="bg-white rounded-2xl p-6 shadow space-y-3 border-t-4 border-blue-600">
+      <div class="flex justify-between"><span class="font-medium text-gray-700">Type</span><span>${tx.type}</span></div>
+      <div class="flex justify-between"><span class="font-medium text-gray-700">Amount</span><span class="font-semibold ${amountClass}">${formatAmount(tx.amount)}</span></div>
+      <div class="flex justify-between"><span class="font-medium text-gray-700">Status</span><span>${tx.status}</span></div>
+      <div class="flex justify-between"><span class="font-medium text-gray-700">Date</span><span>${formatDatePretty(ts)}</span></div>
+      <div class="flex justify-between"><span class="font-medium text-gray-700">Transaction ID</span><span>${tx.id}</span></div>
+      ${extraHTML}
     </div>
   `;
+
   activateTab("transaction-details-screen");
 }
 
-/* ---------- Sorting & Filters ---------- */
-function sortByTimestampDesc(arr) {
-  return arr.slice().sort((a, b) => {
-    const ta = parseTimestamp(a.timestamp || a.createdAt || a.time || a.created_at) || new Date(0);
-    const tb = parseTimestamp(b.timestamp || b.createdAt || b.time || b.created_at) || new Date(0);
-    return tb - ta;
-  });
-}
-
-function applyFiltersClient(category, status) {
-  let filtered = transactionsCache.slice();
-  if (category && category !== "All") {
-    filtered = filtered.filter(tx => (tx.type || "").toLowerCase() === category.toLowerCase());
-  }
-  if (status && status !== "All") {
-    filtered = filtered.filter(tx => (tx.status || "").toLowerCase() === status.toLowerCase());
-  }
-  renderTransactions(sortByTimestampDesc(filtered));
-}
-
-/* ---------- Red Dot ---------- */
-function updateTxRedDot() {
-  const txDot = document.getElementById("txDot");
-  if (txDot) txDot.classList.add("hidden"); // Always hide; no live updates.
-}
-
-/* ---------- Single Static Fetch ---------- */
+/* ---------- Fetch once ---------- */
 async function fetchTransactionsOnce(uid) {
   const candidates = ["Transaction", "transaction", "transactions", "Transactions"];
   for (const coll of candidates) {
@@ -413,25 +411,32 @@ async function fetchTransactionsOnce(uid) {
         activeCollectionName = coll;
         transactionsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderTransactions(transactionsCache);
-        updateTxRedDot();
-        safeLog(`✅ Loaded ${snap.size} transactions from ${coll}`);
         return;
       }
     } catch (e) {
-      safeLog(`❌ Failed for ${coll}:`, e.message);
+      console.error("Failed for", coll, e);
     }
   }
-  txListEl.innerHTML = `<p class="text-center p-6 text-red-500">Could not load transactions.</p>`;
+  txListEl.innerHTML = `<p class="text-center p-6 text-red-500">No transactions found.</p>`;
 }
 
-/* ---------- Init Section ---------- */
+/* ---------- Filters ---------- */
+function applyFiltersClient(category, status) {
+  let filtered = transactionsCache.slice();
+  if (category && category !== "All") {
+    filtered = filtered.filter(tx => (tx.type || "").toLowerCase() === category.toLowerCase());
+  }
+  if (status && status !== "All") {
+    filtered = filtered.filter(tx => (tx.status || "").toLowerCase() === status.toLowerCase());
+  }
+  renderTransactions(filtered);
+}
+
+/* ---------- Init ---------- */
 function initTransactionSection() {
-  safeLog("Initializing transactions section...");
   const user = firebase.auth().currentUser;
   if (!user) {
-    firebase.auth().onAuthStateChanged(u => {
-      if (u) fetchTransactionsOnce(u.uid);
-    });
+    firebase.auth().onAuthStateChanged(u => u && fetchTransactionsOnce(u.uid));
   } else {
     fetchTransactionsOnce(user.uid);
   }
@@ -440,25 +445,15 @@ function initTransactionSection() {
     applyFiltersClient(categoryEl.value, statusEl?.value || "All");
   if (statusEl) statusEl.onchange = () =>
     applyFiltersClient(categoryEl?.value || "All", statusEl.value);
-
-  const navTx = document.getElementById("nav-transaction");
-  if (navTx) {
-    navTx.addEventListener("click", () => {
-      const txDot = document.getElementById("txDot");
-      if (txDot) txDot.classList.add("hidden");
-    });
-  }
 }
 
-/* ---------- Register or Run ---------- */
 if (window.registerPage) {
-  window.registerPage("transactions-screen", initTransactionSection, () => {
-    safeLog("Destroyed transactions module (no live listener).");
-  });
-  safeLog("✅ Registered static transactions module");
+  window.registerPage("transactions-screen", initTransactionSection);
 } else {
   initTransactionSection();
 }
+
+
 
 
 
