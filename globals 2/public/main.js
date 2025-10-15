@@ -4738,130 +4738,219 @@ auth.onAuthStateChanged(async user => {
 
 // ----------------------
 // Payment Section Module
+
+
+
+// ----------------------
+// Payment Transactions (ONE-TIME fetch version)
 // ----------------------
 
-// DOM elements
 const paymentTxListEl = document.getElementById("transactionList");
 const paymentTxFilterEl = document.getElementById("transactionFilter");
 
 // State
-let paymentTransactions = [];
+let paymentTransactions = [];       // full fetched list (filtered to Deposit/Withdraw)
 let paymentRenderedCount = 0;
 const PAYMENT_PAGE_SIZE = 10;
 
 // ----------------------
 // Format helpers
 // ----------------------
-function fmtNaira(n) { return "₦" + Number(n||0).toLocaleString(); }
+function fmtNaira(n) { return "₦" + Number(n || 0).toLocaleString(); }
 
-function parseTimestamp(val){
-  if(!val) return null;
-  if(typeof val.toDate==="function") return val.toDate();
-  if(val instanceof Date) return val;
-  if(typeof val==="number") return new Date(val);
-  if(typeof val==="string"){const d=new Date(val);return isNaN(d.getTime())?null:d;}
+function parseTimestamp(val) {
+  if (!val) return null;
+  if (typeof val.toDate === "function") return val.toDate();
+  if (val instanceof Date) return val;
+  if (typeof val === "number") return new Date(val);
+  if (typeof val === "string") {
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+  }
   return null;
 }
-
-function formatAmount(amount){ return fmtNaira(amount); }
-function formatDatePretty(d){ return d?d.toLocaleString():"—"; }
+function formatAmount(amount) { return fmtNaira(amount); }
+function formatDatePretty(d) { return d ? d.toLocaleString() : "—"; }
 
 // ----------------------
-// Render single transaction card
-// ----------------------
-function paymentCardHtml(tx){
-  const date=parseTimestamp(tx.timestamp||tx.createdAt||tx.time||tx.created_at);
-  const amountClass = tx.status==="successful"?"text-green-600":tx.status==="failed"?"text-red-600":"text-yellow-600";
-  return `<div class="cursor-pointer bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition">
-    <div class="flex items-center justify-between">
-      <div>
-        <p class="text-sm font-semibold text-gray-900">${tx.type||"Unknown"}</p>
-        <p class="text-xs text-gray-400 mt-1">${formatDatePretty(date)}</p>
+// Render single transaction card (payment)
+ // ----------------------
+function paymentCardHtml(tx) {
+  const date = parseTimestamp(tx.timestamp || tx.createdAt || tx.time || tx.created_at);
+  const status = (tx.status || "").toLowerCase();
+  const amountClass = status === "successful" ? "text-green-600" : status === "failed" ? "text-red-600" : "text-yellow-600";
+
+  // extra details for Withdraw
+  let extra = "";
+  if ((tx.type || "").toLowerCase() === "withdraw") {
+    extra = `
+      <div class="mt-3 text-sm text-gray-600">
+        <div class="flex justify-between"><span class="font-medium">Bank</span><span>${escapeHtml(tx.bankName || tx.bank || "—")}</span></div>
+        <div class="flex justify-between"><span class="font-medium">Account</span><span>${escapeHtml(tx.accNum || tx.accountNumber || "—")}</span></div>
+        <div class="flex justify-between"><span class="font-medium">Account Name</span><span>${escapeHtml(tx.account_name || tx.accountName || "—")}</span></div>
       </div>
-      <div class="text-right">
-        <p class="text-base font-bold ${amountClass}">${formatAmount(tx.amount)}</p>
-        <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${amountClass} bg-opacity-10">
-          ${tx.status||"—"}
-        </span>
+    `;
+  } else if ((tx.type || "").toLowerCase() === "deposit") {
+    extra = tx.metadata && tx.metadata.note ? `<div class="mt-2 text-sm text-gray-600">${escapeHtml(tx.metadata.note)}</div>` : "";
+  }
+
+  return `
+    <div class="cursor-pointer bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition" data-tx-id="${tx.id || ''}">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-semibold text-gray-900">${escapeHtml(tx.type || "Unknown")}</p>
+          <p class="text-xs text-gray-400 mt-1">${formatDatePretty(date)}</p>
+        </div>
+        <div class="text-right">
+          <p class="text-base font-bold ${amountClass}">${formatAmount(tx.amount)}</p>
+          <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${amountClass} bg-opacity-10">
+            ${escapeHtml(tx.status || "—")}
+          </span>
+        </div>
       </div>
+      ${extra}
     </div>
-  </div>`;  
+  `;
+}
+
+// safe escape for small text bits
+function escapeHtml(s) { return String(s == null ? "" : s)
+  .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+  .replaceAll('"', "&quot;").replaceAll("'", "&#39;"); }
+
+// ----------------------
+// renderTransactions (paged)
+// ----------------------
+function renderPaymentTransactions(reset = true) {
+  if (!paymentTxListEl) return;
+  if (reset) {
+    paymentTxListEl.innerHTML = "";
+    paymentRenderedCount = 0;
+  }
+
+  const toRender = paymentTransactions.slice(paymentRenderedCount, paymentRenderedCount + PAYMENT_PAGE_SIZE);
+  toRender.forEach(tx => paymentTxListEl.insertAdjacentHTML("beforeend", paymentCardHtml(tx)));
+  paymentRenderedCount += toRender.length;
+
+  // optional: add "Load more" button if more left
+  const remaining = paymentTransactions.length - paymentRenderedCount;
+  const existingLoadMore = document.getElementById("paymentLoadMoreBtn");
+  if (existingLoadMore) existingLoadMore.remove();
+  if (remaining > 0 && paymentTxListEl) {
+    const btn = document.createElement("button");
+    btn.id = "paymentLoadMoreBtn";
+    btn.className = "mt-3 w-full bg-white border rounded-xl py-2 text-sm text-gray-700";
+    btn.textContent = `Load more (${remaining})`;
+    btn.addEventListener("click", () => renderPaymentTransactions(false));
+    paymentTxListEl.appendChild(btn);
+  }
 }
 
 // ----------------------
-// Render transactions in Payment section
+// client-side filter application
 // ----------------------
-function renderPaymentTransactions(reset=true){
-  if(!paymentTxListEl) return;
-  if(reset){ paymentTxListEl.innerHTML=""; paymentRenderedCount=0; }
+function applyPaymentFilter() {
+  // status filter values: "all" | "successful" | "processing" | "failed"
+  const status = (paymentTxFilterEl?.value || "all").toLowerCase();
+  // create filtered copy from the fetched list (original list maintained)
+  const filtered = paymentTransactionsAll
+    .filter(tx => ["deposit", "withdraw"].includes((tx.type || "").toLowerCase()))
+    .filter(tx => {
+      if (status === "all") return true;
+      return ((tx.status || "").toLowerCase() === status);
+    })
+    .sort((a, b) => {
+      const ta = parseTimestamp(a.timestamp || a.createdAt || a.time || a.created_at) || 0;
+      const tb = parseTimestamp(b.timestamp || b.createdAt || b.time || b.created_at) || 0;
+      return tb - ta;
+    });
 
-  const filtered = paymentTransactions.slice(paymentRenderedCount, paymentRenderedCount+PAYMENT_PAGE_SIZE);
-  filtered.forEach(tx=>{
-    paymentTxListEl.insertAdjacentHTML("beforeend", paymentCardHtml(tx));
-  });
-  paymentRenderedCount += filtered.length;
+  // assign to active list and render
+  paymentTransactions = filtered;
+  renderPaymentTransactions(true);
 }
 
 // ----------------------
-// Filter by status dropdown
+// FETCH ONCE from Firestore (no snapshots)
 // ----------------------
-function applyPaymentFilter(){
-  const status = paymentTxFilterEl?.value || "all";
-  const filtered = paymentTransactions.filter(tx=>{
-    const okType = ["deposit","withdraw"].includes((tx.type||"").toLowerCase());
-    const okStatus = status==="all" || (tx.status||"").toLowerCase()===status.toLowerCase();
-    return okType && okStatus;
-  }).sort((a,b)=>{
-    const ta=parseTimestamp(a.timestamp||a.createdAt||a.time||a.created_at)||0;
-    const tb=parseTimestamp(b.timestamp||b.createdAt||b.time||b.created_at)||0;
-    return tb-ta;
-  });
+// we keep a master array `paymentTransactionsAll` fetched once
+let paymentTransactionsAll = [];
+async function fetchPaymentTransactionsOnceForUser(userId) {
+  if (!userId) return;
+  paymentTxListEl && (paymentTxListEl.innerHTML = `<p class="p-4 text-gray-500 text-sm">Loading transactions...</p>`);
+  const collCandidates = ["Transaction", "transaction", "transactions", "Transactions"];
+  for (const coll of collCandidates) {
+    try {
+      const snap = await firebase.firestore().collection(coll)
+        .where("userId", "==", userId)
+        .orderBy("timestamp", "desc")
+        .get();
 
-  paymentRenderedCount=0;
-  paymentTxListEl.innerHTML="";
-  paymentTransactions=filtered;
-  renderPaymentTransactions();
+      if (!snap.empty) {
+        paymentTransactionsAll = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Filter to Deposit/Withdraw and allowed statuses, sort by timestamp desc
+        paymentTransactionsAll = paymentTransactionsAll
+          .filter(tx => ["deposit", "withdraw"].includes((tx.type || "").toLowerCase()))
+          .sort((a, b) => {
+            const ta = parseTimestamp(a.timestamp || a.createdAt || a.time || a.created_at) || 0;
+            const tb = parseTimestamp(b.timestamp || b.createdAt || b.time || b.created_at) || 0;
+            return tb - ta;
+          });
+
+        // Initialize active list and render (respect current filter if set)
+        if (paymentTxFilterEl && paymentTxFilterEl.value) {
+          applyPaymentFilter();
+        } else {
+          paymentTransactions = paymentTransactionsAll.slice(); // copy
+          renderPaymentTransactions(true);
+        }
+        console.log(`[payments] Loaded ${paymentTransactionsAll.length} transactions from '${coll}'`);
+        return;
+      }
+    } catch (err) {
+      console.error(`[payments] fetch error for collection ${coll}:`, err);
+      // try next candidate
+    }
+  }
+
+  // nothing found
+  if (paymentTxListEl) paymentTxListEl.innerHTML = `<p class="p-6 text-center text-gray-500">No transactions found. Reload to try again.</p>`;
+  paymentTransactionsAll = [];
+  paymentTransactions = [];
 }
 
 // ----------------------
-// Listen to Payment transaction collection
+// Init Payment section (one-time fetch only)
 // ----------------------
-function startPaymentListener(){
-  const user = firebase.auth().currentUser;
-  if(!user) return;
+function initPaymentSection() {
+  // attach filter handler
+  if (paymentTxFilterEl) {
+    paymentTxFilterEl.addEventListener("change", applyPaymentFilter);
+  }
 
-  const collNames=["Transaction","transaction","transactions","Transactions"];
-  let attached=false;
+  // Wait for auth and fetch once
+  const cur = firebase.auth().currentUser;
+  if (cur) {
+    fetchPaymentTransactionsOnceForUser(cur.uid);
+  } else {
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) fetchPaymentTransactionsOnceForUser(user.uid);
+    });
+  }
 
-  collNames.forEach(collName=>{
-    if(attached) return;
-    try{
-      const ref=firebase.firestore().collection(collName).where("userId","==",user.uid).orderBy("timestamp","desc");
-      ref.onSnapshot(snap=>{
-        paymentTransactions = snap.docs.map(doc=>({id:doc.id,...doc.data()}))
-          .filter(tx=>["deposit","withdraw"].includes((tx.type||"").toLowerCase()));
-        applyPaymentFilter();
-      });
-      attached=true;
-    }catch(e){console.error("Payment listener error:",e);}
-  });
+  console.log("[payments] initPaymentSection - static fetch mode");
 }
 
-// ----------------------
-// Init Payment section (lazy load)
-// ----------------------
-function initPaymentSection(){
-  const user = firebase.auth().currentUser;
-  if(!user) return; // exit if no user
-
-  startPaymentListener();
-  paymentTxFilterEl?.addEventListener("change",applyPaymentFilter);
-
-  console.log("Payment section initialized");
-}
-
-// Expose globally so activateTab can call it
+// expose globally
 window.initPaymentSection = initPaymentSection;
+
+
+
+
+
+
+
+
 
 
 
