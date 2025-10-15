@@ -78,9 +78,9 @@ window.copyToClipboard = function (id) {
 
 
 // ✅ TOP NAV FUNCTION USERNAMES (reactive)
-firebase.auth().onAuthStateChanged(function (user) {
+// ✅ TOP NAV FUNCTION USERNAMES (NO LIVE FETCH, one-time load)
+firebase.auth().onAuthStateChanged(async function (user) {
   const navbarGreeting = document.getElementById("navbarGreeting");
-
   if (!navbarGreeting) return;
 
   if (!user) {
@@ -90,50 +90,48 @@ firebase.auth().onAuthStateChanged(function (user) {
 
   const uid = user.uid;
 
-  // Listen for real-time changes in the user's document
-  firebase.firestore().collection("users").doc(uid)
-    .onSnapshot((doc) => {
-      if (!doc.exists) {
-        navbarGreeting.textContent = "Hello Guest 👋";
-        return;
-      }
+  try {
+    const doc = await firebase.firestore().collection("users").doc(uid).get();
 
-      const userData = doc.data();
-      const username = (typeof userData.username === "string" && userData.username.trim().length > 0)
-        ? userData.username.trim()
-        : "Guest";
-
-      // Clear old content
-      navbarGreeting.textContent = "";
-
-      // "Hello " text
-      navbarGreeting.appendChild(document.createTextNode("Hello "));
-
-      // Bold username
-      const nameSpan = document.createElement("span");
-      nameSpan.className = "font-semibold";
-      nameSpan.textContent = username;
-      navbarGreeting.appendChild(nameSpan);
-
-      // Wave or Verified badge
-      if (userData.is_Premium === true) {
-        const img = document.createElement("img");
-        img.src = "VERIFIED.jpg"; // exact path
-        img.alt = "Verified";
-        img.className = "w-4 h-4 ml-1 inline-block align-middle object-contain";
-        img.onerror = () => { img.style.display = "none"; };
-        navbarGreeting.appendChild(img);
-      } else {
-        navbarGreeting.appendChild(document.createTextNode(" 👋"));
-      }
-
-    }, (err) => {
-      console.error("Error listening to user doc:", err);
+    if (!doc.exists) {
       navbarGreeting.textContent = "Hello Guest 👋";
-    });
+      return;
+    }
+
+    const userData = doc.data();
+    const username = (typeof userData.username === "string" && userData.username.trim().length > 0)
+      ? userData.username.trim()
+      : "Guest";
+
+    // ✅ Clear old content first
+    navbarGreeting.textContent = "";
+
+    // "Hello " text
+    navbarGreeting.appendChild(document.createTextNode("Hello "));
+
+    // Bold username
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "font-semibold";
+    nameSpan.textContent = username;
+    navbarGreeting.appendChild(nameSpan);
+
+    // ✅ Show verified badge or 👋 emoji
+    if (userData.is_Premium === true) {
+      const img = document.createElement("img");
+      img.src = "VERIFIED.jpg";
+      img.alt = "Verified";
+      img.className = "w-4 h-4 ml-1 inline-block align-middle object-contain";
+      img.onerror = () => { img.style.display = "none"; };
+      navbarGreeting.appendChild(img);
+    } else {
+      navbarGreeting.appendChild(document.createTextNode(" 👋"));
+    }
+
+  } catch (err) {
+    console.error("Error fetching user data:", err);
+    navbarGreeting.textContent = "Hello Guest 👋";
+  }
 });
-
-
 
 
 
