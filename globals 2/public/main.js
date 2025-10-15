@@ -5074,65 +5074,42 @@ function handleDeposit() {
  /* ---------- Robust loadBanks (retry + better UI) ---------- */
 async function loadBanks() {
   const bankSelect = document.getElementById('withdrawBankSelect');
-  if (!bankSelect) return console.warn('No #withdrawBankSelect element found');
+  if (!bankSelect) return;
 
   bankSelect.disabled = true;
   bankSelect.innerHTML = `<option>Loading Banks...</option>`;
 
-  const candidateUrls = [
-    '/api/get-banks',
-    location.origin + '/api/get-banks',
-    'https://globalstasks.name.ng/api/get-banks'
-  ];
+  try {
+    // 🔹 Always fetch from your own backend (no external fallback)
+    const res = await fetch('/api/get-banks', { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
 
-  let banks = null;
-  let lastErr = null;
+    // 🔹 Normalize data (Paystack returns { data: [...] })
+    const banks = Array.isArray(data)
+      ? data
+      : (Array.isArray(data.data) ? data.data : []);
 
-  for (const url of candidateUrls) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000); // 8s per attempt
-      const res = await fetch(url, { cache: 'no-store', signal: controller.signal });
-      clearTimeout(timeout);
-
-      if (!res.ok) {
-        lastErr = `HTTP ${res.status} from ${url}`;
-        console.warn('banks fetch non-ok', url, res.status);
-        continue;
-      }
-
-      const json = await res.json().catch(()=>null);
-      // Accept either array or { data: [...] }
-      if (Array.isArray(json)) banks = json;
-      else if (json && Array.isArray(json.data)) banks = json.data;
-
-      if (banks && banks.length) {
-        console.log('Banks loaded from', url, 'count=', banks.length);
-        break;
-      } else {
-        lastErr = `No banks data at ${url}`;
-      }
-    } catch (err) {
-      lastErr = (err && err.name === 'AbortError') ? 'timeout' : (err.message || err);
-      console.warn('banks fetch error', url, lastErr);
+    if (!banks.length) {
+      throw new Error('Empty bank list');
     }
-  }
 
-  if (!banks) {
-    bankSelect.innerHTML = `<option value="">Error loading banks</option>`;
+    // 🔹 Populate dropdown
+    bankSelect.innerHTML = `<option value="">Select Bank</option>`;
+    banks.forEach(bank => {
+      const opt = document.createElement('option');
+      opt.value = bank.code;
+      opt.textContent = bank.name || bank.bank_name || 'Unknown Bank';
+      bankSelect.appendChild(opt);
+    });
+
     bankSelect.disabled = false;
-    console.error('All bank fetch attempts failed. Last error:', lastErr);
-    return;
+    console.log(`✅ Loaded ${banks.length} banks from Paystack.`);
+  } catch (err) {
+    console.error('❌ loadBanks error:', err);
+    bankSelect.innerHTML = `<option>Error loading banks</option>`;
+    bankSelect.disabled = false;
   }
-
-  bankSelect.innerHTML = `<option value="">Select Bank</option>`;
-  banks.forEach(bank => {
-    const opt = document.createElement('option');
-    opt.value = bank.code || bank.bank_code || (bank?.code ?? '');
-    opt.textContent = bank.name || bank.bank_name || bank?.bank_name || 'Unknown Bank';
-    bankSelect.appendChild(opt);
-  });
-  bankSelect.disabled = false;
 }
 
 
