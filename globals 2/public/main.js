@@ -5152,7 +5152,6 @@ async function submitWithdrawal() {
   const accNum = (document.getElementById('withdrawAccountNumber')?.value || '').toString().trim();
   const bankCode = (document.getElementById('withdrawBankSelect')?.value || '').toString().trim();
   const accountName = (document.getElementById('withdrawAccountName')?.value || '').trim();
-  const accountName = rawName.trim();
   const amount = parseInt(document.getElementById('withdrawAmount')?.value || '0', 10);
   // support both withdrawPin or withdrawPassword id (legacy)
   const pinEl = document.getElementById('withdrawPin') || document.getElementById('withdrawPassword');
