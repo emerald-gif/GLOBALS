@@ -2814,7 +2814,130 @@ window.copyTelegramMessage = copyTelegramMessage;
 
 
 
+(function (w, d) {
+  // Prevent multiple instances
+  if (w.__balanceCtrl && typeof w.__balanceCtrl.stop === "function") w.__balanceCtrl.stop();
 
+  // Helpers
+  function fmtNaira(n) {
+    return "₦" + (Number(n) || 0).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  function coerceNumber(val) {
+    if (val == null) return 0;
+    if (typeof val === "number") return isFinite(val) ? val : 0;
+    let s = String(val).replace(/[₦,\s]/g, "");
+    let n = parseFloat(s);
+    return isFinite(n) ? n : 0;
+  }
+
+  function animateNumber(el, from, to, duration = 600) {
+    if (!el) return;
+    if (from === to) {
+      el.textContent = fmtNaira(to);
+      return;
+    }
+    const start = performance.now();
+    const diff = to - from;
+    cancelAnimationFrame(el.__rafId);
+    const step = (t) => {
+      const p = Math.min((t - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      const val = from + diff * eased;
+      el.textContent = fmtNaira(val);
+      if (p < 1) el.__rafId = requestAnimationFrame(step);
+    };
+    el.__rafId = requestAnimationFrame(step);
+  }
+
+  const ctrl = {
+    auth: null,
+    db: null,
+    unsubUser: null,
+    balanceEl: null,
+    currentValue: 0,
+    lastShownValue: 0,
+    isHidden: JSON.parse(localStorage.getItem("balanceHidden") || "false"),
+
+    init() {
+      this.balanceEl = d.getElementById("balance");
+      const toggleBtn = d.getElementById("toggleBalanceBtn");
+      if (toggleBtn && !toggleBtn.__bound) {
+        toggleBtn.addEventListener("click", () => this.toggleHidden(), { passive: true });
+        toggleBtn.__bound = true;
+      }
+
+      // seed initial balance
+      if (this.balanceEl) {
+        const seed = coerceNumber(this.balanceEl.dataset.value || this.balanceEl.textContent);
+        this.currentValue = this.lastShownValue = seed;
+        this.balanceEl.textContent = this.isHidden ? "₦****" : fmtNaira(seed);
+      }
+    },
+
+    start() {
+      this.init();
+      if (!w.firebase || !firebase.apps.length) {
+        console.warn("Firebase not ready for balance listener");
+        return;
+      }
+      this.auth = firebase.auth();
+      this.db = firebase.firestore();
+
+      this.auth.onAuthStateChanged((user) => {
+        if (this.unsubUser) this.unsubUser();
+        if (!user) return;
+
+        const ref = this.db.collection("users").doc(user.uid);
+        this.unsubUser = ref.onSnapshot((snap) => {
+          if (!snap.exists) return;
+          const next = coerceNumber(snap.data().balance);
+          if (next === this.currentValue || !this.balanceEl) return;
+
+          const from = this.lastShownValue || this.currentValue;
+          this.currentValue = next;
+          this.lastShownValue = next;
+          if (this.isHidden) {
+            this.balanceEl.textContent = "₦****";
+          } else {
+            animateNumber(this.balanceEl, from, next, 700);
+          }
+        });
+      });
+    },
+
+    toggleHidden() {
+      this.isHidden = !this.isHidden;
+      localStorage.setItem("balanceHidden", JSON.stringify(this.isHidden));
+      if (!this.balanceEl) return;
+      if (this.isHidden) {
+        this.balanceEl.textContent = "₦****";
+      } else {
+        animateNumber(this.balanceEl, 0, this.currentValue, 400);
+      }
+    },
+
+    stop() {
+      if (this.unsubUser) this.unsubUser();
+      this.unsubUser = null;
+      cancelAnimationFrame(this.balanceEl?.__rafId);
+    }
+  };
+
+  w.__balanceCtrl = ctrl;
+
+  // Auto start on DOM ready
+  if (d.readyState === "loading") {
+    d.addEventListener("DOMContentLoaded", () => ctrl.start(), { once: true });
+  } else {
+    ctrl.start();
+  }
+
+  w.addEventListener("beforeunload", () => ctrl.stop(), { passive: true });
+})(window, document);
 
 
                                                        
@@ -2828,10 +2951,6 @@ window.copyTelegramMessage = copyTelegramMessage;
 
 
    
-
-/* ====== Safe Balance Listener (no imports, no side effects) ====== */
-
-
 
 
 
