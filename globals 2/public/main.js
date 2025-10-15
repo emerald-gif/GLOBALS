@@ -5161,8 +5161,8 @@ const amount = parseInt(document.getElementById('withdrawAmount')?.value || '0',
 const pinEl = document.getElementById('withdrawPin') || document.getElementById('withdrawPassword');
 const pin = (pinEl?.value || '').trim();
 
-if (!accNum || !bankName || !accountName || !amount || amount < 1000 || !pin) {
-  alert('⚠️ Please fill all fields correctly (min ₦1000)');
+if (!accNum || !bankName || !accountName || !amount || amount < 500 || !pin) {
+  alert('⚠️ Please fill all fields correctly (min ₦500)');
   return;
 }
   const user = await ensureFirebaseUser();
