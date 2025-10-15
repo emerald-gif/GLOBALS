@@ -113,164 +113,154 @@ app.post("/api/verify-account", async (req, res) => {
   }
 });
 
-
-
-
 /* =======================
    REQUEST WITHDRAWAL (auth + PIN check)
    ======================= */
-
 /* =======================
-   REQUEST WITHDRAWAL (manual: write to Withdraw + Transaction)
-   ======================= */
+REQUEST WITHDRAWAL (manual — write to Firestore)
+======================= */
 app.post("/api/request-withdrawal", async (req, res) => {
   try {
-    // 1) verify id token (header preferred)
+    // ✅ Step 1: Verify user
     let decoded;
     try {
       decoded = await verifyIdTokenFromHeaderOrBody(req);
     } catch (tokenErr) {
-      const code = tokenErr.code === 'NO_TOKEN' ? 401 : 401;
-      console.warn('request-withdrawal token error', tokenErr.message, tokenErr.detail || '');
-      return res.status(code).json({ status: "fail", message: tokenErr.message });
+      console.warn("withdrawal token error", tokenErr.message, tokenErr.detail || "");
+      return res.status(401).json({ status: "fail", message: tokenErr.message });
     }
     const uid = decoded.uid;
     if (!uid) return res.status(401).json({ status: "fail", message: "Invalid token (no uid)" });
 
-    // 2) validate body
+    // ✅ Step 2: Validate body
     const { accNum, bankCode, account_name, amount, pin } = req.body || {};
     if (!accNum || !bankCode || !account_name || !amount || !pin) {
       return res.status(400).json({ status: "fail", message: "Missing required withdrawal fields" });
     }
     const amtNum = Number(amount);
-    if (!isFinite(amtNum) || amtNum <= 0) {
-      return res.status(400).json({ status: "fail", message: "Invalid amount" });
+    if (!isFinite(amtNum) || amtNum < 1000) {
+      return res.status(400).json({ status: "fail", message: "Minimum withdrawal is ₦1000" });
     }
 
-    if (amtNum < 1000) {
-      return res.status(400).json({ status: "fail", message: "Minimum withdrawal is ₦1,000" });
-    }
-
-    // 3) read user doc
+    // ✅ Step 3: Check user + PIN
     const userRef = dbAdmin.collection("users").doc(uid);
     const userSnap = await userRef.get();
-    if (!userSnap.exists) {
-      return res.status(404).json({ status: "fail", message: "User not found" });
-    }
-    const userData = userSnap.data() || {};
+    if (!userSnap.exists) return res.status(404).json({ status: "fail", message: "User not found" });
 
-    // 4) PIN check
-    if (!userData.pin) {
-      return res.status(400).json({ status: "fail", message: "Set payment pin first" });
-    }
+    const userData = userSnap.data() || {};
+    if (!userData.pin) return res.status(400).json({ status: "fail", message: "Set payment pin first" });
     if (String(userData.pin) !== String(pin)) {
       return res.status(400).json({ status: "fail", message: "Invalid PIN" });
     }
 
-    // 5) balance check and transactional write:
-    // We'll deduct the balance immediately (so users can't double-withdraw),
-    // and create Withdraw and Transaction docs with status "processing".
-    const withdrawsRef = dbAdmin.collection('Withdraw').doc(); // note: collection name capital 'Withdraw' per your request
-    const txRef = dbAdmin.collection('Transaction').doc(); // single transaction collection
+    // ✅ Step 4: Check balance
+    const balance = Number(userData.balance) || 0;
+    if (amtNum > balance) {
+      return res.status(400).json({ status: "fail", message: "Insufficient balance" });
+    }
+
+    // ✅ Step 5: Write to Firestore (Withdraw + Transaction)
+    const withdrawRef = dbAdmin.collection("Withdraw").doc();
+    const transactionRef = dbAdmin.collection("Transaction").doc();
 
     await dbAdmin.runTransaction(async (tx) => {
-      const uSnap = await tx.get(userRef);
-      const current = (uSnap.exists && Number(uSnap.data().balance)) ? Number(uSnap.data().balance) : 0;
-      if (amtNum > current) {
-        throw new Error('Insufficient balance (race condition)');
-      }
-
-      // Deduct balance
-      tx.update(userRef, { balance: current - amtNum, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
-
-      // Create Withdraw document
-      tx.set(withdrawsRef, {
-        userId: uid,
-        accountNumber: accNum,
-        bankCode: bankCode,
-        bankName: (req.body.bankName || null), // optional if you want to pass bank name
-        accountName: account_name,
+      tx.update(userRef, { balance: balance - amtNum });
+      tx.set(withdrawRef, {
+        uid,
+        accNum,
+        bankCode,
+        account_name,
         amount: amtNum,
-        status: 'processing',
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+        status: "processing",
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
-
-      // Create Transaction document
-      tx.set(txRef, {
-        userId: uid,
-        type: 'Withdraw',
+      tx.set(transactionRef, {
+        uid,
+        type: "Withdraw",
+        accNum,
+        bankCode,
+        account_name,
         amount: amtNum,
-        status: 'processing',
+        status: "processing",
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        metadata: {
-          accountNumber: accNum,
-          bankCode,
-          accountName
-        }
       });
     });
 
-    return res.json({ status: "success", message: "Withdrawal request saved and is under review." });
-
+    return res.json({ status: "success", message: "Withdrawal request submitted successfully" });
   } catch (err) {
-    console.error('request-withdrawal (manual) error:', err.response?.data || err.message || err);
-    // handle known error from transaction above
-    if (err.message && err.message.includes('Insufficient')) {
-      return res.status(400).json({ status: "fail", message: err.message });
-    }
-    return res.status(500).json({ status: "fail", message: "Server error during withdrawal", detail: err.response?.data || err.message || null });
+    console.error("withdrawal error:", err);
+    return res.status(500).json({ status: "fail", message: "Server error during withdrawal" });
   }
 });
-
-
-
-
 
 /* =======================
    DEPOSIT: verify-payment
    ======================= */
-app.post("/api/verify-account", async (req, res) => {
-  const { accNum, bankCode } = req.body || {};
-  if (!accNum || !bankCode) {
-    return res.status(400).json({ status: "fail", error: "Missing account number or bank code" });
-  }
-
+app.post("/api/verify-payment", async (req, res) => {
   try {
-    const response = await axios.get("https://api.paystack.co/bank/resolve", {
-      headers: {
-        Authorization: `Bearer ${PAYSTACK_SECRET}`,
-        "Content-Type": "application/json",
-      },
-      params: {
-        account_number: accNum,
-        bank_code: bankCode,
-      },
-      timeout: 10000, // 10s timeout for safety
+    // decode token (header preferred, fallback to body.idToken)
+    let decoded;
+    try {
+      decoded = await verifyIdTokenFromHeaderOrBody(req);
+    } catch (tokenErr) {
+      console.warn('verify-payment token error', tokenErr.message, tokenErr.detail || '');
+      return res.status(401).json({ status: "fail", message: tokenErr.message });
+    }
+    const uid = decoded.uid;
+    if (!uid) return res.status(401).json({ status: "fail", message: "Invalid token (no uid)" });
+
+    const { reference, amount } = req.body || {};
+    const amountNum = Number(amount);
+    if (!reference || !isFinite(amountNum) || amountNum <= 0) {
+      return res.status(400).json({ status: "fail", message: "Invalid reference or amount" });
+    }
+
+    // verify transaction with Paystack
+    const verifyResp = await axios.get(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+      headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` }
     });
 
-    if (response.data && response.data.status && response.data.data) {
-      const accountName = response.data.data.account_name;
-      console.log(`✅ Verified account: ${accountName}`);
-      return res.json({ status: "success", account_name: accountName });
-    } else {
-      console.warn("❌ Paystack verify failed:", response.data);
-      return res.json({ status: "fail", error: "Account not found" });
+    const paymentData = verifyResp.data?.data;
+    if (!paymentData || paymentData.status !== "success") {
+      console.warn('verify-payment: paystack says not success', paymentData || {});
+      return res.status(400).json({ status: "fail", message: "Payment not successful", detail: paymentData || null });
     }
-  } catch (err) {
-    console.error("❌ verify-account error:", err.response?.data || err.message);
-    return res.status(500).json({
-      status: "fail",
-      error: "Account verification failed",
-      detail: err.response?.data || err.message,
+
+    const paidNaira = Number(paymentData.amount) / 100;
+
+    // Prevent double-processing — transactional write
+    const paymentDocRef = dbAdmin.collection("payments").doc(reference);
+    await dbAdmin.runTransaction(async (tx) => {
+      const pSnap = await tx.get(paymentDocRef);
+      if (pSnap.exists) return;
+      const userRef = dbAdmin.collection("users").doc(uid);
+      const userSnap = await tx.get(userRef);
+      let currentBalance = 0;
+      if (userSnap.exists) {
+        const cur = userSnap.data().balance;
+        currentBalance = (typeof cur === "number") ? cur : Number(cur) || 0;
+      }
+      const newBalance = currentBalance + paidNaira;
+
+      tx.set(paymentDocRef, {
+        reference,
+        uid,
+        amount: paidNaira,
+        status: "verified",
+        paystack: paymentData,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      tx.set(userRef, { balance: newBalance }, { merge: true });
     });
+
+    return res.json({ status: "success" });
+
+  } catch (err) {
+    console.error("verify-payment error:", err.response?.data || err.message || err);
+    return res.status(500).json({ status: "fail", message: "Server error verifying payment", detail: err.response?.data || err.message || null });
   }
 });
-
-
-
-
-
-
 
 /* =======================
    PAYSTACK WEBHOOK (optional redundancy)
@@ -302,13 +292,6 @@ app.post('/webhook/paystack', async (req, res) => {
 
 
 
-
-
-
-// ... other API routes (withdrawal, verify-payment, etc.)
-
-
-
 // ✅ Keep this last (do not move)
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "dashboard.html"));
@@ -317,11 +300,6 @@ app.get("*", (req, res) => {
 /* Start server */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
-
-
-
-
-
 
 
 
