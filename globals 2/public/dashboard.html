@@ -2501,216 +2501,96 @@
                                                     <!-- PAYMENT HISTORY-->
 
 
+
+
 <!-- 🔵 PAYMENT SECTION -->
 
 
+<div id="payment" class="tab-section hidden max-w-md mx-auto px-5 py-8 space-y-8">
 
-// ============================================
-// GLOBALS Payment Transactions (Static Fetch)
-// ============================================
+  <!-- ⬅️ Back Button -->
+  <button onclick="activateTab('dashboard')" 
+    class="flex items-center gap-2 text-gray-600 hover:text-blue-600 font-medium mb-2 transition-colors">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
 
-const paymentTxListEl = document.getElementById("transactionList");
-const paymentTxFilterEl = document.getElementById("transactionFilter");
-let paymentTransactionsAll = [];
-let paymentTransactions = [];
-let paymentRenderedCount = 0;
-const PAGE_SIZE = 10;
-
-// ---------- Helpers ----------
-function fmtNaira(n) { return "₦" + Number(n || 0).toLocaleString(); }
-
-function parseTimestamp(val) {
-  if (!val) return null;
-  if (typeof val.toDate === "function") return val.toDate();
-  if (val instanceof Date) return val;
-  if (typeof val === "number") return new Date(val);
-  if (typeof val === "string") {
-    const d = new Date(val);
-    return isNaN(d.getTime()) ? null : d;
-  }
-  return null;
-}
-
-function formatDatePretty(d) {
-  if (!d) return "—";
-  return d.toLocaleString();
-}
-
-function escapeHtml(s) {
-  return String(s == null ? "" : s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-// ---------- Create a transaction card ----------
-function createTransactionCard(tx) {
-  const date = parseTimestamp(tx.timestamp || tx.createdAt || tx.time || tx.created_at);
-  const status = (tx.status || "").toLowerCase();
-  const type = (tx.type || "").toLowerCase();
-  const amountClass =
-    status === "successful"
-      ? "text-green-600"
-      : status === "failed"
-      ? "text-red-600"
-      : "text-yellow-600";
-
-  // Card base
-  const card = document.createElement("div");
-  card.className =
-    "bg-white rounded-2xl shadow-sm hover:shadow-md transition p-4 cursor-pointer";
-
-  card.innerHTML = `
-    <div class="flex items-center justify-between">
-      <div>
-        <p class="text-sm font-semibold text-gray-900 capitalize">${escapeHtml(
-          tx.type || "Unknown"
-        )}</p>
-        <p class="text-xs text-gray-400 mt-1">${formatDatePretty(date)}</p>
+  <!-- ⚡ Quick Actions -->
+  <div class="grid grid-cols-2 gap-4">
+    <!-- Deposit -->
+    <button onclick="activateTab('depositSection')" 
+      class="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-transform hover:-translate-y-1">
+      <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 grid place-items-center mb-2 shadow-inner">
+        <i data-lucide="arrow-down-circle" class="w-5 h-5"></i>
       </div>
-      <div class="text-right">
-        <p class="text-base font-bold ${amountClass}">${fmtNaira(tx.amount)}</p>
-        <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${amountClass} bg-opacity-10">
-          ${escapeHtml(tx.status || "—")}
-        </span>
+      <span class="text-sm font-semibold text-gray-800">Deposit</span>
+    </button>
+
+    <!-- Withdraw -->
+    <button onclick="activateTab('withdrawFundsSection')" 
+      class="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-transform hover:-translate-y-1">
+      <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 grid place-items-center mb-2 shadow-inner">
+        <i data-lucide="arrow-up-circle" class="w-5 h-5"></i>
       </div>
+      <span class="text-sm font-semibold text-gray-800">Withdraw</span>
+    </button>
+  </div>
+
+  <!-- 🌌 Banner -->
+  <div class="relative rounded-3xl overflow-hidden shadow-md border border-gray-100">
+    <img src="MOON1.jpeg" alt="Promo Banner" class="w-full h-44 object-cover">
+    <div class="absolute inset-0 bg-gradient-to-t from-gray-900/70 via-gray-700/20 to-transparent"></div>
+    <div class="absolute bottom-4 left-4 text-white">
+      <h3 class="text-lg font-bold">Globals 2025 Fintech</h3>
+      <p class="text-xs opacity-80">Experience the future of money today</p>
     </div>
-  `;
+  </div>
 
-  // Withdrawal details dropdown
-  if (type === "withdraw") {
-    const detailsBtn = document.createElement("button");
-    detailsBtn.textContent = "View Bank Details ▾";
-    detailsBtn.className =
-      "mt-3 text-blue-600 text-sm font-medium hover:underline focus:outline-none";
-    detailsBtn.addEventListener("click", () => {
-      detailsDiv.classList.toggle("hidden");
-      detailsBtn.textContent = detailsDiv.classList.contains("hidden")
-        ? "View Bank Details ▾"
-        : "Hide Bank Details ▴";
-    });
+  <!-- 📄 Transaction History -->
+  <div class="bg-white rounded-2xl shadow-md p-6 space-y-5 border border-gray-100">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+      <h2 class="text-base font-semibold text-gray-900">Transaction History</h2>
+      <select id="transactionFilter" class="w-full border rounded-lg px-3 py-2 text-sm text-gray-700">
+  <option value="all">All</option>
+  <option value="successful">Successful</option>
+  <option value="processing">Processing</option>
+  <option value="failed">Failed</option>
+</select>
+    </div>
 
-    const detailsDiv = document.createElement("div");
-    detailsDiv.className = "hidden mt-3 text-sm text-gray-700 space-y-1";
-    detailsDiv.innerHTML = `
-      <div class="flex justify-between"><span class="font-medium">Bank:</span> <span>${escapeHtml(
-        tx.bankName || tx.bank || "—"
-      )}</span></div>
-      <div class="flex justify-between"><span class="font-medium">Account Number:</span> <span>${escapeHtml(
-        tx.accNum || tx.accountNumber || "—"
-      )}</span></div>
-      <div class="flex justify-between"><span class="font-medium">Account Name:</span> <span>${escapeHtml(
-        tx.account_name || tx.accountName || "—"
-      )}</span></div>
-    `;
+    <!-- Transaction List -->
+    <div id="transactionList" class="space-y-3">
+      <!-- Skeleton loaders -->
+      <div class="tx-skel"></div>
+      <div class="tx-skel"></div>
+      <div class="tx-skel"></div>
+    </div>
 
-    card.appendChild(detailsBtn);
-    card.appendChild(detailsDiv);
-  }
+    <!-- Load More -->
+    <button id="loadMoreTx" class="w-full hidden text-sm font-medium text-blue-600 hover:underline transition-colors">
+      Load more
+    </button>
+  </div>
 
-  return card;
+</div>
+
+<style>
+.tx-skel {
+  @apply animate-pulse bg-gray-100 h-14 rounded-xl;
 }
+</style>
 
-// ---------- Render ----------
-function renderTransactions(reset = true) {
-  if (!paymentTxListEl) return;
-  if (reset) {
-    paymentTxListEl.innerHTML = "";
-    paymentRenderedCount = 0;
-  }
+<!-- ✅ Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
 
-  const slice = paymentTransactions.slice(paymentRenderedCount, paymentRenderedCount + PAGE_SIZE);
-  slice.forEach((tx) => {
-    const card = createTransactionCard(tx);
-    paymentTxListEl.appendChild(card);
-  });
-  paymentRenderedCount += slice.length;
 
-  const remaining = paymentTransactions.length - paymentRenderedCount;
-  const loadBtn = document.getElementById("loadMoreTxBtn");
-  if (loadBtn) loadBtn.remove();
 
-  if (remaining > 0) {
-    const btn = document.createElement("button");
-    btn.id = "loadMoreTxBtn";
-    btn.textContent = `Load more (${remaining})`;
-    btn.className =
-      "mt-3 w-full bg-white border rounded-xl py-2 text-sm text-gray-700 hover:bg-blue-50 transition";
-    btn.onclick = () => renderTransactions(false);
-    paymentTxListEl.appendChild(btn);
-  }
-}
 
-// ---------- Filter ----------
-function applyPaymentFilter() {
-  const status = (paymentTxFilterEl?.value || "all").toLowerCase();
-  paymentTransactions = paymentTransactionsAll
-    .filter((tx) => ["deposit", "withdraw"].includes((tx.type || "").toLowerCase()))
-    .filter((tx) => {
-      if (status === "all") return true;
-      return (tx.status || "").toLowerCase() === status;
-    })
-    .sort((a, b) => {
-      const ta = parseTimestamp(a.timestamp || a.createdAt || a.time || a.created_at) || 0;
-      const tb = parseTimestamp(b.timestamp || b.createdAt || b.time || b.created_at) || 0;
-      return tb - ta;
-    });
 
-  renderTransactions(true);
-}
-
-// ---------- Fetch once (no snapshot) ----------
-async function fetchPaymentTransactionsOnce(userId) {
-  if (!userId) return;
-  paymentTxListEl.innerHTML = `<p class="p-4 text-gray-500 text-sm">Loading transactions...</p>`;
-
-  const collections = ["Transaction", "transaction", "transactions", "Transactions"];
-  for (const coll of collections) {
-    try {
-      const snap = await firebase
-        .firestore()
-        .collection(coll)
-        .where("userId", "==", userId)
-        .orderBy("timestamp", "desc")
-        .get();
-
-      if (!snap.empty) {
-        paymentTransactionsAll = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        applyPaymentFilter(); // show filtered list
-        console.log(`✅ Loaded ${snap.size} from ${coll}`);
-        return;
-      }
-    } catch (err) {
-      console.error("fetchPaymentTransactionsOnce error:", err);
-    }
-  }
-
-  paymentTxListEl.innerHTML = `<p class="p-6 text-center text-gray-500">No transactions found.</p>`;
-}
-
-// ---------- Init ----------
-function initPaymentSection() {
-  if (paymentTxFilterEl) {
-    paymentTxFilterEl.innerHTML = `
-      <option value="all">All</option>
-      <option value="successful">Successful</option>
-      <option value="processing">Processing</option>
-      <option value="failed">Failed</option>
-    `;
-    paymentTxFilterEl.addEventListener("change", applyPaymentFilter);
-  }
-
-  const cur = firebase.auth().currentUser;
-  if (cur) fetchPaymentTransactionsOnce(cur.uid);
-  else firebase.auth().onAuthStateChanged((u) => u && fetchPaymentTransactionsOnce(u.uid));
-
-  console.log("💙 Globals Payments initialized (static)");
-}
-
-window.initPaymentSection = initPaymentSection;
-
+		
 
 
 		
