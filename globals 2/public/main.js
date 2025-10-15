@@ -5118,69 +5118,49 @@ let _verifyAccountTimer = null;
 async function verifyAccount() {
   const accEl = document.getElementById('withdrawAccountNumber');
   const bankEl = document.getElementById('withdrawBankSelect');
-  const nameDisplay = document.getElementById('accountNameDisplay');
   const nameStatus = document.getElementById('accountNameStatus');
+  const nameDisplay = document.getElementById('accountNameDisplay');
+  if (!accEl || !bankEl || !nameStatus || !nameDisplay) return;
 
-  if (!accEl || !bankEl || !nameDisplay) return;
-
-  const accNumRaw = (accEl.value || '').toString().trim();
-  const accNum = accNumRaw.replace(/\D/g,''); // digits only
-  const bankCode = (bankEl.value || '').toString().trim();
+  const accNum = accEl.value.trim();
+  const bankCode = bankEl.value.trim();
   if (accNum.length < 10 || !bankCode) {
-    nameStatus && nameStatus.classList.add('hidden');
-    nameDisplay && nameDisplay.classList.add('hidden');
+    nameStatus.classList.add('hidden');
+    nameDisplay.classList.add('hidden');
     return;
   }
 
-  nameStatus && nameStatus.classList.remove('hidden');
-  nameDisplay && nameDisplay.classList.add('hidden');
+  nameStatus.classList.remove('hidden');
+  nameDisplay.classList.add('hidden');
+  nameDisplay.innerText = "";
 
-  const candidateUrls = [
-    '/api/verify-account',
-    location.origin + '/api/verify-account',
-    'https://globalstasks.name.ng/api/verify-account'
-  ];
+  try {
+    const res = await fetch('/api/verify-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accNum, bankCode })
+    });
 
-  let ok = false;
-  for (const url of candidateUrls) {
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accNum, bankCode }),
-        cache: 'no-store'
-      });
-      if (!res.ok) { console.warn('verify-account non-ok', url, res.status); continue; }
-      const data = await res.json().catch(()=>null);
-      if (!data) { console.warn('verify-account empty json', url); continue; }
-
-      if (data.status === 'success' && data.account_name) {
-        nameDisplay.innerText = `✅ ${data.account_name}`;
-        nameDisplay.classList.remove('hidden');
-        ok = true;
-        break;
-      } else {
-        // show whatever message paystack returned or a friendly message
-        nameDisplay.innerText = data.account_name ? `✅ ${data.account_name}` : '❌ Account not found';
-        nameDisplay.classList.remove('hidden');
-        ok = true;
-        break;
-      }
-    } catch (err) {
-      console.warn('verify-account fetch error', url, err && err.message ? err.message : err);
-      continue;
+    const data = await res.json();
+    if (res.ok && data.status === 'success' && data.account_name) {
+      nameStatus.classList.add('hidden');
+      nameDisplay.innerText = `✅ ${data.account_name}`;
+      nameDisplay.classList.remove('hidden');
+    } else {
+      nameStatus.classList.add('hidden');
+      nameDisplay.innerText = '❌ Account not found';
+      nameDisplay.classList.remove('hidden');
     }
-  }
-
-  if (!ok) {
-    nameDisplay.innerText = '❌ Error verifying account';
+  } catch (err) {
+    console.error('verifyAccount error:', err);
+    nameStatus.classList.add('hidden');
+    nameDisplay.innerText = '❌ Verification error';
     nameDisplay.classList.remove('hidden');
-    console.error('verify-account: all attempts failed');
   }
-  nameStatus && nameStatus.classList.add('hidden');
 }
 
 
+	  
 /* ---------- Improved submitWithdrawal (calls server only) ---------- */
 async function submitWithdrawal() {
   // sanitize number input (commas etc.)
