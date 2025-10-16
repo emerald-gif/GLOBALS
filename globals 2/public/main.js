@@ -1980,11 +1980,11 @@ if (window.registerPage) {
 
 
 async function openJobDetail_correct(jobId) {
-  if (!db) { alert('Database not ready'); return; }
+  if (!db) { showToast('Database not ready', 'error'); return; }
 
   try {
     const doc = await db.collection('affiliateJobs').doc(jobId).get();
-    if (!doc.exists) { alert('Job not found'); return; }
+    if (!doc.exists) { showToast('Job not found', 'error'); return; }
 
     const job = { id: doc.id, ...doc.data() };
     state.currentDetailJobId = job.id;
@@ -1992,26 +1992,26 @@ async function openJobDetail_correct(jobId) {
     if (!container) return;
     container.innerHTML = '';
 
-    // ===== UI BUILD =====
+    // ====== UI BUILD ======
     const wrapper = document.createElement('div');
-    wrapper.className = 'bg-white rounded-2xl aff2-card overflow-hidden shadow-sm';
+    wrapper.className = 'bg-white rounded-2xl shadow-md overflow-hidden';
 
-    // ---- Banner ----
+    // --- Banner ---
     const imgWrap = document.createElement('div');
     imgWrap.className = 'relative';
     const banner = document.createElement('img');
     banner.src = job.image || job.campaignLogoURL || '/assets/default-banner.jpg';
-    banner.className = 'w-full h-48 object-cover';
+    banner.className = 'w-full h-52 object-cover';
     const thumb = document.createElement('img');
     thumb.src = job.image || job.campaignLogoURL || '/assets/default-thumb.jpg';
-    thumb.className = 'absolute -bottom-7 left-6 w-16 h-16 rounded-full border-4 border-white object-cover shadow';
+    thumb.className = 'absolute -bottom-8 left-6 w-16 h-16 rounded-full border-4 border-white shadow-lg object-cover';
     imgWrap.appendChild(banner);
     imgWrap.appendChild(thumb);
     wrapper.appendChild(imgWrap);
 
-    // ---- Body ----
+    // --- Body ---
     const body = document.createElement('div');
-    body.className = 'p-6 space-y-4';
+    body.className = 'p-6 space-y-5';
 
     body.innerHTML = `
       <div>
@@ -2032,32 +2032,30 @@ async function openJobDetail_correct(jobId) {
         </div>
       ` : ''}
 
-      ${job.totalBudget ? `<div class="text-gray-600 text-sm"><strong>Total Budget:</strong> ${formatNaira(job.totalBudget)}</div>` : ''}
-
       <div class="mt-4">
-        <div class="text-sm text-gray-500 mb-2">Progress</div>
+        <div class="text-sm text-gray-500 mb-1">Progress</div>
         <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-          <div id="aff2_detailProgressBar" class="h-2 bg-blue-400 rounded-full" style="width:0%"></div>
+          <div id="aff2_detailProgressBar" class="h-2 bg-blue-500 rounded-full" style="width:0%"></div>
         </div>
         <div id="aff2_detailProgressText" class="text-sm text-gray-500 mt-1">0/0 (0%)</div>
       </div>
 
-      <!-- Submit Proof Section -->
-      <div class="mt-6 border-t pt-4">
+      <!-- Submit Proof -->
+      <div class="mt-6 border-t pt-5">
         <h3 class="text-base font-semibold text-gray-800 mb-3">Submit Proof</h3>
         <input id="aff2_detailProofFiles" type="file" multiple accept="image/*" 
-               class="block w-full mb-3 text-sm text-gray-700 border rounded-md p-2" />
-        <textarea id="aff2_detailSubmissionNote" placeholder="Write a short note (optional)..." 
+               class="block w-full mb-3 border rounded-md p-2 text-sm text-gray-700" />
+        <textarea id="aff2_detailSubmissionNote" placeholder="Optional note..." 
                   class="w-full border rounded-md p-3 text-sm h-24 mb-3"></textarea>
 
         <button id="aff2_detailSubmitBtn"
                 data-job-id="${safeText(job.id)}"
-                data-proof-count="${Number(job.proofFileCount || 1)}"
                 class="w-full py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">
           Submit Proof
         </button>
+
         <p class="text-xs text-gray-400 mt-2">
-          Submissions are reviewed by admin. Approved submissions will reflect here and in Finished Tasks.
+          Submissions are reviewed by admin. Approved submissions appear in Finished Tasks.
         </p>
       </div>
     `;
@@ -2070,7 +2068,7 @@ async function openJobDetail_correct(jobId) {
     el('aff2_finishedScreen')?.classList.add('aff2-hidden');
     el('aff2_jobDetailScreen')?.classList.remove('aff2-hidden');
 
-    // ===== PROGRESS UPDATE =====
+    // ===== PROGRESS =====
     if (jobDetailUnsub) { try { jobDetailUnsub(); } catch (_) {} jobDetailUnsub = null; }
 
     jobDetailUnsub = multiplexer.subscribe(
@@ -2082,76 +2080,91 @@ async function openJobDetail_correct(jobId) {
         const approved = arr.length;
         const total = Number(job.numWorkers || 0);
         const percent = total > 0 ? Math.min(100, Math.round((approved / total) * 100)) : 0;
-        const bar = el('aff2_detailProgressBar');
-        if (bar && bar.style) bar.style.width = percent + '%';
-        const txt = el('aff2_detailProgressText');
-        if (txt) txt.textContent = `${approved}/${total} (${percent}%)`;
+        el('aff2_detailProgressBar').style.width = percent + '%';
+        el('aff2_detailProgressText').textContent = `${approved}/${total} (${percent}%)`;
       }
     );
     state.unsubscribers.push(jobDetailUnsub);
 
-    // ===== SUBMIT PROOF LOGIC =====
+    // ===== SUBMIT LOGIC =====
     const submitBtn = el('aff2_detailSubmitBtn');
     const fileInput = el('aff2_detailProofFiles');
     const noteInput = el('aff2_detailSubmissionNote');
 
-    if (submitBtn) {
-      submitBtn.addEventListener('click', async () => {
-        const uid = auth.currentUser?.uid;
-        if (!uid) return alert('Please log in.');
+    submitBtn.addEventListener('click', async () => {
+      const uid = auth.currentUser?.uid;
+      if (!uid) return showToast('Please log in first.', 'error');
 
+      const files = Array.from(fileInput.files);
+      if (files.length < 1) {
+        return showToast('Please upload at least one proof file.', 'warning');
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+      submitBtn.classList.add('opacity-70');
+
+      try {
+        // Check if already submitted
         const existing = await db.collection('affiliate_submissions')
           .where('userId', '==', uid)
           .where('jobId', '==', job.id)
           .get();
         if (!existing.empty) {
-          alert('You have already submitted for this job.');
+          showToast('You have already submitted for this job.', 'warning');
+          submitBtn.textContent = 'Already Submitted';
+          submitBtn.classList.replace('bg-blue-600', 'bg-gray-400');
           return;
         }
 
-        const files = Array.from(fileInput.files);
-        if (files.length < (job.proofFileCount || 1)) {
-          alert(`Upload at least ${job.proofFileCount || 1} proof file(s).`);
-          return;
+        // Upload files
+        const uploadedURLs = [];
+        for (const file of files) {
+          const ref = storage.ref(`affiliateProofs/${uid}_${Date.now()}_${file.name}`);
+          await ref.put(file);
+          uploadedURLs.push(await ref.getDownloadURL());
         }
 
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Submitting...';
+        await db.collection('affiliate_submissions').add({
+          jobId: job.id,
+          userId: uid,
+          proofFiles: uploadedURLs,
+          note: noteInput.value.trim() || '',
+          status: 'on review',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
 
-        try {
-          const fileURLs = [];
-          for (const file of files) {
-            const ref = storage.ref(`affiliateProofs/${uid}_${Date.now()}_${file.name}`);
-            await ref.put(file);
-            const url = await ref.getDownloadURL();
-            fileURLs.push(url);
-          }
+        showToast('Proof submitted successfully! ✅', 'success');
+        submitBtn.textContent = 'Submitted';
+        submitBtn.classList.replace('bg-blue-600', 'bg-green-500');
+      } catch (err) {
+        console.error('Submission failed:', err);
+        showToast('Submission failed, please try again.', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Proof';
+        submitBtn.classList.remove('opacity-70');
+      }
+    });
 
-          await db.collection('affiliate_submissions').add({
-            jobId: job.id,
-            userId: uid,
-            proofFiles: fileURLs,
-            note: noteInput.value.trim(),
-            status: 'pending',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          });
-
-          alert('Submission sent successfully!');
-          submitBtn.textContent = 'Submitted';
-          submitBtn.classList.remove('bg-blue-600');
-          submitBtn.classList.add('bg-green-500');
-        } catch (err) {
-          console.error('Proof submission error:', err);
-          alert('Upload failed. Try again.');
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Submit Proof';
-        }
-      });
-    }
   } catch (err) {
-    console.error('[AFF2] openJobDetail_correct error', err);
-    alert('Error loading job details.');
+    console.error('[AFF2] openJobDetail_correct', err);
+    showToast('Failed to open job.', 'error');
   }
+}
+
+// ===== TOAST FUNCTION =====
+function showToast(message, type = 'info') {
+  const toast = document.createElement('div');
+  const colors = {
+    success: 'bg-green-600',
+    error: 'bg-red-600',
+    warning: 'bg-yellow-500',
+    info: 'bg-blue-600'
+  };
+  toast.className = `${colors[type] || colors.info} text-white px-4 py-2 rounded-md fixed bottom-6 left-1/2 transform -translate-x-1/2 shadow-lg z-50 animate-fadeIn`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
 }
 	
 
