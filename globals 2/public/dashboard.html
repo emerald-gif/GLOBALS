@@ -3977,12 +3977,20 @@
 </style>
 
 <script>
+
 function activateTab(tabName) {
+  // Remove active from all nav buttons
   const btns = document.querySelectorAll('#bottomNavbar .nav-btn');
   btns.forEach(b => b.classList.remove('active'));
-  const btn = document.querySelector(`#nav-${tabName.replace(/-screen|Section/g, '').toLowerCase()}`);
+
+  // Normalize the tab name
+  const normalized = tabName.replace(/-screen|Section/g, '').toLowerCase();
+
+  // Activate the matching button
+  const btn = document.querySelector(`#nav-${normalized}`);
   if (btn) btn.classList.add('active');
 }
+
 </script>
 
 
