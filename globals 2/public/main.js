@@ -1976,79 +1976,86 @@ if (window.registerPage) {
 
   // Job detail: subscribe for approved count
   let jobDetailUnsub = null;
+
+
+
 async function openJobDetail_correct(jobId) {
   if (!db) { alert('Database not ready'); return; }
+
   try {
     const doc = await db.collection('affiliateJobs').doc(jobId).get();
     if (!doc.exists) { alert('Job not found'); return; }
 
     const job = { id: doc.id, ...doc.data() };
     state.currentDetailJobId = job.id;
-
     const container = el('aff2_jobDetailContent');
     if (!container) return;
     container.innerHTML = '';
 
-    // ===== BUILD UI =====
+    // ===== UI BUILD =====
     const wrapper = document.createElement('div');
-    wrapper.className = 'bg-white rounded-2xl aff2-card overflow-hidden';
+    wrapper.className = 'bg-white rounded-2xl aff2-card overflow-hidden shadow-sm';
 
+    // ---- Banner ----
     const imgWrap = document.createElement('div');
     imgWrap.className = 'relative';
     const banner = document.createElement('img');
-    banner.src = job.campaignLogoURL || job.image || '/assets/default-banner.jpg';
-    banner.className = 'w-full h-44 object-cover';
+    banner.src = job.image || job.campaignLogoURL || '/assets/default-banner.jpg';
+    banner.className = 'w-full h-48 object-cover';
     const thumb = document.createElement('img');
-    thumb.src = job.campaignLogoURL || job.image || '/assets/default-thumb.jpg';
-    thumb.className = 'absolute -bottom-6 left-6 w-14 h-14 rounded-full border-4 border-white object-cover shadow';
+    thumb.src = job.image || job.campaignLogoURL || '/assets/default-thumb.jpg';
+    thumb.className = 'absolute -bottom-7 left-6 w-16 h-16 rounded-full border-4 border-white object-cover shadow';
     imgWrap.appendChild(banner);
     imgWrap.appendChild(thumb);
     wrapper.appendChild(imgWrap);
 
-    // ===== BODY =====
+    // ---- Body ----
     const body = document.createElement('div');
-    body.className = 'p-5';
+    body.className = 'p-6 space-y-4';
+
     body.innerHTML = `
-      <div class="flex justify-between items-start">
-        <div>
-          <h3 class="text-xl font-bold">${safeText(job.title || 'Untitled')}</h3>
-          <p class="text-sm text-gray-500">
-            ${formatNaira(job.workerPay)} · ${Number(job.numWorkers || 0)} workers
-          </p>
-          ${job.category ? `<span class="inline-block mt-1 px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded-md">${safeText(job.category)}</span>` : ''}
-        </div>
-      </div>
-
-      ${job.description ? `<div class="mt-3 text-gray-700 text-sm">${safeText(job.description)}</div>` : ''}
-      ${job.instructions ? `<div class="mt-3 text-gray-700 text-sm"><strong>Instructions:</strong><br>${safeText(job.instructions)}</div>` : ''}
-
-      ${job.totalBudget ? `<div class="mt-3 text-gray-600 text-sm"><strong>Total Budget:</strong> ${formatNaira(job.totalBudget)}</div>` : ''}
-
-      <div class="mt-5">
-        <div class="text-sm text-gray-500">Progress</div>
-        <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden mt-2">
-          <div id="aff2_detailProgressBar" class="h-2 rounded-full bg-blue-400" style="width:0%"></div>
-        </div>
-        <div id="aff2_detailProgressText" class="text-sm text-gray-500 mt-2">0/0 (0%)</div>
-      </div>
-
-      <hr class="my-4"/>
       <div>
-        <p class="text-sm text-gray-500 mb-2">Proofs required: 
-          <strong id="aff2_detailProofCount">${Number(job.proofFileCount || 1)}</strong>
+        <h2 class="text-xl font-bold">${safeText(job.title || 'Untitled Job')}</h2>
+        <p class="text-sm text-gray-500">
+          ${formatNaira(job.workerPay)} · ${Number(job.numWorkers || 0)} workers
         </p>
-        <input id="aff2_detailProofFiles" type="file" multiple accept="image/*" class="mb-2 block w-full" />
-        <textarea id="aff2_detailSubmissionNote" placeholder="Optional note..." class="w-full border rounded-md p-2 mb-2"></textarea>
+        ${job.category ? `<span class="inline-block mt-1 px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded-md">${safeText(job.category)}</span>` : ''}
+      </div>
 
-        <div class="flex gap-2">
-          <button id="aff2_detailSubmitBtn"
-                  data-job-id="${safeText(job.id)}"
-                  data-proof-count="${Number(job.proofFileCount || 1)}"
-                  class="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold">
-            Submit Proof
-          </button>
-          <button id="aff2_detailCancelBtn" class="py-3 px-4 rounded-xl bg-gray-100">Cancel</button>
+      ${job.description ? `<p class="text-gray-700 text-sm">${safeText(job.description)}</p>` : ''}
+      ${job.instructions ? `<div class="text-gray-700 text-sm"><strong>Instructions:</strong><br>${safeText(job.instructions)}</div>` : ''}
+
+      ${job.targetLink ? `
+        <div class="mt-2">
+          <strong class="block text-sm text-gray-700 mb-1">Target Link:</strong>
+          <a href="${safeText(job.targetLink)}" target="_blank" class="text-blue-600 underline break-all">${safeText(job.targetLink)}</a>
         </div>
+      ` : ''}
+
+      ${job.totalBudget ? `<div class="text-gray-600 text-sm"><strong>Total Budget:</strong> ${formatNaira(job.totalBudget)}</div>` : ''}
+
+      <div class="mt-4">
+        <div class="text-sm text-gray-500 mb-2">Progress</div>
+        <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+          <div id="aff2_detailProgressBar" class="h-2 bg-blue-400 rounded-full" style="width:0%"></div>
+        </div>
+        <div id="aff2_detailProgressText" class="text-sm text-gray-500 mt-1">0/0 (0%)</div>
+      </div>
+
+      <!-- Submit Proof Section -->
+      <div class="mt-6 border-t pt-4">
+        <h3 class="text-base font-semibold text-gray-800 mb-3">Submit Proof</h3>
+        <input id="aff2_detailProofFiles" type="file" multiple accept="image/*" 
+               class="block w-full mb-3 text-sm text-gray-700 border rounded-md p-2" />
+        <textarea id="aff2_detailSubmissionNote" placeholder="Write a short note (optional)..." 
+                  class="w-full border rounded-md p-3 text-sm h-24 mb-3"></textarea>
+
+        <button id="aff2_detailSubmitBtn"
+                data-job-id="${safeText(job.id)}"
+                data-proof-count="${Number(job.proofFileCount || 1)}"
+                class="w-full py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">
+          Submit Proof
+        </button>
         <p class="text-xs text-gray-400 mt-2">
           Submissions are reviewed by admin. Approved submissions will reflect here and in Finished Tasks.
         </p>
@@ -2058,12 +2065,12 @@ async function openJobDetail_correct(jobId) {
     wrapper.appendChild(body);
     container.appendChild(wrapper);
 
-    // ===== SWITCH SCREENS =====
+    // ===== SCREEN SWITCH =====
     el('aff2_jobsContainer')?.classList.add('aff2-hidden');
     el('aff2_finishedScreen')?.classList.add('aff2-hidden');
     el('aff2_jobDetailScreen')?.classList.remove('aff2-hidden');
 
-    // ===== SUBSCRIBE TO PROGRESS =====
+    // ===== PROGRESS UPDATE =====
     if (jobDetailUnsub) { try { jobDetailUnsub(); } catch (_) {} jobDetailUnsub = null; }
 
     jobDetailUnsub = multiplexer.subscribe(
@@ -2072,22 +2079,85 @@ async function openJobDetail_correct(jobId) {
         .where('jobId', '==', job.id)
         .where('status', '==', 'approved'),
       arr => {
-        const approvedCount = arr.length;
-        const totalWorkers = Number(job.numWorkers || 0);
-        const percent = totalWorkers > 0 ? Math.min(100, Math.round((approvedCount / totalWorkers) * 100)) : 0;
+        const approved = arr.length;
+        const total = Number(job.numWorkers || 0);
+        const percent = total > 0 ? Math.min(100, Math.round((approved / total) * 100)) : 0;
         const bar = el('aff2_detailProgressBar');
         if (bar && bar.style) bar.style.width = percent + '%';
-        const tEl = el('aff2_detailProgressText');
-        if (tEl) tEl.textContent = `${approvedCount}/${totalWorkers} (${percent}%)`;
+        const txt = el('aff2_detailProgressText');
+        if (txt) txt.textContent = `${approved}/${total} (${percent}%)`;
       }
     );
     state.unsubscribers.push(jobDetailUnsub);
+
+    // ===== SUBMIT PROOF LOGIC =====
+    const submitBtn = el('aff2_detailSubmitBtn');
+    const fileInput = el('aff2_detailProofFiles');
+    const noteInput = el('aff2_detailSubmissionNote');
+
+    if (submitBtn) {
+      submitBtn.addEventListener('click', async () => {
+        const uid = auth.currentUser?.uid;
+        if (!uid) return alert('Please log in.');
+
+        const existing = await db.collection('affiliate_submissions')
+          .where('userId', '==', uid)
+          .where('jobId', '==', job.id)
+          .get();
+        if (!existing.empty) {
+          alert('You have already submitted for this job.');
+          return;
+        }
+
+        const files = Array.from(fileInput.files);
+        if (files.length < (job.proofFileCount || 1)) {
+          alert(`Upload at least ${job.proofFileCount || 1} proof file(s).`);
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+
+        try {
+          const fileURLs = [];
+          for (const file of files) {
+            const ref = storage.ref(`affiliateProofs/${uid}_${Date.now()}_${file.name}`);
+            await ref.put(file);
+            const url = await ref.getDownloadURL();
+            fileURLs.push(url);
+          }
+
+          await db.collection('affiliate_submissions').add({
+            jobId: job.id,
+            userId: uid,
+            proofFiles: fileURLs,
+            note: noteInput.value.trim(),
+            status: 'on review',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+
+          alert('Submission sent successfully!');
+          submitBtn.textContent = 'Submitted';
+          submitBtn.classList.remove('bg-blue-600');
+          submitBtn.classList.add('bg-green-500');
+        } catch (err) {
+          console.error('Proof submission error:', err);
+          alert('Upload failed. Try again.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit Proof';
+        }
+      });
+    }
   } catch (err) {
-    console.error('[AFF2] openJobDetail_correct', err);
-    alert('Failed to open job. See console.');
+    console.error('[AFF2] openJobDetail_correct error', err);
+    alert('Error loading job details.');
   }
 }
 
+
+	
+
+	
   // ======= UPLOAD helper (keeps identical behaviour to older module) =======
   async function uploadFileHelper(file) {
     if (!file) throw new Error('No file provided');
