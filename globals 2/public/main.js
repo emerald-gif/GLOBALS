@@ -6047,31 +6047,35 @@ function ordinal(n) {
 }
 
 /* ====== CARD BUILDER (2059 look) ====== */
-function makeCard({status='future', day=1, amountLabel='', isLast=false}) {
+function makeCard({ status='future', day=1, isLast=false }) {
   const card = document.createElement('div');
-  card.className = `    flex flex-col items-center justify-center rounded-xl p-2    bg-white text-gray-800 shadow-md  `;
+  card.className = `flex flex-col items-center justify-center rounded-xl p-2 bg-white text-gray-800 shadow-md`;
   card.style.width = '60px';
   card.style.height = '80px';
   card.style.fontSize = '12px';
-  // status styles
+
+  // determine amount
+  const amount = (day <= 2) ? 0 : (day === 7 ? 200 : 50);
+  const amountLabel = amount > 0 ? `₦${amount}` : '₦0';
+
   if (status === 'checked') {
-    card.style.background = '#dcfce7'; // light green
+    card.style.background = '#dcfce7';
     card.style.color = '#065f46';
   } else if (status === 'missed') {
-    card.style.background = '#fee2e2'; // light red
+    card.style.background = '#fee2e2';
     card.style.color = '#991b1b';
   } else if (status === 'today') {
-    card.style.background = '#3b82f6'; // blue
+    card.style.background = '#3b82f6';
     card.style.color = 'white';
   } else {
-    card.style.background = '#f1f5f9'; // light gray
+    card.style.background = '#f1f5f9';
     card.style.color = '#475569';
   }
-  // amount
+
   const amt = document.createElement('div');
   amt.className = 'text-xs font-bold';
   amt.textContent = amountLabel;
-  // circle
+
   const circle = document.createElement('div');
   circle.style.width = '20px';
   circle.style.height = '20px';
@@ -6080,21 +6084,26 @@ function makeCard({status='future', day=1, amountLabel='', isLast=false}) {
   circle.style.alignItems = 'center';
   circle.style.justifyContent = 'center';
   circle.style.margin = '4px 0';
+
   if (status === 'checked') {
     circle.style.background = '#10b981';
-    circle.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17L4 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    circle.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+      <path d="M20 6L9 17L4 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   } else if (status === 'missed') {
     circle.style.background = '#ef4444';
-    circle.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6L18 18" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    circle.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+      <path d="M18 6L6 18M6 6L18 18" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   } else if (status === 'today') {
     circle.style.background = '#facc15';
     circle.innerHTML = `<div style="width:6px;height:6px;border-radius:999px;background:white"></div>`;
   } else {
     circle.style.background = '#cbd5e1';
   }
+
   const dayLabel = document.createElement('div');
   dayLabel.className = 'text-xs font-medium';
   dayLabel.textContent = `Day ${day}`;
+
   card.appendChild(amt);
   card.appendChild(circle);
   card.appendChild(dayLabel);
@@ -6313,48 +6322,52 @@ let _autoCycleInterval = null;
 let _creatingTodayCycle = false;
 async function createNextCycleIfNeeded(uid) {
   if (!uid) return;
-  if (_creatingTodayCycle) return; // small client-side guard
+  if (_creatingTodayCycle) return;
   try {
-    const qs = await cyclesRef(uid).orderBy('cycleStartDate','desc').limit(1).get();
+    const qs = await cyclesRef(uid).orderBy('cycleStartDate', 'desc').limit(1).get();
+    const today = todayStrLocal();
+
     if (qs.empty) {
-      // create fresh with deterministic id
-      const today = todayStrLocal();
       const docRef = cyclesRef(uid).doc(today);
-      _creatingTodayCycle = true;
       await docRef.set({
         cycleStartDate: today,
         days: Array(7).fill(false),
         status: 'processing',
-        rewardAmount: 300,
+        rewardAmount: 200,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: false });
-      _creatingTodayCycle = false;
+      });
       return;
     }
+
     const doc = qs.docs[0];
     const d = doc.data();
-    const today = todayStrLocal();
-    // if last cycle finished and at least 7 days passed since its start -> start new one today
-    if (d.status !== 'processing' && dayDiff(d.cycleStartDate, today) >= 7) {
-      // create deterministic doc for today's date; set() with same id is idempotent across clients
+    const diff = dayDiff(d.cycleStartDate, today);
+
+    // ✅ if stuck processing for 7+ days, close it and start new
+    if (d.status === 'processing' && diff >= 7) {
+      await cyclesRef(uid).doc(doc.id).update({
+        status: 'failed',
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    // ✅ if no active processing cycle and at least 7 days passed since last start — new one
+    const hasProcessing = (d.status === 'processing');
+    if (!hasProcessing && diff >= 7) {
       const newDocRef = cyclesRef(uid).doc(today);
-      // final guard to avoid race: check for a processing cycle quickly
-      const proc = await cyclesRef(uid).where('status', '==', 'processing').limit(1).get();
-      if (!proc.empty) return;
-      _creatingTodayCycle = true;
       await newDocRef.set({
         cycleStartDate: today,
         days: Array(7).fill(false),
         status: 'processing',
-        rewardAmount: 300,
+        rewardAmount: 200,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: false });
-      _creatingTodayCycle = false;
     }
   } catch (err) {
     console.error('createNextCycleIfNeeded error', err);
+  } finally {
     _creatingTodayCycle = false;
   }
 }
