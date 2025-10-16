@@ -1979,11 +1979,11 @@ if (window.registerPage) {
 
 
 async function openJobDetail_correct(jobId) {
-  if (!db) { alert('Database not ready'); return; }
+  if (!db) return alert('Database not ready');
 
   try {
     const doc = await db.collection('affiliateJobs').doc(jobId).get();
-    if (!doc.exists) { alert('Job not found'); return; }
+    if (!doc.exists) return alert('Job not found');
 
     const job = { id: doc.id, ...doc.data() };
     state.currentDetailJobId = job.id;
@@ -1991,30 +1991,23 @@ async function openJobDetail_correct(jobId) {
     if (!container) return;
     container.innerHTML = '';
 
-    // ===== UI =====
     const wrapper = document.createElement('div');
-    wrapper.className = 'bg-white rounded-2xl shadow-md overflow-hidden';
+    wrapper.className = 'bg-white rounded-2xl shadow-md overflow-hidden max-w-2xl mx-auto my-4';
 
-    // Banner
     const imgWrap = document.createElement('div');
     imgWrap.className = 'relative';
     const banner = document.createElement('img');
     banner.src = job.image || job.campaignLogoURL || '/assets/default-banner.jpg';
-    banner.className = 'w-full h-52 object-cover';
-    const thumb = document.createElement('img');
-    thumb.src = job.image || job.campaignLogoURL || '/assets/default-thumb.jpg';
-    thumb.className = 'absolute -bottom-8 left-6 w-16 h-16 rounded-full border-4 border-white shadow-lg object-cover';
+    banner.className = 'w-full h-56 object-cover';
     imgWrap.appendChild(banner);
-    imgWrap.appendChild(thumb);
     wrapper.appendChild(imgWrap);
 
-    // Body
     const body = document.createElement('div');
     body.className = 'p-6 space-y-5';
 
     body.innerHTML = `
       <div>
-        <h2 class="text-xl font-bold">${safeText(job.title || 'Untitled Job')}</h2>
+        <h2 class="text-2xl font-bold text-gray-900">${safeText(job.title || 'Untitled Job')}</h2>
         <p class="text-sm text-gray-500">${formatNaira(job.workerPay)} · ${Number(job.numWorkers || 0)} workers</p>
         ${job.category ? `<span class="inline-block mt-1 px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded-md">${safeText(job.category)}</span>` : ''}
       </div>
@@ -2037,11 +2030,8 @@ async function openJobDetail_correct(jobId) {
         <div id="aff2_detailProgressText" class="text-sm text-gray-500 mt-1">0/0 (0%)</div>
       </div>
 
-      <!-- Submit Proof -->
-      <div class="mt-6 border-t pt-5">
+      <div id="aff2_submitArea" class="mt-6 border-t pt-5">
         <h3 class="text-base font-semibold text-gray-800 mb-3">Submit Proof</h3>
-
-        <!-- Three upload inputs -->
         <div class="space-y-3">
           <div>
             <label class="text-sm text-gray-700">Proof File 1</label>
@@ -2056,33 +2046,27 @@ async function openJobDetail_correct(jobId) {
             <input type="file" id="proofFile3" accept="image/*" class="block w-full border rounded-md p-2 text-sm text-gray-700" />
           </div>
         </div>
-
         <textarea id="aff2_detailSubmissionNote" placeholder="Optional note..." 
-                  class="w-full border rounded-md p-3 text-sm h-24 mb-3 mt-4"></textarea>
-
+          class="w-full border rounded-md p-3 text-sm h-24 mb-3 mt-4"></textarea>
         <button id="aff2_detailSubmitBtn"
-                data-job-id="${safeText(job.id)}"
-                class="w-full py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">
+          data-job-id="${safeText(job.id)}"
+          class="w-full py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">
           Submit Proof
         </button>
-
         <p class="text-xs text-gray-400 mt-2">
           Submissions are reviewed by admin. Approved submissions appear in Finished Tasks.
         </p>
       </div>
     `;
-
     wrapper.appendChild(body);
     container.appendChild(wrapper);
 
-    // ===== SCREEN SWITCH =====
     el('aff2_jobsContainer')?.classList.add('aff2-hidden');
     el('aff2_finishedScreen')?.classList.add('aff2-hidden');
     el('aff2_jobDetailScreen')?.classList.remove('aff2-hidden');
 
-    // ===== PROGRESS =====
-    if (jobDetailUnsub) { try { jobDetailUnsub(); } catch (_) {} jobDetailUnsub = null; }
-
+    // Progress subscription
+    if (jobDetailUnsub) try { jobDetailUnsub(); } catch {}
     jobDetailUnsub = multiplexer.subscribe(
       'aff2_job_approved_' + job.id,
       dbLocal => dbLocal.collection('affiliate_submissions')
@@ -2098,20 +2082,34 @@ async function openJobDetail_correct(jobId) {
     );
     state.unsubscribers.push(jobDetailUnsub);
 
-    // ===== SUBMIT LOGIC =====
+    // ===== Submission Logic =====
+    const uid = auth.currentUser?.uid;
+    if (!uid) return; // skip if not logged in
+
+    const existing = await db.collection('affiliate_submissions')
+      .where('userId', '==', uid)
+      .where('jobId', '==', job.id)
+      .get();
+
+    const submitArea = el('aff2_submitArea');
+    if (!submitArea) return;
+
+    // Already submitted → show status instead
+    if (!existing.empty) {
+      submitArea.innerHTML = `
+        <div class="text-center bg-gray-50 p-5 rounded-xl">
+          <p class="text-green-600 font-semibold">✅ You’ve already submitted proof for this job.</p>
+          <p class="text-sm text-gray-500 mt-2">Please wait for admin review.</p>
+        </div>
+      `;
+      return;
+    }
+
     const submitBtn = el('aff2_detailSubmitBtn');
     const noteInput = el('aff2_detailSubmissionNote');
-    const fileInputs = [
-      el('proofFile1'),
-      el('proofFile2'),
-      el('proofFile3')
-    ];
+    const fileInputs = [el('proofFile1'), el('proofFile2'), el('proofFile3')];
 
-    submitBtn.onclick = async function() {
-      const uid = auth.currentUser?.uid;
-      if (!uid) return alert('Please log in first.');
-
-      // collect uploaded files
+    submitBtn.onclick = async () => {
       const files = fileInputs.map(f => f.files[0]).filter(Boolean);
       if (files.length < 1) return alert('Please upload at least one proof file.');
 
@@ -2120,26 +2118,12 @@ async function openJobDetail_correct(jobId) {
       submitBtn.textContent = 'Submitting...';
 
       try {
-        // Check for duplicates
-        const existing = await db.collection('affiliate_submissions')
-          .where('userId', '==', uid)
-          .where('jobId', '==', job.id)
-          .get();
-        if (!existing.empty) {
-          alert('You have already submitted for this job.');
-          submitBtn.textContent = 'Already Submitted';
-          submitBtn.classList.replace('bg-blue-600', 'bg-gray-400');
-          return;
-        }
-
-        // Upload files
         const uploadedURLs = [];
         for (const file of files) {
           const url = await uploadFileHelper(file);
           uploadedURLs.push(url);
         }
 
-        // Save submission
         await db.collection('affiliate_submissions').add({
           jobId: job.id,
           userId: uid,
@@ -2150,12 +2134,16 @@ async function openJobDetail_correct(jobId) {
         });
 
         alert('✅ Submission successful! It will be reviewed by admin.');
-        submitBtn.textContent = 'Submitted';
-        submitBtn.classList.replace('bg-blue-600', 'bg-green-500');
+        submitArea.innerHTML = `
+          <div class="text-center bg-gray-50 p-5 rounded-xl">
+            <p class="text-green-600 font-semibold">✅ Proof submitted successfully!</p>
+            <p class="text-sm text-gray-500 mt-2">Please wait for admin review.</p>
+          </div>
+        `;
 
       } catch (err) {
         console.error('Submission failed:', err);
-        alert('Submission failed.');
+        alert('Submission failed. Please try again.');
         submitBtn.disabled = false;
         submitBtn.textContent = prevText;
       }
