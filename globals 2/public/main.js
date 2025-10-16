@@ -1991,10 +1991,11 @@ async function openJobDetail_correct(jobId) {
     if (!container) return;
     container.innerHTML = '';
 
-    // Build UI (full screen, card-like)
+    // ===== UI =====
     const wrapper = document.createElement('div');
     wrapper.className = 'bg-white rounded-2xl shadow-md overflow-hidden';
 
+    // Banner
     const imgWrap = document.createElement('div');
     imgWrap.className = 'relative';
     const banner = document.createElement('img');
@@ -2007,11 +2008,9 @@ async function openJobDetail_correct(jobId) {
     imgWrap.appendChild(thumb);
     wrapper.appendChild(imgWrap);
 
+    // Body
     const body = document.createElement('div');
     body.className = 'p-6 space-y-5';
-
-    // compute proof count display (use either field names for safety)
-    const configuredProofCount = Number(job.proofFileCount || job.proofRequired || 1);
 
     body.innerHTML = `
       <div>
@@ -2042,13 +2041,24 @@ async function openJobDetail_correct(jobId) {
       <div class="mt-6 border-t pt-5">
         <h3 class="text-base font-semibold text-gray-800 mb-3">Submit Proof</h3>
 
-        <!-- show expected file count but don't block if fewer; user must upload at least 1 file -->
-        <div class="text-sm text-gray-600 mb-2">Expected proof files: <strong id="aff2_expectedProofCount">${configuredProofCount}</strong></div>
+        <!-- Three upload inputs -->
+        <div class="space-y-3">
+          <div>
+            <label class="text-sm text-gray-700">Proof File 1</label>
+            <input type="file" id="proofFile1" accept="image/*" class="block w-full border rounded-md p-2 text-sm text-gray-700" />
+          </div>
+          <div>
+            <label class="text-sm text-gray-700">Proof File 2</label>
+            <input type="file" id="proofFile2" accept="image/*" class="block w-full border rounded-md p-2 text-sm text-gray-700" />
+          </div>
+          <div>
+            <label class="text-sm text-gray-700">Proof File 3</label>
+            <input type="file" id="proofFile3" accept="image/*" class="block w-full border rounded-md p-2 text-sm text-gray-700" />
+          </div>
+        </div>
 
-        <input id="aff2_detailProofFiles" type="file" multiple accept="image/*" 
-               class="block w-full mb-3 border rounded-md p-2 text-sm text-gray-700" />
         <textarea id="aff2_detailSubmissionNote" placeholder="Optional note..." 
-                  class="w-full border rounded-md p-3 text-sm h-24 mb-3"></textarea>
+                  class="w-full border rounded-md p-3 text-sm h-24 mb-3 mt-4"></textarea>
 
         <button id="aff2_detailSubmitBtn"
                 data-job-id="${safeText(job.id)}"
@@ -2056,108 +2066,96 @@ async function openJobDetail_correct(jobId) {
           Submit Proof
         </button>
 
-        <p class="text-xs text-gray-400 mt-2">Submissions are reviewed by admin. Approved submissions appear in Finished Tasks.</p>
+        <p class="text-xs text-gray-400 mt-2">
+          Submissions are reviewed by admin. Approved submissions appear in Finished Tasks.
+        </p>
       </div>
     `;
 
     wrapper.appendChild(body);
     container.appendChild(wrapper);
 
-    // screen switch
+    // ===== SCREEN SWITCH =====
     el('aff2_jobsContainer')?.classList.add('aff2-hidden');
     el('aff2_finishedScreen')?.classList.add('aff2-hidden');
     el('aff2_jobDetailScreen')?.classList.remove('aff2-hidden');
 
-    // progress subscription update (keeps this intact)
+    // ===== PROGRESS =====
     if (jobDetailUnsub) { try { jobDetailUnsub(); } catch (_) {} jobDetailUnsub = null; }
+
     jobDetailUnsub = multiplexer.subscribe(
       'aff2_job_approved_' + job.id,
-      dbLocal => dbLocal.collection('affiliate_submissions').where('jobId', '==', job.id).where('status', '==', 'approved'),
+      dbLocal => dbLocal.collection('affiliate_submissions')
+        .where('jobId', '==', job.id)
+        .where('status', '==', 'approved'),
       arr => {
         const approved = arr.length;
         const total = Number(job.numWorkers || 0);
         const percent = total > 0 ? Math.min(100, Math.round((approved / total) * 100)) : 0;
-        const bar = el('aff2_detailProgressBar');
-        if (bar && bar.style) bar.style.width = percent + '%';
-        const txt = el('aff2_detailProgressText');
-        if (txt) txt.textContent = `${approved}/${total} (${percent}%)`;
+        el('aff2_detailProgressBar').style.width = percent + '%';
+        el('aff2_detailProgressText').textContent = `${approved}/${total} (${percent}%)`;
       }
     );
     state.unsubscribers.push(jobDetailUnsub);
 
-    // ---- SUBMIT HANDLER (robust) ----
+    // ===== SUBMIT LOGIC =====
     const submitBtn = el('aff2_detailSubmitBtn');
-    const fileInput = el('aff2_detailProofFiles');
     const noteInput = el('aff2_detailSubmissionNote');
+    const fileInputs = [
+      el('proofFile1'),
+      el('proofFile2'),
+      el('proofFile3')
+    ];
 
-    // remove any previous onclick to avoid stacking listeners when reopening details
-    submitBtn.onclick = null;
+    submitBtn.onclick = async function() {
+      const uid = auth.currentUser?.uid;
+      if (!uid) return alert('Please log in first.');
 
-    submitBtn.onclick = async function handleSubmit() {
-      // guard
-      if (!auth || !auth.currentUser) { alert('Please log in to submit proof.'); return; }
+      // collect uploaded files
+      const files = fileInputs.map(f => f.files[0]).filter(Boolean);
+      if (files.length < 1) return alert('Please upload at least one proof file.');
 
-      const uid = auth.currentUser.uid;
-      const files = Array.from(fileInput.files || []);
-
-      // Minimum: at least 1 file required (your requirement)
-      if (files.length < 1) {
-        alert('Please upload at least one proof file.');
-        return;
-      }
-
-      // disable immediately to prevent double-clicks
       submitBtn.disabled = true;
       const prevText = submitBtn.textContent;
       submitBtn.textContent = 'Submitting...';
 
       try {
-        // 1) Check if user already submitted for this job (prevent duplicates)
-        const existingQ = await db.collection('affiliate_submissions')
+        // Check for duplicates
+        const existing = await db.collection('affiliate_submissions')
           .where('userId', '==', uid)
           .where('jobId', '==', job.id)
           .get();
-
-        if (!existingQ.empty) {
-          // user already submitted -> show message and mark button
+        if (!existing.empty) {
           alert('You have already submitted for this job.');
           submitBtn.textContent = 'Already Submitted';
-          submitBtn.classList.remove('bg-blue-600');
-          submitBtn.classList.add('bg-gray-400');
+          submitBtn.classList.replace('bg-blue-600', 'bg-gray-400');
           return;
         }
 
-        // 2) Upload files (use your uploadFileHelper so it respects cloudinary / firebase)
+        // Upload files
         const uploadedURLs = [];
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          // uploadFileHelper exists in your code base (falls back to cloudinary or firebase.storage)
+        for (const file of files) {
           const url = await uploadFileHelper(file);
-          if (!url) throw new Error('Upload failed for file: ' + file.name);
           uploadedURLs.push(url);
         }
 
-        // 3) Write submission document
+        // Save submission
         await db.collection('affiliate_submissions').add({
           jobId: job.id,
           userId: uid,
-          userName: (auth.currentUser.displayName || auth.currentUser.email || ''),
-          proofURLs: uploadedURLs,
-          note: (noteInput.value || '').trim(),
-          status: 'on review', // matches your earlier code
-          postedAt: (window.firebase && window.firebase.firestore) ? window.firebase.firestore.FieldValue.serverTimestamp() : new Date()
+          proofFiles: uploadedURLs,
+          note: noteInput.value.trim() || '',
+          status: 'on review',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         });
 
-        // success
         alert('✅ Submission successful! It will be reviewed by admin.');
         submitBtn.textContent = 'Submitted';
-        submitBtn.classList.remove('bg-blue-600');
-        submitBtn.classList.add('bg-green-500');
+        submitBtn.classList.replace('bg-blue-600', 'bg-green-500');
+
       } catch (err) {
-        // single failure path only — won't later show success
-        console.error('[AFF2] submission error', err);
-        alert('Submission failed. See console for details.');
-        // re-enable to allow retry
+        console.error('Submission failed:', err);
+        alert('Submission failed.');
         submitBtn.disabled = false;
         submitBtn.textContent = prevText;
       }
@@ -2165,7 +2163,7 @@ async function openJobDetail_correct(jobId) {
 
   } catch (err) {
     console.error('[AFF2] openJobDetail_correct', err);
-    alert('Failed to open job. See console.');
+    alert('Failed to open job.');
   }
 }
 
