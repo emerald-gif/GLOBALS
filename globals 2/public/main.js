@@ -2132,7 +2132,7 @@ async function openJobDetail_correct(jobId) {
             userId: uid,
             proofFiles: fileURLs,
             note: noteInput.value.trim(),
-            status: 'on review',
+            status: 'pending',
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
           });
 
@@ -2153,8 +2153,6 @@ async function openJobDetail_correct(jobId) {
     alert('Error loading job details.');
   }
 }
-
-
 	
 
 	
