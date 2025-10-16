@@ -4155,10 +4155,7 @@ function resetAffiliateForm() {
 
 
 
-
-
-
-// === Fetch and Display User Jobs (One-time reload only, No Snapshot) ===
+// === Fetch and Display User Jobs (Fast One-Time Fetch, No Snapshot) ===
 async function fetchAndDisplayUserJobs() {
   const jobList = document.getElementById("jobList");
   jobList.innerHTML = "<p class='text-center text-gray-500'>Loading your jobs...</p>";
@@ -4166,7 +4163,6 @@ async function fetchAndDisplayUserJobs() {
   const user = firebase.auth().currentUser || await new Promise(resolve => {
     firebase.auth().onAuthStateChanged(resolve);
   });
-
   if (!user) {
     jobList.innerHTML = '<p class="text-center text-gray-500">Please log in to see your posted jobs.</p>';
     return;
@@ -4175,61 +4171,77 @@ async function fetchAndDisplayUserJobs() {
   const uid = user.uid;
   let allJobs = [];
 
-  // 🔹 Helper to count approved submissions (no snapshot)
-  async function getApprovedCount(collection, jobId) {
-    try {
-      const snap = await firebase.firestore()
-        .collection(collection)
-        .where("jobId", "==", jobId)
-        .where("status", "==", "approved")
-        .get();
-      return snap.size;
-    } catch (e) {
-      console.error("getApprovedCount error:", e);
-      return 0;
-    }
+  // --- 🔹 Fetch tasks and affiliate jobs in parallel
+  const [taskSnap, affiliateSnap] = await Promise.all([
+    firebase.firestore().collection("tasks")
+      .where("postedBy.uid", "==", uid)
+      .orderBy("postedAt", "desc")
+      .get()
+      .catch(() => ({ empty: true, docs: [] })),
+    firebase.firestore().collection("affiliateJobs")
+      .where("postedBy.uid", "==", uid)
+      .orderBy("postedAt", "desc")
+      .get()
+      .catch(() => ({ empty: true, docs: [] }))
+  ]);
+
+  // --- 🔹 Combine jobs
+  const jobs = [
+    ...taskSnap.docs.map(d => ({ id: d.id, ...d.data(), type: "task" })),
+    ...affiliateSnap.docs.map(d => ({ id: d.id, ...d.data(), type: "affiliate" }))
+  ];
+
+  if (!jobs.length) {
+    jobList.innerHTML = '<p class="text-center text-gray-500">You haven\'t posted any jobs yet.</p>';
+    return;
   }
 
-  // 🔹 Fetch all tasks posted by this user
-  const taskSnap = await firebase.firestore()
-    .collection("tasks")
-    .where("postedBy.uid", "==", uid)
-    .orderBy("postedAt", "desc")
-    .get();
+  // --- 🔹 Preload all approved submissions (parallel batched)
+  const taskIds = jobs.filter(j => j.type === "task").map(j => j.id);
+  const affiliateIds = jobs.filter(j => j.type === "affiliate").map(j => j.id);
 
-  for (const doc of taskSnap.docs) {
-    const job = { ...doc.data(), id: doc.id, type: "task" };
-    job.completed = await getApprovedCount("task_submissions", job.id);
-    allJobs.push(job);
-  }
+  const [taskSubsSnap, affiliateSubsSnap] = await Promise.all([
+    taskIds.length
+      ? firebase.firestore().collection("task_submissions")
+          .where("status", "==", "approved").get()
+      : Promise.resolve({ empty: true, docs: [] }),
+    affiliateIds.length
+      ? firebase.firestore().collection("affiliate_submissions")
+          .where("status", "==", "approved").get()
+      : Promise.resolve({ empty: true, docs: [] })
+  ]);
 
-  // 🔹 Fetch all affiliate jobs posted by this user
-  const affiliateSnap = await firebase.firestore()
-    .collection("affiliateJobs")
-    .where("postedBy.uid", "==", uid)
-    .orderBy("postedAt", "desc")
-    .get();
+  const approvedTaskCounts = {};
+  const approvedAffiliateCounts = {};
 
-  for (const doc of affiliateSnap.docs) {
-    const job = { ...doc.data(), id: doc.id, type: "affiliate" };
-    job.completed = await getApprovedCount("affiliate_submissions", job.id);
-    allJobs.push(job);
-  }
+  taskSubsSnap.docs.forEach(doc => {
+    const jobId = doc.data().jobId;
+    if (taskIds.includes(jobId))
+      approvedTaskCounts[jobId] = (approvedTaskCounts[jobId] || 0) + 1;
+  });
 
-  // 🔹 Sort by date (newest first)
+  affiliateSubsSnap.docs.forEach(doc => {
+    const jobId = doc.data().jobId;
+    if (affiliateIds.includes(jobId))
+      approvedAffiliateCounts[jobId] = (approvedAffiliateCounts[jobId] || 0) + 1;
+  });
+
+  // --- 🔹 Attach completed count
+  allJobs = jobs.map(j => ({
+    ...j,
+    completed:
+      j.type === "task"
+        ? (approvedTaskCounts[j.id] || 0)
+        : (approvedAffiliateCounts[j.id] || 0)
+  }));
+
+  // --- 🔹 Sort by posted date
   allJobs.sort((a, b) => (b.postedAt?.toMillis?.() || 0) - (a.postedAt?.toMillis?.() || 0));
 
-  // 🔹 Render all jobs
-  renderJobs(allJobs);
-
-  function renderJobs(jobs) {
-    if (!jobs.length) {
-      jobList.innerHTML = '<p class="text-center text-gray-500">You haven\'t posted any jobs yet.</p>';
-      return;
-    }
-    jobList.innerHTML = jobs.map(job => renderJobCard(job)).join("");
-  }
+  // --- 🔹 Render cards
+  jobList.innerHTML = allJobs.map(job => renderJobCard(job)).join("");
 }
+
 
 // === Render Job Card ===
 function renderJobCard(job) {
@@ -4240,9 +4252,9 @@ function renderJobCard(job) {
 
   const jobTypeLabel = job.type === "task" ? "Task" : "Affiliate";
   const logo = job.type === "affiliate" ? job.campaignLogoURL : job.screenshotURL;
-  const totalWorkers = job.numWorkers || 0;
-  const completed = job.completed || 0;
-  const progress = totalWorkers ? Math.round((completed / totalWorkers) * 100) : 0;
+  const total = job.numWorkers || 0;
+  const done = job.completed || 0;
+  const progress = total > 0 ? Math.round((done / total) * 100) : 0;
 
   return `
     <div class="p-5 rounded-2xl bg-white shadow-md border border-gray-200 hover:shadow-lg transition">
@@ -4257,12 +4269,12 @@ function renderJobCard(job) {
         ${logo ? `<img src="${logo}" class="w-14 h-14 rounded-lg object-cover border" />` : ""}
         <div>
           <p class="text-sm text-gray-500">${jobTypeLabel} • ${job.category || "Uncategorized"}</p>
-          <p class="text-sm text-gray-700"><span class="font-semibold">Workers:</span> ${completed}/${totalWorkers}</p>
+          <p class="text-sm text-gray-700"><span class="font-semibold">Workers:</span> ${done}/${total}</p>
         </div>
       </div>
 
       <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
-        <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width:${progress}%;"></div>
+        <div class="bg-blue-600 h-2 rounded-full transition-all duration-500" style="width:${progress}%;"></div>
       </div>
       <p class="text-xs text-gray-500 mt-1">${progress}% completed</p>
 
@@ -4282,31 +4294,24 @@ function renderJobCard(job) {
   `;
 }
 
-// === Check Job Details (fetch once, no listener) ===
+
+// === Job Details (One-time fetch, No live updates) ===
 async function checkJobDetails(jobId, jobType) {
   const collection = jobType === "task" ? "tasks" : "affiliateJobs";
   const subCollection = jobType === "task" ? "task_submissions" : "affiliate_submissions";
 
   const doc = await firebase.firestore().collection(collection).doc(jobId).get();
   if (!doc.exists) return;
-
   const job = { ...doc.data(), id: doc.id, type: jobType };
-  const approvedSnap = await firebase.firestore()
+
+  const subsSnap = await firebase.firestore()
     .collection(subCollection)
     .where("jobId", "==", job.id)
     .where("status", "==", "approved")
     .get();
-  job.completed = approvedSnap.size;
-
-  renderJobDetails(job);
-  activateTab("jobDetailsSection");
-}
-
-// === Render Job Details ===
-function renderJobDetails(job) {
-  const totalWorkers = job.numWorkers || 0;
-  const completed = job.completed || 0;
-  const progress = totalWorkers ? Math.round((completed / totalWorkers) * 100) : 0;
+  const completed = subsSnap.size;
+  const total = job.numWorkers || 0;
+  const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   let content = `
     ${job.campaignLogoURL || job.screenshotURL ? `<img src="${job.campaignLogoURL || job.screenshotURL}" class="w-full h-48 object-cover rounded-xl" />` : ""}
@@ -4316,13 +4321,13 @@ function renderJobDetails(job) {
     <div class="mt-3 grid grid-cols-2 gap-4 text-sm text-gray-700">
       <div><span class="font-semibold">Cost:</span> ₦${job.total || 0}</div>
       <div><span class="font-semibold">Worker Pay:</span> ₦${job.workerEarn || job.workerPay || 0}</div>
-      <div><span class="font-semibold">Completed:</span> ${completed}/${totalWorkers}</div>
+      <div><span class="font-semibold">Completed:</span> ${completed}/${total}</div>
       <div><span class="font-semibold">Posted:</span> ${job.postedAt?.toDate().toLocaleString() || "—"}</div>
     </div>
 
     <div class="mt-3">
       <div class="w-full bg-gray-200 rounded-full h-2">
-        <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: ${progress}%"></div>
+        <div class="bg-blue-600 h-2 rounded-full transition-all duration-500" style="width: ${progress}%"></div>
       </div>
       <p class="text-xs text-gray-500 mt-1">${progress}% completed</p>
     </div>
@@ -4333,26 +4338,19 @@ function renderJobDetails(job) {
       <div class="mt-4 space-y-2">
         <p><span class="font-semibold">Target Link:</span> <a href="${job.targetLink || "#"}" class="text-blue-600 underline">${job.targetLink || "—"}</a></p>
         <p><span class="font-semibold">Proof Required:</span> ${job.proofRequired || "—"}</p>
-      </div>
-    `;
+      </div>`;
   } else {
     content += `
       <div class="mt-4 space-y-2">
         <p><span class="font-semibold">Description:</span> ${job.description || "—"}</p>
         <p><span class="font-semibold">Proof:</span> ${job.proof || "—"}</p>
-      </div>
-    `;
+      </div>`;
   }
 
   document.getElementById("jobDetailsContent").innerHTML = content;
+  activateTab("jobDetailsSection");
 }
 
-// === Back Button ===
-function goBackToJobs() {
-  activateTab("myJobsSection");
-}
-
-// === Init ===
 document.addEventListener("DOMContentLoaded", fetchAndDisplayUserJobs);
 
 
