@@ -1784,7 +1784,7 @@ if (window.registerPage) {
 /* Robust Affiliate module - single-file replacement
    Requirements satisfied:
    - No onSnapshot usage (uses get())
-   - 3 proof inputs, at least 1 required
+   - 3 proof inputs, at least 1required
    - Prevent duplicate submission
    - Category on card + detail
    - Finished list full screen + image previews + view modal
