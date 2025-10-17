@@ -3,311 +3,591 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Globals — Earn & Promote • 2025 UI</title>
-  <meta name="description" content="Globals — modern earning and promotion platform. Post tasks, promote, engage and withdraw fast." />
+  <title>Globals | Boost Social Growth — Earn by Completing Simple Tasks</title>
+  <meta name="description" content="Globals — Promote your brand and earn money by completing simple social media tasks. Low prices from ₦500, instant payouts, secure, and trusted." />
+  <meta name="author" content="Globals Team" />
 
-  <!-- Tailwind (CDN for prototype) -->
+  <!-- Open Graph -->
+  <meta property="og:title" content="Globals — Promote & Earn" />
+  <meta property="og:description" content="Boost social growth, get real engagement, and pay/earn instantly with Globals." />
+  <meta property="og:image" content="flyer.jpg" />
+  <meta property="og:type" content="website" />
+
+  <!-- Tailwind (CDN for quick use) -->
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <!-- Lucide icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-
+  <!-- Swiper, Chart libs not required here but you can add if needed -->
   <style>
-    /* small design tokens */
-    :root{ --glass: rgba(255,255,255,0.7); --brand-1:#5b21b6; --brand-2:#06b6d4; }
-    html,body{height:100%}
+    /* small custom UI polish */
+    :root{
+      --brand-1: #4f46e5; /* indigo-600 */
+      --brand-2: #06b6d4; /* cyan-400 */
+      --glass: rgba(255,255,255,0.66);
+    }
 
-    /* Floating shapes (subtle 2025 vibe) */
-    .float-shape{position:absolute;border-radius:999px;filter: blur(26px);opacity:.9;pointer-events:none}
-    .shape-a{width:200px;height:200px;left:-60px;top:-50px;background:linear-gradient(135deg,var(--brand-2),#7c3aed)}
-    .shape-b{width:260px;height:260px;right:-80px;bottom:-80px;background:linear-gradient(135deg,#60a5fa,#34d399)}
+    html { scroll-behavior: smooth; }
+    .hero-gradient { background: linear-gradient(120deg, rgba(79,70,229,0.06), rgba(6,182,212,0.03)); }
+    .glass-card { background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.4)); backdrop-filter: blur(6px); }
+    .icon-circle { display: inline-grid; place-items:center; width:52px; height:52px; border-radius:12px; }
+    .float-blob { filter: blur(40px); opacity: .28; position: absolute; z-index:0; }
+    /* reveal animation */
+    .reveal { opacity:0; transform: translateY(10px); transition: all .6s cubic-bezier(.2,.9,.2,1); }
+    .reveal.show { opacity:1; transform: translateY(0); }
+    /* nav blur on scroll */
+    header.scrolled { backdrop-filter: blur(6px); background: rgba(255,255,255,0.6); box-shadow: 0 4px 20px rgba(15,23,42,0.06); }
+    /* simple focus ring */
+    .focus-ring:focus { outline: 3px solid rgba(99,102,241,0.18); outline-offset: 2px; }
 
-    /* sidebar behavior */
-    #sidebar{transition:transform .28s cubic-bezier(.2,.9,.2,1);}
-    #sidebar.closed{transform:translateX(-110%)}
-    @media(min-width:1024px){#sidebar{transform:none;position:relative;width:320px}}
-
-    /* hero clip art */
-    .hero-illustration{filter:drop-shadow(0 18px 30px rgba(15,23,42,.12))}
-
-    /* micro animations */
-    .card-hover{transition:transform .22s ease, box-shadow .22s ease}
-    .card-hover:hover{transform:translateY(-6px);box-shadow:0 10px 30px rgba(2,6,23,.08)}
+    @media (min-width: 1024px) {
+      .hero-columns { display: grid; grid-template-columns: 1fr 480px; gap: 36px; align-items:center; }
+    }
   </style>
 </head>
-<body class="antialiased bg-gray-50 text-gray-800 min-h-screen">
+<body class="antialiased text-gray-800 bg-gray-50">
 
-  <!-- subtle background floats -->
-  <div class="float-shape shape-a hidden md:block" aria-hidden="true"></div>
-  <div class="float-shape shape-b hidden md:block" aria-hidden="true"></div>
-
-  <!-- overlay for mobile sidebar -->
-  <div id="overlay" class="fixed inset-0 bg-black/40 hidden z-30" onclick="closeSidebar()" aria-hidden="true"></div>
-
-  <!-- SIDEBAR -->
-  <aside id="sidebar" class="fixed z-40 top-0 left-0 h-full w-72 bg-white border-r border-gray-100 shadow-lg closed">
-    <div class="p-5 flex flex-col h-full">
-      <div class="flex items-center gap-3 mb-5">
-        <img src="VERIFIED.jpg" alt="Globals logo" class="w-12 h-12 rounded-lg object-cover border-2 border-indigo-500/30"/>
-        <div>
-          <div class="font-bold text-lg text-gray-900">Globals</div>
-          <div class="text-xs text-gray-500">Earn • Promote • Grow</div>
-        </div>
-        <button id="closeSidebarBtn" class="ml-auto text-gray-600 hover:text-gray-900 md:hidden" aria-label="Close sidebar">✕</button>
-      </div>
-
-      <nav class="flex-1 overflow-y-auto">
-        <ul class="space-y-2">
-          <li><a href="#" class="flex items-center gap-3 p-3 rounded-xl hover:bg-indigo-50 font-medium text-gray-700"><svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2l7 7-5 5V22H10v-8L5 9z" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Dashboard</a></li>
-          <li><a href="#post" class="flex items-center gap-3 p-3 rounded-xl hover:bg-green-50 font-medium text-gray-700">📣 Post Task</a></li>
-          <li><a href="#affiliate" class="flex items-center gap-3 p-3 rounded-xl hover:bg-purple-50 font-medium text-gray-700">🔗 Affiliate Job</a></li>
-          <li><a href="#social" class="flex items-center gap-3 p-3 rounded-xl hover:bg-indigo-50 font-medium text-gray-700">📱 Social Tasks</a></li>
-          <li><a href="#payments" class="flex items-center gap-3 p-3 rounded-xl hover:bg-yellow-50 font-medium text-gray-700">💳 Payments</a></li>
-          <li><a href="#checkin" class="flex items-center gap-3 p-3 rounded-xl hover:bg-teal-50 font-medium text-gray-700">✅ Checkin</a></li>
-        </ul>
-      </nav>
-
-      <div class="mt-4 pt-4 border-t border-gray-100">
-        <a href="tel:09042201295" class="text-sm text-gray-700 hover:text-indigo-600 flex items-center gap-2"><svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h2.2a1 1 0 01.8.4l1.8 2.8a1 1 0 01-.1 1.2l-1.2 1.4a12 12 0 006 6l1.6-1.3a1 1 0 011.2-.1l2.9 1.8v2.2a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke-width="1.4"/></svg> 09042201295</a>
-        <a href="mailto:globalsplatform@gmail.com" class="block text-xs text-gray-500 mt-1">globalsplatform@gmail.com</a>
-
-        <div class="flex items-center gap-3 mt-3">
-          <a href="#" class="p-2 rounded-full bg-indigo-50 text-indigo-600" aria-label="Twitter">T</a>
-          <a href="#" class="p-2 rounded-full bg-pink-50 text-pink-600" aria-label="Instagram">I</a>
-          <a href="#" class="p-2 rounded-full bg-blue-50 text-blue-800" aria-label="Facebook">F</a>
-        </div>
-
-        <div class="text-xs text-gray-400 mt-3">© 2025 Globals</div>
-      </div>
-    </div>
-  </aside>
-
-  <!-- TOP NAV -->
-  <header class="sticky top-0 z-20 bg-white shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 lg:px-8 py-3 flex items-center justify-between gap-4">
-
+  <!-- STICKY NAV -->
+  <header id="topHeader" class="sticky top-0 z-50">
+    <nav class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between transition-all duration-300">
       <div class="flex items-center gap-3">
-        <button id="hamburgerBtn" class="p-2 rounded-md md:hidden" aria-label="Open menu">
-          <svg class="w-6 h-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-        </button>
-
-        <a href="index.html" class="flex items-center gap-3">
-          <img src="GLOBALS.jpg" alt="Globals" class="w-10 h-10 rounded-md object-cover"/>
-          <div class="hidden sm:block">
-            <div class="font-bold text-gray-900">Globals</div>
-            <div class="text-xs text-gray-500">Promote & Earn</div>
+        <a href="#" class="flex items-center gap-3">
+          <img src="GLOBALS.jpg" alt="Globals" class="w-11 h-11 rounded-md object-cover shadow" />
+          <div>
+            <div class="font-bold text-gray-900 tracking-tight">Globals</div>
+            <div class="text-xs text-gray-500 -mt-0.5">Promote • Engage • Earn</div>
           </div>
         </a>
       </div>
 
+      <div class="hidden md:flex items-center gap-6">
+        <a href="#about" class="text-sm hover:text-indigo-600 transition">Why Choose Globals?</a>
+        <a href="#features" class="text-sm hover:text-indigo-600 transition">Features</a>
+        <a href="#how" class="text-sm hover:text-indigo-600 transition">How it works</a>
+        <a href="#tasks" class="text-sm hover:text-indigo-600 transition">Tasks</a>
+        <a href="#contact" class="text-sm hover:text-indigo-600 transition">Contact</a>
+      </div>
+
       <div class="flex items-center gap-3">
-        <div class="hidden sm:flex items-center gap-4">
-          <a href="#" class="text-sm text-gray-700 hover:text-indigo-600">How it works</a>
-          <a href="#" class="text-sm text-gray-700 hover:text-indigo-600">Pricing</a>
-        </div>
+        <a href="login.html" class="text-sm text-gray-700 hover:text-gray-900">Login</a>
+        <a href="signup.html" class="ml-2 inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-500 text-white rounded-2xl text-sm font-semibold shadow hover:opacity-95">Get Started</a>
 
-        <button id="openPost" class="hidden sm:inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow">Post Task</button>
+        <!-- mobile toggle -->
+        <button id="mobileMenuBtn" class="md:hidden ml-2 p-2 rounded-md focus-ring" aria-label="Open menu">
+          <svg class="w-6 h-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </nav>
 
-        <div class="flex items-center gap-3">
-          <button id="notifBtn" class="relative p-2 rounded-md" aria-label="notifications">
-            <svg class="w-5 h-5 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L3 17h5m4 0v1a3 3 0 11-6 0v-1"/></svg>
-            <span id="notifDot" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-600"></span>
-          </button>
-
-          <a href="signup.html" class="text-sm font-semibold text-gray-700 hover:text-indigo-700">Get Started</a>
+    <!-- mobile menu -->
+    <div id="mobileMenu" class="md:hidden bg-white shadow-lg border-t hidden">
+      <div class="px-4 py-3 flex flex-col">
+        <a href="#about" class="py-2">Why Choose Globals?</a>
+        <a href="#features" class="py-2">Features</a>
+        <a href="#how" class="py-2">How it works</a>
+        <a href="#tasks" class="py-2">Tasks</a>
+        <a href="#contact" class="py-2">Contact</a>
+        <div class="mt-3 flex gap-2">
+          <a href="login.html" class="flex-1 py-2 text-center border rounded-xl">Login</a>
+          <a href="signup.html" class="flex-1 py-2 text-center bg-indigo-600 text-white rounded-xl">Sign up</a>
         </div>
       </div>
     </div>
   </header>
 
-  <!-- MAIN CONTENT -->
-  <main class="max-w-7xl mx-auto lg:pl-80 p-6">
+  <main class="max-w-6xl mx-auto px-4 pb-20">
 
     <!-- HERO -->
-    <section class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center mt-8">
-      <div class="space-y-6">
-        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight">Boost Social Media Growth & Earn with <span style="background:linear-gradient(90deg,var(--brand-1),var(--brand-2));-webkit-background-clip:text;color:transparent">Globals</span></h1>
-        <p class="text-gray-600 max-w-xl">Have real engagement — likes, follows & comments from real people. Low promos from ₦500. Instant payouts. No referral required to start earning.</p>
+    <section class="mt-8 relative overflow-visible">
+      <div class="hero-gradient rounded-3xl p-6 lg:p-10 relative z-10">
+        <div class="relative max-w-7xl mx-auto">
+          <!-- decorative blobs -->
+          <div class="float-blob" style="width:280px;height:280px;border-radius:50%;left:-90px;top:-80px;background:linear-gradient(135deg,var(--brand-1),var(--brand-2));"></div>
+          <div class="float-blob" style="width:200px;height:200px;border-radius:50%;right:-80px;top:20px;background:linear-gradient(135deg,#7c3aed,#06b6d4);"></div>
 
-        <div class="flex gap-3">
-          <a href="signup.html" class="inline-flex items-center px-6 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-500 text-white font-semibold shadow-lg">Create free account</a>
-          <a href="#about" class="inline-flex items-center px-5 py-3 rounded-2xl border border-gray-200 text-gray-700 hover:bg-gray-50">Learn more</a>
-        </div>
+          <div class="hero-columns relative">
+            <!-- LEFT: message -->
+            <div class="md:pr-6 z-20">
+              <div class="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-xs font-semibold mb-4">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"><path d="M12 2l2 5h5l-4 3 2 5-5-3-5 3 2-5-4-3h5z" fill="currentColor"/></svg>
+                Grow & Earn — from ₦500
+              </div>
 
-        <ul class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4">
-          <li class="bg-white p-3 rounded-lg shadow-sm text-center text-xs">Simple Tasks</li>
-          <li class="bg-white p-3 rounded-lg shadow-sm text-center text-xs">Instant Rewards</li>
-          <li class="bg-white p-3 rounded-lg shadow-sm text-center text-xs">Min withdraw ₦500</li>
-        </ul>
+              <h1 class="text-3xl md:text-4xl font-extrabold leading-tight text-gray-900">
+                Promote your brand — <span style="background:linear-gradient(90deg,var(--brand-1),var(--brand-2)); -webkit-background-clip:text; color:transparent;">real engagement</span>, real earnings.
+              </h1>
 
-        <div class="mt-4 text-sm text-gray-500">
-          <strong>Why Choose Globals?</strong>
-          <ul class="list-disc list-inside text-gray-500 mt-2 space-y-1">
-            <li>Real & verified engagement.</li>
-            <li>Fast & secure payments (Paystack / Paystak integration placeholder).</li>
-            <li>24/7 support and transparent stats.</li>
-          </ul>
-        </div>
-      </div>
+              <p class="mt-4 text-gray-600 max-w-xl">
+                Boost Social Media Growth. Get real Engagement (Likes, Follows, Comments). Low prices for promotion — from ₦500. Simple Tasks, Instant Rewards. Minimum withdraw: ₦500. No referral needed for instant payments. Secure & reliable platform.
+              </p>
 
-      <!-- right: illustration (leave the user's existing image) -->
-      <div class="bg-white rounded-3xl p-6 shadow-lg relative overflow-hidden">
-        <!-- keep the image user requested (not placeholder) -->
-        <img src="flyer.jpg" alt="Globals flyer" class="w-full h-72 object-cover rounded-xl hero-illustration" />
+              <div class="mt-6 flex flex-wrap gap-3">
+                <a href="signup.html" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-500 text-white font-semibold shadow-lg">
+                  Create free account
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </a>
 
-        <!-- modern SVG badge overlay -->
-        <div class="absolute top-4 right-4 bg-white/90 p-2 rounded-full shadow">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16 5.5 20l2-7L2 9h7l3-7z"/></svg>
-        </div>
+                <a href="#features" class="inline-flex items-center gap-2 px-4 py-3 rounded-2xl border border-gray-200 text-gray-700 hover:bg-gray-50">
+                  Explore features
+                </a>
+              </div>
 
-        <!-- small benefits chips -->
-        <div class="absolute left-6 bottom-6 bg-white/80 p-3 rounded-2xl shadow flex items-center gap-3">
-          <svg class="w-5 h-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <div class="text-xs">Secure & Reliable</div>
-        </div>
-      </div>
-    </section>
+              <!-- quick bullets -->
+              <div class="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm text-gray-700">
+                <div class="bg-white rounded-xl p-3 shadow-sm flex items-start gap-3">
+                  <svg class="w-5 h-5 text-indigo-600 mt-1" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <div>
+                    <div class="font-semibold text-xs">Real & Verified</div>
+                    <div class="text-xs text-gray-500">Authentic engagement</div>
+                  </div>
+                </div>
 
-    <!-- Services / Features -->
-    <section class="mt-12">
-      <h3 class="text-lg font-semibold mb-4">Services</h3>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <article class="bg-white p-4 rounded-xl card-hover flex flex-col items-center text-center">
-          <svg class="w-12 h-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20v-6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <div class="mt-3 font-semibold">Social Promotions</div>
-        </article>
+                <div class="bg-white rounded-xl p-3 shadow-sm flex items-start gap-3">
+                  <svg class="w-5 h-5 text-green-500 mt-1" viewBox="0 0 24 24" fill="none"><path d="M12 8c1.5 0 3 .5 4 1.5S18 13 18 14.5 16.5 17 15 17s-3-.5-4-1.5S10 12 10 10.5 10.5 8 12 8z" stroke="currentColor" stroke-width="1"/></svg>
+                  <div>
+                    <div class="font-semibold text-xs">Instant Rewards</div>
+                    <div class="text-xs text-gray-500">Fast payouts</div>
+                  </div>
+                </div>
 
-        <article class="bg-white p-4 rounded-xl card-hover flex flex-col items-center text-center">
-          <svg class="w-12 h-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7h18M12 3v18" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <div class="mt-3 font-semibold">Affiliate Campaigns</div>
-        </article>
-
-        <article class="bg-white p-4 rounded-xl card-hover flex flex-col items-center text-center">
-          <svg class="w-12 h-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12h18" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <div class="mt-3 font-semibold">Watch Ads & Earn</div>
-        </article>
-
-        <article class="bg-white p-4 rounded-xl card-hover flex flex-col items-center text-center">
-          <svg class="w-12 h-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16 5.5 20l2-7L2 9h7l3-7z" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <div class="mt-3 font-semibold">Spin & Rewards</div>
-        </article>
-      </div>
-    </section>
-
-    <!-- Tasks preview -->
-    <section class="mt-10">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold">Post task job & Affiliate jobs</h3>
-        <a href="#post" class="text-sm text-indigo-600">Post a job ›</a>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-        <div class="bg-white p-5 rounded-2xl shadow card-hover">
-          <div class="flex items-center justify-between">
-            <div>
-              <h4 class="font-semibold">Starter Promo — ₦500</h4>
-              <p class="text-xs text-gray-500 mt-1">Likes + 100 Views • 24h delivery</p>
+                <div class="bg-white rounded-xl p-3 shadow-sm flex items-start gap-3">
+                  <svg class="w-5 h-5 text-yellow-500 mt-1" viewBox="0 0 24 24" fill="none"><path d="M12 2v20M2 12h20" stroke="currentColor" stroke-width="1.4"/></svg>
+                  <div>
+                    <div class="font-semibold text-xs">Low Pricing</div>
+                    <div class="text-xs text-gray-500">Promos from ₦500</div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="text-sm font-bold text-indigo-700">Buy</div>
+
+            <!-- RIGHT: flyer + quick card -->
+            <aside class="bg-white rounded-3xl p-4 shadow-xl glass-card z-30">
+              <div class="rounded-xl overflow-hidden">
+                <!-- flyer.jpg preserved -->
+                <img src="flyer.jpg" alt="Globals flyer" class="w-full h-64 object-cover" />
+              </div>
+
+              <div class="mt-4">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="text-sm font-semibold text-gray-900">Guaranteed Results</div>
+                    <div class="text-xs text-gray-500">Real people — real actions</div>
+                  </div>
+                  <div class="text-indigo-600 font-bold text-lg">From ₦500</div>
+                </div>
+
+                <div class="mt-4 grid grid-cols-2 gap-2">
+                  <a href="#tasks" class="py-2 rounded-xl text-center border border-gray-100 text-sm hover:bg-indigo-50">Browse Tasks</a>
+                  <a href="signup.html" class="py-2 rounded-xl text-center bg-indigo-600 text-white text-sm hover:opacity-95">Start Earning</a>
+                </div>
+
+                <div class="mt-4 text-xs text-gray-500">
+                  Minimum withdraw <span class="font-semibold text-gray-800">₦500</span> • Instant payments available.
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section id="features" class="mt-12 relative">
+      <div class="max-w-6xl mx-auto px-4">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-bold">Platform Highlights</h2>
+          <div class="text-sm text-gray-500">Everything advertisers and earners need — in one place</div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- feature 1 -->
+          <div class="p-6 rounded-2xl bg-white shadow-sm reveal" data-delay="100">
+            <div class="flex items-start gap-4">
+              <div class="icon-circle bg-indigo-50 text-indigo-600">
+                <!-- likes icon -->
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-4.44-9.33-7.11A5.67 5.67 0 016 3c1.6 0 2.92.7 3.62 1.85C10.08 3.7 11.4 3 13 3a5.67 5.67 0 017.33 10.89C19 16.56 12 21 12 21z" fill="currentColor"/></svg>
+              </div>
+              <div>
+                <h3 class="font-semibold">Boost Social Media Growth</h3>
+                <p class="text-sm text-gray-600 mt-1">Have real Engagement (Likes, Follows, Comments) to increase reach and credibility.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- feature 2 -->
+          <div class="p-6 rounded-2xl bg-white shadow-sm reveal" data-delay="200">
+            <div class="flex items-start gap-4">
+              <div class="icon-circle bg-blue-50 text-blue-600">
+                <!-- wallet icon -->
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"><path d="M3 7h18v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 11.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" stroke="currentColor" stroke-width="1.6"/></svg>
+              </div>
+              <div>
+                <h3 class="font-semibold">Fast & Secure Payments</h3>
+                <p class="text-sm text-gray-600 mt-1">Instant deposits and withdrawals through trusted gateways like Paystack.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- feature 3 -->
+          <div class="p-6 rounded-2xl bg-white shadow-sm reveal" data-delay="300">
+            <div class="flex items-start gap-4">
+              <div class="icon-circle bg-green-50 text-emerald-600">
+                <!-- lightning -->
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="currentColor"/></svg>
+              </div>
+              <div>
+                <h3 class="font-semibold">Quick Earnings</h3>
+                <p class="text-sm text-gray-600 mt-1">Earn money daily by completing simple social media tasks.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- feature 4 -->
+          <div class="p-6 rounded-2xl bg-white shadow-sm reveal" data-delay="400">
+            <div class="flex items-start gap-4">
+              <div class="icon-circle bg-gray-50 text-gray-700">
+                <!-- shield -->
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"><path d="M12 2l8 4v6c0 5-3.6 9.5-8 10-4.4-.5-8-5-8-10V6l8-4z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div>
+                <h3 class="font-semibold">Safe & Reliable</h3>
+                <p class="text-sm text-gray-600 mt-1">Your data and transactions are fully secure with us.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- feature 5 -->
+          <div class="p-6 rounded-2xl bg-white shadow-sm reveal" data-delay="500">
+            <div class="flex items-start gap-4">
+              <div class="icon-circle bg-indigo-50 text-indigo-700">
+                <!-- stats -->
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.4"/><path d="M7 14l3-5 4 3 5-9" stroke="currentColor" stroke-width="1.4"/></svg>
+              </div>
+              <div>
+                <h3 class="font-semibold">Transparent Statistics</h3>
+                <p class="text-sm text-gray-600 mt-1">Track your growth and earnings in real-time from your dashboard.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- feature 6 -->
+          <div class="p-6 rounded-2xl bg-white shadow-sm reveal" data-delay="600">
+            <div class="flex items-start gap-4">
+              <div class="icon-circle bg-pink-50 text-pink-600">
+                <!-- support -->
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"><path d="M12 2v6M6 10v6a6 6 0 0012 0v-6" stroke="currentColor" stroke-width="1.4"/></svg>
+              </div>
+              <div>
+                <h3 class="font-semibold">24/7 Support</h3>
+                <p class="text-sm text-gray-600 mt-1">Our team is always available to help you anytime you need it.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WHY CHOOSE GLOBALS -->
+    <section id="about" class="mt-12">
+      <div class="max-w-4xl mx-auto text-center">
+        <h2 class="text-2xl font-bold">Why Choose Globals?</h2>
+        <p class="text-gray-600 mt-2">We make it simple for Advertisers to grow and for Earners to make money online.</p>
+      </div>
+
+      <div class="max-w-6xl mx-auto mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 px-4">
+        <div class="p-6 rounded-2xl glass-card shadow-md reveal" data-delay="120">
+          <div class="flex items-start gap-4">
+            <div class="w-12 h-12 rounded-lg bg-indigo-600 text-white flex items-center justify-center">
+              <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"><path d="M8 7a4 4 0 100 8 4 4 0 000-8zM2 20a10 10 0 0120 0" stroke="currentColor" stroke-width="1.4"/></svg>
+            </div>
+            <div>
+              <h4 class="font-semibold">Real & Verified Engagement</h4>
+              <p class="text-sm text-gray-600 mt-1">Get authentic social media growth powered by real people, not fake accounts.</p>
+            </div>
           </div>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl shadow card-hover">
-          <div class="flex items-center justify-between">
-            <div>
-              <h4 class="font-semibold">Affiliate Blast — ₦2,000</h4>
-              <p class="text-xs text-gray-500 mt-1">Large reach • Verified users</p>
+        <div class="p-6 rounded-2xl glass-card shadow-md reveal" data-delay="220">
+          <div class="flex items-start gap-4">
+            <div class="w-12 h-12 rounded-lg bg-blue-500 text-white flex items-center justify-center">
+              <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"><path d="M12 1v22" stroke="currentColor" stroke-width="1.4"/></svg>
             </div>
-            <div class="text-sm font-bold text-indigo-700">Buy</div>
+            <div>
+              <h4 class="font-semibold">Fast & Secure Payments</h4>
+              <p class="text-sm text-gray-600 mt-1">Instant deposits and withdrawals through trusted gateways like Paystack for peace of mind.</p>
+            </div>
           </div>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl shadow card-hover">
-          <div class="flex items-center justify-between">
-            <div>
-              <h4 class="font-semibold">Boost Post — ₦1,200</h4>
-              <p class="text-xs text-gray-500 mt-1">Good engagement • Quick delivery</p>
+        <div class="p-6 rounded-2xl glass-card shadow-md reveal" data-delay="320">
+          <div class="flex items-start gap-4">
+            <div class="w-12 h-12 rounded-lg bg-green-500 text-white flex items-center justify-center">
+              <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5v14" stroke="currentColor" stroke-width="1.4"/></svg>
             </div>
-            <div class="text-sm font-bold text-indigo-700">Buy</div>
+            <div>
+              <h4 class="font-semibold">Quick Earnings</h4>
+              <p class="text-sm text-gray-600 mt-1">Earn money daily by completing simple social media tasks with instant crediting.</p>
+            </div>
           </div>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- About / Why choose -->
-    <section id="about" class="mt-12 bg-white p-6 rounded-2xl shadow-sm">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="md:col-span-2">
-          <h4 class="font-semibold text-lg">Why Choose Globals?</h4>
-          <p class="text-gray-600 mt-2">We make it simple for advertisers to grow and earners to make money online. Real & verified engagement, transparent stats, and fast withdrawals. No fake bots — community-powered promotions.</p>
-        </div>
-        <div class="flex flex-col gap-3">
-          <div class="p-3 rounded-lg bg-gray-50">Real & Verified Engagement</div>
-          <div class="p-3 rounded-lg bg-gray-50">Fast & Secure Payments</div>
-          <div class="p-3 rounded-lg bg-gray-50">24/7 Support</div>
         </div>
       </div>
     </section>
 
-    <!-- Footer area -->
-    <footer class="mt-12 bg-white p-6 rounded-2xl shadow-sm">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- HOW IT WORKS -->
+    <section id="how" class="mt-12">
+      <div class="max-w-6xl mx-auto px-4">
+        <h2 class="text-2xl font-bold text-center">How it works</h2>
+        <p class="text-gray-600 text-center mt-2">Three simple steps to start promoting or earning on Globals.</p>
+
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="p-6 rounded-2xl bg-white shadow-sm text-center reveal" data-delay="140">
+            <div class="mx-auto w-20 h-20 rounded-full bg-indigo-50 flex items-center justify-center mb-4">
+              <svg class="w-7 h-7 text-indigo-600" viewBox="0 0 24 24" fill="none"><path d="M3 12h18" stroke="currentColor" stroke-width="1.6"/></svg>
+            </div>
+            <h3 class="font-semibold">1. Post</h3>
+            <p class="text-sm text-gray-600 mt-2">Advertisers post promotion tasks (WhatsApp, Telegram, Instagram, TikTok).</p>
+          </div>
+
+          <div class="p-6 rounded-2xl bg-white shadow-sm text-center reveal" data-delay="240">
+            <div class="mx-auto w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center mb-4">
+              <svg class="w-7 h-7 text-blue-600" viewBox="0 0 24 24" fill="none"><path d="M12 5v14" stroke="currentColor" stroke-width="1.6"/></svg>
+            </div>
+            <h3 class="font-semibold">2. Engage</h3>
+            <p class="text-sm text-gray-600 mt-2">Earners complete simple tasks and leave evidence for quick verification.</p>
+          </div>
+
+          <div class="p-6 rounded-2xl bg-white shadow-sm text-center reveal" data-delay="340">
+            <div class="mx-auto w-20 h-20 rounded-full bg-green-50 flex items-center justify-center mb-4">
+              <svg class="w-7 h-7 text-green-600" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="1.6"/></svg>
+            </div>
+            <h3 class="font-semibold">3. Earn</h3>
+            <p class="text-sm text-gray-600 mt-2">Rewards are credited instantly; withdraw from ₦500 whenever you like.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TASKS PREVIEW -->
+    <section id="tasks" class="mt-12">
+      <div class="max-w-6xl mx-auto px-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-2xl font-bold">Available Tasks</h2>
+          <a href="signup.html" class="text-indigo-600 hover:underline">See all tasks</a>
+        </div>
+
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- sample task card (not placeholder text — real style) -->
+          <article class="p-5 bg-white rounded-2xl shadow-sm reveal" data-delay="160">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-lg bg-indigo-50 flex items-center justify-center">
+                  <svg class="w-6 h-6 text-indigo-600" viewBox="0 0 24 24" fill="none"><path d="M3 12h18" stroke="currentColor" stroke-width="1.4"/></svg>
+                </div>
+                <div>
+                  <h4 class="font-semibold">Instagram Likes — 500 likes</h4>
+                  <div class="text-xs text-gray-500 mt-1">Complete: Follow + Like + Comment</div>
+                </div>
+              </div>
+
+              <div class="text-right">
+                <div class="text-indigo-700 font-bold">₦2,000</div>
+                <div class="text-xs text-gray-400">Instant</div>
+              </div>
+            </div>
+
+            <div class="mt-4 flex items-center justify-between">
+              <div class="text-xs text-gray-500">Task ID: G-5241</div>
+              <a href="signup.html" class="text-sm bg-indigo-600 text-white px-3 py-1.5 rounded-xl">Take task</a>
+            </div>
+          </article>
+
+          <article class="p-5 bg-white rounded-2xl shadow-sm reveal" data-delay="260">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-lg bg-green-50 flex items-center justify-center">
+                  <svg class="w-6 h-6 text-green-600" viewBox="0 0 24 24" fill="none"><path d="M12 2l2 5h5l-4 3 2 5-5-3-5 3 2-5-4-3h5z" fill="currentColor"/></svg>
+                </div>
+                <div>
+                  <h4 class="font-semibold">WhatsApp Group Invite</h4>
+                  <div class="text-xs text-gray-500 mt-1">Join the group and send proof to earn.</div>
+                </div>
+              </div>
+
+              <div class="text-right">
+                <div class="text-indigo-700 font-bold">₦500</div>
+                <div class="text-xs text-gray-400">Instant</div>
+              </div>
+            </div>
+
+            <div class="mt-4 flex items-center justify-between">
+              <div class="text-xs text-gray-500">Task ID: G-6239</div>
+              <a href="signup.html" class="text-sm bg-indigo-600 text-white px-3 py-1.5 rounded-xl">Take task</a>
+            </div>
+          </article>
+
+          <article class="p-5 bg-white rounded-2xl shadow-sm reveal" data-delay="360">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-lg bg-pink-50 flex items-center justify-center">
+                  <svg class="w-6 h-6 text-pink-600" viewBox="0 0 24 24" fill="none"><path d="M4 4h16v16H4z" stroke="currentColor" stroke-width="1.4"/></svg>
+                </div>
+                <div>
+                  <h4 class="font-semibold">TikTok Follows</h4>
+                  <div class="text-xs text-gray-500 mt-1">Follow + screenshot proof.</div>
+                </div>
+              </div>
+
+              <div class="text-right">
+                <div class="text-indigo-700 font-bold">₦750</div>
+                <div class="text-xs text-gray-400">Instant</div>
+              </div>
+            </div>
+
+            <div class="mt-4 flex items-center justify-between">
+              <div class="text-xs text-gray-500">Task ID: G-7410</div>
+              <a href="signup.html" class="text-sm bg-indigo-600 text-white px-3 py-1.5 rounded-xl">Take task</a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTACT & SUPPORT -->
+    <section id="contact" class="mt-12">
+      <div class="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+        <div class="bg-white p-8 rounded-2xl shadow-sm reveal" data-delay="160">
+          <h3 class="text-xl font-bold">Talk to us</h3>
+          <p class="text-gray-600 mt-2">Need help? Our team is available 24/7 — or use our AI-help center inside the dashboard after you sign up.</p>
+
+          <div class="mt-6 space-y-3">
+            <div class="flex items-center gap-3">
+              <svg class="w-5 h-5 text-indigo-600" viewBox="0 0 24 24" fill="none"><path d="M2 3h20v18H2z" stroke="currentColor" stroke-width="1.4" /></svg>
+              <div>
+                <div class="text-sm font-semibold">Email</div>
+                <div class="text-xs text-gray-500">globalsplatform@gmail.com</div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <svg class="w-5 h-5 text-indigo-600" viewBox="0 0 24 24" fill="none"><path d="M22 16.92V21a1 1 0 01-1.11.99A19.86 19.86 0 013 5.11 1 1 0 014 4h4.09a1 1 0 01.96.74l.7 2.71a1 1 0 01-.24.92L7.7 12.7a12 12 0 006.6 6.6l2.2-2.2a1 1 0 01.92-.24l2.71.7a1 1 0 01.74.96V21z" stroke="currentColor" stroke-width="1.2"/></svg>
+              <div>
+                <div class="text-sm font-semibold">Phone</div>
+                <div class="text-xs text-gray-500">09042201295</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-indigo-600 p-8 rounded-2xl text-white shadow-md reveal" data-delay="260">
+          <h3 class="text-xl font-bold">Start promoting today</h3>
+          <p class="mt-2 text-indigo-100">Create a campaign, select your budget and target, and get genuine engagement fast.</p>
+
+          <div class="mt-6">
+            <div class="text-sm text-indigo-100 mb-2">Popular package</div>
+            <div class="flex items-center justify-between bg-indigo-700/30 p-4 rounded-xl">
+              <div>
+                <div class="text-sm">Starter Promo</div>
+                <div class="text-xs text-indigo-200">From ₦500 — Likes / Follows / Comments</div>
+              </div>
+              <div class="font-bold text-white">₦500</div>
+            </div>
+
+            <div class="mt-4">
+              <a href="signup.html" class="inline-flex items-center gap-2 px-4 py-3 bg-white text-indigo-600 rounded-2xl font-semibold shadow">Create campaign</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="mt-16">
+      <div class="max-w-6xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div>
-          <div class="flex items-center gap-3 mb-3"><img src="VERIFIED.jpg" class="w-10 h-10 rounded-md"/><div class="font-bold">Globals</div></div>
-          <p class="text-sm text-gray-600">Earn through referrals, affiliate tasks, and daily challenges.</p>
+          <div class="flex items-center gap-3">
+            <img src="VERIFIED.jpg" alt="Globals" class="w-12 h-12 rounded-md object-cover" />
+            <div>
+              <div class="font-bold">Globals</div>
+              <div class="text-xs text-gray-500">Promote • Engage • Earn</div>
+            </div>
+          </div>
+
+          <p class="text-sm text-gray-500 mt-4">Earn through referrals, affiliate tasks, and daily challenges. Minimum withdraw ₦500. Instant payments via trusted gateways.</p>
+
+          <div class="mt-4 flex gap-3">
+            <a href="#" class="p-2 rounded-md bg-blue-50"><svg class="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="currentColor"><path d="M22 5.92c-.64.28-1.33.46-2.05.55.74-.44 1.31-1.13 1.58-1.96-.69.41-1.45.72-2.26.89C18.2 4 17.23 3.5 16.13 3.5c-1.86 0-3.38 1.52-3.38 3.39 0 .27.03.53.09.78C9.7 7.53 6.12 5.8 3.9 3.07c-.3.52-.47 1.13-.47 1.78 0 1.23.63 2.32 1.59 2.96"/></svg></a>
+            <a href="#" class="p-2 rounded-md bg-pink-50"><svg class="w-4 h-4 text-pink-600" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h10a5 5 0 015 5v10a5 5 0 01-5 5H7a5 5 0 01-5-5V7a5 5 0 015-5zm5 6.2A4.8 4.8 0 1016.8 13 4.8 4.8 0 0012 8.2z"/></svg></a>
+            <a href="#" class="p-2 rounded-md bg-blue-50"><svg class="w-4 h-4 text-blue-800" viewBox="0 0 24 24" fill="currentColor"><path d="M22 12a10 10 0 10-11.5 9.9v-7H8.3v-2.9h2.2V9.1c0-2.2 1.3-3.4 3.2-3.4.9 0 1.8.16 1.8.16v2h-1c-1 0-1.3.62-1.3 1.2v1.5h2.2l-.35 2.9h-1.85V22A10 10 0 0022 12z"/></svg></a>
+          </div>
+        </div>
+
+        <div class="flex flex-col">
+          <h4 class="font-semibold">Explore</h4>
+          <nav class="mt-3 space-y-2 text-sm text-gray-600">
+            <a href="#tasks" class="block hover:text-indigo-600">Available Tasks</a>
+            <a href="#how" class="block hover:text-indigo-600">How it works</a>
+            <a href="#features" class="block hover:text-indigo-600">Features</a>
+            <a href="login.html" class="block hover:text-indigo-600">Login</a>
+          </nav>
         </div>
 
         <div>
-          <h5 class="font-semibold">Explore</h5>
-          <ul class="text-sm text-gray-600 mt-2 space-y-1">
-            <li><a href="#affiliate" class="hover:text-indigo-600">Affiliate Task</a></li>
-            <li><a href="#social" class="hover:text-indigo-600">Social Task</a></li>
-            <li><a href="#daily" class="hover:text-indigo-600">Daily Challenge</a></li>
-          </ul>
-        </div>
-
-        <div>
-          <h5 class="font-semibold">Contact</h5>
+          <h4 class="font-semibold">Contact</h4>
           <p class="text-sm text-gray-600 mt-2">Phone: <a href="tel:09042201295" class="text-indigo-600">09042201295</a></p>
-          <p class="text-sm text-gray-600">Email: <a href="mailto:globalsplatform@gmail.com" class="text-indigo-600">globalsplatform@gmail.com</a></p>
+          <p class="text-sm text-gray-600 mt-1">Email: <a href="mailto:globalsplatform@gmail.com" class="text-indigo-600">globalsplatform@gmail.com</a></p>
+
+          <div class="mt-4">
+            <div class="text-xs text-gray-400">Partnered with</div>
+            <img src="PAYSTACK.jpg" alt="Paystack" class="h-8 mt-2 object-contain" />
+          </div>
         </div>
       </div>
 
-      <div class="border-t mt-6 pt-4 text-xs text-gray-500 flex items-center justify-between">
-        <div>© 2025 Globals. All rights reserved.</div>
-        <div class="flex items-center gap-3"><img src="PAYSTACK.jpg" class="h-6" alt="Paystack"/></div>
+      <div class="border-t border-gray-100 mt-6 py-4 text-center text-xs text-gray-400">
+        © 2025 Globals. All rights reserved.
       </div>
     </footer>
-
   </main>
 
-  <!-- Minimal JS for interactivity -->
+  <!-- small utilities -->
+  <button id="backToTop" title="Back to top"
+    class="fixed right-5 bottom-6 p-3 rounded-full bg-indigo-600 text-white shadow-lg hidden z-50">
+    ↑
+  </button>
+
   <script>
-    // sidebar controls
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('overlay');
-    const hamburger = document.getElementById('hamburgerBtn');
-    const closeBtn = document.getElementById('closeSidebarBtn');
+    // Mobile menu toggle
+    const mobileBtn = document.getElementById('mobileMenuBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+    mobileBtn && mobileBtn.addEventListener('click', ()=> mobileMenu.classList.toggle('hidden'));
 
-    function openSidebar(){ sidebar.classList.remove('closed'); overlay.classList.remove('hidden'); overlay.style.display='block'; }
-    function closeSidebar(){ sidebar.classList.add('closed'); overlay.classList.add('hidden'); overlay.style.display='none'; }
+    // header blur on scroll
+    const header = document.getElementById('topHeader');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 8) header.classList.add('scrolled'); else header.classList.remove('scrolled');
 
-    hamburger?.addEventListener('click', openSidebar);
-    closeBtn?.addEventListener('click', closeSidebar);
-
-    // make sure overlay toggles correctly on resize
-    window.addEventListener('resize', ()=>{
-      if(window.innerWidth>=1024){ overlay.style.display='none'; overlay.classList.add('hidden'); sidebar.classList.remove('closed'); }
-      else { if(!sidebar.classList.contains('closed')) overlay.style.display='block'; }
+      // back to top visibility
+      const btt = document.getElementById('backToTop');
+      if (!btt) return;
+      if (window.scrollY > 600) btt.classList.remove('hidden'); else btt.classList.add('hidden');
     });
 
-    // UX: small notification demo
-    const notifBtn = document.getElementById('notifBtn');
-    notifBtn?.addEventListener('click', ()=>{ alert('No new notifications — demo'); });
+    document.getElementById('backToTop').addEventListener('click', ()=> window.scrollTo({top:0,behavior:'smooth'}));
 
-    // Lucide icons init
-    document.addEventListener('DOMContentLoaded', ()=>{ if(window.lucide) lucide.createIcons(); });
+    // simple reveal on scroll
+    const revealEls = document.querySelectorAll('.reveal');
+    const revealObserver = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{
+        if (e.isIntersecting) {
+          e.target.classList.add('show');
+          // optional: stagger using data-delay
+          const delay = e.target.getAttribute('data-delay');
+          if (delay) e.target.style.transitionDelay = (parseInt(delay)/1000)+'s';
+        }
+      });
+    }, {threshold: 0.12});
+    revealEls.forEach(el => revealObserver.observe(el));
+
+    // Close mobile menu when clicking an anchor
+    mobileMenu && mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', ()=> mobileMenu.classList.add('hidden')));
   </script>
 </body>
 </html>
