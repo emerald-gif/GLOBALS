@@ -2814,19 +2814,25 @@ window.copyTelegramMessage = copyTelegramMessage;
                                                               // LOGOUT
 															  
 
-  lucide.createIcons();
+  // 🔐 Global Logout Function (works for both button & sidebar link)
+window.logoutUser = function logoutUser() {
+  const loader = document.getElementById("pageLoader");
+  if (loader) loader.classList.add("show");
 
-  // 🔐 Logout functionality
-  function logoutUser() {
-    firebase.auth().signOut().then(() => {
-      alert("Logged out successfully");
-      window.location.href = "/"; // redirect to landing/login page
-    }).catch((error) => {
+  firebase.auth().signOut()
+    .then(() => {
+      setTimeout(() => {
+        if (loader) loader.classList.remove("show");
+        alert("Logged out successfully");
+        window.location.href = "/"; // redirect to login/landing
+      }, 400);
+    })
+    .catch((error) => {
       console.error("Logout Error:", error);
+      if (loader) loader.classList.remove("show");
       alert("Error logging out. Try again.");
     });
-  }
-
+};
 
 
 
