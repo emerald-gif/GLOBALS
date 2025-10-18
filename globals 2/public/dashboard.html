@@ -2577,10 +2577,11 @@
 	
 
 <!-- Withdrawal Section -->
+<!-- Withdrawal Section -->
 <div id="withdrawFundsSection" class="tab-section hidden p-6 max-w-md mx-auto rounded-xl shadow-lg bg-white mt-8 space-y-6">
-
-  <button onclick="activateTab('payment')" 
-    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+  <!-- Back Button -->
+  <button onclick="activateTab('payment')"   
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4 transition">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
     </svg>
@@ -2590,32 +2591,43 @@
   <h2 class="text-2xl font-bold text-center text-gray-800">Withdraw Funds</h2>
 
   <!-- ✅ Account Number -->
-  <input id="withdrawAccountNumber" type="number" placeholder="Account Number"
-    class="w-full px-4 py-2 border rounded-lg" />
+  <input id="withdrawAccountNumber" type="number" placeholder="Account Number"  
+    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
 
   <!-- ✅ Bank Select -->
-  <select id="withdrawBankSelect"
-    class="w-full px-4 py-2 border rounded-lg bg-white text-gray-700">
+  <select id="withdrawBankSelect"  
+    class="w-full px-4 py-2 border rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
     <option value="">Loading Banks...</option>
   </select>
 
-  <!-- ✅ Verification Status (shows fetched name) -->
-  <div id="accountNameStatus" class="text-sm text-blue-600 hidden">🔄 Verifying Account...</div>
+  <!-- ✅ Verification Status -->
+  <div id="accountNameStatus" class="text-sm text-blue-600 hidden">🔄 Verifying Account...</div>  
   <div id="accountNameDisplay" class="text-sm text-green-600 hidden"></div>
 
   <!-- ✅ Withdrawal Amount -->
-  <input id="withdrawAmount" type="number" placeholder="Amount (min ₦500)"
-    class="w-full px-4 py-2 border rounded-lg" />
+  <input id="withdrawAmount" type="number" placeholder="Amount (min ₦500)"  
+    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
 
   <!-- ✅ Payment PIN -->
-  <input id="withdrawPin" type="password" placeholder="Enter your 6-digit payment PIN"
-    class="w-full px-4 py-2 border rounded-lg" />
+  <input id="withdrawPin" type="password" placeholder="Enter your 6-digit payment PIN"  
+    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
 
   <!-- ✅ Withdraw Button -->
-  <button onclick="submitWithdrawal()"
-    class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-xl font-semibold transition">
+  <button onclick="submitWithdrawal()"  
+    class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition active:scale-[.98]">
     Withdraw Now
   </button>
+
+  <!-- ✅ Important Notes -->
+  <div class="mt-4 bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-gray-700">
+    <p class="font-semibold text-blue-700 mb-1">⚠️ Important Withdrawal Notes</p>
+    <ul class="list-disc ml-5 space-y-1 text-gray-600">
+      <li>Minimum withdrawal amount is <span class="font-medium text-gray-800">₦500</span>.</li>
+      <li>Withdrawals take between <span class="font-medium text-gray-800">10–30 minutes</span> depending on your bank.</li>
+      <li>Ensure your <span class="font-medium text-gray-800">bank details are correct</span> before submitting.</li>
+      <li>If you have made a withdrawal and haven’t received it, please contact <span class="text-blue-700 font-medium">Customer Support</span>.</li>
+    </ul>
+  </div>
 </div>
 
 
