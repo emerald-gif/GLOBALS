@@ -2044,6 +2044,7 @@ if (window.registerPage) {
 
   // replace submit area with submitted state (show images + note + status)
 // ---- Helper for safe timestamps ----
+// ---- Helper for safe timestamps ----
 function formatTimestampSafe(ts) {
   try {
     if (ts && typeof ts.toDate === "function") return ts.toDate().toLocaleString();
@@ -2143,7 +2144,7 @@ function makeFinishedCard(id, sub, job) {
     </div>
     <p class="text-sm text-gray-500">${date}</p>
     <div class="mt-2 flex items-center justify-between">
-      
+      <p class="text-sm text-gray-700"><strong>Earn:</strong> ${earn}</p>
       <button class="text-indigo-600 text-sm font-medium hover:underline" onclick="openFinishedDetail('${id}')">View</button>
     </div>
   `;
@@ -2195,7 +2196,6 @@ async function openFinishedDetail(id) {
     alert("Error loading task details.");
   }
 }
-
   // ----- Finished list rendering (explicit get) -----
   // safe timestamp -> string helper
 // ---- Helper for safe timestamps ----
