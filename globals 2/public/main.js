@@ -2043,24 +2043,6 @@ if (window.registerPage) {
   }
 
   // replace submit area with submitted state (show images + note + status)
-  function replaceSubmitAreaWithSubmitted(sub) {
-    const area = el('aff2_submitArea');
-    if (!area) return;
-    const proofs = (sub.proofFiles || sub.proofURLs || []).map(u => `<img src="${safeText(u)}" style="width:100%;max-height:220px;object-fit:contain;border-radius:8px;margin-bottom:8px">`).join('');
-    const note = sub.note ? `<div style="margin-top:8px;color:#374151"><strong>Note:</strong> ${safeText(sub.note)}</div>` : '';
-    const status = safeText(sub.status || 'on review');
-    area.innerHTML = `
-      <div style="background:#f8fafc;padding:14px;border-radius:12px;text-align:center">
-        <div style="color:#16a34a;font-weight:600;margin-bottom:6px">✅ You've submitted proof</div>
-        <div style="font-size:13px;color:#6b7280;margin-bottom:8px">Status: <strong style="color:#111827">${status}</strong></div>
-        ${proofs || '<div style="color:#9ca3af;font-size:13px">No proof images</div>'}
-        ${note}
-      </div>
-    `;
-  }
-
-  // ----- Finished list rendering (explicit get) -----
-  // safe timestamp -> string helper
 // ---- Helper for safe timestamps ----
 function formatTimestampSafe(ts) {
   try {
@@ -2210,6 +2192,24 @@ async function openFinishedDetail(id) {
     document.body.appendChild(modal);
   } catch (err) {
     console.error(err);
+    alert("Error loading task details.");
+  }
+}
+
+  // ----- Finished list rendering (explicit get) -----
+  // safe timestamp -> string helper
+// ---- Helper for safe timestamps ----
+function formatTimestampSafe(ts) {
+  try {
+    if (ts && typeof ts.toDate === "function") return ts.toDate().toLocaleString();
+    if (typeof ts === "string") return new Date(ts).toLocaleString();
+    if (typeof ts === "number") return new Date(ts).toLocaleString();
+  } catch (e) {}
+  return "";
+}
+
+// ---- Load & Render Finished Tasks ----
+
     alert("Error loading task details.");
   }
 }
