@@ -2045,20 +2045,24 @@ if (window.registerPage) {
   // replace submit area with submitted state (show images + note + status)
 // ---- Helper for safe timestamps ----
 // ---- Helper for safe timestamps ----
+// ====== Safe Timestamp Formatter ======
 function formatTimestampSafe(ts) {
   try {
     if (ts && typeof ts.toDate === "function") return ts.toDate().toLocaleString();
     if (typeof ts === "string") return new Date(ts).toLocaleString();
     if (typeof ts === "number") return new Date(ts).toLocaleString();
-  } catch (e) {}
+  } catch {}
   return "";
 }
 
-// ---- Load & Render Finished Tasks ----
+// ====== Load Finished Tasks & Setup Search ======
+let finishedTasksCache = []; // cache tasks for instant search
+
 async function loadAndRenderFinished() {
   const listEl = el("aff2_finishedList");
   const pendingCountEl = el("aff2_pendingCount");
   const approvedCountEl = el("aff2_approvedCount");
+  const searchInput = el("aff2_searchFinished");
 
   if (!listEl) return;
 
@@ -2085,7 +2089,7 @@ async function loadAndRenderFinished() {
       return;
     }
 
-    // Count stats
+    // Count and cache
     let pending = 0, approved = 0;
     const jobIds = [...new Set(snap.docs.map(d => (d.data().jobId || null)).filter(Boolean))];
     const jobMap = {};
@@ -2099,19 +2103,25 @@ async function loadAndRenderFinished() {
       jobsSnap.forEach(jd => jobMap[jd.id] = jd.data());
     }
 
-    listEl.innerHTML = ""; // clear loader
-
-    snap.forEach((doc) => {
+    // Build cache
+    finishedTasksCache = snap.docs.map(doc => {
       const sub = doc.data();
       const job = jobMap[sub.jobId] || {};
       if (sub.status === "on review") pending++;
       if (sub.status === "approved") approved++;
-      listEl.appendChild(makeFinishedCard(doc.id, sub, job));
+      return { id: doc.id, sub, job };
     });
 
-    // Update counters
     pendingCountEl.textContent = pending;
     approvedCountEl.textContent = approved;
+
+    renderFinishedTasks(finishedTasksCache);
+
+    // Setup search listener
+    if (searchInput && !searchInput.dataset.ready) {
+      setupFinishedSearch(searchInput);
+      searchInput.dataset.ready = "1";
+    }
 
   } catch (err) {
     console.error("loadAndRenderFinished error:", err);
@@ -2119,7 +2129,41 @@ async function loadAndRenderFinished() {
   }
 }
 
-// ---- Create Each Task Card ----
+// ====== Render Filtered Tasks ======
+function renderFinishedTasks(tasks) {
+  const listEl = el("aff2_finishedList");
+  if (!listEl) return;
+
+  listEl.innerHTML = "";
+  if (!tasks.length) {
+    listEl.innerHTML = `<p class="text-gray-500 text-center p-6">No tasks found.</p>`;
+    return;
+  }
+
+  tasks.forEach(({ id, sub, job }) => {
+    listEl.appendChild(makeFinishedCard(id, sub, job));
+  });
+}
+
+// ====== Setup Search ======
+function setupFinishedSearch(input) {
+  input.addEventListener("input", () => {
+    const query = input.value.trim().toLowerCase();
+    if (!query) {
+      renderFinishedTasks(finishedTasksCache);
+      return;
+    }
+
+    const filtered = finishedTasksCache.filter(({ sub, job }) => {
+      const title = (job.title || "").toLowerCase();
+      const status = (sub.status || "").toLowerCase();
+      return title.includes(query) || status.includes(query);
+    });
+    renderFinishedTasks(filtered);
+  });
+}
+
+// ====== Finished Task Card ======
 function makeFinishedCard(id, sub, job) {
   const date = formatTimestampSafe(sub.createdAt);
   const title = safeText(job.title || "Untitled Task");
@@ -2149,7 +2193,6 @@ function makeFinishedCard(id, sub, job) {
     </div>
   `;
 
-  // Add small proof image preview if available
   if (imgUrl) {
     const img = document.createElement("img");
     img.src = imgUrl;
@@ -2161,7 +2204,7 @@ function makeFinishedCard(id, sub, job) {
   return div;
 }
 
-// ---- View details modal ----
+// ====== Modal (same as before) ======
 async function openFinishedDetail(id) {
   try {
     const doc = await db.collection("affiliate_submissions").doc(id).get();
@@ -2176,11 +2219,10 @@ async function openFinishedDetail(id) {
     const note = sub.note || "No note added";
     const imgUrl = sub.proofImage || sub.image || "";
 
-    // Create modal layout
     const modal = document.createElement("div");
     modal.className = "fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4";
     modal.innerHTML = `
-      <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 relative">
+      <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 relative animate-[fadeIn_0.2s_ease-out]">
         <button onclick="this.parentElement.parentElement.remove()" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600">&times;</button>
         <h2 class="text-lg font-semibold text-gray-900 mb-2">${title}</h2>
         <p class="text-sm text-gray-500 mb-1"><strong>Status:</strong> <span class="capitalize">${status}</span></p>
@@ -2196,24 +2238,6 @@ async function openFinishedDetail(id) {
     alert("Error loading task details.");
   }
 }
-  // ----- Finished list rendering (explicit get) -----
-  // safe timestamp -> string helper
-// ---- Helper for safe timestamps ----
-function formatTimestampSafe(ts) {
-  try {
-    if (ts && typeof ts.toDate === "function") return ts.toDate().toLocaleString();
-    if (typeof ts === "string") return new Date(ts).toLocaleString();
-    if (typeof ts === "number") return new Date(ts).toLocaleString();
-  } catch (e) {}
-  return "";
-}
-
-// ---- Load & Render Finished Tasks ----
-
-    alert("Error loading task details.");
-  }
-}
-
 // small tweak in makeFinishedElement to use formatTimestampSafe
 // replace the date line in makeFinishedElement with the safer formatter:
 // const date = formatTimestampSafe(sub.createdAt);
