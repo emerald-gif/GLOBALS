@@ -1781,6 +1781,8 @@ if (window.registerPage) {
 
 // AFF2 COMPLETE MODULE - single-file (replace your old AFF2 script with this)
 // Requirements: firebase (auth, firestore), optional firebase.storage OR provide window.uploadToCloudinary(file)
+// AFF2 COMPLETE MODULE - single-file (replace your old AFF2 script with this)
+// Requirements: firebase (auth, firestore), optional firebase.storage OR provide window.uploadToCloudinary(file)
 // Usage: include after firebase init. The module auto-inits but exposes AFF2 API for manual control.
 
 (function(){
@@ -1792,9 +1794,8 @@ if (window.registerPage) {
 
   /* =========================
      CONFIG
-     - LIVE_UPDATES: use onSnapshot for realtime updates (may require Firestore rules and indices)
      ========================= */
-  const LIVE_UPDATES = false; // set true if you want real-time updates (snapshot). Default: get() mode.
+  const LIVE_UPDATES = false; // set true if you want real-time updates for jobs
 
   /* =========================
      HELPERS
@@ -1826,24 +1827,21 @@ if (window.registerPage) {
      MODULE STATE
      ========================= */
   const state = {
-    handlers: [],            // event listeners to remove on destroy
-    currentJobId: null,     // job currently opened
-    snapshotUnsub: null,    // for live updates
+    handlers: [],                // delegated handlers for cleanup
+    currentJobId: null,          // job currently opened
+    snapshotUnsub: null,         // unsubscribe for jobs (if LIVE_UPDATES)
+    subsUnsub: null,             // unsubscribe for submissions approval listener
+    submissionStatusMap: {},     // maps submissionId -> lastKnownStatus
   };
 
   /* =========================
      UPLOAD HELPER
-     - prefers window.uploadToCloudinary(file) if provided
-     - falls back to firebase.storage if available & user is logged in
-     - throws error otherwise
      ========================= */
   async function uploadFileHelper(file) {
     if (!file) throw new Error('No file provided');
-    // prefer cloudinary helper
     if (typeof window.uploadToCloudinary === 'function') {
       return await window.uploadToCloudinary(file);
     }
-    // fallback to firebase.storage if available
     if (storageAvailable && auth && auth.currentUser) {
       const storageRef = window.firebase.storage().ref();
       const path = `affiliate_proofs/${auth.currentUser.uid}_${Date.now()}_${file.name.replace(/\s+/g,'_')}`;
@@ -1856,6 +1854,7 @@ if (window.registerPage) {
 
   /* =========================
      JOB CARD / DETAIL RENDERERS
+     - Note: Progress removed from job detail per request.
      ========================= */
   function makeJobCardElement(job) {
     const wrap = document.createElement('div');
@@ -1889,6 +1888,7 @@ if (window.registerPage) {
   /* =========================
      LOAD & RENDER JOB LIST
      - excludes jobs that are already full
+     - reads filledWorkers (which now reflects approved submissions)
      ========================= */
   async function loadAndRenderJobs() {
     const grid = el('aff2_grid') || el('aff2_jobsList');
@@ -1901,8 +1901,7 @@ if (window.registerPage) {
       if (!db) throw new Error('Database not available');
 
       if (LIVE_UPDATES) {
-        // use onSnapshot for live updates
-        if (state.snapshotUnsub) state.snapshotUnsub(); // clear old unsub if any
+        if (state.snapshotUnsub) state.snapshotUnsub();
         let query = db.collection('affiliateJobs').where('status','==','approved');
         try { query = query.orderBy('postedAt','desc'); } catch(e){} // ignore index errors
         state.snapshotUnsub = query.onSnapshot(snap => {
@@ -1938,10 +1937,9 @@ if (window.registerPage) {
   }
 
   /* =========================
-     OPEN JOB DETAIL (single get)
-     - renders job detail screen and submit area
-     - loads current progress
-     - checks if user already submitted and locks submit area
+     OPEN JOB DETAIL
+     - Progress has been removed from detail screen as requested.
+     - only renders job info and submit area
      ========================= */
   async function openJobDetail(jobId) {
     if (!db) { alert('Database not ready'); return; }
@@ -1977,14 +1975,6 @@ if (window.registerPage) {
         ${job.instructions ? `<div class="text-gray-700 text-sm"><strong>Instructions:</strong><br>${safeText(job.instructions)}</div>` : ''}
         ${job.targetLink ? `<div><strong class="text-sm text-gray-700">Target Link:</strong> <a href="${safeText(job.targetLink)}" target="_blank" class="text-blue-600 underline break-all">${safeText(job.targetLink)}</a></div>` : ''}
 
-        <div>
-          <div class="text-sm text-gray-500 mb-1">Progress</div>
-          <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-            <div id="aff2_detailProgressBar" class="h-2 bg-blue-500 rounded-full" style="width:0%"></div>
-          </div>
-          <div id="aff2_detailProgressText" class="text-sm text-gray-500 mt-1">0/0 (0%)</div>
-        </div>
-
         <div id="aff2_submitArea" class="mt-6 border-t pt-4">
           <h3 class="text-base font-semibold text-gray-800 mb-3">Submit Proof</h3>
 
@@ -2010,9 +2000,6 @@ if (window.registerPage) {
       el('aff2_jobsContainer')?.classList.add('aff2-hidden');
       el('aff2_finishedScreen')?.classList.add('aff2-hidden');
       el('aff2_jobDetailScreen')?.classList.remove('aff2-hidden');
-
-      // load progress and check if user already submitted
-      await refreshProgressOnce(job.id, Number(job.numWorkers || 0));
 
       // If user already submitted, lock submit area
       let userSubmitted = false;
@@ -2042,7 +2029,8 @@ if (window.registerPage) {
   }
 
   /* =========================
-     REFRESH PROGRESS (one-time)
+     REFRESH PROGRESS (kept for potential external use)
+     - counts only approved submissions (used by job list, not detail)
      ========================= */
   async function refreshProgressOnce(jobId, totalWorkers) {
     try {
@@ -2053,20 +2041,21 @@ if (window.registerPage) {
       const approved = approvedSnap.size || 0;
       const total = Number(totalWorkers || 0);
       const pct = total ? Math.min(100, Math.round((approved/total)*100)) : 0;
+
+      // If you have elements outside detail that display progress, update them here.
       const bar = el('aff2_detailProgressBar'); if (bar) bar.style.width = pct + '%';
       const t = el('aff2_detailProgressText'); if (t) t.textContent = `${approved}/${total} (${pct}%)`;
+      return { approved, total, pct };
     } catch (err) {
       console.error('[AFF2] refreshProgressOnce', err);
+      return null;
     }
   }
 
   /* =========================
      SUBMISSION FLOW
-     - checks for duplicates
-     - uploads files
-     - writes affiliate_submissions
-     - increments affiliateJobs.filledWorkers atomically
-     - updates UI and hides job card if full
+     - includes workerEarn in payload
+     - DOES NOT increment filledWorkers here (increment handled on approval listener)
      ========================= */
   function attachSubmissionHandler(job) {
     const submitBtn = el('aff2_detailSubmitBtn');
@@ -2078,6 +2067,7 @@ if (window.registerPage) {
     submitBtn.onclick = async function() {
       if (!auth || !auth.currentUser) { alert('Please login to submit proof.'); return; }
       const uid = auth.currentUser.uid;
+      const currentUser = auth.currentUser;
 
       const fEls = [el('proofFile1'), el('proofFile2'), el('proofFile3')];
       const files = fEls.map(i => i?.files?.[0]).filter(Boolean);
@@ -2121,38 +2111,31 @@ if (window.registerPage) {
           uploadedUrls.push(url);
         }
 
-        // build payload
+        // build payload (ADD workerEarn here)
         const payload = {
           jobId: job.id,
           userId: uid,
-          userName: auth.currentUser.displayName || auth.currentUser.email || '',
+          userName: currentUser.displayName || currentUser.email || '',
           proofFiles: uploadedUrls,
           note: (el('aff2_detailSubmissionNote')?.value || '').trim(),
           status: 'on review',
+          workerEarn: job.workerPay || 0, // <-- record worker earning at time of submission
           createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
         };
 
         // write submission
         await db.collection('affiliate_submissions').add(payload);
 
-        // increment filledWorkers atomically
-        
+        // NOTE: We DO NOT increment filledWorkers here.
+        // filledWorkers will only be updated by the approval listener (admin approval or manual change in Firestore).
+
         alert('✅ Submission successful! It will be reviewed by admin.');
 
-        // update UI: show submitted state
+        // update UI: show submitted state (payload has workerEarn but createdAt is serverTimestamp so UI shows on review)
         replaceSubmitAreaWithSubmitted(payload);
 
-        // refresh progress UI
-        await refreshProgressOnce(job.id, job.numWorkers);
-
-        // remove job card if full
-        const newJobSnap = await jobRef.get();
-        const newData = newJobSnap.data();
-        if ((newData.filledWorkers || 0) >= (newData.numWorkers || 0)) {
-          // remove card from list
-          const jobCard = document.querySelector(`[data-job-id="${job.id}"]`);
-          if (jobCard) jobCard.remove();
-        }
+        // Optionally refresh job list so card could disappear if someone else filled slots via approval concurrently
+        setTimeout(()=> loadAndRenderJobs(), 700);
 
       } catch (err) {
         console.error('[AFF2] submit error', err);
@@ -2165,24 +2148,23 @@ if (window.registerPage) {
 
   /* =========================
      REPLACE SUBMIT AREA WITH SUBMITTED VIEW
-     - shows uploaded images, note and status
-     - prevents re-submission visually
      ========================= */
   function replaceSubmitAreaWithSubmitted(submission) {
     const area = el('aff2_submitArea');
     if (!area) return;
 
-    // ensure proofFiles array exists
     const urls = submission.proofFiles || submission.proofURLs || [];
     const imgs = urls.map(u => `<img src="${safeText(u)}" class="w-full rounded-lg mt-2 border border-gray-200 object-contain">`).join('');
 
     const status = safeText(submission.status || 'on review');
     const statusColor = status === 'approved' ? 'text-green-600' : status === 'rejected' ? 'text-red-600' : 'text-yellow-600';
+    const earnDisplay = submission.workerEarn ? formatNaira(submission.workerEarn) : '';
 
     area.innerHTML = `
       <div class="p-4 bg-gray-50 rounded-xl">
         <h3 class="text-base font-semibold text-gray-800 mb-2">Proof Submitted</h3>
         <p class="text-sm text-gray-600 mb-2">Status: <span class="${statusColor} font-medium">${status}</span></p>
+        ${earnDisplay ? `<p class="text-sm text-gray-700 mb-2"><strong>Potential Earn:</strong> ${earnDisplay}</p>` : ''}
         ${imgs || `<div class="text-sm text-gray-400">No proof images available</div>`}
         ${submission.note ? `<p class="text-sm text-gray-700 mt-3"><strong>Note:</strong> ${safeText(submission.note)}</p>` : ''}
         <p class="text-xs text-gray-400 mt-4">Your submission will be reviewed by admin. You cannot submit again for this job.</p>
@@ -2192,7 +2174,7 @@ if (window.registerPage) {
 
   /* =========================
      FINISHED TASKS VIEW (user-specific)
-     - shows user's submissions with status
+     - show workerEarn if present
      ========================= */
   async function loadAndRenderFinished() {
     const listEl = el("aff2_finishedList");
@@ -2260,7 +2242,7 @@ if (window.registerPage) {
     const title = safeText(job.title || sub.jobId || 'Affiliate Job');
     const status = safeText(sub.status || 'on review');
     const note = safeText(sub.note || 'No note added');
-    const earn = sub.amount || sub.reward || "₦0";
+    const earn = sub.workerEarn ? formatNaira(sub.workerEarn) : (sub.amount || sub.reward || "₦0");
     const urls = sub.proofFiles || sub.proofURLs || [];
     const statusColor =
       status === "approved" ? "text-green-600 bg-green-100"
@@ -2296,7 +2278,7 @@ if (window.registerPage) {
       const job = jobDoc?.data() || {};
       const title = job.title || "Untitled Task";
       const status = sub.status || "on review";
-      const earn = sub.amount || sub.reward || "₦0";
+      const earn = sub.workerEarn ? formatNaira(sub.workerEarn) : (sub.amount || sub.reward || "₦0");
       const date = formatTimestampSafe(sub.createdAt);
       const note = sub.note || "No note added";
       const urls = sub.proofFiles || sub.proofURLs || [];
@@ -2320,6 +2302,122 @@ if (window.registerPage) {
     } catch (err) {
       console.error('[AFF2] openFinishedDetail', err);
       alert('Failed to load submission.');
+    }
+  }
+
+  /* =========================
+     SUBMISSION APPROVAL LISTENER (AUTO-SYNC)
+     - Keeps affiliateJobs.filledWorkers in sync with approved submissions.
+     - Works even if you manually edit submission.status in Firestore.
+     - Uses a submissionStatusMap to avoid double increments on initial load.
+     ========================= */
+  async function initApprovalListener() {
+    if (!db) return;
+
+    // 1) Populate local map with current submission statuses (initial snapshot)
+    try {
+      const allSubSnap = await db.collection('affiliate_submissions').get();
+      state.submissionStatusMap = {};
+      allSubSnap.forEach(d => {
+        state.submissionStatusMap[d.id] = d.data().status || null;
+      });
+    } catch (e) {
+      console.error('[AFF2] initApprovalListener initial fetch failed', e);
+      state.submissionStatusMap = {};
+    }
+
+    // 2) Attach realtime listener to detect changes
+    if (state.subsUnsub) try { state.subsUnsub(); } catch(_) {}
+    state.subsUnsub = db.collection('affiliate_submissions').onSnapshot(snap => {
+      snap.docChanges().forEach(async change => {
+        try {
+          const id = change.doc.id;
+          const after = change.doc.data();
+          const before = state.submissionStatusMap[id]; // may be undefined for brand new docs
+
+          // determine inc: +1 if moved to approved, -1 if moved from approved to something else
+          let inc = 0;
+          if (before !== 'approved' && after.status === 'approved') inc = 1;
+          else if (before === 'approved' && after.status !== 'approved') inc = -1;
+          else if (change.type === 'removed' && before === 'approved') inc = -1;
+
+          if (inc !== 0 && after.jobId) {
+            // perform atomic transaction to adjust filledWorkers with bounds
+            const jobRef = db.collection('affiliateJobs').doc(after.jobId);
+            try {
+              await db.runTransaction(async (tx) => {
+                const jobDoc = await tx.get(jobRef);
+                if (!jobDoc.exists) return;
+                const jobData = jobDoc.data();
+                const current = Number(jobData.filledWorkers || 0);
+                const max = Number(jobData.numWorkers || 0);
+                if (inc > 0) {
+                  if (current < max) {
+                    tx.update(jobRef, { filledWorkers: window.firebase.firestore.FieldValue.increment(1) });
+                    // if after reaching max we might want to remove the job from lists client-side; we'll trigger UI refresh below
+                  } else {
+                    // already full; do not increment
+                    console.warn(`[AFF2] job ${after.jobId} already full; skipping increment`);
+                  }
+                } else if (inc < 0) {
+                  if (current > 0) {
+                    tx.update(jobRef, { filledWorkers: window.firebase.firestore.FieldValue.increment(-1) });
+                  } else {
+                    // nothing to decrement
+                    console.warn(`[AFF2] job ${after.jobId} filledWorkers already 0; skipping decrement`);
+                  }
+                }
+              });
+            } catch (txErr) {
+              console.error('[AFF2] transaction failed while updating filledWorkers', txErr);
+            }
+
+            // small UI refresh (re-render job list to reflect changes)
+            setTimeout(()=> loadAndRenderJobs(), 400);
+          }
+
+          // update local map state
+          if (change.type === 'removed') delete state.submissionStatusMap[id];
+          else state.submissionStatusMap[id] = after.status;
+
+        } catch (err) {
+          console.error('[AFF2] approval listener change handler error', err);
+        }
+      });
+    }, err => {
+      console.error('[AFF2] submissions snapshot error', err);
+    });
+  }
+
+  /* =========================
+     ONE-TIME RECONCILIATION
+     - Ensures affiliateJobs.filledWorkers == count(approved submissions) for each job
+     - Useful for a first time run to correct any mismatches
+     ========================= */
+  async function reconcileFilledWorkersCounts() {
+    if (!db) return;
+    try {
+      const jobsSnap = await db.collection('affiliateJobs').get();
+      for (const jobDoc of jobsSnap.docs) {
+        try {
+          const jobId = jobDoc.id;
+          const approvedSnap = await db.collection('affiliate_submissions')
+            .where('jobId', '==', jobId)
+            .where('status', '==', 'approved')
+            .get();
+          const approvedCount = approvedSnap.size;
+          // only update if mismatch
+          const current = Number(jobDoc.data().filledWorkers || 0);
+          if (current !== approvedCount) {
+            await jobDoc.ref.update({ filledWorkers: approvedCount });
+            console.log(`[AFF2] reconciled job ${jobId}: filledWorkers ${current} -> ${approvedCount}`);
+          }
+        } catch (innerErr) {
+          console.error('[AFF2] reconcile error for job', jobDoc.id, innerErr);
+        }
+      }
+    } catch (err) {
+      console.error('[AFF2] reconcileFilledWorkersCounts failed', err);
     }
   }
 
@@ -2363,18 +2461,19 @@ if (window.registerPage) {
     }
   }
 
-  function init() {
+  async function init() {
     // attach delegated click listener
     document.addEventListener('click', onDocumentClick);
     state.handlers.push({ el: document, ev: 'click', fn: onDocumentClick });
 
-    // initial render
-    loadAndRenderJobs();
+    // initial reconciliation to ensure counts match approved submissions
+    await reconcileFilledWorkersCounts();
 
-    // optionally load finished counts if element exists
-    if (el('aff2_pendingCount') || el('aff2_approvedCount')) {
-      // lazy, only when user opens finished view this will update
-    }
+    // start approval listener to auto-sync filledWorkers on manual or admin approval
+    initApprovalListener();
+
+    // initial job render
+    loadAndRenderJobs();
   }
 
   function destroy() {
@@ -2382,8 +2481,10 @@ if (window.registerPage) {
       try { h.el.removeEventListener(h.ev, h.fn); } catch(_) {}
     }
     state.handlers = [];
-    if (state.snapshotUnsub) try { state.snapshotUnsub(); } catch(_) {}
+    try { if (state.snapshotUnsub) state.snapshotUnsub(); } catch(_) {}
+    try { if (state.subsUnsub) state.subsUnsub(); } catch(_) {}
     state.snapshotUnsub = null;
+    state.subsUnsub = null;
     try { if (el('aff2_jobDetailContent')) el('aff2_jobDetailContent').innerHTML = ''; } catch(_) {}
     try { if (el('aff2_grid')) el('aff2_grid').innerHTML = ''; } catch(_) {}
     try { if (el('aff2_finishedList')) el('aff2_finishedList').innerHTML = ''; } catch(_) {}
@@ -2406,8 +2507,6 @@ if (window.registerPage) {
   setTimeout(()=>{ try{ init(); }catch(e){console.error('[AFF2] init failed',e);} }, 0);
 
 })(); // end module
-
-
 
 
 
