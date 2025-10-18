@@ -2061,123 +2061,156 @@ if (window.registerPage) {
 
   // ----- Finished list rendering (explicit get) -----
   // safe timestamp -> string helper
+// ---- Helper for safe timestamps ----
 function formatTimestampSafe(ts) {
   try {
-    // Firestore Timestamp object -> Date
-    if (ts && typeof ts.toDate === 'function') return ts.toDate().toLocaleString();
-    // ISO string
-    if (typeof ts === 'string' && ts.length) return new Date(ts).toLocaleString();
-    // number epoch
-    if (typeof ts === 'number') return new Date(ts).toLocaleString();
-  } catch (e) { /* ignore */ }
-  return '';
+    if (ts && typeof ts.toDate === "function") return ts.toDate().toLocaleString();
+    if (typeof ts === "string") return new Date(ts).toLocaleString();
+    if (typeof ts === "number") return new Date(ts).toLocaleString();
+  } catch (e) {}
+  return "";
 }
 
-// ----- Finished list rendering (explicit get) - robust version -----
+// ---- Load & Render Finished Tasks ----
 async function loadAndRenderFinished() {
-  const listEl = el('aff2_finishedList');
-  if (!listEl) { console.warn('[AFF2] no finished list container'); return; }
+  const listEl = el("aff2_finishedList");
+  const pendingCountEl = el("aff2_pendingCount");
+  const approvedCountEl = el("aff2_approvedCount");
+
+  if (!listEl) return;
 
   try {
-    // basic checks
-    if (!window.firebase || !window.firebase.firestore) {
-      console.error('[AFF2] Firestore not initialized');
-      listEl.innerHTML = '<p class="text-red-500 p-6">Database not available. Please refresh or sign in.</p>';
-      return;
-    }
-    if (!auth) {
-      console.error('[AFF2] Firebase Auth not available');
-      listEl.innerHTML = '<p class="text-red-500 p-6">Auth not available. Please refresh or sign in.</p>';
-      return;
-    }
+    listEl.innerHTML = `<p class="text-gray-500 text-center p-6">Loading finished tasks...</p>`;
 
-    // show loading state
-    listEl.innerHTML = '<p class="text-gray-500 p-6">Loading finished tasks...</p>';
-
-    // wait for auth state if currentUser not ready
-    const ensureUser = () => new Promise(resolve => {
-      if (auth.currentUser) return resolve(auth.currentUser);
-      const off = auth.onAuthStateChanged(user => {
-        off(); // unsubscribe
-        resolve(user);
-      });
-      // if onAuthStateChanged returned a function we unsubscribe above; otherwise leave.
+    const user = auth.currentUser || await new Promise((resolve) => {
+      const unsub = auth.onAuthStateChanged((u) => { unsub(); resolve(u); });
     });
-    const user = await ensureUser();
     if (!user) {
-      listEl.innerHTML = '<p class="text-gray-500 p-6">Login to see your finished tasks.</p>';
-      return;
-    }
-    const uid = user.uid;
-
-    // run query safely; guard for permission/index errors and show message
-    let snap;
-    try {
-      snap = await db.collection('affiliate_submissions')
-        .where('userId', '==', uid)
-        .orderBy('createdAt', 'desc')
-        .get();
-    } catch (qerr) {
-      console.error('[AFF2] finished query error', qerr);
-      // try a fallback without orderBy in case of index/permission problem
-      try {
-        snap = await db.collection('affiliate_submissions')
-          .where('userId', '==', uid)
-          .get();
-      } catch (qerr2) {
-        console.error('[AFF2] finished fallback query error', qerr2);
-        const msg = qerr2 && qerr2.message ? safeText(qerr2.message) : 'Failed to load finished tasks.';
-        listEl.innerHTML = `<p class="text-red-500 p-6">Failed to load finished tasks. ${msg}</p>`;
-        return;
-      }
-    }
-
-    if (!snap || snap.empty) {
-      listEl.innerHTML = '<p class="text-gray-500 p-6">You have no finished tasks yet.</p>';
+      listEl.innerHTML = `<p class="text-gray-500 text-center p-6">Please sign in to see your finished tasks.</p>`;
       return;
     }
 
-    // gather jobIds to fetch titles (defensive)
-    const jobIds = [...new Set(snap.docs.map(d => {
-      const data = d.data() || {};
-      return data.jobId || null;
-    }).filter(Boolean))];
+    const snap = await db.collection("affiliate_submissions")
+      .where("userId", "==", user.uid)
+      .orderBy("createdAt", "desc")
+      .get();
 
+    if (snap.empty) {
+      listEl.innerHTML = `<p class="text-gray-500 text-center p-6">You have no finished tasks yet.</p>`;
+      pendingCountEl.textContent = "0";
+      approvedCountEl.textContent = "0";
+      return;
+    }
+
+    // Count stats
+    let pending = 0, approved = 0;
+    const jobIds = [...new Set(snap.docs.map(d => (d.data().jobId || null)).filter(Boolean))];
     const jobMap = {};
-    if (jobIds.length) {
-      // chunk jobIds 10 at a time (Firestore 'in' supports up to 10)
-      for (let i = 0; i < jobIds.length; i += 10) {
-        const chunk = jobIds.slice(i, i + 10);
-        try {
-          const jobsSnap = await db.collection('affiliateJobs')
-            .where(window.firebase.firestore.FieldPath.documentId(), 'in', chunk)
-            .get();
-          jobsSnap.forEach(jd => jobMap[jd.id] = jd.data());
-        } catch (je) {
-          console.warn('[AFF2] job chunk fetch failed for chunk', chunk, je);
-          // continue; missing jobs will be handled gracefully
-        }
-      }
+
+    // Fetch job titles
+    for (let i = 0; i < jobIds.length; i += 10) {
+      const chunk = jobIds.slice(i, i + 10);
+      const jobsSnap = await db.collection("affiliateJobs")
+        .where(firebase.firestore.FieldPath.documentId(), "in", chunk)
+        .get();
+      jobsSnap.forEach(jd => jobMap[jd.id] = jd.data());
     }
 
-    // render
-    listEl.innerHTML = '';
-    snap.forEach(doc => {
-      const raw = doc.data() || {};
-      // normalize createdAt (some docs may have serverTimestamp or client timestamp)
-      const createdAt = raw.createdAt || raw.timeCreated || null;
-      const normalizedSub = {
-        id: doc.id,
-        ...raw,
-        createdAt // keep original type for formatting in makeFinishedElement
-      };
-      listEl.appendChild(makeFinishedElement(normalizedSub, jobMap[normalizedSub.jobId] || {}));
+    listEl.innerHTML = ""; // clear loader
+
+    snap.forEach((doc) => {
+      const sub = doc.data();
+      const job = jobMap[sub.jobId] || {};
+      if (sub.status === "on review") pending++;
+      if (sub.status === "approved") approved++;
+      listEl.appendChild(makeFinishedCard(doc.id, sub, job));
     });
+
+    // Update counters
+    pendingCountEl.textContent = pending;
+    approvedCountEl.textContent = approved;
 
   } catch (err) {
-    console.error('[AFF2] loadAndRenderFinished', err);
-    const msg = err && err.message ? safeText(err.message) : 'Failed to load finished tasks.';
-    listEl.innerHTML = `<p class="text-red-500 p-6">Failed to load finished tasks. ${msg}</p>`;
+    console.error("loadAndRenderFinished error:", err);
+    listEl.innerHTML = `<p class="text-red-500 text-center p-6">Error loading finished tasks: ${err.message}</p>`;
+  }
+}
+
+// ---- Create Each Task Card ----
+function makeFinishedCard(id, sub, job) {
+  const date = formatTimestampSafe(sub.createdAt);
+  const title = safeText(job.title || "Untitled Task");
+  const status = safeText(sub.status || "on review");
+  const note = safeText(sub.note || "No note added");
+  const earn = sub.amount || sub.reward || "₦0";
+  const imgUrl = sub.proofImage || sub.image || "";
+
+  const statusColor =
+    status === "approved" ? "text-green-600 bg-green-100"
+    : status === "rejected" ? "text-red-600 bg-red-100"
+    : "text-yellow-600 bg-yellow-100";
+
+  const div = document.createElement("div");
+  div.className =
+    "bg-white/80 backdrop-blur-md shadow-md border border-gray-100 rounded-2xl p-4 mb-3 hover:shadow-lg transition-all duration-300";
+
+  div.innerHTML = `
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="font-semibold text-gray-900 truncate">${title}</h3>
+      <span class="text-xs font-medium px-2 py-1 rounded-full ${statusColor} capitalize">${status}</span>
+    </div>
+    <p class="text-sm text-gray-500">${date}</p>
+    <div class="mt-2 flex items-center justify-between">
+      <p class="text-sm text-gray-700"><strong>Earn:</strong> ${earn}</p>
+      <button class="text-indigo-600 text-sm font-medium hover:underline" onclick="openFinishedDetail('${id}')">View</button>
+    </div>
+  `;
+
+  // Add small proof image preview if available
+  if (imgUrl) {
+    const img = document.createElement("img");
+    img.src = imgUrl;
+    img.alt = "proof";
+    img.className = "mt-3 w-full max-h-36 object-contain rounded-lg border border-gray-200";
+    div.appendChild(img);
+  }
+
+  return div;
+}
+
+// ---- View details modal ----
+async function openFinishedDetail(id) {
+  try {
+    const doc = await db.collection("affiliate_submissions").doc(id).get();
+    if (!doc.exists) return alert("Submission not found.");
+    const sub = doc.data();
+    const jobDoc = sub.jobId ? await db.collection("affiliateJobs").doc(sub.jobId).get() : null;
+    const job = jobDoc?.data() || {};
+    const title = job.title || "Untitled Task";
+    const status = sub.status || "on review";
+    const earn = sub.amount || sub.reward || "₦0";
+    const date = formatTimestampSafe(sub.createdAt);
+    const note = sub.note || "No note added";
+    const imgUrl = sub.proofImage || sub.image || "";
+
+    // Create modal layout
+    const modal = document.createElement("div");
+    modal.className = "fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4";
+    modal.innerHTML = `
+      <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 relative">
+        <button onclick="this.parentElement.parentElement.remove()" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600">&times;</button>
+        <h2 class="text-lg font-semibold text-gray-900 mb-2">${title}</h2>
+        <p class="text-sm text-gray-500 mb-1"><strong>Status:</strong> <span class="capitalize">${status}</span></p>
+        <p class="text-sm text-gray-500 mb-1"><strong>Earned:</strong> ${earn}</p>
+        <p class="text-sm text-gray-500 mb-1"><strong>Submitted:</strong> ${date}</p>
+        <p class="text-sm text-gray-700 mt-2"><strong>Note:</strong> ${note}</p>
+        ${imgUrl ? `<img src="${imgUrl}" class="mt-4 w-full rounded-lg border border-gray-200 object-contain max-h-60" />` : ""}
+      </div>
+    `;
+    document.body.appendChild(modal);
+  } catch (err) {
+    console.error(err);
+    alert("Error loading task details.");
   }
 }
 
