@@ -1865,9 +1865,10 @@ if (window.registerPage) {
       if (snap.empty) { grid.innerHTML = '<p class="text-gray-500 p-6 text-center">No affiliate tasks right now.</p>'; return; }
       grid.innerHTML = '';
       snap.forEach(doc => {
-        const job = { id: doc.id, ...doc.data() };
-        grid.appendChild(makeJobCardElement(job));
-      });
+  const job = { id: doc.id, ...doc.data() };
+  if ((job.filledWorkers || 0) >= (job.numWorkers || 0)) return;
+  grid.appendChild(makeJobCardElement(job));
+});
     } catch (err) {
       console.error('[AFF2] loadAndRenderJobs', err);
       grid.innerHTML = '<p class="text-red-500 p-6">Failed to load tasks.</p>';
@@ -1973,75 +1974,133 @@ if (window.registerPage) {
     }
   }
 
+
+
+	// Check if already submitted by user (so it stays locked)
+const userSub = await db.collection('affiliate_submissions')
+  .where('jobId','==',job.id)
+  .where('userId','==',auth?.currentUser?.uid || '')
+  .get();
+
+if (!userSub.empty) {
+  replaceSubmitAreaWithSubmitted(userSub.docs[0].data());
+}
+	
+
   // attach submit handler (cleans old handler first)
   function attachSubmissionHandler(job) {
-    const submitBtn = el('aff2_detailSubmitBtn');
-    if (!submitBtn) return;
-    // clear any previous handler
-    submitBtn.onclick = null;
+  const submitBtn = el('aff2_detailSubmitBtn');
+  if (!submitBtn) return;
 
-    submitBtn.onclick = async function() {
-      // ensure auth
-      if (!auth || !auth.currentUser) { alert('Please login to submit proof.'); return; }
-      const uid = auth.currentUser.uid;
+  submitBtn.onclick = async function() {
+    if (!auth || !auth.currentUser) {
+      alert('Please login to submit proof.');
+      return;
+    }
 
-      // collect files (3 inputs) - at least 1 required
-      const fEls = [el('proofFile1'), el('proofFile2'), el('proofFile3')];
-      const files = fEls.map(i => i?.files?.[0]).filter(Boolean);
-      if (files.length < 1) { alert('Please upload at least one proof file.'); return; } // **immediately return** to avoid success path
+    const uid = auth.currentUser.uid;
+    const fEls = [el('proofFile1'), el('proofFile2'), el('proofFile3')];
+    const files = fEls.map(i => i?.files?.[0]).filter(Boolean);
 
-      // disable button to prevent double click
-      submitBtn.disabled = true;
-      const prevText = submitBtn.textContent;
-      submitBtn.textContent = 'Submitting...';
+    if (files.length < 1) {
+      alert('Please upload at least one proof file.');
+      return;
+    }
 
-      try {
-        // final duplicate-check before upload (race mitigation)
-        const check = await db.collection('affiliate_submissions')
-          .where('jobId','==', job.id)
-          .where('userId','==', uid)
-          .get();
-        if (!check.empty) {
-          alert('You have already submitted for this job.');
-          // show submitted state in place of submit area
-          const subDoc = check.docs[0];
-          const subData = { id: subDoc.id, ...subDoc.data() };
-          replaceSubmitAreaWithSubmitted(subData);
-          return;
-        }
+    submitBtn.disabled = true;
+    const prevText = submitBtn.textContent;
+    submitBtn.textContent = 'Submitting...';
 
-        // upload files sequentially
-        const uploadedUrls = [];
-        for (let i=0;i<files.length;i++) {
-          const url = await uploadFileHelper(files[i]);
-          uploadedUrls.push(url);
-        }
-
-        // prepare submission payload
-        const payload = {
-          jobId: job.id,
-          userId: uid,
-          userName: auth.currentUser.displayName || auth.currentUser.email || '',
-          proofFiles: uploadedUrls,
-          note: (el('aff2_detailSubmissionNote')?.value || '').trim(),
-          status: 'on review',
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-
-        await db.collection('affiliate_submissions').add(payload);
-
-        alert('✅ Submission successful! It will be reviewed by admin.');
-        replaceSubmitAreaWithSubmitted({ ...payload, id: 'local-submission' });
-
-      } catch (err) {
-        console.error('[AFF2] submit error', err);
-        alert('Submission failed. Please try again.');
-        submitBtn.disabled = false;
+    try {
+      // Check if job is already full
+      const jobRef = db.collection('affiliateJobs').doc(job.id);
+      const jobSnap = await jobRef.get();
+      if (!jobSnap.exists) throw new Error('Job not found.');
+      const jobData = jobSnap.data();
+      if ((jobData.filledWorkers || 0) >= (jobData.numWorkers || 0)) {
+        alert('This job has reached its limit of workers.');
         submitBtn.textContent = prevText;
+        submitBtn.disabled = false;
+        return;
       }
-    };
-  }
 
+      // Check for duplicate submission
+      const existing = await db.collection('affiliate_submissions')
+        .where('jobId','==',job.id)
+        .where('userId','==',uid)
+        .get();
+      if (!existing.empty) {
+        alert('You already submitted for this job.');
+        replaceSubmitAreaWithSubmitted(existing.docs[0].data());
+        return;
+      }
+
+      // Upload proofs
+      const uploadedUrls = [];
+      for (let f of files) uploadedUrls.push(await uploadFileHelper(f));
+
+      const payload = {
+        jobId: job.id,
+        userId: uid,
+        userName: auth.currentUser.displayName || auth.currentUser.email || '',
+        proofFiles: uploadedUrls,
+        note: (el('aff2_detailSubmissionNote')?.value || '').trim(),
+        status: 'on review',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      await db.collection('affiliate_submissions').add(payload);
+
+      // Increment filledWorkers
+      await jobRef.update({
+        filledWorkers: firebase.firestore.FieldValue.increment(1)
+      });
+
+      alert('✅ Submission successful! It will be reviewed by admin.');
+
+      // Update UI
+      replaceSubmitAreaWithSubmitted(payload);
+      await refreshProgressOnce(job.id, job.numWorkers);
+
+      // Auto remove card if job is full
+      const newJobSnap = await jobRef.get();
+      const newData = newJobSnap.data();
+      if ((newData.filledWorkers || 0) >= (newData.numWorkers || 0)) {
+        const jobCard = document.querySelector(`[data-id="${job.id}"]`)?.closest('.aff2-job-card');
+        if (jobCard) jobCard.remove();
+      }
+
+    } catch (err) {
+      console.error('[AFF2] submit error', err);
+      alert('Submission failed. Please try again.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = prevText;
+    }
+  };
+}
+
+
+function replaceSubmitAreaWithSubmitted(submission) {
+  const area = el('aff2_submitArea');
+  if (!area) return;
+
+  const imgs = (submission.proofFiles || []).map(u => 
+    `<img src="${safeText(u)}" class="w-full rounded-lg mt-2 border border-gray-200 object-contain">`
+  ).join('');
+
+  area.innerHTML = `
+    <div class="p-4 bg-gray-50 rounded-xl">
+      <h3 class="text-base font-semibold text-gray-800 mb-2">Proof Submitted</h3>
+      <p class="text-sm text-gray-600 mb-2">Status: <span class="text-yellow-600 font-medium">On Review</span></p>
+      ${imgs}
+      ${submission.note ? `<p class="text-sm text-gray-700 mt-3"><strong>Note:</strong> ${safeText(submission.note)}</p>` : ''}
+      <p class="text-xs text-gray-400 mt-4">You’ve already submitted for this job.</p>
+    </div>
+  `;
+}
+
+
+	
   // replace submit area with submitted state (show images + note + status)
 // ---- Helper for safe timestamps ----
 // ---- Helper for safe timestamps ----
