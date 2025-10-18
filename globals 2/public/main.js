@@ -2161,7 +2161,7 @@ function makeFinishedCard(id, sub, job) {
     </div>
     <p class="text-sm text-gray-500">${date}</p>
     <div class="mt-2 flex items-center justify-between">
-      <p class="text-sm text-gray-700"><strong>Earn:</strong> ${earn}</p>
+      
       <button class="text-indigo-600 text-sm font-medium hover:underline" onclick="openFinishedDetail('${id}')">View</button>
     </div>
   `;
