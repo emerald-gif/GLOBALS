@@ -2136,10 +2136,7 @@ if (window.registerPage) {
         await db.collection('affiliate_submissions').add(payload);
 
         // increment filledWorkers atomically
-        await jobRef.update({
-          filledWorkers: window.firebase.firestore.FieldValue.increment(1)
-        });
-
+        
         alert('✅ Submission successful! It will be reviewed by admin.');
 
         // update UI: show submitted state
