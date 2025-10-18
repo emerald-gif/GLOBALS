@@ -1779,7 +1779,10 @@ if (window.registerPage) {
                                     //AFFILIATE 
 
 
-// Robust Affiliate Module - no onSnapshot (uses get())
+// AFF2 COMPLETE MODULE - single-file (replace your old AFF2 script with this)
+// Requirements: firebase (auth, firestore), optional firebase.storage OR provide window.uploadToCloudinary(file)
+// Usage: include after firebase init. The module auto-inits but exposes AFF2 API for manual control.
+
 (function(){
   'use strict';
 
@@ -1787,45 +1790,82 @@ if (window.registerPage) {
   if (window.AFF2_COMPLETE_INSTANCE) { console.warn('[AFF2] already initialized'); return; }
   window.AFF2_COMPLETE_INSTANCE = true;
 
-  // ----- helpers -----
+  /* =========================
+     CONFIG
+     - LIVE_UPDATES: use onSnapshot for realtime updates (may require Firestore rules and indices)
+     ========================= */
+  const LIVE_UPDATES = false; // set true if you want real-time updates (snapshot). Default: get() mode.
+
+  /* =========================
+     HELPERS
+     ========================= */
   const el = id => document.getElementById(id);
+  const q = sel => document.querySelector(sel);
   const safeText = s => String(s || '')
     .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
     .replaceAll('"','&quot;').replaceAll("'", '&#39;');
   const formatNaira = n => (n==null||isNaN(Number(n))) ? '₦0' : '₦' + Number(n).toLocaleString('en-NG');
+  function formatTimestampSafe(ts) {
+    try {
+      if (!ts) return '';
+      if (ts && typeof ts.toDate === "function") return ts.toDate().toLocaleString();
+      if (typeof ts === "string" || typeof ts === "number") return new Date(ts).toLocaleString();
+    } catch(e) {}
+    return "";
+  }
 
-  // Firebase references (expects firebase to be initialized)
+  /* =========================
+     FIREBASE SHORTCUTS
+     ========================= */
   const firebaseAvailable = !!(window.firebase && window.firebase.firestore);
   const db = firebaseAvailable ? window.firebase.firestore() : null;
   const auth = (window.firebase && window.firebase.auth) ? window.firebase.auth() : null;
+  const storageAvailable = !!(window.firebase && window.firebase.storage);
 
-  // module state for cleanup
+  /* =========================
+     MODULE STATE
+     ========================= */
   const state = {
-    handlers: [],
-    currentJobId: null
+    handlers: [],            // event listeners to remove on destroy
+    currentJobId: null,     // job currently opened
+    snapshotUnsub: null,    // for live updates
   };
 
-  // ----- upload helper (uses uploadToCloudinary if provided, else firebase.storage) -----
+  /* =========================
+     UPLOAD HELPER
+     - prefers window.uploadToCloudinary(file) if provided
+     - falls back to firebase.storage if available & user is logged in
+     - throws error otherwise
+     ========================= */
   async function uploadFileHelper(file) {
     if (!file) throw new Error('No file provided');
+    // prefer cloudinary helper
     if (typeof window.uploadToCloudinary === 'function') {
       return await window.uploadToCloudinary(file);
     }
-    if (window.firebase && window.firebase.storage && auth && auth.currentUser) {
+    // fallback to firebase.storage if available
+    if (storageAvailable && auth && auth.currentUser) {
       const storageRef = window.firebase.storage().ref();
-      const path = `affiliate_proofs/${auth.currentUser.uid}_${Date.now()}_${file.name}`;
+      const path = `affiliate_proofs/${auth.currentUser.uid}_${Date.now()}_${file.name.replace(/\s+/g,'_')}`;
       const ref = storageRef.child(path);
-      await ref.put(file);
-      return await ref.getDownloadURL();
+      const snap = await ref.put(file);
+      return await snap.ref.getDownloadURL();
     }
     throw new Error('No upload helper available: provide uploadToCloudinary(file) or enable firebase.storage.');
   }
 
-  // ----- Job card renderer (includes category) -----
+  /* =========================
+     JOB CARD / DETAIL RENDERERS
+     ========================= */
   function makeJobCardElement(job) {
     const wrap = document.createElement('div');
     wrap.className = 'aff2-job-card bg-white rounded-xl p-3 shadow-sm';
+    wrap.dataset.jobId = job.id || '';
     const img = job.campaignLogoURL || job.image || '/assets/default-thumb.jpg';
+    const filled = Number(job.filledWorkers || 0);
+    const total  = Number(job.numWorkers || 0);
+    const pct = total ? Math.min(100, Math.round((filled/total)*100)) : 0;
+
     wrap.innerHTML = `
       <div class="overflow-hidden rounded-lg">
         <img src="${safeText(img)}" alt="${safeText(job.title||'')}" class="w-full h-36 object-cover rounded-lg" />
@@ -1833,8 +1873,11 @@ if (window.registerPage) {
       <div class="mt-3">
         <h4 class="font-semibold text-md">${safeText(job.title||'Untitled')}</h4>
         ${job.category ? `<div class="mt-1"><span class="aff2-category-tag inline-block text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded">${safeText(job.category)}</span></div>` : ''}
-        <div class="text-sm text-gray-500 mt-1">${formatNaira(job.workerPay)} · ${Number(job.numWorkers||0)} workers</div>
-        <div class="text-sm text-gray-500 mt-1">${Number(job.filledWorkers||0)}/${Number(job.numWorkers||0)} workers</div>
+        <div class="text-sm text-gray-500 mt-1">${formatNaira(job.workerPay)} · ${total} worker${total===1?'':'s'}</div>
+        <div class="text-sm text-gray-500 mt-1">${filled}/${total} workers</div>
+        <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden mt-2">
+          <div class="h-2 bg-blue-500 rounded-full" style="width:${pct}%"></div>
+        </div>
         <div class="mt-3">
           <button class="aff2-btn-view w-full py-2 rounded-xl bg-blue-600 text-white font-semibold" data-id="${safeText(job.id)}">View Task</button>
         </div>
@@ -1843,7 +1886,10 @@ if (window.registerPage) {
     return wrap;
   }
 
-  // ----- render job list (explicit fetch get(), no snapshots) -----
+  /* =========================
+     LOAD & RENDER JOB LIST
+     - excludes jobs that are already full
+     ========================= */
   async function loadAndRenderJobs() {
     const grid = el('aff2_grid') || el('aff2_jobsList');
     if (!grid) {
@@ -1854,28 +1900,49 @@ if (window.registerPage) {
       grid.innerHTML = '<p class="text-gray-500 p-6">Loading tasks...</p>';
       if (!db) throw new Error('Database not available');
 
-      // Query approved jobs, ordered by postedAt desc if field exists
-      let q = db.collection('affiliateJobs').where('status','==','approved');
-      // try to order by postedAt if index exists; we'll fallback if fails
-      try {
-        q = q.orderBy('postedAt','desc');
-      } catch(e) { /* ignore ordering error if index missing */ }
+      if (LIVE_UPDATES) {
+        // use onSnapshot for live updates
+        if (state.snapshotUnsub) state.snapshotUnsub(); // clear old unsub if any
+        let query = db.collection('affiliateJobs').where('status','==','approved');
+        try { query = query.orderBy('postedAt','desc'); } catch(e){} // ignore index errors
+        state.snapshotUnsub = query.onSnapshot(snap => {
+          if (snap.empty) { grid.innerHTML = '<p class="text-gray-500 p-6 text-center">No affiliate tasks right now.</p>'; return; }
+          grid.innerHTML = '';
+          snap.forEach(doc => {
+            const job = { id: doc.id, ...doc.data() };
+            if ((job.filledWorkers || 0) >= (job.numWorkers || 0)) return; // skip full jobs
+            grid.appendChild(makeJobCardElement(job));
+          });
+        }, err => {
+          console.error('[AFF2] jobs snapshot error', err);
+          grid.innerHTML = '<p class="text-red-500 p-6">Failed to load tasks.</p>';
+        });
+        return;
+      }
 
-      const snap = await q.get();
+      // GET mode
+      let qRef = db.collection('affiliateJobs').where('status','==','approved');
+      try { qRef = qRef.orderBy('postedAt','desc'); } catch(e) {}
+      const snap = await qRef.get();
       if (snap.empty) { grid.innerHTML = '<p class="text-gray-500 p-6 text-center">No affiliate tasks right now.</p>'; return; }
       grid.innerHTML = '';
       snap.forEach(doc => {
-  const job = { id: doc.id, ...doc.data() };
-  if ((job.filledWorkers || 0) >= (job.numWorkers || 0)) return;
-  grid.appendChild(makeJobCardElement(job));
-});
+        const job = { id: doc.id, ...doc.data() };
+        if ((job.filledWorkers || 0) >= (job.numWorkers || 0)) return; // skip full jobs
+        grid.appendChild(makeJobCardElement(job));
+      });
     } catch (err) {
       console.error('[AFF2] loadAndRenderJobs', err);
       grid.innerHTML = '<p class="text-red-500 p-6">Failed to load tasks.</p>';
     }
   }
 
-  // ----- open job detail (get() only) -----
+  /* =========================
+     OPEN JOB DETAIL (single get)
+     - renders job detail screen and submit area
+     - loads current progress
+     - checks if user already submitted and locks submit area
+     ========================= */
   async function openJobDetail(jobId) {
     if (!db) { alert('Database not ready'); return; }
     try {
@@ -1886,12 +1953,12 @@ if (window.registerPage) {
 
       const detailContainer = el('aff2_jobDetailContent');
       if (!detailContainer) { alert('Detail container not found'); return; }
-      detailContainer.innerHTML = '';
+      detailContainer.innerHTML = ''; // reset
 
-      // big/full layout
       const wrapper = document.createElement('div');
       wrapper.className = 'aff2-detail-wrapper bg-white rounded-2xl shadow-md overflow-hidden max-w-3xl mx-auto my-6';
 
+      // banner
       const banner = document.createElement('img');
       banner.src = job.image || job.campaignLogoURL || '/assets/default-banner.jpg';
       banner.className = 'w-full h-56 object-cover';
@@ -1936,20 +2003,37 @@ if (window.registerPage) {
           <p class="text-xs text-gray-400 mt-2">Submissions are reviewed by admin.</p>
         </div>
       `;
-
       wrapper.appendChild(body);
       detailContainer.appendChild(wrapper);
 
-      // show detail screen, hide others if present
+      // show/hide screens
       el('aff2_jobsContainer')?.classList.add('aff2-hidden');
       el('aff2_finishedScreen')?.classList.add('aff2-hidden');
       el('aff2_jobDetailScreen')?.classList.remove('aff2-hidden');
 
-      // load progress once (get approved count)
+      // load progress and check if user already submitted
       await refreshProgressOnce(job.id, Number(job.numWorkers || 0));
 
-      // submission flow
-      attachSubmissionHandler(job);
+      // If user already submitted, lock submit area
+      let userSubmitted = false;
+      if (auth && auth.currentUser) {
+        try {
+          const userSnap = await db.collection('affiliate_submissions')
+            .where('jobId','==',job.id)
+            .where('userId','==',auth.currentUser.uid)
+            .get();
+          if (!userSnap.empty) {
+            const subData = userSnap.docs[0].data();
+            replaceSubmitAreaWithSubmitted({ ...subData, id: userSnap.docs[0].id });
+            userSubmitted = true;
+          }
+        } catch (e) {
+          console.error('[AFF2] check user submission', e);
+        }
+      }
+
+      // attach submit handler only if user not already submitted and job not full
+      if (!userSubmitted) attachSubmissionHandler(job);
 
     } catch (err) {
       console.error('[AFF2] openJobDetail', err);
@@ -1957,7 +2041,9 @@ if (window.registerPage) {
     }
   }
 
-  // refresh progress (one-time get)
+  /* =========================
+     REFRESH PROGRESS (one-time)
+     ========================= */
   async function refreshProgressOnce(jobId, totalWorkers) {
     try {
       const approvedSnap = await db.collection('affiliate_submissions')
@@ -1974,366 +2060,277 @@ if (window.registerPage) {
     }
   }
 
-
-
-	// Check if already submitted by user (so it stays locked)
-const userSub = await db.collection('affiliate_submissions')
-  .where('jobId','==',job.id)
-  .where('userId','==',auth?.currentUser?.uid || '')
-  .get();
-
-if (!userSub.empty) {
-  replaceSubmitAreaWithSubmitted(userSub.docs[0].data());
-}
-	
-
-  // attach submit handler (cleans old handler first)
+  /* =========================
+     SUBMISSION FLOW
+     - checks for duplicates
+     - uploads files
+     - writes affiliate_submissions
+     - increments affiliateJobs.filledWorkers atomically
+     - updates UI and hides job card if full
+     ========================= */
   function attachSubmissionHandler(job) {
-  const submitBtn = el('aff2_detailSubmitBtn');
-  if (!submitBtn) return;
+    const submitBtn = el('aff2_detailSubmitBtn');
+    if (!submitBtn) return;
 
-  submitBtn.onclick = async function() {
-    if (!auth || !auth.currentUser) {
-      alert('Please login to submit proof.');
-      return;
-    }
+    // clear old handler
+    submitBtn.onclick = null;
 
-    const uid = auth.currentUser.uid;
-    const fEls = [el('proofFile1'), el('proofFile2'), el('proofFile3')];
-    const files = fEls.map(i => i?.files?.[0]).filter(Boolean);
+    submitBtn.onclick = async function() {
+      if (!auth || !auth.currentUser) { alert('Please login to submit proof.'); return; }
+      const uid = auth.currentUser.uid;
 
-    if (files.length < 1) {
-      alert('Please upload at least one proof file.');
-      return;
-    }
+      const fEls = [el('proofFile1'), el('proofFile2'), el('proofFile3')];
+      const files = fEls.map(i => i?.files?.[0]).filter(Boolean);
+      if (files.length < 1) { alert('Please upload at least one proof file.'); return; }
 
-    submitBtn.disabled = true;
-    const prevText = submitBtn.textContent;
-    submitBtn.textContent = 'Submitting...';
+      submitBtn.disabled = true;
+      const prevText = submitBtn.textContent;
+      submitBtn.textContent = 'Submitting...';
+
+      try {
+        // re-fetch job snapshot to ensure we have latest counts
+        const jobRef = db.collection('affiliateJobs').doc(job.id);
+        const jobSnap = await jobRef.get();
+        if (!jobSnap.exists) throw new Error('Job not found.');
+        const jobData = jobSnap.data();
+        if ((jobData.filledWorkers || 0) >= (jobData.numWorkers || 0)) {
+          alert('This job has reached its limit of workers.');
+          submitBtn.textContent = prevText;
+          submitBtn.disabled = false;
+          // remove card from list if present
+          const jobCard = document.querySelector(`[data-job-id="${job.id}"]`);
+          if (jobCard) jobCard.remove();
+          return;
+        }
+
+        // duplicate submission check
+        const dup = await db.collection('affiliate_submissions')
+          .where('jobId','==', job.id)
+          .where('userId','==', uid)
+          .get();
+        if (!dup.empty) {
+          alert('You have already submitted for this job.');
+          replaceSubmitAreaWithSubmitted({ id: dup.docs[0].id, ...dup.docs[0].data() });
+          return;
+        }
+
+        // upload files sequentially
+        const uploadedUrls = [];
+        for (let i = 0; i < files.length; i++) {
+          const url = await uploadFileHelper(files[i]);
+          uploadedUrls.push(url);
+        }
+
+        // build payload
+        const payload = {
+          jobId: job.id,
+          userId: uid,
+          userName: auth.currentUser.displayName || auth.currentUser.email || '',
+          proofFiles: uploadedUrls,
+          note: (el('aff2_detailSubmissionNote')?.value || '').trim(),
+          status: 'on review',
+          createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        // write submission
+        await db.collection('affiliate_submissions').add(payload);
+
+        // increment filledWorkers atomically
+        await jobRef.update({
+          filledWorkers: window.firebase.firestore.FieldValue.increment(1)
+        });
+
+        alert('✅ Submission successful! It will be reviewed by admin.');
+
+        // update UI: show submitted state
+        replaceSubmitAreaWithSubmitted(payload);
+
+        // refresh progress UI
+        await refreshProgressOnce(job.id, job.numWorkers);
+
+        // remove job card if full
+        const newJobSnap = await jobRef.get();
+        const newData = newJobSnap.data();
+        if ((newData.filledWorkers || 0) >= (newData.numWorkers || 0)) {
+          // remove card from list
+          const jobCard = document.querySelector(`[data-job-id="${job.id}"]`);
+          if (jobCard) jobCard.remove();
+        }
+
+      } catch (err) {
+        console.error('[AFF2] submit error', err);
+        alert('Submission failed. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = prevText;
+      }
+    };
+  }
+
+  /* =========================
+     REPLACE SUBMIT AREA WITH SUBMITTED VIEW
+     - shows uploaded images, note and status
+     - prevents re-submission visually
+     ========================= */
+  function replaceSubmitAreaWithSubmitted(submission) {
+    const area = el('aff2_submitArea');
+    if (!area) return;
+
+    // ensure proofFiles array exists
+    const urls = submission.proofFiles || submission.proofURLs || [];
+    const imgs = urls.map(u => `<img src="${safeText(u)}" class="w-full rounded-lg mt-2 border border-gray-200 object-contain">`).join('');
+
+    const status = safeText(submission.status || 'on review');
+    const statusColor = status === 'approved' ? 'text-green-600' : status === 'rejected' ? 'text-red-600' : 'text-yellow-600';
+
+    area.innerHTML = `
+      <div class="p-4 bg-gray-50 rounded-xl">
+        <h3 class="text-base font-semibold text-gray-800 mb-2">Proof Submitted</h3>
+        <p class="text-sm text-gray-600 mb-2">Status: <span class="${statusColor} font-medium">${status}</span></p>
+        ${imgs || `<div class="text-sm text-gray-400">No proof images available</div>`}
+        ${submission.note ? `<p class="text-sm text-gray-700 mt-3"><strong>Note:</strong> ${safeText(submission.note)}</p>` : ''}
+        <p class="text-xs text-gray-400 mt-4">Your submission will be reviewed by admin. You cannot submit again for this job.</p>
+      </div>
+    `;
+  }
+
+  /* =========================
+     FINISHED TASKS VIEW (user-specific)
+     - shows user's submissions with status
+     ========================= */
+  async function loadAndRenderFinished() {
+    const listEl = el("aff2_finishedList");
+    const pendingCountEl = el("aff2_pendingCount");
+    const approvedCountEl = el("aff2_approvedCount");
+    if (!listEl) return;
 
     try {
-      // Check if job is already full
-      const jobRef = db.collection('affiliateJobs').doc(job.id);
-      const jobSnap = await jobRef.get();
-      if (!jobSnap.exists) throw new Error('Job not found.');
-      const jobData = jobSnap.data();
-      if ((jobData.filledWorkers || 0) >= (jobData.numWorkers || 0)) {
-        alert('This job has reached its limit of workers.');
-        submitBtn.textContent = prevText;
-        submitBtn.disabled = false;
+      listEl.innerHTML = `<p class="text-gray-500 text-center p-6">Loading finished tasks...</p>`;
+
+      const user = auth.currentUser || await new Promise((resolve) => {
+        const unsub = auth.onAuthStateChanged((u) => { unsub(); resolve(u); });
+      });
+      if (!user) {
+        listEl.innerHTML = `<p class="text-gray-500 text-center p-6">Please sign in to see your finished tasks.</p>`;
+        if (pendingCountEl) pendingCountEl.textContent = "0";
+        if (approvedCountEl) approvedCountEl.textContent = "0";
         return;
       }
 
-      // Check for duplicate submission
-      const existing = await db.collection('affiliate_submissions')
-        .where('jobId','==',job.id)
-        .where('userId','==',uid)
+      const snap = await db.collection("affiliate_submissions")
+        .where("userId", "==", user.uid)
+        .orderBy("createdAt", "desc")
         .get();
-      if (!existing.empty) {
-        alert('You already submitted for this job.');
-        replaceSubmitAreaWithSubmitted(existing.docs[0].data());
+
+      if (snap.empty) {
+        listEl.innerHTML = `<p class="text-gray-500 text-center p-6">You have no finished tasks yet.</p>`;
+        if (pendingCountEl) pendingCountEl.textContent = "0";
+        if (approvedCountEl) approvedCountEl.textContent = "0";
         return;
       }
 
-      // Upload proofs
-      const uploadedUrls = [];
-      for (let f of files) uploadedUrls.push(await uploadFileHelper(f));
+      // gather job ids to display titles
+      let pending = 0, approved = 0;
+      const jobIds = [...new Set(snap.docs.map(d => (d.data().jobId || null)).filter(Boolean))];
+      const jobMap = {};
+      for (let i = 0; i < jobIds.length; i += 10) {
+        const chunk = jobIds.slice(i, i + 10);
+        const jobsSnap = await db.collection("affiliateJobs")
+          .where(window.firebase.firestore.FieldPath.documentId(), "in", chunk)
+          .get();
+        jobsSnap.forEach(jd => jobMap[jd.id] = jd.data());
+      }
 
-      const payload = {
-        jobId: job.id,
-        userId: uid,
-        userName: auth.currentUser.displayName || auth.currentUser.email || '',
-        proofFiles: uploadedUrls,
-        note: (el('aff2_detailSubmissionNote')?.value || '').trim(),
-        status: 'on review',
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      };
-
-      await db.collection('affiliate_submissions').add(payload);
-
-      // Increment filledWorkers
-      await jobRef.update({
-        filledWorkers: firebase.firestore.FieldValue.increment(1)
+      listEl.innerHTML = '';
+      snap.forEach(doc => {
+        const sub = doc.data();
+        const job = jobMap[sub.jobId] || {};
+        if (sub.status === "on review") pending++;
+        if (sub.status === "approved") approved++;
+        listEl.appendChild(makeFinishedCard(doc.id, sub, job));
       });
 
-      alert('✅ Submission successful! It will be reviewed by admin.');
-
-      // Update UI
-      replaceSubmitAreaWithSubmitted(payload);
-      await refreshProgressOnce(job.id, job.numWorkers);
-
-      // Auto remove card if job is full
-      const newJobSnap = await jobRef.get();
-      const newData = newJobSnap.data();
-      if ((newData.filledWorkers || 0) >= (newData.numWorkers || 0)) {
-        const jobCard = document.querySelector(`[data-id="${job.id}"]`)?.closest('.aff2-job-card');
-        if (jobCard) jobCard.remove();
-      }
+      if (pendingCountEl) pendingCountEl.textContent = pending;
+      if (approvedCountEl) approvedCountEl.textContent = approved;
 
     } catch (err) {
-      console.error('[AFF2] submit error', err);
-      alert('Submission failed. Please try again.');
-      submitBtn.disabled = false;
-      submitBtn.textContent = prevText;
+      console.error("loadAndRenderFinished error:", err);
+      listEl.innerHTML = `<p class="text-red-500 text-center p-6">Error loading finished tasks: ${err.message}</p>`;
     }
-  };
-}
-
-
-function replaceSubmitAreaWithSubmitted(submission) {
-  const area = el('aff2_submitArea');
-  if (!area) return;
-
-  const imgs = (submission.proofFiles || []).map(u => 
-    `<img src="${safeText(u)}" class="w-full rounded-lg mt-2 border border-gray-200 object-contain">`
-  ).join('');
-
-  area.innerHTML = `
-    <div class="p-4 bg-gray-50 rounded-xl">
-      <h3 class="text-base font-semibold text-gray-800 mb-2">Proof Submitted</h3>
-      <p class="text-sm text-gray-600 mb-2">Status: <span class="text-yellow-600 font-medium">On Review</span></p>
-      ${imgs}
-      ${submission.note ? `<p class="text-sm text-gray-700 mt-3"><strong>Note:</strong> ${safeText(submission.note)}</p>` : ''}
-      <p class="text-xs text-gray-400 mt-4">You’ve already submitted for this job.</p>
-    </div>
-  `;
-}
-
-
-	
-  // replace submit area with submitted state (show images + note + status)
-// ---- Helper for safe timestamps ----
-// ---- Helper for safe timestamps ----
-// ====== Safe Timestamp Formatter ======
-// ---- Helper for safe timestamps ----
-function formatTimestampSafe(ts) {
-  try {
-    if (ts && typeof ts.toDate === "function") return ts.toDate().toLocaleString();
-    if (typeof ts === "string") return new Date(ts).toLocaleString();
-    if (typeof ts === "number") return new Date(ts).toLocaleString();
-  } catch (e) {}
-  return "";
-}
-
-// ---- Load & Render Finished Tasks ----
-async function loadAndRenderFinished() {
-  const listEl = el("aff2_finishedList");
-  const pendingCountEl = el("aff2_pendingCount");
-  const approvedCountEl = el("aff2_approvedCount");
-
-  if (!listEl) return;
-
-  try {
-    listEl.innerHTML = `<p class="text-gray-500 text-center p-6">Loading finished tasks...</p>`;
-
-    const user = auth.currentUser || await new Promise((resolve) => {
-      const unsub = auth.onAuthStateChanged((u) => { unsub(); resolve(u); });
-    });
-    if (!user) {
-      listEl.innerHTML = `<p class="text-gray-500 text-center p-6">Please sign in to see your finished tasks.</p>`;
-      return;
-    }
-
-    const snap = await db.collection("affiliate_submissions")
-      .where("userId", "==", user.uid)
-      .orderBy("createdAt", "desc")
-      .get();
-
-    if (snap.empty) {
-      listEl.innerHTML = `<p class="text-gray-500 text-center p-6">You have no finished tasks yet.</p>`;
-      pendingCountEl.textContent = "0";
-      approvedCountEl.textContent = "0";
-      return;
-    }
-
-    // Count stats
-    let pending = 0, approved = 0;
-    const jobIds = [...new Set(snap.docs.map(d => (d.data().jobId || null)).filter(Boolean))];
-    const jobMap = {};
-
-    // Fetch job titles
-    for (let i = 0; i < jobIds.length; i += 10) {
-      const chunk = jobIds.slice(i, i + 10);
-      const jobsSnap = await db.collection("affiliateJobs")
-        .where(firebase.firestore.FieldPath.documentId(), "in", chunk)
-        .get();
-      jobsSnap.forEach(jd => jobMap[jd.id] = jd.data());
-    }
-
-    listEl.innerHTML = ""; // clear loader
-
-    snap.forEach((doc) => {
-      const sub = doc.data();
-      const job = jobMap[sub.jobId] || {};
-      if (sub.status === "on review") pending++;
-      if (sub.status === "approved") approved++;
-      listEl.appendChild(makeFinishedCard(doc.id, sub, job));
-    });
-
-    // Update counters
-    pendingCountEl.textContent = pending;
-    approvedCountEl.textContent = approved;
-
-  } catch (err) {
-    console.error("loadAndRenderFinished error:", err);
-    listEl.innerHTML = `<p class="text-red-500 text-center p-6">Error loading finished tasks: ${err.message}</p>`;
-  }
-}
-
-// ---- Create Each Task Card ----
-function makeFinishedCard(id, sub, job) {
-  const date = formatTimestampSafe(sub.createdAt);
-  const title = safeText(job.title || "Untitled Task");
-  const status = safeText(sub.status || "on review");
-  const note = safeText(sub.note || "No note added");
-  const earn = sub.amount || sub.reward || "₦0";
-  const imgUrl = sub.proofImage || sub.image || "";
-
-  const statusColor =
-    status === "approved" ? "text-green-600 bg-green-100"
-    : status === "rejected" ? "text-red-600 bg-red-100"
-    : "text-yellow-600 bg-yellow-100";
-
-  const div = document.createElement("div");
-  div.className =
-    "bg-white/80 backdrop-blur-md shadow-md border border-gray-100 rounded-2xl p-4 mb-3 hover:shadow-lg transition-all duration-300";
-
-  div.innerHTML = `
-    <div class="flex items-center justify-between mb-2">
-      <h3 class="font-semibold text-gray-900 truncate">${title}</h3>
-      <span class="text-xs font-medium px-2 py-1 rounded-full ${statusColor} capitalize">${status}</span>
-    </div>
-    <p class="text-sm text-gray-500">${date}</p>
-    <div class="mt-2 flex items-center justify-between">
-      <p class="text-sm text-gray-700"><strong>Earn:</strong> ${earn}</p>
-      <button class="text-indigo-600 text-sm font-medium hover:underline" onclick="openFinishedDetail('${id}')">View</button>
-    </div>
-  `;
-
-  // Add small proof image preview if available
-  if (imgUrl) {
-    const img = document.createElement("img");
-    img.src = imgUrl;
-    img.alt = "proof";
-    img.className = "mt-3 w-full max-h-36 object-contain rounded-lg border border-gray-200";
-    div.appendChild(img);
   }
 
-  return div;
-}
-
-// ---- View details modal ----
-async function openFinishedDetail(id) {
-  try {
-    const doc = await db.collection("affiliate_submissions").doc(id).get();
-    if (!doc.exists) return alert("Submission not found.");
-    const sub = doc.data();
-    const jobDoc = sub.jobId ? await db.collection("affiliateJobs").doc(sub.jobId).get() : null;
-    const job = jobDoc?.data() || {};
-    const title = job.title || "Untitled Task";
-    const status = sub.status || "on review";
-    const earn = sub.amount || sub.reward || "₦0";
+  function makeFinishedCard(id, sub, job) {
     const date = formatTimestampSafe(sub.createdAt);
-    const note = sub.note || "No note added";
-    const imgUrl = sub.proofImage || sub.image || "";
-
-    // Create modal layout
-    const modal = document.createElement("div");
-    modal.className = "fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4";
-    modal.innerHTML = `
-      <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 relative">
-        <button onclick="this.parentElement.parentElement.remove()" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600">&times;</button>
-        <h2 class="text-lg font-semibold text-gray-900 mb-2">${title}</h2>
-        <p class="text-sm text-gray-500 mb-1"><strong>Status:</strong> <span class="capitalize">${status}</span></p>
-        <p class="text-sm text-gray-500 mb-1"><strong>Earned:</strong> ${earn}</p>
-        <p class="text-sm text-gray-500 mb-1"><strong>Submitted:</strong> ${date}</p>
-        <p class="text-sm text-gray-700 mt-2"><strong>Note:</strong> ${note}</p>
-        ${imgUrl ? `<img src="${imgUrl}" class="mt-4 w-full rounded-lg border border-gray-200 object-contain max-h-60" />` : ""}
-      </div>
-    `;
-    document.body.appendChild(modal);
-  } catch (err) {
-    console.error(err);
-    alert("Error loading task details.");
-  }
-}
-// small tweak in makeFinishedElement to use formatTimestampSafe
-// replace the date line in makeFinishedElement with the safer formatter:
-// const date = formatTimestampSafe(sub.createdAt);
-
-  // finished card element
-  function makeFinishedElement(sub, job) {
-    const wrap = document.createElement('div');
-    wrap.className = 'aff2-finished-card bg-white rounded-2xl p-4 mb-4 shadow-sm';
-    const status = (sub.status || 'on review').toLowerCase();
-    const border = status === 'approved' ? '#10b981' : status === 'rejected' ? '#ef4444' : '#f59e0b';
-    wrap.style.borderLeft = `6px solid ${border}`;
-
-    const jobTitle = safeText(job.title || sub.jobId || 'Affiliate Job');
-    const date = sub.createdAt && sub.createdAt.toDate ? sub.createdAt.toDate().toLocaleString() : '';
-
-    // images grid - scale large images
+    const title = safeText(job.title || sub.jobId || 'Affiliate Job');
+    const status = safeText(sub.status || 'on review');
+    const note = safeText(sub.note || 'No note added');
+    const earn = sub.amount || sub.reward || "₦0";
     const urls = sub.proofFiles || sub.proofURLs || [];
-    const imagesHtml = urls.length ? urls.map(u => `<img src="${safeText(u)}" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px">`).join('') : '<div style="color:#9ca3af">No proof images</div>';
+    const statusColor =
+      status === "approved" ? "text-green-600 bg-green-100"
+      : status === "rejected" ? "text-red-600 bg-red-100"
+      : "text-yellow-600 bg-yellow-100";
 
-    wrap.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div>
-          <div style="font-weight:700;color:#111827">${jobTitle}</div>
-          <div style="font-size:13px;color:#6b7280;margin-top:6px">Status: <strong style="color:${border}">${safeText(sub.status||'on review')}</strong></div>
-          <div style="font-size:12px;color:#9ca3af;margin-top:6px">${safeText(date)}</div>
-        </div>
-        <div><button class="aff2-view-submission-btn" data-id="${safeText(sub.id)}" style="background:#2563eb;color:#fff;border:none;padding:8px 10px;border-radius:8px;cursor:pointer">View</button></div>
+    const div = document.createElement("div");
+    div.className =
+      "bg-white/80 backdrop-blur-md shadow-md border border-gray-100 rounded-2xl p-4 mb-3 hover:shadow-lg transition-all duration-300";
+
+    div.innerHTML = `
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-semibold text-gray-900 truncate">${title}</h3>
+        <span class="text-xs font-medium px-2 py-1 rounded-full ${statusColor} capitalize">${status}</span>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:12px">
-        ${imagesHtml}
+      <p class="text-sm text-gray-500">${date}</p>
+      <div class="mt-2 flex items-center justify-between">
+        <p class="text-sm text-gray-700"><strong>Earn:</strong> ${earn}</p>
+        <button class="text-indigo-600 text-sm font-medium hover:underline" data-sub-id="${id}" onclick="window.AFF2.openFinishedDetail && window.AFF2.openFinishedDetail('${id}')">View</button>
       </div>
-      ${sub.note ? `<div style="margin-top:10px;color:#374151"><strong>Note:</strong> ${safeText(sub.note)}</div>` : ''}
+      ${urls.length ? `<div class="mt-3 grid gap-2 grid-cols-2">${urls.map(u=>`<img src="${safeText(u)}" class="w-full max-h-36 object-contain rounded-lg border">`).join('')}</div>` : ''}
+      ${note ? `<div class="mt-3 text-sm text-gray-700"><strong>Note:</strong> ${note}</div>` : ''}
     `;
-    return wrap;
+    return div;
   }
 
-  // open submission modal (fetch by id)
-  async function openSubmissionModal(subId) {
+  async function openFinishedDetail(id) {
     try {
-      const doc = await db.collection('affiliate_submissions').doc(subId).get();
+      const doc = await db.collection('affiliate_submissions').doc(id).get();
       if (!doc.exists) return alert('Submission not found.');
-      const sub = { id: doc.id, ...doc.data() };
+      const sub = doc.data();
+      const jobDoc = sub.jobId ? await db.collection('affiliateJobs').doc(sub.jobId).get() : null;
+      const job = jobDoc?.data() || {};
+      const title = job.title || "Untitled Task";
+      const status = sub.status || "on review";
+      const earn = sub.amount || sub.reward || "₦0";
+      const date = formatTimestampSafe(sub.createdAt);
+      const note = sub.note || "No note added";
+      const urls = sub.proofFiles || sub.proofURLs || [];
 
-      // modal
-      const modal = document.createElement('div');
-      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px';
-      const box = document.createElement('div');
-      box.style.cssText = 'max-width:900px;width:100%;max-height:90vh;overflow:auto;background:#fff;border-radius:12px;padding:20px';
-      box.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <h3 style="margin:0">${safeText(sub.jobTitle||sub.jobId||'Submission')}</h3>
-          <button id="aff2_modal_close" style="background:#ef4444;color:#fff;border:none;padding:6px 10px;border-radius:8px;cursor:pointer">Close</button>
+      const modal = document.createElement("div");
+      modal.className = "fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4";
+      modal.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 relative">
+          <button id="aff2_modal_close" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600">&times;</button>
+          <h2 class="text-lg font-semibold text-gray-900 mb-2">${safeText(title)}</h2>
+          <p class="text-sm text-gray-500 mb-1"><strong>Status:</strong> <span class="capitalize">${safeText(status)}</span></p>
+          <p class="text-sm text-gray-500 mb-1"><strong>Earned:</strong> ${earn}</p>
+          <p class="text-sm text-gray-500 mb-1"><strong>Submitted:</strong> ${date}</p>
+          <p class="text-sm text-gray-700 mt-2"><strong>Note:</strong> ${safeText(note)}</p>
+          ${urls.length ? `<div class="mt-4 grid gap-2">${urls.map(u=>`<img src="${safeText(u)}" class="w-full rounded-lg border object-contain max-h-60">`).join('')}</div>` : ''}
         </div>
-        <div style="margin-top:8px;color:#6b7280"><strong>Status:</strong> ${safeText(sub.status||'on review')}</div>
-        <div style="font-size:13px;color:#9ca3af;margin-top:6px">${(sub.createdAt&&sub.createdAt.toDate)?sub.createdAt.toDate().toLocaleString():''}</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px">
-          ${(sub.proofFiles||sub.proofURLs||[]).map(u => `<img src="${safeText(u)}" style="width:100%;max-height:400px;object-fit:contain;border-radius:8px">`).join('') || '<div style="color:#9ca3af">No proof images</div>'}
-        </div>
-        ${sub.note ? `<div style="margin-top:12px;color:#374151"><strong>Note:</strong> ${safeText(sub.note)}</div>` : ''}
       `;
-      modal.appendChild(box);
       document.body.appendChild(modal);
-
-      // close handlers
-      box.querySelector('#aff2_modal_close').addEventListener('click', ()=> modal.remove());
+      modal.querySelector('#aff2_modal_close').addEventListener('click', ()=> modal.remove());
       modal.addEventListener('click', (ev)=> { if (ev.target === modal) modal.remove(); });
-
     } catch (err) {
-      console.error('[AFF2] openSubmissionModal', err);
+      console.error('[AFF2] openFinishedDetail', err);
       alert('Failed to load submission.');
     }
   }
 
-  // ----- event delegation (single) -----
+  /* =========================
+     EVENT DELEGATION & INIT / DESTROY
+     ========================= */
   function onDocumentClick(e) {
     const t = e.target;
-
     // open job detail
     const viewBtn = t.closest && t.closest('.aff2-btn-view');
     if (viewBtn) {
@@ -2342,11 +2339,11 @@ async function openFinishedDetail(id) {
       return;
     }
 
-    // view submission from finished list
-    const viewSub = t.closest && t.closest('.aff2-view-submission-btn');
+    // view submission from finished list (if using custom button)
+    const viewSub = t.closest && t.closest('[data-sub-id]');
     if (viewSub) {
-      const id = viewSub.dataset.id;
-      if (id) openSubmissionModal(id);
+      const id = viewSub.dataset.subId || viewSub.getAttribute('data-sub-id');
+      if (id) openFinishedDetail(id);
       return;
     }
 
@@ -2369,47 +2366,49 @@ async function openFinishedDetail(id) {
     }
   }
 
-  // ----- public init / destroy -----
   function init() {
-    // event delegation
+    // attach delegated click listener
     document.addEventListener('click', onDocumentClick);
     state.handlers.push({ el: document, ev: 'click', fn: onDocumentClick });
 
-    // initial job load (explicit)
+    // initial render
     loadAndRenderJobs();
+
+    // optionally load finished counts if element exists
+    if (el('aff2_pendingCount') || el('aff2_approvedCount')) {
+      // lazy, only when user opens finished view this will update
+    }
   }
 
   function destroy() {
-    // remove delegated handlers
     for (const h of state.handlers) {
       try { h.el.removeEventListener(h.ev, h.fn); } catch(_) {}
     }
     state.handlers = [];
-
-    // clear DOM areas if you want
+    if (state.snapshotUnsub) try { state.snapshotUnsub(); } catch(_) {}
+    state.snapshotUnsub = null;
     try { if (el('aff2_jobDetailContent')) el('aff2_jobDetailContent').innerHTML = ''; } catch(_) {}
     try { if (el('aff2_grid')) el('aff2_grid').innerHTML = ''; } catch(_) {}
     try { if (el('aff2_finishedList')) el('aff2_finishedList').innerHTML = ''; } catch(_) {}
-
-    // unset instance
     try { delete window.AFF2_COMPLETE_INSTANCE; } catch(_) { window.AFF2_COMPLETE_INSTANCE = null; }
   }
 
-  // ----- expose API -----
+  /* =========================
+     EXPORT API
+     ========================= */
   window.AFF2 = {
     init,
     destroy,
     loadAndRenderJobs,
     loadAndRenderFinished,
-    openJobDetail
+    openJobDetail,
+    openFinishedDetail
   };
 
-  // auto init once (you can call AFF2.init() again if needed)
-  setTimeout(()=>{ try{ init(); }catch(e){console.error(e);} }, 0);
+  // auto init
+  setTimeout(()=>{ try{ init(); }catch(e){console.error('[AFF2] init failed',e);} }, 0);
 
 })(); // end module
-
-
 
 
 
