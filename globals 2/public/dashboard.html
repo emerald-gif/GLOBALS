@@ -2635,40 +2635,52 @@
 
 
 <!-- Deposit Section -->
-<!-- Deposit Section (drop-in) -->
 <div id="depositSection" class="tab-section hidden p-6 max-w-md mx-auto rounded-xl shadow-lg bg-white mt-8 space-y-6">
   
-	
-	<button onclick="activateTab('payment')" 
-    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+  <!-- Back Button -->
+  <button onclick="activateTab('payment')" 
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4 transition">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
     </svg>
     Back
   </button>
-	
+
   <h2 class="text-2xl font-bold text-center text-gray-800">Deposit Funds</h2>
 
+  <!-- ✅ User Email -->
   <div>
-    <label class="block text-gray-600 mb-1">Email</label>
+    <label class="block text-gray-600 mb-1">Your Email</label>
     <input id="depositEmail" type="email" readonly
       class="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg border border-gray-300" />
   </div>
 
+  <!-- ✅ Deposit Amount -->
   <div>
-    <label class="block text-gray-600 mb-1">Amount (₦)</label>
+    <label class="block text-gray-600 mb-1">Deposit Amount (₦)</label>
     <input id="depositAmount" type="number" placeholder="Minimum ₦100"
       class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-    <p id="amountError" class="text-red-500 text-sm hidden mt-1">Please enter an amount above ₦100</p>
+    <p id="amountError" class="text-red-500 text-sm hidden mt-1">Please enter an amount of ₦100 or above.</p>
   </div>
 
+  <!-- ✅ Proceed Button -->
   <button id="depositBtn" onclick="handleDeposit()"
-    class="w-full bg-blue-600 hover:bg-blue-700 transition duration-300 text-white py-3 rounded-lg font-semibold">
-    Proceed to Paystack Checkout
+    class="w-full bg-blue-600 hover:bg-blue-700 transition duration-300 text-white py-3 rounded-xl font-semibold active:scale-[.98]">
+    Proceed to Payment
   </button>
+
+  <!-- ✅ Important Deposit Notes -->
+  <div class="mt-4 bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-gray-700">
+    <p class="font-semibold text-blue-700 mb-1">💡 Deposit Instructions</p>
+    <ul class="list-disc ml-5 space-y-1 text-gray-600">
+      <li>The minimum deposit amount is <span class="font-medium text-gray-800">₦100</span>.</li>
+      <li>After clicking <span class="font-medium">Proceed to Payment</span>, you’ll be redirected to the <span class="font-medium">Paystack checkout</span> page.</li>
+      <li>Complete the payment using the account or card details provided on that page.</li>
+      <li>Once payment is successful, <span class="font-medium text-gray-800">do not press "Cancel"</span>. Please wait and allow the system to redirect you automatically back to your dashboard.</li>
+      <li>Your deposit will be verified and reflected in your wallet immediately after successful payment.</li>
+    </ul>
+  </div>
 </div>
-
-
 
 
 
