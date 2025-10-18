@@ -2060,41 +2060,130 @@ if (window.registerPage) {
   }
 
   // ----- Finished list rendering (explicit get) -----
-  async function loadAndRenderFinished() {
-    const listEl = el('aff2_finishedList');
-    if (!listEl) { console.warn('[AFF2] no finished list container'); return; }
+  // safe timestamp -> string helper
+function formatTimestampSafe(ts) {
+  try {
+    // Firestore Timestamp object -> Date
+    if (ts && typeof ts.toDate === 'function') return ts.toDate().toLocaleString();
+    // ISO string
+    if (typeof ts === 'string' && ts.length) return new Date(ts).toLocaleString();
+    // number epoch
+    if (typeof ts === 'number') return new Date(ts).toLocaleString();
+  } catch (e) { /* ignore */ }
+  return '';
+}
 
-    try {
-      listEl.innerHTML = '<p class="text-gray-500 p-6">Loading finished tasks...</p>';
-      if (!auth || !auth.currentUser) { listEl.innerHTML = '<p class="text-gray-500 p-6">Login to see your finished tasks.</p>'; return; }
-      const uid = auth.currentUser.uid;
+// ----- Finished list rendering (explicit get) - robust version -----
+async function loadAndRenderFinished() {
+  const listEl = el('aff2_finishedList');
+  if (!listEl) { console.warn('[AFF2] no finished list container'); return; }
 
-      const snap = await db.collection('affiliate_submissions').where('userId','==',uid).orderBy('createdAt','desc').get();
-      if (snap.empty) { listEl.innerHTML = '<p class="text-gray-500 p-6">You have no finished tasks yet.</p>'; return; }
-
-      // gather jobIds to fetch titles
-      const jobIds = [...new Set(snap.docs.map(d => d.data().jobId).filter(Boolean))];
-      const jobMap = {};
-
-      // chunk jobIds 10 at a time
-      for (let i=0;i<jobIds.length;i+=10) {
-        const chunk = jobIds.slice(i,i+10);
-        const jobsSnap = await db.collection('affiliateJobs').where(window.firebase.firestore.FieldPath.documentId(), 'in', chunk).get();
-        jobsSnap.forEach(jd => jobMap[jd.id] = jd.data());
-      }
-
-      listEl.innerHTML = '';
-      snap.forEach(doc => {
-        const sub = { id: doc.id, ...doc.data() };
-        const job = jobMap[sub.jobId] || {};
-        listEl.appendChild(makeFinishedElement(sub, job));
-      });
-
-    } catch (err) {
-      console.error('[AFF2] loadAndRenderFinished', err);
-      listEl.innerHTML = '<p class="text-red-500 p-6">Failed to load finished tasks.</p>';
+  try {
+    // basic checks
+    if (!window.firebase || !window.firebase.firestore) {
+      console.error('[AFF2] Firestore not initialized');
+      listEl.innerHTML = '<p class="text-red-500 p-6">Database not available. Please refresh or sign in.</p>';
+      return;
     }
+    if (!auth) {
+      console.error('[AFF2] Firebase Auth not available');
+      listEl.innerHTML = '<p class="text-red-500 p-6">Auth not available. Please refresh or sign in.</p>';
+      return;
+    }
+
+    // show loading state
+    listEl.innerHTML = '<p class="text-gray-500 p-6">Loading finished tasks...</p>';
+
+    // wait for auth state if currentUser not ready
+    const ensureUser = () => new Promise(resolve => {
+      if (auth.currentUser) return resolve(auth.currentUser);
+      const off = auth.onAuthStateChanged(user => {
+        off(); // unsubscribe
+        resolve(user);
+      });
+      // if onAuthStateChanged returned a function we unsubscribe above; otherwise leave.
+    });
+    const user = await ensureUser();
+    if (!user) {
+      listEl.innerHTML = '<p class="text-gray-500 p-6">Login to see your finished tasks.</p>';
+      return;
+    }
+    const uid = user.uid;
+
+    // run query safely; guard for permission/index errors and show message
+    let snap;
+    try {
+      snap = await db.collection('affiliate_submissions')
+        .where('userId', '==', uid)
+        .orderBy('createdAt', 'desc')
+        .get();
+    } catch (qerr) {
+      console.error('[AFF2] finished query error', qerr);
+      // try a fallback without orderBy in case of index/permission problem
+      try {
+        snap = await db.collection('affiliate_submissions')
+          .where('userId', '==', uid)
+          .get();
+      } catch (qerr2) {
+        console.error('[AFF2] finished fallback query error', qerr2);
+        const msg = qerr2 && qerr2.message ? safeText(qerr2.message) : 'Failed to load finished tasks.';
+        listEl.innerHTML = `<p class="text-red-500 p-6">Failed to load finished tasks. ${msg}</p>`;
+        return;
+      }
+    }
+
+    if (!snap || snap.empty) {
+      listEl.innerHTML = '<p class="text-gray-500 p-6">You have no finished tasks yet.</p>';
+      return;
+    }
+
+    // gather jobIds to fetch titles (defensive)
+    const jobIds = [...new Set(snap.docs.map(d => {
+      const data = d.data() || {};
+      return data.jobId || null;
+    }).filter(Boolean))];
+
+    const jobMap = {};
+    if (jobIds.length) {
+      // chunk jobIds 10 at a time (Firestore 'in' supports up to 10)
+      for (let i = 0; i < jobIds.length; i += 10) {
+        const chunk = jobIds.slice(i, i + 10);
+        try {
+          const jobsSnap = await db.collection('affiliateJobs')
+            .where(window.firebase.firestore.FieldPath.documentId(), 'in', chunk)
+            .get();
+          jobsSnap.forEach(jd => jobMap[jd.id] = jd.data());
+        } catch (je) {
+          console.warn('[AFF2] job chunk fetch failed for chunk', chunk, je);
+          // continue; missing jobs will be handled gracefully
+        }
+      }
+    }
+
+    // render
+    listEl.innerHTML = '';
+    snap.forEach(doc => {
+      const raw = doc.data() || {};
+      // normalize createdAt (some docs may have serverTimestamp or client timestamp)
+      const createdAt = raw.createdAt || raw.timeCreated || null;
+      const normalizedSub = {
+        id: doc.id,
+        ...raw,
+        createdAt // keep original type for formatting in makeFinishedElement
+      };
+      listEl.appendChild(makeFinishedElement(normalizedSub, jobMap[normalizedSub.jobId] || {}));
+    });
+
+  } catch (err) {
+    console.error('[AFF2] loadAndRenderFinished', err);
+    const msg = err && err.message ? safeText(err.message) : 'Failed to load finished tasks.';
+    listEl.innerHTML = `<p class="text-red-500 p-6">Failed to load finished tasks. ${msg}</p>`;
   }
+}
+
+// small tweak in makeFinishedElement to use formatTimestampSafe
+// replace the date line in makeFinishedElement with the safer formatter:
+// const date = formatTimestampSafe(sub.createdAt);
 
   // finished card element
   function makeFinishedElement(sub, job) {
