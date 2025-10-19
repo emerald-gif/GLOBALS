@@ -1779,168 +1779,157 @@ if (window.registerPage) {
                                     //AFFILIATE 
 
 
-// AFF2 COMPLETE MODULE - single-file (replace your old AFF2 script with this)
-// Requirements: firebase (auth, firestore), optional firebase.storage OR provide window.uploadToCloudinary(file)
-// AFF2 COMPLETE MODULE - single-file (replace your old AFF2 script with this)
-// Requirements: firebase (auth, firestore), optional firebase.storage OR provide window.uploadToCloudinary(file)
-// Usage: include after firebase init. The module auto-inits but exposes AFF2 API for manual control.
-
+// AFF2 Robust Affiliate Module — single-file (no onSnapshot)
+// Behaviors:
+// - Only uses get()
+// - Progress increments on submission (on review + approved count = occupancy)
+// - Approvals remove job when approvedCount >= numWorkers
+// - If occupancy >= numWorkers -> hide submission UI (but keep job visible)
+// - If occupancy drops below numWorkers (e.g. a rejection) -> allow submissions again
+// - User's own submission still shown in detail even if rejected
 (function(){
   'use strict';
 
-  // single-instance guard
-  if (window.AFF2_COMPLETE_INSTANCE) { console.warn('[AFF2] already initialized'); return; }
-  window.AFF2_COMPLETE_INSTANCE = true;
+  if (window.AFF2_COMPLETE_INSTANCE_V2) { console.warn('[AFF2] instance already present'); return; }
+  window.AFF2_COMPLETE_INSTANCE_V2 = true;
 
-  /* =========================
-     CONFIG
-     ========================= */
-  const LIVE_UPDATES = false; // set true if you want real-time updates for jobs
-
-  /* =========================
-     HELPERS
-     ========================= */
+  // Helpers
   const el = id => document.getElementById(id);
-  const q = sel => document.querySelector(sel);
-  const safeText = s => String(s || '')
-    .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
-    .replaceAll('"','&quot;').replaceAll("'", '&#39;');
+  const safeText = s => String(s || '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'", '&#39;');
   const formatNaira = n => (n==null||isNaN(Number(n))) ? '₦0' : '₦' + Number(n).toLocaleString('en-NG');
-  function formatTimestampSafe(ts) {
-    try {
-      if (!ts) return '';
-      if (ts && typeof ts.toDate === "function") return ts.toDate().toLocaleString();
-      if (typeof ts === "string" || typeof ts === "number") return new Date(ts).toLocaleString();
-    } catch(e) {}
-    return "";
-  }
 
-  /* =========================
-     FIREBASE SHORTCUTS
-     ========================= */
+  // Firebase
   const firebaseAvailable = !!(window.firebase && window.firebase.firestore);
   const db = firebaseAvailable ? window.firebase.firestore() : null;
   const auth = (window.firebase && window.firebase.auth) ? window.firebase.auth() : null;
-  const storageAvailable = !!(window.firebase && window.firebase.storage);
 
-  /* =========================
-     MODULE STATE
-     ========================= */
   const state = {
-    handlers: [],                // delegated handlers for cleanup
-    currentJobId: null,          // job currently opened
-    snapshotUnsub: null,         // unsubscribe for jobs (if LIVE_UPDATES)
-    subsUnsub: null,             // unsubscribe for submissions approval listener
-    submissionStatusMap: {},     // maps submissionId -> lastKnownStatus
+    handlers: [],
+    currentJobId: null,
+    // Track temporary occupancy for currently open detail to update UI immediately on submit
+    currentOccupancy: 0,
+    currentApproved: 0,
+    currentNumWorkers: 0
   };
 
-  /* =========================
-     UPLOAD HELPER
-     ========================= */
+  // Upload helper (Cloudinary or Firebase storage)
   async function uploadFileHelper(file) {
     if (!file) throw new Error('No file provided');
     if (typeof window.uploadToCloudinary === 'function') {
       return await window.uploadToCloudinary(file);
     }
-    if (storageAvailable && auth && auth.currentUser) {
+    if (window.firebase && window.firebase.storage && auth && auth.currentUser) {
       const storageRef = window.firebase.storage().ref();
-      const path = `affiliate_proofs/${auth.currentUser.uid}_${Date.now()}_${file.name.replace(/\s+/g,'_')}`;
+      const path = `affiliate_proofs/${auth.currentUser.uid}_${Date.now()}_${file.name}`;
       const ref = storageRef.child(path);
-      const snap = await ref.put(file);
-      return await snap.ref.getDownloadURL();
+      await ref.put(file);
+      return await ref.getDownloadURL();
     }
-    throw new Error('No upload helper available: provide uploadToCloudinary(file) or enable firebase.storage.');
+    throw new Error('No upload helper available. Provide uploadToCloudinary(file) or enable firebase.storage.');
   }
 
-  /* =========================
-     JOB CARD / DETAIL RENDERERS
-     - Note: Progress removed from job detail per request.
-     ========================= */
-  function makeJobCardElement(job) {
+  // ====== JOB CARD ======
+  function makeJobCardElement(job, occupancyCount, approvedCount) {
+    // occupancyCount = on review + approved (temporary occupancy)
+    // approvedCount = only approved
     const wrap = document.createElement('div');
-    wrap.className = 'aff2-job-card bg-white rounded-xl p-3 shadow-sm';
-    wrap.dataset.jobId = job.id || '';
+    wrap.className = 'aff2-job-card bg-white rounded-xl p-3 shadow-sm mb-4';
     const img = job.campaignLogoURL || job.image || '/assets/default-thumb.jpg';
-    const filled = Number(job.filledWorkers || 0);
-    const total  = Number(job.numWorkers || 0);
-    const pct = total ? Math.min(100, Math.round((filled/total)*100)) : 0;
-
+    const remainingSlots = Math.max(0, (Number(job.numWorkers||0) - occupancyCount));
     wrap.innerHTML = `
       <div class="overflow-hidden rounded-lg">
-        <img src="${safeText(img)}" alt="${safeText(job.title||'')}" class="w-full h-36 object-cover rounded-lg" />
+        <img src="${safeText(img)}" alt="${safeText(job.title||'')}" class="w-full h-36 object-cover rounded-lg"/>
       </div>
       <div class="mt-3">
-        <h4 class="font-semibold text-md">${safeText(job.title||'Untitled')}</h4>
-        ${job.category ? `<div class="mt-1"><span class="aff2-category-tag inline-block text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded">${safeText(job.category)}</span></div>` : ''}
-        <div class="text-sm text-gray-500 mt-1">${formatNaira(job.workerPay)} · ${total} worker${total===1?'':'s'}</div>
-        <div class="text-sm text-gray-500 mt-1">${filled}/${total} workers</div>
-        <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden mt-2">
-          <div class="h-2 bg-blue-500 rounded-full" style="width:${pct}%"></div>
-        </div>
-        <div class="mt-3">
-          <button class="aff2-btn-view w-full py-2 rounded-xl bg-blue-600 text-white font-semibold" data-id="${safeText(job.id)}">View Task</button>
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h4 class="font-semibold text-md">${safeText(job.title||'Untitled')}</h4>
+            ${job.category ? `<div class="mt-1"><span class="inline-block text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded">${safeText(job.category)}</span></div>` : ''}
+            <div class="text-sm text-gray-500 mt-1">${formatNaira(job.workerPay)} · ${Number(job.numWorkers||0)} workers</div>
+            <div class="text-sm text-gray-500 mt-1">Occupancy: ${occupancyCount}/${Number(job.numWorkers||0)} · Approved: ${approvedCount}</div>
+          </div>
+          <div style="min-width:120px;text-align:right">
+            ${remainingSlots <= 0 ? '<div class="text-xs text-red-500 font-medium">No open slots</div>' : `<div class="text-xs text-green-600 font-medium">${remainingSlots} open</div>`}
+            <button class="aff2-btn-view mt-3 w-full py-2 bg-blue-600 text-white rounded-xl" data-id="${safeText(job.id)}">View Task</button>
+          </div>
         </div>
       </div>
     `;
     return wrap;
   }
 
-  /* =========================
-     LOAD & RENDER JOB LIST
-     - excludes jobs that are already full
-     - reads filledWorkers (which now reflects approved submissions)
-     ========================= */
+  // ====== Load & render jobs (explicit get) ======
   async function loadAndRenderJobs() {
-    const grid = el('aff2_grid') || el('aff2_jobsList');
-    if (!grid) {
-      console.warn('[AFF2] no job grid element (aff2_grid or aff2_jobsList) found.');
-      return;
-    }
+    const grid = el('aff2_grid') || el('aff2_jobsList') || el('aff2_jobsContainer');
+    if (!grid) { console.warn('[AFF2] jobs container missing'); return; }
     try {
-      grid.innerHTML = '<p class="text-gray-500 p-6">Loading tasks...</p>';
+      grid.innerHTML = '<p class="text-gray-500 p-6 text-center">Loading jobs...</p>';
       if (!db) throw new Error('Database not available');
 
-      if (LIVE_UPDATES) {
-        if (state.snapshotUnsub) state.snapshotUnsub();
-        let query = db.collection('affiliateJobs').where('status','==','approved');
-        try { query = query.orderBy('postedAt','desc'); } catch(e){} // ignore index errors
-        state.snapshotUnsub = query.onSnapshot(snap => {
-          if (snap.empty) { grid.innerHTML = '<p class="text-gray-500 p-6 text-center">No affiliate tasks right now.</p>'; return; }
-          grid.innerHTML = '';
-          snap.forEach(doc => {
-            const job = { id: doc.id, ...doc.data() };
-            if ((job.filledWorkers || 0) >= (job.numWorkers || 0)) return; // skip full jobs
-            grid.appendChild(makeJobCardElement(job));
-          });
-        }, err => {
-          console.error('[AFF2] jobs snapshot error', err);
-          grid.innerHTML = '<p class="text-red-500 p-6">Failed to load tasks.</p>';
-        });
+      // fetch jobs (status approved meaning job itself published)
+      let jobsQuery = db.collection('affiliateJobs').where('status','==','approved');
+      try { jobsQuery = jobsQuery.orderBy('postedAt','desc'); } catch (_) {}
+
+      const snap = await jobsQuery.get();
+      if (snap.empty) {
+        grid.innerHTML = '<p class="text-gray-500 p-6 text-center">No affiliate tasks right now.</p>';
         return;
       }
 
-      // GET mode
-      let qRef = db.collection('affiliateJobs').where('status','==','approved');
-      try { qRef = qRef.orderBy('postedAt','desc'); } catch(e) {}
-      const snap = await qRef.get();
-      if (snap.empty) { grid.innerHTML = '<p class="text-gray-500 p-6 text-center">No affiliate tasks right now.</p>'; return; }
+      // For each job, get occupancy (on review + approved) and approved counts
+      // We'll parallelize counts per job
+      const jobs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Prepare promises to get counts
+      const countPromises = jobs.map(job => (async () => {
+        const jobId = job.id;
+        // occupancy: statuses that count as submitted (on review + approved)
+        const occSnap = await db.collection('affiliate_submissions')
+          .where('jobId','==', jobId)
+          .where('status','in', ['on review','approved'])
+          .get()
+          .catch(err => { /* if where-in fails because no 'in' support, fallback to get all and filter */ null });
+        let occupancy = 0;
+        if (occSnap && occSnap.size !== undefined) occupancy = occSnap.size;
+        else {
+          // fallback: fetch all submissions and compute occupancy & approved
+          const allSnap = await db.collection('affiliate_submissions').where('jobId','==',jobId).get();
+          occupancy = allSnap.docs.filter(d => {
+            const s = (d.data().status || '').toLowerCase();
+            return s === 'on review' || s === 'approved';
+          }).length;
+        }
+        // approved count
+        const approvedSnap = await db.collection('affiliate_submissions').where('jobId','==', jobId).where('status','==','approved').get();
+        const approved = approvedSnap.size || 0;
+        return { jobId, occupancy, approved };
+      })());
+
+      const counts = await Promise.all(countPromises);
+
+      // map counts by jobId
+      const map = {};
+      counts.forEach(c => map[c.jobId] = c);
+
+      // Build elements; exclude fully-approved jobs (approved >= numWorkers)
       grid.innerHTML = '';
-      snap.forEach(doc => {
-        const job = { id: doc.id, ...doc.data() };
-        if ((job.filledWorkers || 0) >= (job.numWorkers || 0)) return; // skip full jobs
-        grid.appendChild(makeJobCardElement(job));
-      });
+      for (const job of jobs) {
+        const c = map[job.id] || { occupancy: 0, approved: 0 };
+        const numWorkers = Number(job.numWorkers || 0);
+        if (numWorkers > 0 && c.approved >= numWorkers) {
+          // job fully approved - skip showing (job leaves)
+          continue;
+        }
+        const elJob = makeJobCardElement(job, c.occupancy, c.approved);
+        grid.appendChild(elJob);
+      }
+
     } catch (err) {
       console.error('[AFF2] loadAndRenderJobs', err);
-      grid.innerHTML = '<p class="text-red-500 p-6">Failed to load tasks.</p>';
+      (grid).innerHTML = '<p class="text-red-500 p-6">Failed to load tasks.</p>';
     }
   }
 
-  /* =========================
-     OPEN JOB DETAIL
-     - Progress has been removed from detail screen as requested.
-     - only renders job info and submit area
-     ========================= */
+  // ====== Open job detail (get) ======
   async function openJobDetail(jobId) {
     if (!db) { alert('Database not ready'); return; }
     try {
@@ -1949,14 +1938,35 @@ if (window.registerPage) {
       const job = { id: doc.id, ...doc.data() };
       state.currentJobId = job.id;
 
-      const detailContainer = el('aff2_jobDetailContent');
-      if (!detailContainer) { alert('Detail container not found'); return; }
-      detailContainer.innerHTML = ''; // reset
+      // fetch occupancy and approved counts now
+      let occupancy = 0, approved = 0;
+      try {
+        // attempt efficient queries
+        const occSnap = await db.collection('affiliate_submissions')
+          .where('jobId','==', job.id)
+          .where('status','in', ['on review','approved'])
+          .get();
+        occupancy = occSnap.size || 0;
+      } catch(e) {
+        // fallback
+        const allSnap = await db.collection('affiliate_submissions').where('jobId','==', job.id).get();
+        occupancy = allSnap.docs.filter(d => { const s=(d.data().status||'').toLowerCase(); return s==='on review' || s==='approved'; }).length;
+      }
+      const approvedSnap = await db.collection('affiliate_submissions').where('jobId','==', job.id).where('status','==','approved').get();
+      approved = approvedSnap.size || 0;
+
+      state.currentOccupancy = occupancy;
+      state.currentApproved = approved;
+      state.currentNumWorkers = Number(job.numWorkers || 0);
+
+      // Render detail UI larger/full
+      const content = el('aff2_jobDetailContent');
+      if (!content) { alert('Detail container missing'); return; }
+      content.innerHTML = '';
 
       const wrapper = document.createElement('div');
-      wrapper.className = 'aff2-detail-wrapper bg-white rounded-2xl shadow-md overflow-hidden max-w-3xl mx-auto my-6';
+      wrapper.className = 'bg-white rounded-2xl shadow-md overflow-hidden max-w-3xl mx-auto my-6';
 
-      // banner
       const banner = document.createElement('img');
       banner.src = job.image || job.campaignLogoURL || '/assets/default-banner.jpg';
       banner.className = 'w-full h-56 object-cover';
@@ -1964,6 +1974,7 @@ if (window.registerPage) {
 
       const body = document.createElement('div');
       body.className = 'p-6 space-y-4';
+
       body.innerHTML = `
         <div>
           <h2 class="text-2xl font-bold">${safeText(job.title||'Untitled')}</h2>
@@ -1971,14 +1982,21 @@ if (window.registerPage) {
           <p class="text-sm text-gray-500 mt-2">${formatNaira(job.workerPay)} · ${Number(job.numWorkers||0)} workers</p>
         </div>
 
-        ${job.description ? `<p class="text-gray-700 text-sm">${safeText(job.description)}</p>` : ''}
         ${job.instructions ? `<div class="text-gray-700 text-sm"><strong>Instructions:</strong><br>${safeText(job.instructions)}</div>` : ''}
         ${job.targetLink ? `<div><strong class="text-sm text-gray-700">Target Link:</strong> <a href="${safeText(job.targetLink)}" target="_blank" class="text-blue-600 underline break-all">${safeText(job.targetLink)}</a></div>` : ''}
+
+        <div>
+          <div class="text-sm text-gray-500 mb-1">Occupancy (submitted + approved)</div>
+          <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+            <div id="aff2_detailProgressBar" class="h-2 bg-blue-500 rounded-full" style="width:${Math.min(100, Math.round((state.currentOccupancy / (job.numWorkers || 1)) * 100))}%"></div>
+          </div>
+          <div id="aff2_detailProgressText" class="text-sm text-gray-500 mt-1">${state.currentOccupancy}/${Number(job.numWorkers||0)} · Approved: ${state.currentApproved}</div>
+        </div>
 
         <div id="aff2_submitArea" class="mt-6 border-t pt-4">
           <h3 class="text-base font-semibold text-gray-800 mb-3">Submit Proof</h3>
 
-          <div class="space-y-3">
+          <div id="aff2_submitInputs" class="space-y-3">
             <div><label class="text-sm text-gray-700">Proof File 1</label><input type="file" id="proofFile1" accept="image/*" class="block w-full border rounded-md p-2"></div>
             <div><label class="text-sm text-gray-700">Proof File 2</label><input type="file" id="proofFile2" accept="image/*" class="block w-full border rounded-md p-2"></div>
             <div><label class="text-sm text-gray-700">Proof File 3</label><input type="file" id="proofFile3" accept="image/*" class="block w-full border rounded-md p-2"></div>
@@ -1990,152 +2008,185 @@ if (window.registerPage) {
             <button id="aff2_detailSubmitBtn" class="w-full py-3 bg-blue-600 text-white rounded-xl">Submit Proof</button>
           </div>
 
-          <p class="text-xs text-gray-400 mt-2">Job is currently Running</p>
+          <p id="aff2_submitHelp" class="text-xs text-gray-400 mt-2">Submissions are reviewed by admin. Approved submissions finalize a slot; rejected frees it again.</p>
         </div>
       `;
+
       wrapper.appendChild(body);
-      detailContainer.appendChild(wrapper);
+      content.appendChild(wrapper);
 
       // show/hide screens
       el('aff2_jobsContainer')?.classList.add('aff2-hidden');
       el('aff2_finishedScreen')?.classList.add('aff2-hidden');
       el('aff2_jobDetailScreen')?.classList.remove('aff2-hidden');
 
-      // If user already submitted, lock submit area
-      let userSubmitted = false;
-      if (auth && auth.currentUser) {
-        try {
-          const userSnap = await db.collection('affiliate_submissions')
-            .where('jobId','==',job.id)
-            .where('userId','==',auth.currentUser.uid)
-            .get();
-          if (!userSnap.empty) {
-            const subData = userSnap.docs[0].data();
-            replaceSubmitAreaWithSubmitted({ ...subData, id: userSnap.docs[0].id });
-            userSubmitted = true;
-          }
-        } catch (e) {
-          console.error('[AFF2] check user submission', e);
+      // If approvedCount >= numWorkers -> this job should not be visible normally (handled in jobs list), but if user opens it, we should show message and hide submit
+      const numWorkers = Number(job.numWorkers || 0);
+      if (numWorkers > 0 && state.currentApproved >= numWorkers) {
+        // job fully approved — hide submit area and show closed message
+        const area = el('aff2_submitArea');
+        if (area) {
+          area.innerHTML = `<div style="padding:12px;background:#f8fafc;border-radius:12px;text-align:center"><strong>All slots fully approved. This job is closed.</strong></div>`;
         }
+        return;
       }
 
-      // attach submit handler only if user not already submitted and job not full
-      if (!userSubmitted) attachSubmissionHandler(job);
+      // If occupancy (on review + approved) >= numWorkers, hide submit inputs (no open slots) but job remains visible and user can see details
+      if (numWorkers > 0 && state.currentOccupancy >= numWorkers) {
+        const area = el('aff2_submitArea');
+        if (area) {
+          area.innerHTML = `<div style="padding:12px;background:#fffbeb;border-radius:12px;text-align:center"><strong>No open submission slots right now. Please check back later.</strong></div>`;
+        }
+        // Still, we must display user's own submission if present (even rejected) — check below and append if exists
+        await showUserSubmissionIfExists(job.id);
+        return;
+      }
+
+      // Check if user already submitted -> if so show submitted view
+      const user = auth.currentUser;
+      if (!user) {
+        // Not logged in: attach handler that alerts login
+        const submitBtn = el('aff2_detailSubmitBtn');
+        submitBtn.onclick = () => alert('Please log in to submit proof.');
+        return;
+      }
+
+      const uid = user.uid;
+      const existingSnap = await db.collection('affiliate_submissions')
+        .where('jobId','==', job.id)
+        .where('userId','==', uid)
+        .get();
+
+      if (!existingSnap.empty) {
+        // show the user's existing submission (even if rejected)
+        const doc = existingSnap.docs[0];
+        const sub = { id: doc.id, ...doc.data() };
+        replaceSubmitAreaWithSubmitted(sub);
+        return;
+      }
+
+      // Otherwise attach submit handler (enable submission)
+      attachSubmitHandlerForJob(job);
 
     } catch (err) {
       console.error('[AFF2] openJobDetail', err);
-      alert('Failed to open job.');
+      alert('Failed to load job details.');
     }
   }
 
-  /* =========================
-     REFRESH PROGRESS (kept for potential external use)
-     - counts only approved submissions (used by job list, not detail)
-     ========================= */
-  async function refreshProgressOnce(jobId, totalWorkers) {
+  // Show a user's own submission in the submit area if it exists (for cases where occupancy blocks submissions but user submitted earlier)
+  async function showUserSubmissionIfExists(jobId) {
+    if (!auth || !auth.currentUser) return;
     try {
-      const approvedSnap = await db.collection('affiliate_submissions')
-        .where('jobId','==',jobId)
-        .where('status','==','approved')
+      const uid = auth.currentUser.uid;
+      const snap = await db.collection('affiliate_submissions')
+        .where('jobId','==', jobId)
+        .where('userId','==', uid)
         .get();
-      const approved = approvedSnap.size || 0;
-      const total = Number(totalWorkers || 0);
-      const pct = total ? Math.min(100, Math.round((approved/total)*100)) : 0;
-
-      // If you have elements outside detail that display progress, update them here.
-      const bar = el('aff2_detailProgressBar'); if (bar) bar.style.width = pct + '%';
-      const t = el('aff2_detailProgressText'); if (t) t.textContent = `${approved}/${total} (${pct}%)`;
-      return { approved, total, pct };
+      if (!snap.empty) {
+        const doc = snap.docs[0];
+        const sub = { id: doc.id, ...doc.data() };
+        replaceSubmitAreaWithSubmitted(sub);
+      }
     } catch (err) {
-      console.error('[AFF2] refreshProgressOnce', err);
-      return null;
+      console.error('[AFF2] showUserSubmissionIfExists', err);
     }
   }
 
-  /* =========================
-     SUBMISSION FLOW
-     - includes workerEarn in payload
-     - DOES NOT increment filledWorkers here (increment handled on approval listener)
-     ========================= */
-  function attachSubmissionHandler(job) {
+  // Replace submit area with submitted view (user's submission or local)
+  function replaceSubmitAreaWithSubmitted(sub) {
+    const area = el('aff2_submitArea');
+    if (!area) return;
+    const proofs = (sub.proofFiles || sub.proofURLs || []).map(u => `<img src="${safeText(u)}" style="width:100%;max-height:220px;object-fit:contain;border-radius:8px;margin-bottom:8px">`).join('');
+    const note = sub.note ? `<div style="margin-top:8px;color:#374151"><strong>Note:</strong> ${safeText(sub.note)}</div>` : '';
+    const status = safeText(sub.status || 'on review');
+    area.innerHTML = `
+      <div style="background:#f8fafc;padding:14px;border-radius:12px;text-align:center">
+        <div style="color:#16a34a;font-weight:600;margin-bottom:6px">✅ Your submission</div>
+        <div style="font-size:13px;color:#6b7280;margin-bottom:8px">Status: <strong style="color:#111827">${status}</strong></div>
+        ${proofs || '<div style="color:#9ca3af;font-size:13px">No proof images</div>'}
+        ${note}
+      </div>
+    `;
+    // Update local occupancy & progress UI to reflect user's submission if it's transient local-submission
+    if (sub && sub._localIncrement) {
+      // if created locally with marker, increment occupancy display
+      state.currentOccupancy = (state.currentOccupancy || 0) + 1;
+      updateDetailProgressUI();
+    }
+  }
+
+  // Update detail progress bar & text based on state.currentOccupancy/currentApproved/currentNumWorkers
+  function updateDetailProgressUI() {
+    const bar = el('aff2_detailProgressBar');
+    const text = el('aff2_detailProgressText');
+    const total = Number(state.currentNumWorkers || 0) || 1;
+    const occ = Number(state.currentOccupancy || 0);
+    const approved = Number(state.currentApproved || 0);
+    const pct = Math.min(100, Math.round((occ / total) * 100));
+    if (bar) bar.style.width = pct + '%';
+    if (text) text.textContent = `${occ}/${total} · Approved: ${approved}`;
+  }
+
+  // Attach submit event logic for a job (only called when slots available and user hasn't submitted)
+  function attachSubmitHandlerForJob(job) {
     const submitBtn = el('aff2_detailSubmitBtn');
     if (!submitBtn) return;
-
-    // clear old handler
     submitBtn.onclick = null;
-
     submitBtn.onclick = async function() {
-      if (!auth || !auth.currentUser) { alert('Please login to submit proof.'); return; }
+      if (!auth || !auth.currentUser) { alert('Please log in to submit proof.'); return; }
       const uid = auth.currentUser.uid;
-      const currentUser = auth.currentUser;
 
+      // collect files
       const fEls = [el('proofFile1'), el('proofFile2'), el('proofFile3')];
       const files = fEls.map(i => i?.files?.[0]).filter(Boolean);
-      if (files.length < 1) { alert('Please upload at least one proof file.'); return; }
+      if (files.length < 1) { alert('Please upload at least one proof file.'); return; } // immediate return -> no double alert bug
 
+      // disable
       submitBtn.disabled = true;
       const prevText = submitBtn.textContent;
       submitBtn.textContent = 'Submitting...';
 
       try {
-        // re-fetch job snapshot to ensure we have latest counts
-        const jobRef = db.collection('affiliateJobs').doc(job.id);
-        const jobSnap = await jobRef.get();
-        if (!jobSnap.exists) throw new Error('Job not found.');
-        const jobData = jobSnap.data();
-        if ((jobData.filledWorkers || 0) >= (jobData.numWorkers || 0)) {
-          alert('This job has reached its limit of workers.');
-          submitBtn.textContent = prevText;
-          submitBtn.disabled = false;
-          // remove card from list if present
-          const jobCard = document.querySelector(`[data-job-id="${job.id}"]`);
-          if (jobCard) jobCard.remove();
-          return;
-        }
-
-        // duplicate submission check
-        const dup = await db.collection('affiliate_submissions')
-          .where('jobId','==', job.id)
-          .where('userId','==', uid)
-          .get();
-        if (!dup.empty) {
+        // final duplicate check
+        const check = await db.collection('affiliate_submissions').where('jobId','==', job.id).where('userId','==', uid).get();
+        if (!check.empty) {
           alert('You have already submitted for this job.');
-          replaceSubmitAreaWithSubmitted({ id: dup.docs[0].id, ...dup.docs[0].data() });
+          // show existing
+          const doc = check.docs[0];
+          replaceSubmitAreaWithSubmitted({ id: doc.id, ...doc.data() });
           return;
         }
 
         // upload files sequentially
-        const uploadedUrls = [];
-        for (let i = 0; i < files.length; i++) {
+        const uploaded = [];
+        for (let i=0;i<files.length;i++) {
           const url = await uploadFileHelper(files[i]);
-          uploadedUrls.push(url);
+          uploaded.push(url);
         }
 
-        // build payload (ADD workerEarn here)
+        // create submission payload; mark local increment to update UI instantly
         const payload = {
           jobId: job.id,
           userId: uid,
-          userName: currentUser.displayName || currentUser.email || '',
-          proofFiles: uploadedUrls,
+          userName: auth.currentUser.displayName || auth.currentUser.email || '',
+          proofFiles: uploaded,
           note: (el('aff2_detailSubmissionNote')?.value || '').trim(),
           status: 'on review',
-          workerEarn: job.workerPay || 0, // <-- record worker earning at time of submission
-          createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
-        // write submission
+        // write to DB
         await db.collection('affiliate_submissions').add(payload);
 
-        // NOTE: We DO NOT increment filledWorkers here.
-        // filledWorkers will only be updated by the approval listener (admin approval or manual change in Firestore).
+        // increment local occupancy so progress bar updates instantly
+        state.currentOccupancy = (state.currentOccupancy || 0) + 1;
+        updateDetailProgressUI();
 
-        alert('✅ Submission successful! It will be reviewed.');
+        // After submission, replace submit area with submitted view
+        replaceSubmitAreaWithSubmitted({ ...payload, _localIncrement: true });
 
-        // update UI: show submitted state (payload has workerEarn but createdAt is serverTimestamp so UI shows on review)
-        replaceSubmitAreaWithSubmitted(payload);
-
-        // Optionally refresh job list so card could disappear if someone else filled slots via approval concurrently
-        setTimeout(()=> loadAndRenderJobs(), 700);
+        alert('✅ Submission successful! It will be reviewed by admin.');
 
       } catch (err) {
         console.error('[AFF2] submit error', err);
@@ -2146,304 +2197,142 @@ if (window.registerPage) {
     };
   }
 
-  /* =========================
-     REPLACE SUBMIT AREA WITH SUBMITTED VIEW
-     ========================= */
-  function replaceSubmitAreaWithSubmitted(submission) {
-    const area = el('aff2_submitArea');
-    if (!area) return;
-
-    const urls = submission.proofFiles || submission.proofURLs || [];
-    const imgs = urls.map(u => `<img src="${safeText(u)}" class="w-full rounded-lg mt-2 border border-gray-200 object-contain">`).join('');
-
-    const status = safeText(submission.status || 'on review');
-    const statusColor = status === 'approved' ? 'text-green-600' : status === 'rejected' ? 'text-red-600' : 'text-yellow-600';
-    const earnDisplay = submission.workerEarn ? formatNaira(submission.workerEarn) : '';
-
-    area.innerHTML = `
-      <div class="p-4 bg-gray-50 rounded-xl">
-        <h3 class="text-base font-semibold text-gray-800 mb-2">Proof Submitted</h3>
-        <p class="text-sm text-gray-600 mb-2">Status: <span class="${statusColor} font-medium">${status}</span></p>
-        ${earnDisplay ? `<p class="text-sm text-gray-700 mb-2"><strong>Potential Earn:</strong> ${earnDisplay}</p>` : ''}
-        ${imgs || `<div class="text-sm text-gray-400">No proof images available</div>`}
-        ${submission.note ? `<p class="text-sm text-gray-700 mt-3"><strong>Note:</strong> ${safeText(submission.note)}</p>` : ''}
-        <p class="text-xs text-gray-400 mt-4">Your submission will be reviewed. You cannot submit again for this job.</p>
-      </div>
-    `;
-  }
-
-  /* =========================
-     FINISHED TASKS VIEW (user-specific)
-     - show workerEarn if present
-     ========================= */
+  // ====== Finished tasks rendering ======
   async function loadAndRenderFinished() {
-    const listEl = el("aff2_finishedList");
-    const pendingCountEl = el("aff2_pendingCount");
-    const approvedCountEl = el("aff2_approvedCount");
-    if (!listEl) return;
-
+    const listEl = el('aff2_finishedList');
+    if (!listEl) { console.warn('[AFF2] finished list missing'); return; }
     try {
-      listEl.innerHTML = `<p class="text-gray-500 text-center p-6">Loading finished tasks...</p>`;
+      listEl.innerHTML = '<p class="text-gray-500 p-6">Loading submissions...</p>';
+      if (!auth || !auth.currentUser) { listEl.innerHTML = '<p class="text-gray-500 p-6">Please log in to view your submissions.</p>'; return; }
+      const uid = auth.currentUser.uid;
+      const snap = await db.collection('affiliate_submissions').where('userId','==', uid).orderBy('createdAt','desc').get();
+      if (snap.empty) { listEl.innerHTML = '<p class="text-gray-500 p-6">No finished tasks yet.</p>'; return; }
 
-      const user = auth.currentUser || await new Promise((resolve) => {
-        const unsub = auth.onAuthStateChanged((u) => { unsub(); resolve(u); });
-      });
-      if (!user) {
-        listEl.innerHTML = `<p class="text-gray-500 text-center p-6">Please sign in to see your finished tasks.</p>`;
-        if (pendingCountEl) pendingCountEl.textContent = "0";
-        if (approvedCountEl) approvedCountEl.textContent = "0";
-        return;
-      }
-
-      const snap = await db.collection("affiliate_submissions")
-        .where("userId", "==", user.uid)
-        .orderBy("createdAt", "desc")
-        .get();
-
-      if (snap.empty) {
-        listEl.innerHTML = `<p class="text-gray-500 text-center p-6">You have no finished tasks yet.</p>`;
-        if (pendingCountEl) pendingCountEl.textContent = "0";
-        if (approvedCountEl) approvedCountEl.textContent = "0";
-        return;
-      }
-
-      // gather job ids to display titles
-      let pending = 0, approved = 0;
-      const jobIds = [...new Set(snap.docs.map(d => (d.data().jobId || null)).filter(Boolean))];
+      // fetch job titles in chunks
+      const jobIds = [...new Set(snap.docs.map(d => d.data().jobId).filter(Boolean))];
       const jobMap = {};
-      for (let i = 0; i < jobIds.length; i += 10) {
-        const chunk = jobIds.slice(i, i + 10);
-        const jobsSnap = await db.collection("affiliateJobs")
-          .where(window.firebase.firestore.FieldPath.documentId(), "in", chunk)
-          .get();
+      for (let i=0;i<jobIds.length;i+=10) {
+        const chunk = jobIds.slice(i,i+10);
+        const jobsSnap = await db.collection('affiliateJobs').where(window.firebase.firestore.FieldPath.documentId(), 'in', chunk).get();
         jobsSnap.forEach(jd => jobMap[jd.id] = jd.data());
       }
 
       listEl.innerHTML = '';
       snap.forEach(doc => {
-        const sub = doc.data();
+        const sub = { id: doc.id, ...doc.data() };
         const job = jobMap[sub.jobId] || {};
-        if (sub.status === "on review") pending++;
-        if (sub.status === "approved") approved++;
-        listEl.appendChild(makeFinishedCard(doc.id, sub, job));
+        listEl.appendChild(makeFinishedElement(sub, job));
       });
 
-      if (pendingCountEl) pendingCountEl.textContent = pending;
-      if (approvedCountEl) approvedCountEl.textContent = approved;
-
     } catch (err) {
-      console.error("loadAndRenderFinished error:", err);
-      listEl.innerHTML = `<p class="text-red-500 text-center p-6">Error loading finished tasks: ${err.message}</p>`;
+      console.error('[AFF2] loadAndRenderFinished', err);
+      listEl.innerHTML = '<p class="text-red-500 p-6">Failed to load submissions.</p>';
     }
   }
 
-  function makeFinishedCard(id, sub, job) {
-    const date = formatTimestampSafe(sub.createdAt);
-    const title = safeText(job.title || sub.jobId || 'Affiliate Job');
-    const status = safeText(sub.status || 'on review');
-    const note = safeText(sub.note || 'No note added');
-    const earn = sub.workerEarn ? formatNaira(sub.workerEarn) : (sub.amount || sub.reward || "₦0");
+  function makeFinishedElement(sub, job) {
+    const wrap = document.createElement('div');
+    wrap.className = 'aff2-finished-card bg-white rounded-2xl p-4 mb-4 shadow-sm';
+    const status = (sub.status || 'on review').toLowerCase();
+    const border = status === 'approved' ? '#10b981' : status === 'rejected' ? '#ef4444' : '#f59e0b';
+    wrap.style.borderLeft = `6px solid ${border}`;
+
+    const jobTitle = safeText(job.title || sub.jobId || 'Affiliate Job');
+    const date = (sub.createdAt && sub.createdAt.toDate) ? sub.createdAt.toDate().toLocaleString() : '';
+
     const urls = sub.proofFiles || sub.proofURLs || [];
-    const statusColor =
-      status === "approved" ? "text-green-600 bg-green-100"
-      : status === "rejected" ? "text-red-600 bg-red-100"
-      : "text-yellow-600 bg-yellow-100";
+    const imagesWrap = document.createElement('div');
+    imagesWrap.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:10px';
+    if (urls.length) {
+      urls.forEach(u => {
+        const img = document.createElement('img');
+        img.src = u;
+        img.style.cssText = 'width:100%;max-height:200px;object-fit:contain;border-radius:8px';
+        imagesWrap.appendChild(img);
+      });
+    } else {
+      const p = document.createElement('div');
+      p.textContent = 'No proof images';
+      p.style.cssText = 'color:#9ca3af';
+      imagesWrap.appendChild(p);
+    }
 
-    const div = document.createElement("div");
-    div.className =
-      "bg-white/80 backdrop-blur-md shadow-md border border-gray-100 rounded-2xl p-4 mb-3 hover:shadow-lg transition-all duration-300";
-
-    div.innerHTML = `
-      <div class="flex items-center justify-between mb-2">
-        <h3 class="font-semibold text-gray-900 truncate">${title}</h3>
-        <span class="text-xs font-medium px-2 py-1 rounded-full ${statusColor} capitalize">${status}</span>
+    wrap.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-weight:700;color:#111827">${jobTitle}</div>
+          <div style="font-size:13px;color:#6b7280;margin-top:6px">Status: <strong style="color:${border}">${safeText(sub.status||'on review')}</strong></div>
+          <div style="font-size:12px;color:#9ca3af;margin-top:6px">${safeText(date)}</div>
+        </div>
+        <div><button class="aff2-view-submission-btn" data-id="${safeText(sub.id)}" style="background:#2563eb;color:#fff;border:none;padding:8px 10px;border-radius:8px;cursor:pointer">View</button></div>
       </div>
-      <p class="text-sm text-gray-500">${date}</p>
-      <div class="mt-2 flex items-center justify-between">
-        <p class="text-sm text-gray-700"><strong>Earn:</strong> ${earn}</p>
-        <button class="text-indigo-600 text-sm font-medium hover:underline" data-sub-id="${id}" onclick="window.AFF2.openFinishedDetail && window.AFF2.openFinishedDetail('${id}')">View</button>
-      </div>
-      ${urls.length ? `<div class="mt-3 grid gap-2 grid-cols-2">${urls.map(u=>`<img src="${safeText(u)}" class="w-full max-h-36 object-contain rounded-lg border">`).join('')}</div>` : ''}
-      ${note ? `<div class="mt-3 text-sm text-gray-700"><strong>Note:</strong> ${note}</div>` : ''}
     `;
-    return div;
+    wrap.appendChild(imagesWrap);
+    if (sub.note) {
+      const note = document.createElement('div');
+      note.style.cssText = 'margin-top:12px;color:#374151';
+      note.innerHTML = `<strong>Note:</strong> ${safeText(sub.note)}`;
+      wrap.appendChild(note);
+    }
+    return wrap;
   }
 
-  async function openFinishedDetail(id) {
+  // open submission modal
+  async function openSubmissionModal(subId) {
     try {
-      const doc = await db.collection('affiliate_submissions').doc(id).get();
-      if (!doc.exists) return alert('Submission not found.');
-      const sub = doc.data();
-      const jobDoc = sub.jobId ? await db.collection('affiliateJobs').doc(sub.jobId).get() : null;
-      const job = jobDoc?.data() || {};
-      const title = job.title || "Untitled Task";
-      const status = sub.status || "on review";
-      const earn = sub.workerEarn ? formatNaira(sub.workerEarn) : (sub.amount || sub.reward || "₦0");
-      const date = formatTimestampSafe(sub.createdAt);
-      const note = sub.note || "No note added";
-      const urls = sub.proofFiles || sub.proofURLs || [];
+      const doc = await db.collection('affiliate_submissions').doc(subId).get();
+      if (!doc.exists) return alert('Submission not found');
+      const sub = { id: doc.id, ...doc.data() };
 
-      const modal = document.createElement("div");
-      modal.className = "fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4";
-      modal.innerHTML = `
-        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 relative">
-          <button id="aff2_modal_close" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600">&times;</button>
-          <h2 class="text-lg font-semibold text-gray-900 mb-2">${safeText(title)}</h2>
-          <p class="text-sm text-gray-500 mb-1"><strong>Status:</strong> <span class="capitalize">${safeText(status)}</span></p>
-          <p class="text-sm text-gray-500 mb-1"><strong>Earned:</strong> ${earn}</p>
-          <p class="text-sm text-gray-500 mb-1"><strong>Submitted:</strong> ${date}</p>
-          <p class="text-sm text-gray-700 mt-2"><strong>Note:</strong> ${safeText(note)}</p>
-          ${urls.length ? `<div class="mt-4 grid gap-2">${urls.map(u=>`<img src="${safeText(u)}" class="w-full rounded-lg border object-contain max-h-60">`).join('')}</div>` : ''}
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px';
+      const box = document.createElement('div');
+      box.style.cssText = 'max-width:900px;width:100%;max-height:90vh;overflow:auto;background:#fff;border-radius:12px;padding:20px';
+      box.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h3 style="margin:0">${safeText(sub.jobTitle||sub.jobId||'Submission')}</h3>
+          <button id="aff2_modal_close" style="background:#ef4444;color:#fff;border:none;padding:6px 10px;border-radius:8px;cursor:pointer">Close</button>
         </div>
+        <div style="margin-top:8px;color:#6b7280"><strong>Status:</strong> ${safeText(sub.status||'on review')}</div>
+        <div style="font-size:13px;color:#9ca3af;margin-top:6px">${(sub.createdAt&&sub.createdAt.toDate)?sub.createdAt.toDate().toLocaleString():''}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px">
+          ${(sub.proofFiles||sub.proofURLs||[]).map(u => `<img src="${safeText(u)}" style="width:100%;max-height:400px;object-fit:contain;border-radius:8px">`).join('') || '<div style="color:#9ca3af">No proof images</div>'}
+        </div>
+        ${sub.note ? `<div style="margin-top:12px;color:#374151"><strong>Note:</strong> ${safeText(sub.note)}</div>` : ''}
       `;
+      modal.appendChild(box);
       document.body.appendChild(modal);
-      modal.querySelector('#aff2_modal_close').addEventListener('click', ()=> modal.remove());
+      box.querySelector('#aff2_modal_close').addEventListener('click', ()=> modal.remove());
       modal.addEventListener('click', (ev)=> { if (ev.target === modal) modal.remove(); });
+
     } catch (err) {
-      console.error('[AFF2] openFinishedDetail', err);
+      console.error('[AFF2] openSubmissionModal', err);
       alert('Failed to load submission.');
     }
   }
 
-  /* =========================
-     SUBMISSION APPROVAL LISTENER (AUTO-SYNC)
-     - Keeps affiliateJobs.filledWorkers in sync with approved submissions.
-     - Works even if you manually edit submission.status in Firestore.
-     - Uses a submissionStatusMap to avoid double increments on initial load.
-     ========================= */
-  async function initApprovalListener() {
-    if (!db) return;
-
-    // 1) Populate local map with current submission statuses (initial snapshot)
-    try {
-      const allSubSnap = await db.collection('affiliate_submissions').get();
-      state.submissionStatusMap = {};
-      allSubSnap.forEach(d => {
-        state.submissionStatusMap[d.id] = d.data().status || null;
-      });
-    } catch (e) {
-      console.error('[AFF2] initApprovalListener initial fetch failed', e);
-      state.submissionStatusMap = {};
-    }
-
-    // 2) Attach realtime listener to detect changes
-    if (state.subsUnsub) try { state.subsUnsub(); } catch(_) {}
-    state.subsUnsub = db.collection('affiliate_submissions').onSnapshot(snap => {
-      snap.docChanges().forEach(async change => {
-        try {
-          const id = change.doc.id;
-          const after = change.doc.data();
-          const before = state.submissionStatusMap[id]; // may be undefined for brand new docs
-
-          // determine inc: +1 if moved to approved, -1 if moved from approved to something else
-          let inc = 0;
-          if (before !== 'approved' && after.status === 'approved') inc = 1;
-          else if (before === 'approved' && after.status !== 'approved') inc = -1;
-          else if (change.type === 'removed' && before === 'approved') inc = -1;
-
-          if (inc !== 0 && after.jobId) {
-            // perform atomic transaction to adjust filledWorkers with bounds
-            const jobRef = db.collection('affiliateJobs').doc(after.jobId);
-            try {
-              await db.runTransaction(async (tx) => {
-                const jobDoc = await tx.get(jobRef);
-                if (!jobDoc.exists) return;
-                const jobData = jobDoc.data();
-                const current = Number(jobData.filledWorkers || 0);
-                const max = Number(jobData.numWorkers || 0);
-                if (inc > 0) {
-                  if (current < max) {
-                    tx.update(jobRef, { filledWorkers: window.firebase.firestore.FieldValue.increment(1) });
-                    // if after reaching max we might want to remove the job from lists client-side; we'll trigger UI refresh below
-                  } else {
-                    // already full; do not increment
-                    console.warn(`[AFF2] job ${after.jobId} already full; skipping increment`);
-                  }
-                } else if (inc < 0) {
-                  if (current > 0) {
-                    tx.update(jobRef, { filledWorkers: window.firebase.firestore.FieldValue.increment(-1) });
-                  } else {
-                    // nothing to decrement
-                    console.warn(`[AFF2] job ${after.jobId} filledWorkers already 0; skipping decrement`);
-                  }
-                }
-              });
-            } catch (txErr) {
-              console.error('[AFF2] transaction failed while updating filledWorkers', txErr);
-            }
-
-            // small UI refresh (re-render job list to reflect changes)
-            setTimeout(()=> loadAndRenderJobs(), 400);
-          }
-
-          // update local map state
-          if (change.type === 'removed') delete state.submissionStatusMap[id];
-          else state.submissionStatusMap[id] = after.status;
-
-        } catch (err) {
-          console.error('[AFF2] approval listener change handler error', err);
-        }
-      });
-    }, err => {
-      console.error('[AFF2] submissions snapshot error', err);
-    });
-  }
-
-  /* =========================
-     ONE-TIME RECONCILIATION
-     - Ensures affiliateJobs.filledWorkers == count(approved submissions) for each job
-     - Useful for a first time run to correct any mismatches
-     ========================= */
-  async function reconcileFilledWorkersCounts() {
-    if (!db) return;
-    try {
-      const jobsSnap = await db.collection('affiliateJobs').get();
-      for (const jobDoc of jobsSnap.docs) {
-        try {
-          const jobId = jobDoc.id;
-          const approvedSnap = await db.collection('affiliate_submissions')
-            .where('jobId', '==', jobId)
-            .where('status', '==', 'approved')
-            .get();
-          const approvedCount = approvedSnap.size;
-          // only update if mismatch
-          const current = Number(jobDoc.data().filledWorkers || 0);
-          if (current !== approvedCount) {
-            await jobDoc.ref.update({ filledWorkers: approvedCount });
-            console.log(`[AFF2] reconciled job ${jobId}: filledWorkers ${current} -> ${approvedCount}`);
-          }
-        } catch (innerErr) {
-          console.error('[AFF2] reconcile error for job', jobDoc.id, innerErr);
-        }
-      }
-    } catch (err) {
-      console.error('[AFF2] reconcileFilledWorkersCounts failed', err);
-    }
-  }
-
-  /* =========================
-     EVENT DELEGATION & INIT / DESTROY
-     ========================= */
-  function onDocumentClick(e) {
+  // ====== Delegated document click handler ======
+  function onDocClick(e) {
     const t = e.target;
-    // open job detail
-    const viewBtn = t.closest && t.closest('.aff2-btn-view');
-    if (viewBtn) {
-      const id = viewBtn.dataset.id;
+
+    // job card view
+    const jobBtn = t.closest && t.closest('.aff2-btn-view');
+    if (jobBtn) {
+      const id = jobBtn.dataset.id;
       if (id) openJobDetail(id);
       return;
     }
 
-    // view submission from finished list (if using custom button)
-    const viewSub = t.closest && t.closest('[data-sub-id]');
+    // finished view button
+    const viewSub = t.closest && t.closest('.aff2-view-submission-btn');
     if (viewSub) {
-      const id = viewSub.dataset.subId || viewSub.getAttribute('data-sub-id');
-      if (id) openFinishedDetail(id);
+      const id = viewSub.dataset.id;
+      if (id) openSubmissionModal(id);
       return;
     }
 
-    // top nav: open finished
-    if (t.id === 'aff2_openFinishedBtn') {
+    // nav: finished
+    if (t.id === 'aff2_openFinishedBtn' || t.closest && t.closest('#aff2_openFinishedBtn')) {
       el('aff2_jobsContainer')?.classList.add('aff2-hidden');
       el('aff2_jobDetailScreen')?.classList.add('aff2-hidden');
       el('aff2_finishedScreen')?.classList.remove('aff2-hidden');
@@ -2451,8 +2340,8 @@ if (window.registerPage) {
       return;
     }
 
-    // back to list
-    if (t.id === 'aff2_backToListBtn' || t.id === 'aff2_backToMainBtn') {
+    // back to jobs
+    if (t.id === 'aff2_backToListBtn' || t.id === 'aff2_backToMainBtn' || (t.closest && t.closest('#aff2_backToListBtn'))) {
       el('aff2_jobDetailScreen')?.classList.add('aff2-hidden');
       el('aff2_finishedScreen')?.classList.add('aff2-hidden');
       el('aff2_jobsContainer')?.classList.remove('aff2-hidden');
@@ -2461,53 +2350,84 @@ if (window.registerPage) {
     }
   }
 
-  async function init() {
-    // attach delegated click listener
-    document.addEventListener('click', onDocumentClick);
-    state.handlers.push({ el: document, ev: 'click', fn: onDocumentClick });
+  // Wrapper to call finished load (ensures function name compatibility)
+  async function loadAndRenderFinished() {
+    await loadAndRenderFinishedInternal();
+  }
+  async function loadAndRenderFinishedInternal() {
+    await loadAndRenderFinished(); // placeholder for API compatibility
+  }
 
-    // initial reconciliation to ensure counts match approved submissions
-    await reconcileFilledWorkersCounts();
+  // But to avoid confusion, define actual function name used earlier:
+  async function loadAndRenderFinished() {
+    await loadAndRenderFinishedReal();
+  }
+  async function loadAndRenderFinishedReal() {
+    // call actual implementation
+    await (async function(){ // the implementation above
+      const listEl = el('aff2_finishedList');
+      if (!listEl) return console.warn('[AFF2] finished list missing (internal)');
+      try {
+        listEl.innerHTML = '<p class="text-gray-500 p-6">Loading submissions...</p>';
+        if (!auth || !auth.currentUser) { listEl.innerHTML = '<p class="text-gray-500 p-6">Please log in to view your submissions.</p>'; return; }
+        const uid = auth.currentUser.uid;
+        const snap = await db.collection('affiliate_submissions').where('userId','==', uid).orderBy('createdAt','desc').get();
+        if (snap.empty) { listEl.innerHTML = '<p class="text-gray-500 p-6">No finished tasks yet.</p>'; return; }
 
-    // start approval listener to auto-sync filledWorkers on manual or admin approval
-    initApprovalListener();
+        const jobIds = [...new Set(snap.docs.map(d => d.data().jobId).filter(Boolean))];
+        const jobMap = {};
+        for (let i=0;i<jobIds.length;i+=10) {
+          const chunk = jobIds.slice(i,i+10);
+          const jobsSnap = await db.collection('affiliateJobs').where(window.firebase.firestore.FieldPath.documentId(), 'in', chunk).get();
+          jobsSnap.forEach(jd => jobMap[jd.id] = jd.data());
+        }
 
-    // initial job render
+        listEl.innerHTML = '';
+        snap.forEach(doc => {
+          const sub = { id: doc.id, ...doc.data() };
+          const job = jobMap[sub.jobId] || {};
+          listEl.appendChild(makeFinishedElement(sub, job));
+        });
+      } catch (err) {
+        console.error('[AFF2] loadAndRenderFinishedReal', err);
+        listEl.innerHTML = '<p class="text-red-500 p-6">Failed to load submissions.</p>';
+      }
+    })();
+  }
+
+  // Expose init / destroy / convenience functions
+  function init() {
+    // delegated clicks
+    document.addEventListener('click', onDocClick);
+    state.handlers.push({ el: document, ev: 'click', fn: onDocClick });
+
+    // initial job load
     loadAndRenderJobs();
   }
 
   function destroy() {
+    // remove handlers
     for (const h of state.handlers) {
       try { h.el.removeEventListener(h.ev, h.fn); } catch(_) {}
     }
     state.handlers = [];
-    try { if (state.snapshotUnsub) state.snapshotUnsub(); } catch(_) {}
-    try { if (state.subsUnsub) state.subsUnsub(); } catch(_) {}
-    state.snapshotUnsub = null;
-    state.subsUnsub = null;
+
+    // clear UI areas
     try { if (el('aff2_jobDetailContent')) el('aff2_jobDetailContent').innerHTML = ''; } catch(_) {}
     try { if (el('aff2_grid')) el('aff2_grid').innerHTML = ''; } catch(_) {}
     try { if (el('aff2_finishedList')) el('aff2_finishedList').innerHTML = ''; } catch(_) {}
-    try { delete window.AFF2_COMPLETE_INSTANCE; } catch(_) { window.AFF2_COMPLETE_INSTANCE = null; }
+    try { delete window.AFF2_COMPLETE_INSTANCE_V2; } catch(_) { window.AFF2_COMPLETE_INSTANCE_V2 = null; }
   }
 
-  /* =========================
-     EXPORT API
-     ========================= */
+  // Map internal names used earlier to new functions to keep compatibility
   window.AFF2 = {
-    init,
-    destroy,
-    loadAndRenderJobs,
-    loadAndRenderFinished,
-    openJobDetail,
-    openFinishedDetail
+    init, destroy, loadAndRenderJobs, loadAndRenderFinished: loadAndRenderFinishedReal, openJobDetail
   };
 
-  // auto init
-  setTimeout(()=>{ try{ init(); }catch(e){console.error('[AFF2] init failed',e);} }, 0);
+  // Auto-initialize
+  setTimeout(()=>{ try{ init(); } catch(e){ console.error(e); } }, 0);
 
 })(); // end module
-
 
 
 
