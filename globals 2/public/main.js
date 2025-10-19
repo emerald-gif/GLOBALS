@@ -1990,7 +1990,7 @@ if (window.registerPage) {
             <button id="aff2_detailSubmitBtn" class="w-full py-3 bg-blue-600 text-white rounded-xl">Submit Proof</button>
           </div>
 
-          <p class="text-xs text-gray-400 mt-2">Submissions are reviewed by admin.</p>
+          <p class="text-xs text-gray-400 mt-2">Job is currently Running</p>
         </div>
       `;
       wrapper.appendChild(body);
