@@ -2129,7 +2129,7 @@ if (window.registerPage) {
         // NOTE: We DO NOT increment filledWorkers here.
         // filledWorkers will only be updated by the approval listener (admin approval or manual change in Firestore).
 
-        alert('✅ Submission successful! It will be reviewed by admin.');
+        alert('✅ Submission successful! It will be reviewed.');
 
         // update UI: show submitted state (payload has workerEarn but createdAt is serverTimestamp so UI shows on review)
         replaceSubmitAreaWithSubmitted(payload);
@@ -2167,7 +2167,7 @@ if (window.registerPage) {
         ${earnDisplay ? `<p class="text-sm text-gray-700 mb-2"><strong>Potential Earn:</strong> ${earnDisplay}</p>` : ''}
         ${imgs || `<div class="text-sm text-gray-400">No proof images available</div>`}
         ${submission.note ? `<p class="text-sm text-gray-700 mt-3"><strong>Note:</strong> ${safeText(submission.note)}</p>` : ''}
-        <p class="text-xs text-gray-400 mt-4">Your submission will be reviewed by admin. You cannot submit again for this job.</p>
+        <p class="text-xs text-gray-400 mt-4">Your submission will be reviewed. You cannot submit again for this job.</p>
       </div>
     `;
   }
