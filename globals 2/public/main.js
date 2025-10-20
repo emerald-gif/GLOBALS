@@ -1220,12 +1220,8 @@ firebase.auth().onAuthStateChanged(async (user) => {
 	//INSTALL AND EARN FUNCTION 
 
 
-// ---------- Helpers ----------
-
-
-
-
-function initTaskSection() {
+// INSTALL AND EARN FUNCTION (revised) — paste this in place of your previous task section
+(function initTaskSectionModule() {
   // ---------- Small helpers ----------
   function escapeHtml(str) {
     if (str == null) return "";
@@ -1266,6 +1262,37 @@ function initTaskSection() {
         try { unsub(); } catch (e) {}
         resolve(user || null);
       });
+    });
+  }
+
+  // ---------- Progress helpers (transactional) ----------
+  // Update occupancy (filledWorkers) atomically by delta (can be +1 or -1)
+  async function updateTaskOccupancy(taskId, delta) {
+    if (!taskId) throw new Error('taskId required');
+    const db = firebase.firestore();
+    const ref = db.collection('tasks').doc(taskId);
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) throw new Error('Task not found');
+      const data = snap.data() || {};
+      const current = Number(data.filledWorkers || 0);
+      const newVal = Math.max(0, current + Number(delta || 0));
+      tx.update(ref, { filledWorkers: newVal });
+    });
+  }
+
+  // Adjust approved workers count (for admin to call when approving/rejecting)
+  async function adjustTaskApprovedCount(taskId, delta) {
+    if (!taskId) throw new Error('taskId required');
+    const db = firebase.firestore();
+    const ref = db.collection('tasks').doc(taskId);
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) throw new Error('Task not found');
+      const data = snap.data() || {};
+      const current = Number(data.approvedWorkers || 0);
+      const newVal = Math.max(0, current + Number(delta || 0));
+      tx.update(ref, { approvedWorkers: newVal });
     });
   }
 
@@ -1365,6 +1392,10 @@ function initTaskSection() {
     const submitBtn = fullScreen.querySelector("#submitTaskBtn");
     const status = fullScreen.querySelector("#submitStatus");
 
+    // Guard to avoid duplicate handler registration
+    if (!submitBtn || submitBtn._attached) return;
+    submitBtn._attached = true;
+
     submitBtn.addEventListener("click", async () => {
       submitBtn.disabled = true;
       status.textContent = "Checking auth...";
@@ -1378,22 +1409,51 @@ function initTaskSection() {
           return;
         }
 
+        // Double-check user hasn't already submitted (prevents race / duplicate uploads)
+        const preCheck = await firebase.firestore()
+          .collection("task_submissions")
+          .where("taskId", "==", jobId)
+          .where("userId", "==", user.uid)
+          .limit(1)
+          .get();
+        if (!preCheck.empty) {
+          // show existing submission
+          alert('You have already submitted this task.');
+          submitBtn.disabled = false;
+          status.textContent = "";
+          return;
+        }
+
         const proofText = fullScreen.querySelector("#proofTextInput")?.value.trim() || "";
-        const fileInputs = fullScreen.querySelectorAll('input[type="file"]');
+        const fileInputs = Array.from(fullScreen.querySelectorAll('input[type="file"]'));
         const uploadedFiles = [];
 
+        // ensure at least one file uploaded
+        let anyFile = false;
         for (let i = 0; i < fileInputs.length; i++) {
           const fEl = fileInputs[i];
           const file = fEl.files[0];
-          if (file) {
-            status.textContent = `Uploading ${i + 1}/${fileInputs.length}...`;
-            if (typeof uploadToCloudinary !== "function") {
-              throw new Error("uploadToCloudinary(file) not available. Provide a global upload helper.");
-            }
-            const url = await uploadToCloudinary(file);
-            uploadedFiles.push(url);
-            status.textContent = `Uploaded ${uploadedFiles.length}/${fileInputs.length}`;
+          if (file) { anyFile = true; break; }
+        }
+        if (!anyFile) {
+          alert("❗ Please upload at least one proof image.");
+          submitBtn.disabled = false;
+          status.textContent = "";
+          return;
+        }
+
+        // Upload files (we expect uploadToCloudinary to exist or your custom uploader)
+        for (let i = 0; i < fileInputs.length; i++) {
+          const fEl = fileInputs[i];
+          const file = fEl.files[0];
+          if (!file) continue;
+          status.textContent = `Uploading ${uploadedFiles.length + 1} of ${fileInputs.length}...`;
+          if (typeof uploadToCloudinary !== "function") {
+            throw new Error("uploadToCloudinary(file) not available. Provide a global upload helper.");
           }
+          const url = await uploadToCloudinary(file);
+          uploadedFiles.push(url);
+          status.textContent = `Uploaded ${uploadedFiles.length}`;
         }
 
         if (uploadedFiles.length === 0) {
@@ -1404,7 +1464,9 @@ function initTaskSection() {
         }
 
         status.textContent = "Saving submission...";
-        await firebase.firestore().collection("task_submissions").add({
+
+        // create submission doc
+        const payload = {
           taskId: jobId,
           userId: user.uid,
           proofText,
@@ -1412,12 +1474,40 @@ function initTaskSection() {
           submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
           status: "on review",
           workerEarn: jobData.workerEarn || 0
-        });
+        };
+
+        // Write submission
+        const added = await firebase.firestore().collection("task_submissions").add(payload);
+
+        // After writing submission, increment task occupancy atomically
+        try {
+          await updateTaskOccupancy(jobId, +1);
+        } catch (errOcc) {
+          // Log but continue — occupancy stored in tasks may be missing or transaction failed
+          console.error("updateTaskOccupancy failed:", errOcc);
+        }
+
+        // Update local cache (finishedTasksCache) and UI counters if the finished tasks screen exists
+        try {
+          if (!window.finishedTasksCache) window.finishedTasksCache = [];
+          const localPayload = Object.assign({}, payload, { id: added.id, submittedAt: new Date() });
+          window.finishedTasksCache = window.finishedTasksCache || [];
+          window.finishedTasksCache.unshift(localPayload);
+          // If finished UI is visible, re-render counts
+          if (document.getElementById("finishedTasksListUser") && document.getElementById("finishedTasksListUser").offsetParent !== null) {
+            // finished list visible -> re-render
+            if (typeof renderFinishedTasksUser === "function") {
+              try { renderFinishedTasksUser(); } catch (e) { /* ignore */ }
+            }
+          }
+        } catch (e) { console.error('local cache update failed', e); }
 
         alert("✅ Task submitted for review!");
         fullScreen.remove();
+
       } catch (err) {
         console.error("Submit error:", err);
+        // ensure that we don't show success after failure — only one alert (failed)
         alert("❗ Failed to submit task: " + (err?.message || err));
         submitBtn.disabled = false;
         status.textContent = "";
@@ -1459,31 +1549,43 @@ function initTaskSection() {
 
     const total = jobData.numWorkers || 0;
 
-    // one-time fetch of progress count (no snapshot)
-    firebase.firestore()
-  .collection("task_submissions")
-  .where("taskId", "==", jobId)
-  .where("status", "==", "approved")
-  .get()
-  .then(querySnapshot => {
-    const done = querySnapshot.size;
-    rate.textContent = `Progress: ${done} / ${total}`;
+    // one-time fetch of approved progress (no snapshot)
+    (async () => {
+      try {
+        // prefer fields in task doc if present (approvedWorkers / filledWorkers)
+        const taskDoc = await firebase.firestore().collection('tasks').doc(jobId).get();
+        if (taskDoc.exists) {
+          const tdata = taskDoc.data() || {};
+          const approved = Number(tdata.approvedWorkers || 0);
+          const filled = Number(tdata.filledWorkers || 0);
+          rate.textContent = `Progress: ${filled} / ${total} (approved ${approved})`;
+          // remove card if fully approved
+          if (total > 0 && approved >= total) {
+            card.remove();
+            return;
+          }
+          return;
+        }
 
-    // ✅ If the worker limit is reached, remove the card instantly
-    if (total > 0 && done >= total) {
-      console.log(`Task ${jobId} reached max workers (${done}/${total}) — removing.`);
-      card.remove(); // instantly hide from user
-      return;
-    }
-  })
-  .catch(err => {
-    console.error("Failed to read progress for", jobId, err);
-    rate.textContent = `Progress: 0 / ${total}`;
-  });
+        // fallback: count approved submissions
+        const querySnapshot = await firebase.firestore()
+          .collection("task_submissions")
+          .where("taskId", "==", jobId)
+          .where("status", "==", "approved")
+          .get();
+        const done = querySnapshot.size;
+        rate.textContent = `Progress: ${done} / ${total}`;
 
+        if (total > 0 && done >= total) {
+          card.remove();
+          return;
+        }
+      } catch (err) {
+        console.error("Failed to read progress for", jobId, err);
+        rate.textContent = `Progress: 0 / ${total}`;
+      }
+    })();
 
-
-	  
     const button = document.createElement("button");
     button.textContent = "View Task";
     button.className = "mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2 rounded-lg shadow-sm transition";
@@ -1547,223 +1649,212 @@ function initTaskSection() {
     }
   }
 
-  // ---------- Initialize ----------
-  fetchTasksOnce();
-}
+  // ---------- Finished Tasks (user) ----------
+  // minor tweak: maintain window.finishedTasksCache for cross-access; original logic preserved
+  window.finishedTasksCache = window.finishedTasksCache || [];
 
+  async function initFinishedTasksSectionUser() {
+    const btnOpen = document.getElementById("finishedTaskBtnUser");
+    const btnBack = document.getElementById("backToMainBtnUser");
 
+    if (btnOpen) {
+      btnOpen.addEventListener("click", () => {
+        document.getElementById("taskSection").classList.add("hidden");
+        document.getElementById("finishedTasksScreenUser").classList.remove("hidden");
+        renderFinishedTasksUser(); // render from cache or current fetch
+      });
+    }
 
+    if (btnBack) {
+      btnBack.addEventListener("click", () => {
+        document.getElementById("finishedTasksScreenUser").classList.add("hidden");
+        document.getElementById("taskSection").classList.remove("hidden");
+      });
+    }
 
-
-
-
-
-
-
-
-// ================= Finished Task Submissions Logic =================
-
-// Open finished tasks screen
-
-
-
-// ================= Finished Task Submissions Logic (No Live Fetch) =================
-
-let finishedTasksCache = []; // store user's submissions in memory
-
-// ---------- Initialize finished task section ----------
-function initFinishedTasksSectionUser() {
-  const btnOpen = document.getElementById("finishedTaskBtnUser");
-  const btnBack = document.getElementById("backToMainBtnUser");
-
-  if (btnOpen) {
-    btnOpen.addEventListener("click", () => {
-      document.getElementById("taskSection").classList.add("hidden");
-      document.getElementById("finishedTasksScreenUser").classList.remove("hidden");
-      renderFinishedTasksUser(); // ✅ render from cache only
+    // initial one-time load from Firestore
+    firebase.auth().onAuthStateChanged(async user => {
+      if (!user) return;
+      await fetchFinishedTasksOnce(user.uid);
     });
   }
 
-  if (btnBack) {
-    btnBack.addEventListener("click", () => {
-      document.getElementById("finishedTasksScreenUser").classList.add("hidden");
-      document.getElementById("taskSection").classList.remove("hidden");
-    });
+  async function fetchFinishedTasksOnce(uid) {
+    const listEl = document.getElementById("finishedTasksListUser");
+    const pendingCountEl = document.getElementById("pendingCountUser");
+    const approvedCountEl = document.getElementById("approvedCountUser");
+
+    if (!uid) return;
+
+    try {
+      listEl.innerHTML = `<p class="text-center text-gray-500">Loading...</p>`;
+
+      const snap = await firebase.firestore()
+        .collection("task_submissions")
+        .where("userId", "==", uid)
+        .get();
+
+      window.finishedTasksCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // sort newest first
+      window.finishedTasksCache.sort((a, b) => {
+        const t1 = a.submittedAt?.toDate?.() || new Date(0);
+        const t2 = b.submittedAt?.toDate?.() || new Date(0);
+        return t2 - t1;
+      });
+
+      renderFinishedTasksUser();
+
+      // counters
+      let pending = window.finishedTasksCache.filter(d => d.status === "on review").length;
+      let approved = window.finishedTasksCache.filter(d => d.status === "approved").length;
+      if (pendingCountEl) pendingCountEl.textContent = pending;
+      if (approvedCountEl) approvedCountEl.textContent = approved;
+    } catch (err) {
+      console.error("Error fetching finished tasks:", err);
+      const listEl = document.getElementById("finishedTasksListUser");
+      if (listEl) listEl.innerHTML = `<p class="text-center text-red-500">Failed to load tasks. Reload page.</p>`;
+    }
   }
 
-  // initial one-time load from Firestore
-  firebase.auth().onAuthStateChanged(async user => {
-    if (!user) return;
-    await fetchFinishedTasksOnce(user.uid);
-  });
-}
+  function renderFinishedTasksUser() {
+    const listEl = document.getElementById("finishedTasksListUser");
+    const pendingCountEl = document.getElementById("pendingCountUser");
+    const approvedCountEl = document.getElementById("approvedCountUser");
 
-// ---------- One-time Firestore fetch (reload only) ----------
-async function fetchFinishedTasksOnce(uid) {
-  const listEl = document.getElementById("finishedTasksListUser");
-  const pendingCountEl = document.getElementById("pendingCountUser");
-  const approvedCountEl = document.getElementById("approvedCountUser");
+    if (!listEl) return;
+    listEl.innerHTML = "";
 
-  if (!uid) return;
+    if (!window.finishedTasksCache.length) {
+      listEl.innerHTML = `<p class="text-center text-gray-500">No finished tasks yet.</p>`;
+      if (pendingCountEl) pendingCountEl.textContent = "0";
+      if (approvedCountEl) approvedCountEl.textContent = "0";
+      return;
+    }
 
-  try {
-    listEl.innerHTML = `<p class="text-center text-gray-500">Loading...</p>`;
+    let pending = 0, approved = 0;
 
-    const snap = await firebase.firestore()
-      .collection("task_submissions")
-      .where("userId", "==", uid)
-      .get();
+    for (const data of window.finishedTasksCache) {
+      if (data.status === "on review") pending++;
+      if (data.status === "approved") approved++;
 
-    finishedTasksCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const jobTitle = data.cachedTitle || data.taskTitle || "Loading...";
 
-    // sort newest first
-    finishedTasksCache.sort((a, b) => {
-      const t1 = a.submittedAt?.toDate?.() || new Date(0);
-      const t2 = b.submittedAt?.toDate?.() || new Date(0);
-      return t2 - t1;
-    });
+      const card = document.createElement("div");
+      card.className = "p-4 bg-white shadow rounded-xl flex items-center justify-between mb-3";
+      card.innerHTML = `
+        <div>
+          <h3 class="font-semibold text-gray-900">${escapeHtml(jobTitle)}</h3>
+          <p class="text-sm text-gray-600">Earn: ₦${data.workerEarn || 0}</p>
+          <p class="text-xs text-gray-400">${data.submittedAt?.toDate?.().toLocaleString() || ""}</p>
+          <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded ${
+            data.status === "approved"
+              ? "bg-green-100 text-green-700"
+              : "bg-yellow-100 text-yellow-700"
+          }">${escapeHtml(data.status)}</span>
+        </div>
+        <button
+          class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg details-btn-user"
+          data-id="${escapeHtml(data.id)}"
+        >Details</button>
+      `;
 
-    renderFinishedTasksUser();
+      listEl.appendChild(card);
+    }
 
-    // counters
-    let pending = finishedTasksCache.filter(d => d.status === "on review").length;
-    let approved = finishedTasksCache.filter(d => d.status === "approved").length;
     if (pendingCountEl) pendingCountEl.textContent = pending;
     if (approvedCountEl) approvedCountEl.textContent = approved;
 
-  } catch (err) {
-    console.error("Error fetching finished tasks:", err);
-    listEl.innerHTML = `<p class="text-center text-red-500">Failed to load tasks. Reload page.</p>`;
-  }
-}
+    listEl.querySelectorAll(".details-btn-user").forEach(btn => {
+      btn.addEventListener("click", () => showTaskSubmissionDetailsUser(btn.dataset.id));
+    });
 
-// ---------- Render from local cache ----------
-async function renderFinishedTasksUser() {
-  const listEl = document.getElementById("finishedTasksListUser");
-  const pendingCountEl = document.getElementById("pendingCountUser");
-  const approvedCountEl = document.getElementById("approvedCountUser");
-
-  if (!listEl) return;
-  listEl.innerHTML = "";
-
-  if (!finishedTasksCache.length) {
-    listEl.innerHTML = `<p class="text-center text-gray-500">No finished tasks yet.</p>`;
-    if (pendingCountEl) pendingCountEl.textContent = "0";
-    if (approvedCountEl) approvedCountEl.textContent = "0";
-    return;
+    // fetch related task titles once
+    preloadTaskTitles();
   }
 
-  let pending = 0, approved = 0;
+  async function preloadTaskTitles() {
+    const ids = [...new Set(window.finishedTasksCache.map(t => t.taskId).filter(Boolean))];
+    if (!ids.length) return;
+    try {
+      const batch = [];
+      for (let i = 0; i < ids.length; i += 10) {
+        const slice = ids.slice(i, i + 10);
+        const snap = await firebase.firestore()
+          .collection("tasks")
+          .where(firebase.firestore.FieldPath.documentId(), "in", slice)
+          .get();
+        batch.push(...snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }
+      for (const task of batch) {
+        window.finishedTasksCache.forEach(sub => {
+          if (sub.taskId === task.id) sub.cachedTitle = task.title || "Untitled Task";
+        });
+      }
+      // re-render to show cached titles
+      try { renderFinishedTasksUser(); } catch (_) {}
+    } catch (err) {
+      console.error("Error preloading task titles:", err);
+    }
+  }
 
-  for (const data of finishedTasksCache) {
-    if (data.status === "on review") pending++;
-    if (data.status === "approved") approved++;
+  async function showTaskSubmissionDetailsUser(submissionId) {
+    const sub = window.finishedTasksCache.find(d => d.id === submissionId);
+    if (!sub) return alert("Submission not found in memory. Reload page.");
 
-    const jobTitle = data.cachedTitle || "Loading...";
+    const title = sub.cachedTitle || "Untitled Task";
 
-    const card = document.createElement("div");
-    card.className = "p-4 bg-white shadow rounded-xl flex items-center justify-between";
-    card.innerHTML = `
-      <div>
-        <h3 class="font-semibold text-gray-900">${jobTitle}</h3>
-        <p class="text-sm text-gray-600">Earn: ₦${data.workerEarn || 0}</p>
-        <p class="text-xs text-gray-400">${data.submittedAt?.toDate?.().toLocaleString() || ""}</p>
-        <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded ${
-          data.status === "approved"
-            ? "bg-green-100 text-green-700"
-            : "bg-yellow-100 text-yellow-700"
-        }">${data.status}</span>
+    const modal = document.createElement("div");
+    modal.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50";
+    modal.innerHTML = `
+      <div class="bg-white rounded-xl shadow-lg p-6 w-96 max-h-[90vh] overflow-y-auto relative">
+        <h2 class="text-lg font-bold mb-3">Submission Details</h2>
+
+        <p class="text-sm"><strong>Job Title:</strong> ${escapeHtml(title)}</p>
+        <p class="text-sm"><strong>Status:</strong> ${escapeHtml(sub.status)}</p>
+        <p class="text-sm"><strong>Earned:</strong> ₦${sub.workerEarn || 0}</p>
+        <p class="text-sm"><strong>Submitted At:</strong> ${sub.submittedAt?.toDate?.().toLocaleString() || "—"}</p>
+        <p class="text-sm"><strong>Extra Proof:</strong> ${escapeHtml(sub.extraProof || "—")}</p>
+
+        ${(sub.proofImages || []).map(url => `
+          <div class="mt-3">
+            <p class="text-sm font-medium text-gray-700 mb-1">Uploaded Proof:</p>
+            <img src="${escapeHtml(url)}" 
+                 alt="Proof" 
+                 class="rounded-lg border w-full max-h-60 object-contain mb-2" />
+          </div>
+        `).join("")}
+
+        <div class="mt-4 flex justify-end sticky bottom-0 bg-white pt-3">
+          <button class="closeModalUser px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700">
+            Close
+          </button>
+        </div>
       </div>
-      <button
-        class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg details-btn-user"
-        data-id="${data.id}"
-      >Details</button>
     `;
-
-    listEl.appendChild(card);
+    document.body.appendChild(modal);
+    modal.querySelector(".closeModalUser").addEventListener("click", () => modal.remove());
   }
 
-  if (pendingCountEl) pendingCountEl.textContent = pending;
-  if (approvedCountEl) approvedCountEl.textContent = approved;
-
-  listEl.querySelectorAll(".details-btn-user").forEach(btn => {
-    btn.addEventListener("click", () => showTaskSubmissionDetailsUser(btn.dataset.id));
-  });
-
-  // fetch all related task titles once (for next reload)
-  preloadTaskTitles();
-}
-
-// ---------- Preload task titles once ----------
-async function preloadTaskTitles() {
-  const ids = [...new Set(finishedTasksCache.map(t => t.taskId).filter(Boolean))];
-  if (!ids.length) return;
-  try {
-    const batch = [];
-    for (let i = 0; i < ids.length; i += 10) {
-      const slice = ids.slice(i, i + 10);
-      const snap = await firebase.firestore()
-        .collection("tasks")
-        .where(firebase.firestore.FieldPath.documentId(), "in", slice)
-        .get();
-      batch.push(...snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }
-    for (const task of batch) {
-      finishedTasksCache.forEach(sub => {
-        if (sub.taskId === task.id) sub.cachedTitle = task.title || "Untitled Task";
-      });
-    }
-  } catch (err) {
-    console.error("Error preloading task titles:", err);
+  // ---------- Register section ----------
+  if (window.registerPage) {
+    window.registerPage("finishedTasksScreenUser", initFinishedTasksSectionUser);
+  } else {
+    initFinishedTasksSectionUser(); // fallback
   }
-}
 
-// ---------- Show submission details ----------
-async function showTaskSubmissionDetailsUser(submissionId) {
-  const sub = finishedTasksCache.find(d => d.id === submissionId);
-  if (!sub) return alert("Submission not found in memory. Reload page.");
+  // ---------- Initialize UI ----------
+  fetchTasksOnce();
 
-  const title = sub.cachedTitle || "Untitled Task";
+  // ---------- Expose helpers for admin code or other modules ----------
+  window.TaskProgress = {
+    updateTaskOccupancy,       // (taskId, delta) -> modify filledWorkers
+    adjustTaskApprovedCount    // (taskId, delta) -> modify approvedWorkers
+  };
 
-  const modal = document.createElement("div");
-modal.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50";
-modal.innerHTML = `
-  <div class="bg-white rounded-xl shadow-lg p-6 w-96 max-h-[90vh] overflow-y-auto relative">
-    <h2 class="text-lg font-bold mb-3">Submission Details</h2>
+})(); // end initTaskSectionModule
 
-    <p class="text-sm"><strong>Job Title:</strong> ${title}</p>
-    <p class="text-sm"><strong>Status:</strong> ${sub.status}</p>
-    <p class="text-sm"><strong>Earned:</strong> ₦${sub.workerEarn || 0}</p>
-    <p class="text-sm"><strong>Submitted At:</strong> ${sub.submittedAt?.toDate?.().toLocaleString() || "—"}</p>
-    <p class="text-sm"><strong>Extra Proof:</strong> ${sub.extraProof || "—"}</p>
 
-    ${(sub.proofImages || []).map(url => `
-      <div class="mt-3">
-        <p class="text-sm font-medium text-gray-700 mb-1">Uploaded Proof:</p>
-        <img src="${url}" 
-             alt="Proof" 
-             class="rounded-lg border w-full max-h-60 object-contain mb-2" />
-      </div>
-    `).join("")}
-
-    <div class="mt-4 flex justify-end sticky bottom-0 bg-white pt-3">
-      <button class="closeModalUser px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700">
-        Close
-      </button>
-    </div>
-  </div>
-`;
-
-  document.body.appendChild(modal);
-  modal.querySelector(".closeModalUser").addEventListener("click", () => modal.remove());
-}
-
-// ---------- Register section ----------
-if (window.registerPage) {
-  window.registerPage("finishedTasksScreenUser", initFinishedTasksSectionUser);
-} else {
-  initFinishedTasksSectionUser(); // fallback
-}
 
 
 
