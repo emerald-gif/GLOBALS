@@ -1269,88 +1269,82 @@ firebase.auth().onAuthStateChanged(async (user) => {
   }
 
   // ---------- Firestore helpers (transactions) ----------
-  // Ensure tasks document has numeric fields and apply deltas atomically.
-  async function applyTaskDeltas(taskId, { deltaFilled = 0, deltaApproved = 0 } = {}) {
-    if (!taskId) throw new Error('taskId required');
-    const db = firebase.firestore();
-    const ref = db.collection('tasks').doc(taskId);
-    await db.runTransaction(async (tx) => {
-      const snap = await tx.get(ref);
-      if (!snap.exists) {
-        // create doc if missing (defensive)
-        const init = { filledWorkers: Math.max(0, Number(deltaFilled || 0)), approvedWorkers: Math.max(0, Number(deltaApproved || 0)) };
-        tx.set(ref, init, { merge: true });
-        return;
-      }
-      const data = snap.data() || {};
-      const curFilled = Number(data.filledWorkers || 0);
-      const curApproved = Number(data.approvedWorkers || 0);
-      const newFilled = Math.max(0, curFilled + Number(deltaFilled || 0));
-      const newApproved = Math.max(0, curApproved + Number(deltaApproved || 0));
-      tx.update(ref, { filledWorkers: newFilled, approvedWorkers: newApproved });
-    });
-  }
+// ---------- FIXED FIRESTORE TRANSACTION LOGIC (robust status change) ----------
+async function applyTaskDeltas(taskId, { deltaFilled = 0, deltaApproved = 0 } = {}) {
+  if (!taskId) throw new Error("taskId required");
+  const db = firebase.firestore();
+  const ref = db.collection("tasks").doc(taskId);
 
-  // Convenience: increment occupancy after creation
-  async function increaseTaskOccupancy(taskId) { return applyTaskDeltas(taskId, { deltaFilled: +1 }); }
-  async function decreaseTaskOccupancy(taskId) { return applyTaskDeltas(taskId, { deltaFilled: -1 }); }
-  async function changeTaskApprovedCount(taskId, delta) { return applyTaskDeltas(taskId, { deltaApproved: delta }); }
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const data = snap.exists ? snap.data() || {} : {};
+    const curFilled = Number(data.filledWorkers || 0);
+    const curApproved = Number(data.approvedWorkers || 0);
 
-  // Master handler for status transitions of a submission.
-  // Call this whenever a submission's status changes (admin side).
-  // newStatus must be a string like 'on review', 'approved', 'rejected'.
-  async function handleSubmissionStatusChange(submissionId, newStatus) {
-    if (!submissionId) throw new Error('submissionId required');
-    if (typeof newStatus !== 'string') throw new Error('newStatus string required');
+    // Safe clamps
+    const newFilled = Math.max(0, curFilled + deltaFilled);
+    const newApproved = Math.max(0, curApproved + deltaApproved);
 
-    const db = firebase.firestore();
-    const subRef = db.collection('task_submissions').doc(submissionId);
+    tx.set(ref, { filledWorkers: newFilled, approvedWorkers: newApproved }, { merge: true });
+  });
+}
 
-    // run transaction to atomically read current submission and update both docs
-    await db.runTransaction(async (tx) => {
-      const subSnap = await tx.get(subRef);
-      if (!subSnap.exists) throw new Error('Submission not found');
-      const sub = subSnap.data() || {};
-      const prev = (sub.status || '').toLowerCase();
-      const next = newStatus.toLowerCase();
-      if (prev === next) return; // nothing to do
+// Convenience wrappers (unchanged)
+async function increaseTaskOccupancy(taskId) { return applyTaskDeltas(taskId, { deltaFilled: +1 }); }
+async function decreaseTaskOccupancy(taskId) { return applyTaskDeltas(taskId, { deltaFilled: -1 }); }
+async function changeTaskApprovedCount(taskId, delta) { return applyTaskDeltas(taskId, { deltaApproved: delta }); }
 
-      const taskId = sub.taskId;
-      if (!taskId) throw new Error('Submission missing taskId');
+// ---------- FIXED MASTER STATUS HANDLER ----------
+async function handleSubmissionStatusChange(submissionId, newStatus) {
+  if (!submissionId) throw new Error("submissionId required");
+  if (typeof newStatus !== "string") throw new Error("newStatus string required");
 
-      // compute deltas
-      let deltaFilled = 0, deltaApproved = 0;
+  const db = firebase.firestore();
+  const subRef = db.collection("task_submissions").doc(submissionId);
 
-      // occupancy is counted for 'on review' and 'approved'
-      const prevCountsInOccupancy = (prev === 'on review' || prev === 'approved') ? 1 : 0;
-      const nextCountsInOccupancy = (next === 'on review' || next === 'approved') ? 1 : 0;
-      deltaFilled = nextCountsInOccupancy - prevCountsInOccupancy;
+  await db.runTransaction(async (tx) => {
+    const subSnap = await tx.get(subRef);
+    if (!subSnap.exists) throw new Error("Submission not found");
+    const sub = subSnap.data() || {};
+    const prev = (sub.status || "").toLowerCase();
+    const next = newStatus.toLowerCase();
+    if (prev === next) return;
 
-      // approvedWorkers counts only 'approved'
-      const prevApproved = (prev === 'approved') ? 1 : 0;
-      const nextApproved = (next === 'approved') ? 1 : 0;
-      deltaApproved = nextApproved - prevApproved;
+    const taskId = sub.taskId;
+    if (!taskId) throw new Error("Missing taskId on submission");
 
-      // update submission status
-      tx.update(subRef, { status: newStatus });
+    // === Count logic ===
+    // filledWorkers includes: on review + approved
+    // approvedWorkers includes: approved only
 
-      // update task counters
-      const taskRef = db.collection('tasks').doc(taskId);
-      const taskSnap = await tx.get(taskRef);
-      if (!taskSnap.exists) {
-        // create with initial fields
-        const initial = { filledWorkers: Math.max(0, deltaFilled), approvedWorkers: Math.max(0, deltaApproved) };
-        tx.set(taskRef, initial, { merge: true });
-      } else {
-        const t = taskSnap.data() || {};
-        const curFilled = Number(t.filledWorkers || 0);
-        const curApproved = Number(t.approvedWorkers || 0);
-        const newFilled = Math.max(0, curFilled + deltaFilled);
-        const newApproved = Math.max(0, curApproved + deltaApproved);
-        tx.update(taskRef, { filledWorkers: newFilled, approvedWorkers: newApproved });
-      }
-    });
-  }
+    // occupancy count flags
+    const prevOccupy = ["on review", "approved"].includes(prev);
+    const nextOccupy = ["on review", "approved"].includes(next);
+
+    // approval flags
+    const prevApproved = prev === "approved";
+    const nextApproved = next === "approved";
+
+    // compute exact deltas
+    const deltaFilled = (nextOccupy ? 1 : 0) - (prevOccupy ? 1 : 0);
+    const deltaApproved = (nextApproved ? 1 : 0) - (prevApproved ? 1 : 0);
+
+    // Update submission status
+    tx.update(subRef, { status: newStatus });
+
+    // Update task counters
+    const taskRef = db.collection("tasks").doc(taskId);
+    const taskSnap = await tx.get(taskRef);
+    const t = taskSnap.exists ? taskSnap.data() || {} : {};
+    const curFilled = Number(t.filledWorkers || 0);
+    const curApproved = Number(t.approvedWorkers || 0);
+
+    const newFilled = Math.max(0, curFilled + deltaFilled);
+    const newApproved = Math.max(0, curApproved + deltaApproved);
+
+    tx.set(taskRef, { filledWorkers: newFilled, approvedWorkers: newApproved }, { merge: true });
+  });
+}
 
   // ---------- Task details modal and submission ----------
   async function showTaskDetails(jobId, jobData) {
