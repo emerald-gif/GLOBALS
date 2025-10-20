@@ -1220,9 +1220,12 @@ firebase.auth().onAuthStateChanged(async (user) => {
 	//INSTALL AND EARN FUNCTION 
 
 
-// INSTALL AND EARN FUNCTION (revised) — paste this in place of your previous task section
+// INSTALL & EARN — robust occupancy/approved logic (drop-in replacement)
+// Uses only get() and transactions (no onSnapshot). Exposes TaskProgress helpers.
 (function initTaskSectionModule() {
-  // ---------- Small helpers ----------
+  'use strict';
+
+  // ---------- Helpers ----------
   function escapeHtml(str) {
     if (str == null) return "";
     return String(str)
@@ -1265,44 +1268,93 @@ firebase.auth().onAuthStateChanged(async (user) => {
     });
   }
 
-  // ---------- Progress helpers (transactional) ----------
-  // Update occupancy (filledWorkers) atomically by delta (can be +1 or -1)
-  async function updateTaskOccupancy(taskId, delta) {
+  // ---------- Firestore helpers (transactions) ----------
+  // Ensure tasks document has numeric fields and apply deltas atomically.
+  async function applyTaskDeltas(taskId, { deltaFilled = 0, deltaApproved = 0 } = {}) {
     if (!taskId) throw new Error('taskId required');
     const db = firebase.firestore();
     const ref = db.collection('tasks').doc(taskId);
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
-      if (!snap.exists) throw new Error('Task not found');
+      if (!snap.exists) {
+        // create doc if missing (defensive)
+        const init = { filledWorkers: Math.max(0, Number(deltaFilled || 0)), approvedWorkers: Math.max(0, Number(deltaApproved || 0)) };
+        tx.set(ref, init, { merge: true });
+        return;
+      }
       const data = snap.data() || {};
-      const current = Number(data.filledWorkers || 0);
-      const newVal = Math.max(0, current + Number(delta || 0));
-      tx.update(ref, { filledWorkers: newVal });
+      const curFilled = Number(data.filledWorkers || 0);
+      const curApproved = Number(data.approvedWorkers || 0);
+      const newFilled = Math.max(0, curFilled + Number(deltaFilled || 0));
+      const newApproved = Math.max(0, curApproved + Number(deltaApproved || 0));
+      tx.update(ref, { filledWorkers: newFilled, approvedWorkers: newApproved });
     });
   }
 
-  // Adjust approved workers count (for admin to call when approving/rejecting)
-  async function adjustTaskApprovedCount(taskId, delta) {
-    if (!taskId) throw new Error('taskId required');
+  // Convenience: increment occupancy after creation
+  async function increaseTaskOccupancy(taskId) { return applyTaskDeltas(taskId, { deltaFilled: +1 }); }
+  async function decreaseTaskOccupancy(taskId) { return applyTaskDeltas(taskId, { deltaFilled: -1 }); }
+  async function changeTaskApprovedCount(taskId, delta) { return applyTaskDeltas(taskId, { deltaApproved: delta }); }
+
+  // Master handler for status transitions of a submission.
+  // Call this whenever a submission's status changes (admin side).
+  // newStatus must be a string like 'on review', 'approved', 'rejected'.
+  async function handleSubmissionStatusChange(submissionId, newStatus) {
+    if (!submissionId) throw new Error('submissionId required');
+    if (typeof newStatus !== 'string') throw new Error('newStatus string required');
+
     const db = firebase.firestore();
-    const ref = db.collection('tasks').doc(taskId);
+    const subRef = db.collection('task_submissions').doc(submissionId);
+
+    // run transaction to atomically read current submission and update both docs
     await db.runTransaction(async (tx) => {
-      const snap = await tx.get(ref);
-      if (!snap.exists) throw new Error('Task not found');
-      const data = snap.data() || {};
-      const current = Number(data.approvedWorkers || 0);
-      const newVal = Math.max(0, current + Number(delta || 0));
-      tx.update(ref, { approvedWorkers: newVal });
+      const subSnap = await tx.get(subRef);
+      if (!subSnap.exists) throw new Error('Submission not found');
+      const sub = subSnap.data() || {};
+      const prev = (sub.status || '').toLowerCase();
+      const next = newStatus.toLowerCase();
+      if (prev === next) return; // nothing to do
+
+      const taskId = sub.taskId;
+      if (!taskId) throw new Error('Submission missing taskId');
+
+      // compute deltas
+      let deltaFilled = 0, deltaApproved = 0;
+
+      // occupancy is counted for 'on review' and 'approved'
+      const prevCountsInOccupancy = (prev === 'on review' || prev === 'approved') ? 1 : 0;
+      const nextCountsInOccupancy = (next === 'on review' || next === 'approved') ? 1 : 0;
+      deltaFilled = nextCountsInOccupancy - prevCountsInOccupancy;
+
+      // approvedWorkers counts only 'approved'
+      const prevApproved = (prev === 'approved') ? 1 : 0;
+      const nextApproved = (next === 'approved') ? 1 : 0;
+      deltaApproved = nextApproved - prevApproved;
+
+      // update submission status
+      tx.update(subRef, { status: newStatus });
+
+      // update task counters
+      const taskRef = db.collection('tasks').doc(taskId);
+      const taskSnap = await tx.get(taskRef);
+      if (!taskSnap.exists) {
+        // create with initial fields
+        const initial = { filledWorkers: Math.max(0, deltaFilled), approvedWorkers: Math.max(0, deltaApproved) };
+        tx.set(taskRef, initial, { merge: true });
+      } else {
+        const t = taskSnap.data() || {};
+        const curFilled = Number(t.filledWorkers || 0);
+        const curApproved = Number(t.approvedWorkers || 0);
+        const newFilled = Math.max(0, curFilled + deltaFilled);
+        const newApproved = Math.max(0, curApproved + deltaApproved);
+        tx.update(taskRef, { filledWorkers: newFilled, approvedWorkers: newApproved });
+      }
     });
   }
 
   // ---------- Task details modal and submission ----------
   async function showTaskDetails(jobId, jobData) {
-    if (!jobId || !jobData) {
-      console.error("showTaskDetails missing jobId or jobData", { jobId, jobData });
-      alert("Internal error: missing job data. Refresh and try again.");
-      return;
-    }
+    if (!jobId || !jobData) { console.error("missing job data", jobId, jobData); alert('Internal error'); return; }
 
     const fullScreen = document.createElement("div");
     fullScreen.className = "fixed inset-0 bg-white z-50 overflow-y-auto p-6";
@@ -1337,17 +1389,15 @@ firebase.auth().onAuthStateChanged(async (user) => {
         </div>
 
         <div id="proofSection" class="mt-6">
-          <h2 class="text-lg font-bold text-gray-800 mb-4">Proof</h2>
-          <div id="proofFields">${generateProofUploadFields(proofCount)}</div>
-          <input id="proofTextInput" type="text" placeholder="Enter email/username used (if needed)"
-            class="w-full p-2 border border-gray-300 rounded-lg text-sm mt-2" />
+          <h3 class="text-base font-semibold text-gray-800 mb-3">Submit Proof</h3>
+          <div id="proofInputs">${generateProofUploadFields(proofCount)}</div>
+          <textarea id="taskProofNote" placeholder="Optional note..." class="w-full border rounded-md p-3 mt-3 h-24"></textarea>
 
-          <div class="flex items-center gap-3 mt-4">
-            <button id="submitTaskBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
-              Submit Task
-            </button>
-            <div id="submitStatus" class="text-sm text-gray-600"></div>
+          <div class="mt-3">
+            <button id="taskSubmitBtn" class="w-full py-3 bg-blue-600 text-white rounded-xl">Submit Proof</button>
           </div>
+
+          <p class="text-xs text-gray-400 mt-2">Submissions are reviewed by admin.</p>
         </div>
       </div>
     `;
@@ -1355,167 +1405,186 @@ firebase.auth().onAuthStateChanged(async (user) => {
     document.body.appendChild(fullScreen);
     fullScreen.querySelector("#closeTaskBtn").addEventListener("click", () => fullScreen.remove());
 
-    // If user already submitted -> show submission (one-time check)
+    // Load current task counters (prefer task doc fields)
+    let filled = 0, approved = 0, total = Number(jobData.numWorkers || 0);
     try {
-      const user = await waitForAuthReady();
-      if (user) {
-        const snap = await firebase.firestore()
-          .collection("task_submissions")
-          .where("taskId", "==", jobId)
-          .where("userId", "==", user.uid)
-          .limit(1)
+      const tdoc = await firebase.firestore().collection('tasks').doc(jobId).get();
+      if (tdoc.exists) {
+        const td = tdoc.data() || {};
+        filled = Number(td.filledWorkers || 0);
+        approved = Number(td.approvedWorkers || 0);
+      } else {
+        // fallback: compute occupancy & approved by queries (one-time)
+        const occSnap = await firebase.firestore().collection('task_submissions')
+          .where('taskId', '==', jobId)
+          .where('status', 'in', ['on review', 'approved'])
+          .get().catch(()=>null);
+        if (occSnap && occSnap.size!=null) filled = occSnap.size;
+        const aprSnap = await firebase.firestore().collection('task_submissions')
+          .where('taskId', '==', jobId)
+          .where('status', '==', 'approved')
           .get();
-
-        if (!snap.empty) {
-          const sub = snap.docs[0].data();
-          const proofSection = fullScreen.querySelector("#proofSection");
-          proofSection.innerHTML = `
-            <h2 class="text-lg font-bold text-gray-800 mb-4">Your Submission</h2>
-            <p class="text-sm text-gray-700 mb-2"><strong>Submitted Text:</strong> ${escapeHtml(sub.proofText || "—")}</p>
-            <div class="grid grid-cols-2 gap-2">
-              ${(sub.proofImages || []).map(url => `<img src="${escapeHtml(url)}" class="w-full h-32 object-cover rounded-lg border" />`).join("")}
-            </div>
-            <p class="mt-3 text-green-600 font-semibold">✅ Submitted</p>
-          `;
-          return;
-        }
+        approved = aprSnap.size || 0;
       }
     } catch (err) {
-      console.error("Error checking existing submission:", err);
+      console.error('load counters failed', err);
     }
 
-    // attach submit handler if not submitted
+    // If fully approved -> hide submit area and show closed message
+    const submitArea = fullScreen.querySelector('#proofSection');
+    if (total > 0 && approved >= total) {
+      submitArea.innerHTML = `<div style="padding:12px;background:#f8fafc;border-radius:12px;text-align:center"><strong>All slots fully approved. This job is closed.</strong></div>`;
+      // still allow viewing user's own submission later if needed (but we leave UI as-is)
+      return;
+    }
+
+    // If occupancy >= total, hide upload inputs (no open slots), but still show user's own submission if exists
+    if (total > 0 && filled >= total) {
+      submitArea.innerHTML = `<div style="padding:12px;background:#fffbeb;border-radius:12px;text-align:center"><strong>No open submission slots right now. Please check back later.</strong></div>`;
+      // show user's submission if exists
+      await showUserSubmissionIfExists(jobId, fullScreen);
+      return;
+    }
+
+    // Check if user already submitted -> if so show their submission
+    const user = await waitForAuthReady();
+    if (!user) {
+      // not logged: attach handler to prompt login
+      const btn = fullScreen.querySelector('#taskSubmitBtn');
+      btn.onclick = ()=> alert('Please log in to submit proof.');
+      return;
+    }
+
+    const existingSnap = await firebase.firestore().collection('task_submissions')
+      .where('taskId','==', jobId)
+      .where('userId','==', user.uid)
+      .limit(1)
+      .get();
+
+    if (!existingSnap.empty) {
+      const s = existingSnap.docs[0].data();
+      replaceSubmitAreaWithSubmitted(s, submitArea);
+      return;
+    }
+
+    // attach submit handler
     attachSubmitHandler(fullScreen, jobId, jobData);
   }
 
-  function attachSubmitHandler(fullScreen, jobId, jobData) {
-    const submitBtn = fullScreen.querySelector("#submitTaskBtn");
-    const status = fullScreen.querySelector("#submitStatus");
+  // Show user's submission inside a provided container if exists
+  async function showUserSubmissionIfExists(jobId, containerEl) {
+    try {
+      const user = firebase.auth().currentUser;
+      if (!user) return;
+      const snap = await firebase.firestore().collection('task_submissions')
+        .where('taskId','==', jobId)
+        .where('userId','==', user.uid)
+        .limit(1)
+        .get();
+      if (!snap.empty) {
+        const sub = snap.docs[0].data();
+        replaceSubmitAreaWithSubmitted(sub, containerEl);
+      }
+    } catch (err) {
+      console.error('showUserSubmissionIfExists', err);
+    }
+  }
 
-    // Guard to avoid duplicate handler registration
-    if (!submitBtn || submitBtn._attached) return;
+  function replaceSubmitAreaWithSubmitted(sub, containerEl) {
+    const proofs = (sub.proofImages || []).map(u => `<img src="${escapeHtml(u)}" style="width:100%;max-height:220px;object-fit:contain;border-radius:8px;margin-bottom:8px">`).join('');
+    const note = sub.proofText ? `<div style="margin-top:8px;color:#374151"><strong>Note:</strong> ${escapeHtml(sub.proofText)}</div>` : '';
+    const status = escapeHtml(sub.status || 'on review');
+
+    const html = `
+      <div style="background:#f8fafc;padding:14px;border-radius:12px;text-align:center">
+        <div style="color:#16a34a;font-weight:600;margin-bottom:6px">✅ Your submission</div>
+        <div style="font-size:13px;color:#6b7280;margin-bottom:8px">Status: <strong style="color:#111827">${status}</strong></div>
+        ${proofs || '<div style="color:#9ca3af;font-size:13px">No proof images</div>'}
+        ${note}
+      </div>
+    `;
+    if (containerEl) containerEl.innerHTML = html;
+  }
+
+  // ---------- Submit handler ----------
+  function attachSubmitHandler(fullScreen, jobId, jobData) {
+    const submitBtn = fullScreen.querySelector('#taskSubmitBtn');
+    if (!submitBtn) return;
+    if (submitBtn._attached) return; // avoid double attach
     submitBtn._attached = true;
 
-    submitBtn.addEventListener("click", async () => {
+    submitBtn.addEventListener('click', async () => {
       submitBtn.disabled = true;
-      status.textContent = "Checking auth...";
+      const statusEl = fullScreen.querySelector('#submitStatus');
+      if (statusEl) statusEl.textContent = 'Checking...';
 
       try {
         const user = await waitForAuthReady();
-        if (!user) {
-          alert("Please log in to submit task.");
-          submitBtn.disabled = false;
-          status.textContent = "";
-          return;
-        }
+        if (!user) { alert('Please log in to submit task.'); submitBtn.disabled = false; if (statusEl) statusEl.textContent=''; return; }
 
-        // Double-check user hasn't already submitted (prevents race / duplicate uploads)
-        const preCheck = await firebase.firestore()
-          .collection("task_submissions")
-          .where("taskId", "==", jobId)
-          .where("userId", "==", user.uid)
+        // final duplicate check (race-safe)
+        const pre = await firebase.firestore().collection('task_submissions')
+          .where('taskId','==', jobId)
+          .where('userId','==', user.uid)
           .limit(1)
           .get();
-        if (!preCheck.empty) {
-          // show existing submission
-          alert('You have already submitted this task.');
-          submitBtn.disabled = false;
-          status.textContent = "";
-          return;
-        }
+        if (!pre.empty) { alert('You have already submitted this task.'); submitBtn.disabled = false; if (statusEl) statusEl.textContent=''; return; }
 
-        const proofText = fullScreen.querySelector("#proofTextInput")?.value.trim() || "";
         const fileInputs = Array.from(fullScreen.querySelectorAll('input[type="file"]'));
-        const uploadedFiles = [];
+        // require at least one file
+        const anyFile = fileInputs.some(i => i.files && i.files[0]);
+        if (!anyFile) { alert('Please upload at least one proof image.'); submitBtn.disabled = false; if (statusEl) statusEl.textContent=''; return; }
 
-        // ensure at least one file uploaded
-        let anyFile = false;
+        // upload files (requires uploadToCloudinary global or replace with your uploader)
+        const uploaded = [];
         for (let i = 0; i < fileInputs.length; i++) {
           const fEl = fileInputs[i];
-          const file = fEl.files[0];
-          if (file) { anyFile = true; break; }
-        }
-        if (!anyFile) {
-          alert("❗ Please upload at least one proof image.");
-          submitBtn.disabled = false;
-          status.textContent = "";
-          return;
+          if (!fEl.files || !fEl.files[0]) continue;
+          if (statusEl) statusEl.textContent = `Uploading ${uploaded.length+1}...`;
+          if (typeof uploadToCloudinary !== 'function') throw new Error('uploadToCloudinary(file) not available');
+          const url = await uploadToCloudinary(fEl.files[0]);
+          uploaded.push(url);
         }
 
-        // Upload files (we expect uploadToCloudinary to exist or your custom uploader)
-        for (let i = 0; i < fileInputs.length; i++) {
-          const fEl = fileInputs[i];
-          const file = fEl.files[0];
-          if (!file) continue;
-          status.textContent = `Uploading ${uploadedFiles.length + 1} of ${fileInputs.length}...`;
-          if (typeof uploadToCloudinary !== "function") {
-            throw new Error("uploadToCloudinary(file) not available. Provide a global upload helper.");
-          }
-          const url = await uploadToCloudinary(file);
-          uploadedFiles.push(url);
-          status.textContent = `Uploaded ${uploadedFiles.length}`;
-        }
-
-        if (uploadedFiles.length === 0) {
-          alert("❗ Please upload at least one proof image.");
-          submitBtn.disabled = false;
-          status.textContent = "";
-          return;
-        }
-
-        status.textContent = "Saving submission...";
-
-        // create submission doc
         const payload = {
           taskId: jobId,
           userId: user.uid,
-          proofText,
-          proofImages: uploadedFiles,
+          proofImages: uploaded,
+          proofText: (fullScreen.querySelector('#taskProofNote')?.value || '').trim(),
           submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          status: "on review",
+          status: 'on review',
           workerEarn: jobData.workerEarn || 0
         };
 
-        // Write submission
-        const added = await firebase.firestore().collection("task_submissions").add(payload);
+        // Add submission
+        const addedRef = await firebase.firestore().collection('task_submissions').add(payload);
 
-        // After writing submission, increment task occupancy atomically
+        // After successful write, increment occupancy (filledWorkers) atomically.
         try {
-          await updateTaskOccupancy(jobId, +1);
+          await increaseTaskOccupancy(jobId);
         } catch (errOcc) {
-          // Log but continue — occupancy stored in tasks may be missing or transaction failed
-          console.error("updateTaskOccupancy failed:", errOcc);
+          console.error('increaseTaskOccupancy failed', errOcc);
+          // Not fatal for the user; continue
         }
 
-        // Update local cache (finishedTasksCache) and UI counters if the finished tasks screen exists
-        try {
-          if (!window.finishedTasksCache) window.finishedTasksCache = [];
-          const localPayload = Object.assign({}, payload, { id: added.id, submittedAt: new Date() });
-          window.finishedTasksCache = window.finishedTasksCache || [];
-          window.finishedTasksCache.unshift(localPayload);
-          // If finished UI is visible, re-render counts
-          if (document.getElementById("finishedTasksListUser") && document.getElementById("finishedTasksListUser").offsetParent !== null) {
-            // finished list visible -> re-render
-            if (typeof renderFinishedTasksUser === "function") {
-              try { renderFinishedTasksUser(); } catch (e) { /* ignore */ }
-            }
-          }
-        } catch (e) { console.error('local cache update failed', e); }
+        // Update local finished cache (if used)
+        window.finishedTasksCache = window.finishedTasksCache || [];
+        const localCopy = Object.assign({}, payload, { id: addedRef.id, submittedAt: new Date() });
+        window.finishedTasksCache.unshift(localCopy);
 
-        alert("✅ Task submitted for review!");
+        alert('✅ Task submitted for review!');
         fullScreen.remove();
 
       } catch (err) {
-        console.error("Submit error:", err);
-        // ensure that we don't show success after failure — only one alert (failed)
-        alert("❗ Failed to submit task: " + (err?.message || err));
+        console.error('Submit error', err);
+        alert('❗ Failed to submit task: ' + (err && err.message ? err.message : err));
         submitBtn.disabled = false;
-        status.textContent = "";
+        if (statusEl) statusEl.textContent = '';
       }
     });
   }
 
-  // ---------- Task card renderer (one-time, used by fetchTasksOnce) ----------
+  // ---------- Task card renderer / one-time fetch ----------
   function createTaskCard(jobId, jobData) {
     const taskContainer = document.getElementById("task-jobs");
     if (!taskContainer) return;
@@ -1549,39 +1618,27 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
     const total = jobData.numWorkers || 0;
 
-    // one-time fetch of approved progress (no snapshot)
+    // One-time fetch: prefer task doc fields; fallback to counting approved submissions
     (async () => {
       try {
-        // prefer fields in task doc if present (approvedWorkers / filledWorkers)
-        const taskDoc = await firebase.firestore().collection('tasks').doc(jobId).get();
-        if (taskDoc.exists) {
-          const tdata = taskDoc.data() || {};
-          const approved = Number(tdata.approvedWorkers || 0);
-          const filled = Number(tdata.filledWorkers || 0);
+        const tdoc = await firebase.firestore().collection('tasks').doc(jobId).get();
+        if (tdoc.exists) {
+          const td = tdoc.data() || {};
+          const filled = Number(td.filledWorkers || 0);
+          const approved = Number(td.approvedWorkers || 0);
           rate.textContent = `Progress: ${filled} / ${total} (approved ${approved})`;
-          // remove card if fully approved
-          if (total > 0 && approved >= total) {
-            card.remove();
-            return;
-          }
-          return;
-        }
-
-        // fallback: count approved submissions
-        const querySnapshot = await firebase.firestore()
-          .collection("task_submissions")
-          .where("taskId", "==", jobId)
-          .where("status", "==", "approved")
-          .get();
-        const done = querySnapshot.size;
-        rate.textContent = `Progress: ${done} / ${total}`;
-
-        if (total > 0 && done >= total) {
-          card.remove();
-          return;
+          if (total > 0 && approved >= total) { card.remove(); return; }
+        } else {
+          const aprSnap = await firebase.firestore().collection('task_submissions')
+            .where('taskId', '==', jobId)
+            .where('status', '==', 'approved')
+            .get();
+          const done = aprSnap.size;
+          rate.textContent = `Progress: ${done} / ${total}`;
+          if (total > 0 && done >= total) { card.remove(); return; }
         }
       } catch (err) {
-        console.error("Failed to read progress for", jobId, err);
+        console.error('progress read failed', err);
         rate.textContent = `Progress: 0 / ${total}`;
       }
     })();
@@ -1603,7 +1660,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
     taskContainer.appendChild(card);
   }
 
-  // ---------- One-time task fetch (no live listeners) ----------
   async function fetchTasksOnce() {
     try {
       const taskContainer = document.getElementById("task-jobs");
@@ -1613,11 +1669,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
       taskContainer.innerHTML = `<p class="p-4 text-gray-400 text-sm">Loading tasks...</p>`;
 
-      const snap = await firebase.firestore()
-        .collection("tasks")
-        .where("status", "==", "approved")
-        .get();
-
+      const snap = await firebase.firestore().collection("tasks").where("status", "==", "approved").get();
       const tasks = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       taskContainer.innerHTML = "";
 
@@ -1649,8 +1701,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
     }
   }
 
-  // ---------- Finished Tasks (user) ----------
-  // minor tweak: maintain window.finishedTasksCache for cross-access; original logic preserved
+  // ---------- Finished tasks UI (unchanged logic but use window.finishedTasksCache) ----------
   window.finishedTasksCache = window.finishedTasksCache || [];
 
   async function initFinishedTasksSectionUser() {
@@ -1661,7 +1712,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
       btnOpen.addEventListener("click", () => {
         document.getElementById("taskSection").classList.add("hidden");
         document.getElementById("finishedTasksScreenUser").classList.remove("hidden");
-        renderFinishedTasksUser(); // render from cache or current fetch
+        renderFinishedTasksUser();
       });
     }
 
@@ -1672,7 +1723,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
       });
     }
 
-    // initial one-time load from Firestore
     firebase.auth().onAuthStateChanged(async user => {
       if (!user) return;
       await fetchFinishedTasksOnce(user.uid);
@@ -1689,15 +1739,10 @@ firebase.auth().onAuthStateChanged(async (user) => {
     try {
       listEl.innerHTML = `<p class="text-center text-gray-500">Loading...</p>`;
 
-      const snap = await firebase.firestore()
-        .collection("task_submissions")
-        .where("userId", "==", uid)
-        .get();
-
+      const snap = await firebase.firestore().collection("task_submissions").where("userId","==", uid).get();
       window.finishedTasksCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      // sort newest first
-      window.finishedTasksCache.sort((a, b) => {
+      window.finishedTasksCache.sort((a,b) => {
         const t1 = a.submittedAt?.toDate?.() || new Date(0);
         const t2 = b.submittedAt?.toDate?.() || new Date(0);
         return t2 - t1;
@@ -1705,11 +1750,11 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
       renderFinishedTasksUser();
 
-      // counters
       let pending = window.finishedTasksCache.filter(d => d.status === "on review").length;
       let approved = window.finishedTasksCache.filter(d => d.status === "approved").length;
       if (pendingCountEl) pendingCountEl.textContent = pending;
       if (approvedCountEl) approvedCountEl.textContent = approved;
+
     } catch (err) {
       console.error("Error fetching finished tasks:", err);
       const listEl = document.getElementById("finishedTasksListUser");
@@ -1721,7 +1766,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
     const listEl = document.getElementById("finishedTasksListUser");
     const pendingCountEl = document.getElementById("pendingCountUser");
     const approvedCountEl = document.getElementById("approvedCountUser");
-
     if (!listEl) return;
     listEl.innerHTML = "";
 
@@ -1733,7 +1777,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
     }
 
     let pending = 0, approved = 0;
-
     for (const data of window.finishedTasksCache) {
       if (data.status === "on review") pending++;
       if (data.status === "approved") approved++;
@@ -1758,7 +1801,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
           data-id="${escapeHtml(data.id)}"
         >Details</button>
       `;
-
       listEl.appendChild(card);
     }
 
@@ -1769,7 +1811,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
       btn.addEventListener("click", () => showTaskSubmissionDetailsUser(btn.dataset.id));
     });
 
-    // fetch related task titles once
     preloadTaskTitles();
   }
 
@@ -1780,10 +1821,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
       const batch = [];
       for (let i = 0; i < ids.length; i += 10) {
         const slice = ids.slice(i, i + 10);
-        const snap = await firebase.firestore()
-          .collection("tasks")
-          .where(firebase.firestore.FieldPath.documentId(), "in", slice)
-          .get();
+        const snap = await firebase.firestore().collection("tasks").where(firebase.firestore.FieldPath.documentId(), "in", slice).get();
         batch.push(...snap.docs.map(d => ({ id: d.id, ...d.data() })));
       }
       for (const task of batch) {
@@ -1791,11 +1829,8 @@ firebase.auth().onAuthStateChanged(async (user) => {
           if (sub.taskId === task.id) sub.cachedTitle = task.title || "Untitled Task";
         });
       }
-      // re-render to show cached titles
       try { renderFinishedTasksUser(); } catch (_) {}
-    } catch (err) {
-      console.error("Error preloading task titles:", err);
-    }
+    } catch (err) { console.error("Error preloading task titles:", err); }
   }
 
   async function showTaskSubmissionDetailsUser(submissionId) {
@@ -1836,28 +1871,23 @@ firebase.auth().onAuthStateChanged(async (user) => {
     modal.querySelector(".closeModalUser").addEventListener("click", () => modal.remove());
   }
 
-  // ---------- Register section ----------
+  // ---------- Init ----------
   if (window.registerPage) {
     window.registerPage("finishedTasksScreenUser", initFinishedTasksSectionUser);
   } else {
-    initFinishedTasksSectionUser(); // fallback
+    initFinishedTasksSectionUser();
   }
 
-  // ---------- Initialize UI ----------
   fetchTasksOnce();
 
-  // ---------- Expose helpers for admin code or other modules ----------
-  window.TaskProgress = {
-    updateTaskOccupancy,       // (taskId, delta) -> modify filledWorkers
-    adjustTaskApprovedCount    // (taskId, delta) -> modify approvedWorkers
-  };
+  // ---------- Expose helpers for admin or other modules ----------
+  window.TaskProgress = window.TaskProgress || {};
+  window.TaskProgress.increaseTaskOccupancy = increaseTaskOccupancy;
+  window.TaskProgress.decreaseTaskOccupancy = decreaseTaskOccupancy;
+  window.TaskProgress.changeTaskApprovedCount = changeTaskApprovedCount;
+  window.TaskProgress.handleSubmissionStatusChange = handleSubmissionStatusChange;
 
-})(); // end initTaskSectionModule
-
-
-
-
-
+})(); // end module
 
 
 
