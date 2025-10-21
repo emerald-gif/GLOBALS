@@ -1243,27 +1243,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
   // ---------- Cloudinary uploader (replace with your details) ----------
   // Make sure this is available before any upload attempt.
-  async function uploadToCloudinary(file) {
-    if (!file) throw new Error('No file provided to uploadToCloudinary');
-    // Replace these with your Cloudinary details:
-    const CLOUD_NAME = 'YOUR_CLOUD_NAME';
-    const UPLOAD_PRESET = 'YOUR_UPLOAD_PRESET';
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', UPLOAD_PRESET);
-
-    const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
-    const res = await fetch(url, { method: 'POST', body: formData });
-    if (!res.ok) {
-      const txt = await res.text().catch(()=>null);
-      throw new Error('Cloudinary upload failed: ' + (txt || res.status));
-    }
-    const json = await res.json();
-    if (!json.secure_url) throw new Error('Cloudinary response missing secure_url');
-    return json.secure_url;
-  }
-
+  
   // ---------- DOM helpers ----------
   function el(id) { return document.getElementById(id); }
   function hasFirebase() { return typeof firebase !== 'undefined' && firebase.firestore && firebase.auth; }
