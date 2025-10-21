@@ -1220,14 +1220,19 @@ firebase.auth().onAuthStateChanged(async (user) => {
 	//INSTALL AND EARN FUNCTION 
 
 
-// INSTALL & EARN — robust occupancy/approved logic (drop-in replacement)
-// Uses only get() and transactions (no onSnapshot). Exposes TaskProgress helpers.
+
+// main.js — Task module (combined, robust, drop-in replacement)
 (function initTaskSectionModule() {
   'use strict';
 
-  // ---------- Helpers ----------
+  // ---------- Small runtime helpers ----------
+  function safeLog(...args) { try { console.log(...args); } catch(_){} }
+  function safeWarn(...args) { try { console.warn(...args); } catch(_){} }
+  function safeError(...args) { try { console.error(...args); } catch(_){} }
+
+  // ---------- escapeHtml (compatible) ----------
   function escapeHtml(str) {
-    if (str == null) return '';
+    if (str == null) return "";
     return String(str)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -1236,24 +1241,52 @@ firebase.auth().onAuthStateChanged(async (user) => {
       .replace(/'/g, '&#39;');
   }
 
+  // ---------- Cloudinary uploader (replace with your details) ----------
+  // Make sure this is available before any upload attempt.
+  async function uploadToCloudinary(file) {
+    if (!file) throw new Error('No file provided to uploadToCloudinary');
+    // Replace these with your Cloudinary details:
+    const CLOUD_NAME = 'YOUR_CLOUD_NAME';
+    const UPLOAD_PRESET = 'YOUR_UPLOAD_PRESET';
 
-	
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', UPLOAD_PRESET);
 
-  function generateProofUploadFields(count) {
-    let html = "";
-    for (let i = 1; i <= count; i++) {
-      html += `
-      <div class="mb-4">
-        <label class="block text-sm font-medium text-gray-700 mb-1">Upload Proof ${i}</label>
-        <input id="proof-file-${i}" type="file" accept="image/*" class="w-full p-2 border border-gray-300 rounded-lg text-sm" />
-      </div>`;
+    const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
+    const res = await fetch(url, { method: 'POST', body: formData });
+    if (!res.ok) {
+      const txt = await res.text().catch(()=>null);
+      throw new Error('Cloudinary upload failed: ' + (txt || res.status));
     }
-    return html;
+    const json = await res.json();
+    if (!json.secure_url) throw new Error('Cloudinary response missing secure_url');
+    return json.secure_url;
   }
 
+  // ---------- DOM helpers ----------
+  function el(id) { return document.getElementById(id); }
+  function hasFirebase() { return typeof firebase !== 'undefined' && firebase.firestore && firebase.auth; }
+
+  // ---------- Wait for Firebase & DOM ----------
+  async function waitForReady(timeoutMs = 5000) {
+    // Wait for DOMContentLoaded
+    if (document.readyState === 'loading') {
+      await new Promise(res => document.addEventListener('DOMContentLoaded', res, { once: true }));
+    }
+    // Wait for firebase.auth to be available (best-effort)
+    const start = Date.now();
+    while (!hasFirebase() && Date.now() - start < timeoutMs) {
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise(r => setTimeout(r, 100));
+    }
+    return hasFirebase();
+  }
+
+  // ---------- Auth helper ----------
   function waitForAuthReady(timeout = 4000) {
     return new Promise((resolve) => {
-      if (typeof firebase === "undefined" || !firebase.auth) return resolve(null);
+      if (!hasFirebase()) return resolve(null);
       let done = false;
       const t = setTimeout(() => {
         if (done) return;
@@ -1274,6 +1307,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
   // ---------- Firestore helpers (transactions) ----------
   async function applyTaskDeltas(taskId, { deltaFilled = 0, deltaApproved = 0 } = {}) {
     if (!taskId) throw new Error('taskId required');
+    if (!hasFirebase()) throw new Error('Firebase not initialized');
     const db = firebase.firestore();
     const ref = db.collection('tasks').doc(taskId);
     await db.runTransaction(async (tx) => {
@@ -1296,9 +1330,10 @@ firebase.auth().onAuthStateChanged(async (user) => {
   async function decreaseTaskOccupancy(taskId) { return applyTaskDeltas(taskId, { deltaFilled: -1 }); }
   async function changeTaskApprovedCount(taskId, delta) { return applyTaskDeltas(taskId, { deltaApproved: delta }); }
 
-  // ---------- Reconcile helpers (authoritative) ----------
+  // ---------- Reconcile helpers ----------
   async function reconcileTaskCounters(taskId) {
     if (!taskId) throw new Error('taskId required');
+    if (!hasFirebase()) throw new Error('Firebase not initialized');
     const db = firebase.firestore();
     const occSnap = await db.collection('task_submissions')
       .where('taskId', '==', taskId)
@@ -1322,6 +1357,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
   }
 
   async function reconcileAllTasks() {
+    if (!hasFirebase()) throw new Error('Firebase not initialized');
     const db = firebase.firestore();
     const tasksSnap = await db.collection('tasks').get();
     for (const tdoc of tasksSnap.docs) {
@@ -1329,14 +1365,14 @@ firebase.auth().onAuthStateChanged(async (user) => {
     }
   }
 
-  // ---------- Master handler for status transitions of a submission ----------
+  // ---------- Admin status handler (transactional) ----------
   async function handleSubmissionStatusChange(submissionId, newStatus) {
     if (!submissionId) throw new Error('submissionId required');
     if (typeof newStatus !== 'string') throw new Error('newStatus string required');
+    if (!hasFirebase()) throw new Error('Firebase not initialized');
 
     const db = firebase.firestore();
     const subRef = db.collection('task_submissions').doc(submissionId);
-
     await db.runTransaction(async (tx) => {
       const subSnap = await tx.get(subRef);
       if (!subSnap.exists) throw new Error('Submission not found');
@@ -1374,53 +1410,55 @@ firebase.auth().onAuthStateChanged(async (user) => {
     });
   }
 
-  // ---------- Task details modal and submission ----------
+  // ---------- UI helpers ----------
+  function generateProofUploadFields(count) {
+    let html = "";
+    for (let i = 1; i <= count; i++) {
+      html += `
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Upload Proof ${i}</label>
+        <input id="proof-file-${i}" type="file" accept="image/*" class="w-full p-2 border border-gray-300 rounded-lg text-sm" />
+      </div>`;
+    }
+    return html;
+  }
+
+  // ---------- Task details modal & submit flow ----------
   async function showTaskDetails(jobId, jobData) {
     try {
       if (!jobId) throw new Error('jobId missing');
       if (!jobData || typeof jobData !== 'object') {
-        // try to load jobData from tasks collection as fallback
-        try {
-          const tdoc = await firebase.firestore().collection('tasks').doc(jobId).get();
-          if (tdoc.exists) jobData = Object.assign({}, jobData || {}, tdoc.data());
-        } catch (loadErr) {
-          console.warn('Failed to load jobData from tasks collection:', loadErr);
-        }
+        if (!hasFirebase()) throw new Error('jobData missing and Firebase not available to load it');
+        const tdoc = await firebase.firestore().collection('tasks').doc(jobId).get();
+        if (tdoc.exists) jobData = Object.assign({}, jobData || {}, tdoc.data());
       }
       if (!jobData || typeof jobData !== 'object') throw new Error('jobData missing or invalid');
-    } catch (earlyErr) {
-      console.error('showTaskDetails early check failed', earlyErr);
-      alert('Failed to open task details: ' + (earlyErr && earlyErr.message ? earlyErr.message : earlyErr));
+    } catch (err) {
+      safeError('showTaskDetails early check failed', err);
+      alert('Failed to open task details: ' + (err && err.message ? err.message : err));
       return;
     }
 
-    const fullScreen = document.createElement("div");
+    const fullScreen = document.createElement('div');
     fullScreen.className = "fixed inset-0 bg-white z-50 overflow-y-auto p-6";
-
     const proofCount = jobData.proofFileCount || 1;
-    const safeTitle = escapeHtml(jobData.title || "Untitled Task");
-    const safeCategory = escapeHtml(jobData.category || "");
-    const safeSub = escapeHtml(jobData.subCategory || "");
-    const safeDesc = escapeHtml(jobData.description || "No description provided");
-    const safeProofText = escapeHtml(jobData.proof || "Provide the necessary screenshot or details.");
+
+    const safeTitle = escapeHtml(jobData.title || 'Untitled Task');
+    const safeCategory = escapeHtml(jobData.category || '');
+    const safeSub = escapeHtml(jobData.subCategory || '');
+    const safeDesc = escapeHtml(jobData.description || 'No description provided');
+    const safeProofText = escapeHtml(jobData.proof || 'Provide the necessary screenshot or details.');
 
     fullScreen.innerHTML = `
       <div class="max-w-2xl mx-auto space-y-6">
         <button id="closeTaskBtn" class="text-blue-600 font-bold text-sm underline">← Back to Tasks</button>
-
         <h1 class="text-2xl font-bold text-gray-800">${safeTitle}</h1>
         <p class="text-sm text-gray-500">${safeCategory} • ${safeSub}</p>
-
-        <img src="${escapeHtml(jobData.screenshotURL || 'https://via.placeholder.com/400')}"
-          alt="Task Preview"
-          class="w-full h-64 object-cover rounded-xl border"
-        />
-
+        <img src="${escapeHtml(jobData.screenshotURL || 'https://via.placeholder.com/400')}" alt="Task Preview" class="w-full h-64 object-cover rounded-xl border" />
         <div>
           <h2 class="text-lg font-semibold text-gray-800 mb-2">Task Description</h2>
           <p class="text-gray-700 text-sm whitespace-pre-line">${safeDesc}</p>
         </div>
-
         <div>
           <h2 class="text-lg font-semibold text-gray-800 mb-2">Proof Required</h2>
           <p class="text-sm text-gray-700">${safeProofText}</p>
@@ -1430,47 +1468,26 @@ firebase.auth().onAuthStateChanged(async (user) => {
           <h3 class="text-base font-semibold text-gray-800 mb-3">Submit Proof</h3>
           <div id="proofInputs">${generateProofUploadFields(proofCount)}</div>
           <textarea id="taskProofNote" placeholder="Optional note..." class="w-full border rounded-md p-3 mt-3 h-24"></textarea>
-
           <div class="mt-3">
             <button id="taskSubmitBtn" class="w-full py-3 bg-blue-600 text-white rounded-xl">Submit Proof</button>
           </div>
-
           <p class="text-xs text-gray-400 mt-2">Submissions are reviewed by admin.</p>
         </div>
       </div>
     `;
 
     document.body.appendChild(fullScreen);
-    const closeBtn = fullScreen.querySelector("#closeTaskBtn");
-    if (closeBtn) closeBtn.addEventListener("click", () => fullScreen.remove());
+    fullScreen.querySelector('#closeTaskBtn')?.addEventListener('click', () => fullScreen.remove());
 
-    // Authoritative load: reconcile counters for this task before rendering counters
+    // Get authoritative counts (best-effort)
     let filled = 0, approved = 0, total = Number(jobData.numWorkers || 0);
     try {
-      const r = await reconcileTaskCounters(jobId);
-      filled = r.filled;
-      approved = r.approved;
+      if (hasFirebase()) {
+        const r = await reconcileTaskCounters(jobId);
+        filled = r.filled; approved = r.approved;
+      }
     } catch (err) {
-      console.warn('reconcileTaskCounters failed (non-fatal)', err);
-      try {
-        const tdoc = await firebase.firestore().collection('tasks').doc(jobId).get();
-        if (tdoc.exists) {
-          const td = tdoc.data() || {};
-          filled = Number(td.filledWorkers || 0);
-          approved = Number(td.approvedWorkers || 0);
-        } else {
-          const occSnap = await firebase.firestore().collection('task_submissions')
-            .where('taskId', '==', jobId)
-            .where('status', 'in', ['on review', 'approved'])
-            .get().catch(()=>null);
-          if (occSnap && occSnap.size!=null) filled = occSnap.size;
-          const aprSnap = await firebase.firestore().collection('task_submissions')
-            .where('taskId', '==', jobId)
-            .where('status', '==', 'approved')
-            .get();
-          approved = aprSnap.size || 0;
-        }
-      } catch (e) { console.error('fallback load counters failed', e); }
+      safeWarn('reconcile failed', err);
     }
 
     const submitArea = fullScreen.querySelector('#proofSection');
@@ -1479,7 +1496,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
       await showUserSubmissionIfExists(jobId, fullScreen);
       return;
     }
-
     if (total > 0 && filled >= total) {
       submitArea.innerHTML = `<div style="padding:12px;background:#fffbeb;border-radius:12px;text-align:center"><strong>No open submission slots right now. Please check back later.</strong></div>`;
       await showUserSubmissionIfExists(jobId, fullScreen);
@@ -1489,33 +1505,35 @@ firebase.auth().onAuthStateChanged(async (user) => {
     const user = await waitForAuthReady();
     if (!user) {
       const btn = fullScreen.querySelector('#taskSubmitBtn');
-      if (btn) btn.onclick = ()=> alert('Please log in to submit proof.');
+      if (btn) btn.onclick = () => alert('Please log in to submit proof.');
       return;
     }
 
     try {
-      const existingSnap = await firebase.firestore().collection('task_submissions')
-        .where('taskId','==', jobId)
-        .where('userId','==', user.uid)
-        .limit(1)
-        .get();
+      if (hasFirebase()) {
+        const existingSnap = await firebase.firestore().collection('task_submissions')
+          .where('taskId','==', jobId)
+          .where('userId','==', user.uid)
+          .limit(1)
+          .get();
 
-      if (!existingSnap.empty) {
-        const s = existingSnap.docs[0].data();
-        replaceSubmitAreaWithSubmitted(s, submitArea);
-        return;
+        if (!existingSnap.empty) {
+          const s = existingSnap.docs[0].data();
+          replaceSubmitAreaWithSubmitted(s, submitArea);
+          return;
+        }
       }
     } catch (err) {
-      console.error('Error checking existing submission:', err);
-      // continue to attach handler so user can try
+      safeWarn('Error checking existing submission', err);
     }
 
     attachSubmitHandler(fullScreen, jobId, jobData);
   }
 
-  // Show user's submission inside a provided container if exists
+  // ---------- Show user's submission ----------
   async function showUserSubmissionIfExists(jobId, containerEl) {
     try {
+      if (!hasFirebase()) return;
       const user = firebase.auth().currentUser;
       if (!user) return;
       const snap = await firebase.firestore().collection('task_submissions')
@@ -1528,7 +1546,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
         replaceSubmitAreaWithSubmitted(sub, containerEl);
       }
     } catch (err) {
-      console.error('showUserSubmissionIfExists', err);
+      safeWarn('showUserSubmissionIfExists error', err);
     }
   }
 
@@ -1564,21 +1582,33 @@ firebase.auth().onAuthStateChanged(async (user) => {
         const user = await waitForAuthReady();
         if (!user) { alert('Please log in to submit task.'); submitBtn.disabled = false; if (statusEl) statusEl.textContent=''; return; }
 
-        const pre = await firebase.firestore().collection('task_submissions')
-          .where('taskId','==', jobId)
-          .where('userId','==', user.uid)
-          .limit(1)
-          .get();
-        if (!pre.empty) { alert('You have already submitted this task.'); submitBtn.disabled = false; if (statusEl) statusEl.textContent=''; return; }
+        // duplicate check pre
+        if (hasFirebase()) {
+          const pre = await firebase.firestore().collection('task_submissions')
+            .where('taskId','==', jobId)
+            .where('userId','==', user.uid)
+            .limit(1)
+            .get();
+          if (!pre.empty) { alert('You have already submitted this task.'); submitBtn.disabled = false; if (statusEl) statusEl.textContent=''; return; }
+        }
 
         const fileInputs = Array.from(fullScreen.querySelectorAll('input[type="file"]'));
         const anyFile = fileInputs.some(i => i.files && i.files[0]);
         if (!anyFile) { alert('Please upload at least one proof image.'); submitBtn.disabled = false; if (statusEl) statusEl.textContent=''; return; }
 
-        const taskRef = firebase.firestore().collection('tasks').doc(jobId);
-        const taskSnap = await taskRef.get();
-        const totalSlots = Number(jobData.numWorkers || (taskSnap.exists ? (taskSnap.data().numWorkers || 0) : 0));
-        const curFilled = taskSnap.exists ? Number(taskSnap.data().filledWorkers || 0) : 0;
+        // cheap pre-check slots
+        let totalSlots = Number(jobData.numWorkers || 0);
+        let curFilled = 0;
+        if (hasFirebase()) {
+          try {
+            const taskRef = firebase.firestore().collection('tasks').doc(jobId);
+            const taskSnap = await taskRef.get();
+            totalSlots = Number(jobData.numWorkers || (taskSnap.exists ? (taskSnap.data().numWorkers || 0) : 0));
+            curFilled = taskSnap.exists ? Number(taskSnap.data().filledWorkers || 0) : 0;
+          } catch (e) {
+            safeWarn('Failed reading task doc for pre-check', e);
+          }
+        }
 
         if (totalSlots > 0 && curFilled >= totalSlots) {
           alert('No open submission slots right now. Please check back later.');
@@ -1587,6 +1617,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
           return;
         }
 
+        // upload files (Cloudinary) -> ensure we store only strings
         const uploaded = [];
         for (let i = 0; i < fileInputs.length; i++) {
           const fEl = fileInputs[i];
@@ -1600,17 +1631,21 @@ firebase.auth().onAuthStateChanged(async (user) => {
         const payload = {
           taskId: jobId,
           userId: user.uid,
-          proofImages: uploaded,
+          proofImages: uploaded, // array of strings only
           proofText: (fullScreen.querySelector('#taskProofNote')?.value || '').trim(),
           status: 'on review',
           workerEarn: jobData.workerEarn || 0
         };
+
+        // ensure Firebase exists for transactions
+        if (!hasFirebase()) throw new Error('Firebase not initialized');
 
         const db = firebase.firestore();
         const submissionsCol = db.collection('task_submissions');
         const newSubRef = submissionsCol.doc();
 
         await db.runTransaction(async (tx) => {
+          const taskRef = db.collection('tasks').doc(jobId);
           const tSnap = await tx.get(taskRef);
           const tData = tSnap.exists ? (tSnap.data() || {}) : {};
           const curFilledTx = Number(tData.filledWorkers || 0);
@@ -1635,10 +1670,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
           }));
 
           if (!tSnap.exists) {
-            const init = {
-              filledWorkers: 1,
-              approvedWorkers: 0
-            };
+            const init = { filledWorkers: 1, approvedWorkers: 0 };
             if (jobData.numWorkers != null) init.numWorkers = Number(jobData.numWorkers);
             tx.set(taskRef, init, { merge: true });
           } else {
@@ -1648,10 +1680,10 @@ firebase.auth().onAuthStateChanged(async (user) => {
           }
         });
 
-        try {
-          await reconcileTaskCounters(jobId);
-        } catch (e) { console.warn('reconcileTaskCounters after submit failed (non-fatal)', e); }
+        // reconcile as best-effort
+        try { await reconcileTaskCounters(jobId); } catch (e) { safeWarn('reconcile after submit failed', e); }
 
+        // update local cache (safe plain object)
         window.finishedTasksCache = window.finishedTasksCache || [];
         const localCopy = Object.assign({}, payload, { id: newSubRef.id, submittedAt: new Date() });
         window.finishedTasksCache.unshift(localCopy);
@@ -1660,13 +1692,14 @@ firebase.auth().onAuthStateChanged(async (user) => {
         fullScreen.remove();
 
       } catch (err) {
-        console.error('Submit error', err);
+        safeError('Submit error', err);
         if (err && err.message === 'NO_SLOTS') {
           alert('Sorry — by the time you tried to submit the slots were taken. Please check later.');
         } else if (err && err.message === 'ALREADY_SUBMITTED') {
           alert('You have already submitted this task.');
         } else {
-          alert('❗ Failed to submit task: ' + (err && err.message ? err.message : err));
+          // Firestore type errors (like tried to write File) will show here; be explicit
+          alert('❗ Failed to submit task: ' + (err && err.message ? err.message : String(err)));
         }
         submitBtn.disabled = false;
         if (statusEl) statusEl.textContent = '';
@@ -1676,102 +1709,113 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
   // ---------- Task card renderer / one-time fetch ----------
   function createTaskCard(jobId, jobData) {
-    const taskContainer = document.getElementById("task-jobs");
-    if (!taskContainer) return;
+    try {
+      const taskContainer = el('task-jobs');
+      if (!taskContainer) return;
 
-    const card = document.createElement("div");
-    card.className = "flex gap-4 p-4 rounded-2xl shadow-md border border-gray-200 bg-white hover:shadow-lg transition duration-300 mb-4 items-center";
+      const card = document.createElement('div');
+      card.className = "flex gap-4 p-4 rounded-2xl shadow-md border border-gray-200 bg-white hover:shadow-lg transition duration-300 mb-4 items-center";
 
-    const image = document.createElement("img");
-    image.src = jobData.screenshotURL || "https://via.placeholder.com/80";
-    image.alt = "Task Preview";
-    image.className = "w-20 h-20 rounded-xl object-cover";
+      const image = document.createElement('img');
+      image.src = jobData.screenshotURL || "https://via.placeholder.com/80";
+      image.alt = "Task Preview";
+      image.className = "w-20 h-20 rounded-xl object-cover";
 
-    const content = document.createElement("div");
-    content.className = "flex-1";
+      const content = document.createElement('div');
+      content.className = "flex-1";
 
-    const title = document.createElement("h2");
-    title.textContent = jobData.title || "Untitled Task";
-    title.className = "text-lg font-semibold text-gray-800";
+      const title = document.createElement('h2');
+      title.textContent = jobData.title || "Untitled Task";
+      title.className = "text-lg font-semibold text-gray-800";
 
-    const meta = document.createElement("p");
-    meta.className = "text-sm text-gray-500 mt-1";
-    meta.textContent = `${jobData.category || ""} • ${jobData.subCategory || ""}`;
+      const meta = document.createElement('p');
+      meta.className = "text-sm text-gray-500 mt-1";
+      meta.textContent = `${jobData.category || ""} • ${jobData.subCategory || ""}`;
 
-    const earn = document.createElement("p");
-    earn.textContent = `Earn: ₦${jobData.workerEarn || 0}`;
-    earn.className = "text-sm text-green-600 font-semibold mt-1";
+      const earn = document.createElement('p');
+      earn.textContent = `Earn: ₦${jobData.workerEarn || 0}`;
+      earn.className = "text-sm text-green-600 font-semibold mt-1";
 
-    const rate = document.createElement("p");
-    rate.className = "text-xs text-gray-500";
-    rate.textContent = "Progress: loading...";
+      const rate = document.createElement('p');
+      rate.className = "text-xs text-gray-500";
+      rate.textContent = "Progress: loading...";
 
-    const total = jobData.numWorkers || 0;
+      const total = jobData.numWorkers || 0;
 
-    (async () => {
-      try {
-        await reconcileTaskCounters(jobId).catch(()=>null);
-        const tdoc = await firebase.firestore().collection('tasks').doc(jobId).get();
-        if (tdoc.exists) {
-          const td = tdoc.data() || {};
-          const filled = Number(td.filledWorkers || 0);
-          const approved = Number(td.approvedWorkers || 0);
-          rate.textContent = `Progress: ${filled} / ${total} (approved ${approved})`;
-          if (total > 0 && approved >= total) { card.remove(); return; }
-        } else {
-          const aprSnap = await firebase.firestore().collection('task_submissions')
-            .where('taskId', '==', jobId)
-            .where('status', '==', 'approved')
-            .get();
-          const done = aprSnap.size;
-          rate.textContent = `Progress: ${done} / ${total}`;
-          if (total > 0 && done >= total) { card.remove(); return; }
+      (async () => {
+        try {
+          if (hasFirebase()) await reconcileTaskCounters(jobId).catch(()=>null);
+          if (hasFirebase()) {
+            const tdoc = await firebase.firestore().collection('tasks').doc(jobId).get();
+            if (tdoc.exists) {
+              const td = tdoc.data() || {};
+              const filled = Number(td.filledWorkers || 0);
+              const approved = Number(td.approvedWorkers || 0);
+              rate.textContent = `Progress: ${filled} / ${total} (approved ${approved})`;
+              if (total > 0 && approved >= total) { card.remove(); return; }
+            } else {
+              const aprSnap = await firebase.firestore().collection('task_submissions')
+                .where('taskId', '==', jobId)
+                .where('status', '==', 'approved')
+                .get();
+              const done = aprSnap.size;
+              rate.textContent = `Progress: ${done} / ${total}`;
+              if (total > 0 && done >= total) { card.remove(); return; }
+            }
+          } else {
+            rate.textContent = `Progress: ? / ${total}`;
+          }
+        } catch (err) {
+          safeWarn('progress read failed', err);
+          rate.textContent = `Progress: 0 / ${total}`;
         }
-      } catch (err) {
-        console.error('progress read failed', err);
-        rate.textContent = `Progress: 0 / ${total}`;
-      }
-    })();
+      })();
 
-    const button = document.createElement("button");
-    button.textContent = "View Task";
-    button.className = "mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2 rounded-lg shadow-sm transition";
-    // NEW: robust click handler with await + try/catch and debug logs
-    button.addEventListener("click", async (ev) => {
-      try {
-        ev.preventDefault();
-        // defensive check
-        if (!jobId) throw new Error('Missing jobId');
-        if (!jobData || typeof jobData !== 'object') throw new Error('Missing job data');
-        await showTaskDetails(jobId, jobData);
-      } catch (err) {
-        console.error('Failed to open task details for', jobId, err);
-        alert('Failed to open task details: ' + (err && err.message ? err.message : err));
-      }
-    });
+      const button = document.createElement('button');
+      button.textContent = "View Task";
+      button.className = "mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2 rounded-lg shadow-sm transition";
+      button.addEventListener('click', async (ev) => {
+        try {
+          ev.preventDefault();
+          if (!jobId) throw new Error('Missing jobId');
+          if (!jobData || typeof jobData !== 'object') throw new Error('Missing job data');
+          await showTaskDetails(jobId, jobData);
+        } catch (err) {
+          safeError('Failed to open task details for', jobId, err);
+          alert('Failed to open task details: ' + (err && err.message ? err.message : err));
+        }
+      });
 
-    content.appendChild(title);
-    content.appendChild(meta);
-    content.appendChild(earn);
-    content.appendChild(rate);
-    content.appendChild(button);
+      content.appendChild(title);
+      content.appendChild(meta);
+      content.appendChild(earn);
+      content.appendChild(rate);
+      content.appendChild(button);
 
-    card.appendChild(image);
-    card.appendChild(content);
-
-    taskContainer.appendChild(card);
+      card.appendChild(image);
+      card.appendChild(content);
+      taskContainer.appendChild(card);
+    } catch (err) {
+      safeWarn('createTaskCard error', err);
+    }
   }
 
+  // ---------- Fetch tasks once (safe) ----------
   async function fetchTasksOnce() {
     try {
-      const taskContainer = document.getElementById("task-jobs");
+      const taskContainer = el('task-jobs');
       if (!taskContainer) return;
-      const searchInput = document.getElementById("taskSearch");
-      const filterSelect = document.getElementById("taskCategoryFilter");
+      const searchInput = el('taskSearch');
+      const filterSelect = el('taskCategoryFilter');
 
       taskContainer.innerHTML = `<p class="p-4 text-gray-400 text-sm">Loading tasks...</p>`;
 
-      const snap = await firebase.firestore().collection("tasks").where("status", "==", "approved").get();
+      if (!hasFirebase()) {
+        taskContainer.innerHTML = `<p class="p-4 text-gray-400 text-sm">Firebase not initialized.</p>`;
+        return;
+      }
+
+      const snap = await firebase.firestore().collection('tasks').where('status', '==', 'approved').get();
       const tasks = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       taskContainer.innerHTML = "";
 
@@ -1795,52 +1839,50 @@ firebase.auth().onAuthStateChanged(async (user) => {
       if (filterSelect) filterSelect.addEventListener("change", renderTasks);
       renderTasks();
     } catch (err) {
-      console.error("Failed to fetch tasks:", err);
-      const taskContainer = document.getElementById("task-jobs");
+      safeError("Failed to fetch tasks:", err);
+      const taskContainer = el("task-jobs");
       if (taskContainer) {
         taskContainer.innerHTML = `<p class="p-4 text-red-500 text-sm">Failed to load tasks. Please reload.</p>`;
       }
     }
   }
 
-  // ---------- Finished tasks UI (unchanged logic but use window.finishedTasksCache) ----------
+  // ---------- Finished tasks UI ----------
   window.finishedTasksCache = window.finishedTasksCache || [];
 
   async function initFinishedTasksSectionUser() {
-    const btnOpen = document.getElementById("finishedTaskBtnUser");
-    const btnBack = document.getElementById("backToMainBtnUser");
-
-    if (btnOpen) {
-      btnOpen.addEventListener("click", () => {
-        document.getElementById("taskSection").classList.add("hidden");
-        document.getElementById("finishedTasksScreenUser").classList.remove("hidden");
-        renderFinishedTasksUser();
-      });
-    }
-
-    if (btnBack) {
-      btnBack.addEventListener("click", () => {
-        document.getElementById("finishedTasksScreenUser").classList.add("hidden");
-        document.getElementById("taskSection").classList.remove("hidden");
-      });
-    }
-
-    firebase.auth().onAuthStateChanged(async user => {
-      if (!user) return;
-      await fetchFinishedTasksOnce(user.uid);
-    });
+    try {
+      const btnOpen = el("finishedTaskBtnUser");
+      const btnBack = el("backToMainBtnUser");
+      if (btnOpen) {
+        btnOpen.addEventListener("click", () => {
+          el("taskSection")?.classList.add("hidden");
+          el("finishedTasksScreenUser")?.classList.remove("hidden");
+          renderFinishedTasksUser();
+        });
+      }
+      if (btnBack) {
+        btnBack.addEventListener("click", () => {
+          el("finishedTasksScreenUser")?.classList.add("hidden");
+          el("taskSection")?.classList.remove("hidden");
+        });
+      }
+      if (hasFirebase()) {
+        firebase.auth().onAuthStateChanged(async user => {
+          if (!user) return;
+          await fetchFinishedTasksOnce(user.uid);
+        });
+      }
+    } catch (err) { safeWarn('initFinishedTasksSectionUser error', err); }
   }
 
   async function fetchFinishedTasksOnce(uid) {
-    const listEl = document.getElementById("finishedTasksListUser");
-    const pendingCountEl = document.getElementById("pendingCountUser");
-    const approvedCountEl = document.getElementById("approvedCountUser");
-
-    if (!uid) return;
-
     try {
+      const listEl = el("finishedTasksListUser");
+      const pendingCountEl = el("pendingCountUser");
+      const approvedCountEl = el("approvedCountUser");
+      if (!uid || !hasFirebase() || !listEl) return;
       listEl.innerHTML = `<p class="text-center text-gray-500">Loading...</p>`;
-
       const snap = await firebase.firestore().collection("task_submissions").where("userId","==", uid).get();
       window.finishedTasksCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
@@ -1859,18 +1901,17 @@ firebase.auth().onAuthStateChanged(async (user) => {
       let approved = window.finishedTasksCache.filter(d => (d.status || '').toLowerCase() === "approved").length;
       if (pendingCountEl) pendingCountEl.textContent = pending;
       if (approvedCountEl) approvedCountEl.textContent = approved;
-
     } catch (err) {
-      console.error("Error fetching finished tasks:", err);
-      const listEl = document.getElementById("finishedTasksListUser");
+      safeError("Error fetching finished tasks:", err);
+      const listEl = el("finishedTasksListUser");
       if (listEl) listEl.innerHTML = `<p class="text-center text-red-500">Failed to load tasks. Reload page.</p>`;
     }
   }
 
   function renderFinishedTasksUser() {
-    const listEl = document.getElementById("finishedTasksListUser");
-    const pendingCountEl = document.getElementById("pendingCountUser");
-    const approvedCountEl = document.getElementById("approvedCountUser");
+    const listEl = el("finishedTasksListUser");
+    const pendingCountEl = el("pendingCountUser");
+    const approvedCountEl = el("approvedCountUser");
     if (!listEl) return;
     listEl.innerHTML = "";
 
@@ -1888,7 +1929,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
       if (statusKey === "approved") approved++;
 
       const jobTitle = data.cachedTitle || data.taskTitle || "Loading...";
-
       const card = document.createElement("div");
       card.className = "p-4 bg-white shadow rounded-xl flex items-center justify-between mb-3";
       card.innerHTML = `
@@ -1923,22 +1963,19 @@ firebase.auth().onAuthStateChanged(async (user) => {
   }
 
   async function preloadTaskTitles() {
-    const ids = [...new Set(window.finishedTasksCache.map(t => t.taskId).filter(Boolean))];
-    if (!ids.length) return;
     try {
-      const batch = [];
-      for (let i = 0; i < ids.length; i += 10) {
-        const slice = ids.slice(i, i + 10);
+      const ids = [...new Set(window.finishedTasksCache.map(t => t.taskId).filter(Boolean))];
+      if (!ids.length || !hasFirebase()) return;
+      for (let i=0;i<ids.length;i+=10) {
+        const slice = ids.slice(i, i+10);
         const snap = await firebase.firestore().collection("tasks").where(firebase.firestore.FieldPath.documentId(), "in", slice).get();
-        batch.push(...snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }
-      for (const task of batch) {
-        window.finishedTasksCache.forEach(sub => {
-          if (sub.taskId === task.id) sub.cachedTitle = task.title || "Untitled Task";
-        });
+        for (const d of snap.docs) {
+          const task = { id: d.id, ...d.data() };
+          window.finishedTasksCache.forEach(sub => { if (sub.taskId === task.id) sub.cachedTitle = task.title || 'Untitled Task'; });
+        }
       }
       try { renderFinishedTasksUser(); } catch (_) {}
-    } catch (err) { console.error("Error preloading task titles:", err); }
+    } catch (err) { safeWarn('preloadTaskTitles error', err); }
   }
 
   async function showTaskSubmissionDetailsUser(submissionId) {
@@ -1952,26 +1989,19 @@ firebase.auth().onAuthStateChanged(async (user) => {
     modal.innerHTML = `
       <div class="bg-white rounded-xl shadow-lg p-6 w-96 max-h-[90vh] overflow-y-auto relative">
         <h2 class="text-lg font-bold mb-3">Submission Details</h2>
-
         <p class="text-sm"><strong>Job Title:</strong> ${escapeHtml(title)}</p>
         <p class="text-sm"><strong>Status:</strong> ${escapeHtml(sub.status)}</p>
         <p class="text-sm"><strong>Earned:</strong> ₦${sub.workerEarn || 0}</p>
         <p class="text-sm"><strong>Submitted At:</strong> ${sub.submittedAt?.toDate?.().toLocaleString() || "—"}</p>
         <p class="text-sm"><strong>Extra Proof:</strong> ${escapeHtml(sub.extraProof || "—")}</p>
-
         ${(sub.proofImages || []).map(url => `
           <div class="mt-3">
             <p class="text-sm font-medium text-gray-700 mb-1">Uploaded Proof:</p>
-            <img src="${escapeHtml(url)}" 
-                 alt="Proof" 
-                 class="rounded-lg border w-full max-h-60 object-contain mb-2" />
+            <img src="${escapeHtml(url)}" alt="Proof" class="rounded-lg border w-full max-h-60 object-contain mb-2" />
           </div>
         `).join("")}
-
         <div class="mt-4 flex justify-end sticky bottom-0 bg-white pt-3">
-          <button class="closeModalUser px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700">
-            Close
-          </button>
+          <button class="closeModalUser px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700">Close</button>
         </div>
       </div>
     `;
@@ -1979,16 +2009,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
     modal.querySelector(".closeModalUser").addEventListener("click", () => modal.remove());
   }
 
-  // ---------- Init ----------
-  if (window.registerPage) {
-    window.registerPage("finishedTasksScreenUser", initFinishedTasksSectionUser);
-  } else {
-    initFinishedTasksSectionUser();
-  }
-
-  fetchTasksOnce();
-
-  // ---------- Expose helpers for admin or other modules ----------
+  // ---------- Expose helpers + init ----------
   window.TaskProgress = window.TaskProgress || {};
   window.TaskProgress.increaseTaskOccupancy = increaseTaskOccupancy;
   window.TaskProgress.decreaseTaskOccupancy = decreaseTaskOccupancy;
@@ -1996,16 +2017,29 @@ firebase.auth().onAuthStateChanged(async (user) => {
   window.TaskProgress.handleSubmissionStatusChange = handleSubmissionStatusChange;
   window.TaskProgress.reconcileTaskCounters = reconcileTaskCounters;
   window.TaskProgress.reconcileAllTasks = reconcileAllTasks;
-
   window.TaskProgress.startAutoReconcile = function(taskId, ms = 60_000) {
     if (!taskId) throw new Error('taskId required');
     const iid = setInterval(() => reconcileTaskCounters(taskId).catch(()=>null), ms);
     return () => clearInterval(iid);
   };
 
+  // Run init after DOM + (best-effort) Firebase ready
+  (async () => {
+    const firebaseReady = await waitForReady(4000);
+    if (!firebaseReady) safeWarn('Firebase not detected or slow to initialize — module will still run but Firestore features will be disabled until firebase loads.');
+
+    // Minimal safe init: only call if DOM elements exist
+    try {
+      // Init UI listeners
+      initFinishedTasksSectionUser();
+      // Fetch tasks (if possible)
+      fetchTasksOnce().catch(e => safeWarn('fetchTasksOnce failed', e));
+    } catch (err) {
+      safeWarn('module init failed', err);
+    }
+  })();
+
 })(); // end module
-
-
 
 
 
