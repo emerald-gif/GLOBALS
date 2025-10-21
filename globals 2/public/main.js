@@ -1226,11 +1226,16 @@ firebase.auth().onAuthStateChanged(async (user) => {
   'use strict';
 
   // ---------- Helpers ----------
+  function escapeHtml(str) {
+    if (str == null) return "";
+    return String(str)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;')
+      .replaceAll("'", "&#39;");
+  }
 
-
-
-
-	
   function generateProofUploadFields(count) {
     let html = "";
     for (let i = 1; i <= count; i++) {
@@ -1264,7 +1269,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
   }
 
   // ---------- Firestore helpers (transactions) ----------
-  // Ensure tasks document has numeric fields and apply deltas atomically.
   async function applyTaskDeltas(taskId, { deltaFilled = 0, deltaApproved = 0 } = {}) {
     if (!taskId) throw new Error('taskId required');
     const db = firebase.firestore();
@@ -1272,7 +1276,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
       if (!snap.exists) {
-        // create doc if missing (defensive)
         const init = { filledWorkers: Math.max(0, Number(deltaFilled || 0)), approvedWorkers: Math.max(0, Number(deltaApproved || 0)) };
         tx.set(ref, init, { merge: true });
         return;
@@ -1286,17 +1289,14 @@ firebase.auth().onAuthStateChanged(async (user) => {
     });
   }
 
-  // Convenience: increment occupancy after creation
   async function increaseTaskOccupancy(taskId) { return applyTaskDeltas(taskId, { deltaFilled: +1 }); }
   async function decreaseTaskOccupancy(taskId) { return applyTaskDeltas(taskId, { deltaFilled: -1 }); }
   async function changeTaskApprovedCount(taskId, delta) { return applyTaskDeltas(taskId, { deltaApproved: delta }); }
 
   // ---------- Reconcile helpers (authoritative) ----------
-  // Recalculate occupancy and approved counters from submissions and write them atomically.
   async function reconcileTaskCounters(taskId) {
     if (!taskId) throw new Error('taskId required');
     const db = firebase.firestore();
-    // compute counts
     const occSnap = await db.collection('task_submissions')
       .where('taskId', '==', taskId)
       .get();
@@ -1305,9 +1305,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
       const s = String(d.data().status || '').toLowerCase();
       if (s === 'approved') { filled += 1; approved += 1; }
       else if (s === 'on review') { filled += 1; }
-      // other statuses do not count in occupancy
     });
-    // write via transaction to avoid races
     await db.runTransaction(async (tx) => {
       const ref = db.collection('tasks').doc(taskId);
       const snap = await tx.get(ref);
@@ -1320,7 +1318,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
     return { filled, approved };
   }
 
-  // Recalculate all tasks (useful once-off to repair inconsistent DB).
   async function reconcileAllTasks() {
     const db = firebase.firestore();
     const tasksSnap = await db.collection('tasks').get();
@@ -1330,9 +1327,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
   }
 
   // ---------- Master handler for status transitions of a submission ----------
-  // Call this whenever a submission's status changes (admin side). It uses transaction and updates both submission + task counts.
-  // newStatus must be a string like 'on review', 'approved', 'rejected'.
-  // (This function is useful for admin UI to call instead of editing the submission directly.)
   async function handleSubmissionStatusChange(submissionId, newStatus) {
     if (!submissionId) throw new Error('submissionId required');
     if (typeof newStatus !== 'string') throw new Error('newStatus string required');
@@ -1340,37 +1334,30 @@ firebase.auth().onAuthStateChanged(async (user) => {
     const db = firebase.firestore();
     const subRef = db.collection('task_submissions').doc(submissionId);
 
-    // run transaction to atomically read current submission and update both docs
     await db.runTransaction(async (tx) => {
       const subSnap = await tx.get(subRef);
       if (!subSnap.exists) throw new Error('Submission not found');
       const sub = subSnap.data() || {};
       const prev = (sub.status || '').toLowerCase();
       const next = newStatus.toLowerCase();
-      if (prev === next) return; // nothing to do
+      if (prev === next) return;
 
       const taskId = sub.taskId;
       if (!taskId) throw new Error('Submission missing taskId');
 
-      // compute deltas
-      // occupancy is counted for 'on review' and 'approved'
       const prevCountsInOccupancy = (prev === 'on review' || prev === 'approved') ? 1 : 0;
       const nextCountsInOccupancy = (next === 'on review' || next === 'approved') ? 1 : 0;
       const deltaFilled = nextCountsInOccupancy - prevCountsInOccupancy;
 
-      // approvedWorkers counts only 'approved'
       const prevApproved = (prev === 'approved') ? 1 : 0;
       const nextApproved = (next === 'approved') ? 1 : 0;
       const deltaApproved = nextApproved - prevApproved;
 
-      // update submission status
       tx.update(subRef, { status: newStatus });
 
-      // update task counters
       const taskRef = db.collection('tasks').doc(taskId);
       const taskSnap = await tx.get(taskRef);
       if (!taskSnap.exists) {
-        // create with initial fields
         const initial = { filledWorkers: Math.max(0, deltaFilled), approvedWorkers: Math.max(0, deltaApproved) };
         tx.set(taskRef, initial, { merge: true });
       } else {
@@ -1386,7 +1373,23 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
   // ---------- Task details modal and submission ----------
   async function showTaskDetails(jobId, jobData) {
-    if (!jobId || !jobData) { console.error("missing job data", jobId, jobData); alert('Internal error'); return; }
+    try {
+      if (!jobId) throw new Error('jobId missing');
+      if (!jobData || typeof jobData !== 'object') {
+        // try to load jobData from tasks collection as fallback
+        try {
+          const tdoc = await firebase.firestore().collection('tasks').doc(jobId).get();
+          if (tdoc.exists) jobData = Object.assign({}, jobData || {}, tdoc.data());
+        } catch (loadErr) {
+          console.warn('Failed to load jobData from tasks collection:', loadErr);
+        }
+      }
+      if (!jobData || typeof jobData !== 'object') throw new Error('jobData missing or invalid');
+    } catch (earlyErr) {
+      console.error('showTaskDetails early check failed', earlyErr);
+      alert('Failed to open task details: ' + (earlyErr && earlyErr.message ? earlyErr.message : earlyErr));
+      return;
+    }
 
     const fullScreen = document.createElement("div");
     fullScreen.className = "fixed inset-0 bg-white z-50 overflow-y-auto p-6";
@@ -1435,17 +1438,16 @@ firebase.auth().onAuthStateChanged(async (user) => {
     `;
 
     document.body.appendChild(fullScreen);
-    fullScreen.querySelector("#closeTaskBtn").addEventListener("click", () => fullScreen.remove());
+    const closeBtn = fullScreen.querySelector("#closeTaskBtn");
+    if (closeBtn) closeBtn.addEventListener("click", () => fullScreen.remove());
 
     // Authoritative load: reconcile counters for this task before rendering counters
     let filled = 0, approved = 0, total = Number(jobData.numWorkers || 0);
     try {
-      // Try to reconcile authoritative counters (fast local write)
       const r = await reconcileTaskCounters(jobId);
       filled = r.filled;
       approved = r.approved;
     } catch (err) {
-      // If reconcile fails, fallback to reading the task doc (existing behavior)
       console.warn('reconcileTaskCounters failed (non-fatal)', err);
       try {
         const tdoc = await firebase.firestore().collection('tasks').doc(jobId).get();
@@ -1454,7 +1456,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
           filled = Number(td.filledWorkers || 0);
           approved = Number(td.approvedWorkers || 0);
         } else {
-          // fallback: compute occupancy & approved by queries (one-time)
           const occSnap = await firebase.firestore().collection('task_submissions')
             .where('taskId', '==', jobId)
             .where('status', 'in', ['on review', 'approved'])
@@ -1469,45 +1470,43 @@ firebase.auth().onAuthStateChanged(async (user) => {
       } catch (e) { console.error('fallback load counters failed', e); }
     }
 
-    // If fully approved -> hide submit area and show closed message
     const submitArea = fullScreen.querySelector('#proofSection');
     if (total > 0 && approved >= total) {
       submitArea.innerHTML = `<div style="padding:12px;background:#f8fafc;border-radius:12px;text-align:center"><strong>All slots fully approved. This job is closed.</strong></div>`;
-      // still allow viewing user's own submission later if needed
       await showUserSubmissionIfExists(jobId, fullScreen);
       return;
     }
 
-    // If occupancy >= total, hide upload inputs (no open slots), but still show user's own submission if exists
     if (total > 0 && filled >= total) {
       submitArea.innerHTML = `<div style="padding:12px;background:#fffbeb;border-radius:12px;text-align:center"><strong>No open submission slots right now. Please check back later.</strong></div>`;
-      // show user's submission if exists
       await showUserSubmissionIfExists(jobId, fullScreen);
       return;
     }
 
-    // Check if user already submitted -> if so show their submission
     const user = await waitForAuthReady();
     if (!user) {
-      // not logged: attach handler to prompt login
       const btn = fullScreen.querySelector('#taskSubmitBtn');
-      btn.onclick = ()=> alert('Please log in to submit proof.');
+      if (btn) btn.onclick = ()=> alert('Please log in to submit proof.');
       return;
     }
 
-    const existingSnap = await firebase.firestore().collection('task_submissions')
-      .where('taskId','==', jobId)
-      .where('userId','==', user.uid)
-      .limit(1)
-      .get();
+    try {
+      const existingSnap = await firebase.firestore().collection('task_submissions')
+        .where('taskId','==', jobId)
+        .where('userId','==', user.uid)
+        .limit(1)
+        .get();
 
-    if (!existingSnap.empty) {
-      const s = existingSnap.docs[0].data();
-      replaceSubmitAreaWithSubmitted(s, submitArea);
-      return;
+      if (!existingSnap.empty) {
+        const s = existingSnap.docs[0].data();
+        replaceSubmitAreaWithSubmitted(s, submitArea);
+        return;
+      }
+    } catch (err) {
+      console.error('Error checking existing submission:', err);
+      // continue to attach handler so user can try
     }
 
-    // attach submit handler (new transactional version)
     attachSubmitHandler(fullScreen, jobId, jobData);
   }
 
@@ -1546,11 +1545,11 @@ firebase.auth().onAuthStateChanged(async (user) => {
     if (containerEl) containerEl.innerHTML = html;
   }
 
-  // ---------- Submit handler (REPLACEMENT: transaction-safe, avoids double-count) ----------
+  // ---------- Submit handler (transaction-safe) ----------
   function attachSubmitHandler(fullScreen, jobId, jobData) {
     const submitBtn = fullScreen.querySelector('#taskSubmitBtn');
     if (!submitBtn) return;
-    if (submitBtn._attached) return; // avoid double attach
+    if (submitBtn._attached) return;
     submitBtn._attached = true;
 
     submitBtn.addEventListener('click', async () => {
@@ -1562,7 +1561,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
         const user = await waitForAuthReady();
         if (!user) { alert('Please log in to submit task.'); submitBtn.disabled = false; if (statusEl) statusEl.textContent=''; return; }
 
-        // final duplicate check (race-safe pre-check)
         const pre = await firebase.firestore().collection('task_submissions')
           .where('taskId','==', jobId)
           .where('userId','==', user.uid)
@@ -1571,11 +1569,9 @@ firebase.auth().onAuthStateChanged(async (user) => {
         if (!pre.empty) { alert('You have already submitted this task.'); submitBtn.disabled = false; if (statusEl) statusEl.textContent=''; return; }
 
         const fileInputs = Array.from(fullScreen.querySelectorAll('input[type="file"]'));
-        // require at least one file
         const anyFile = fileInputs.some(i => i.files && i.files[0]);
         if (!anyFile) { alert('Please upload at least one proof image.'); submitBtn.disabled = false; if (statusEl) statusEl.textContent=''; return; }
 
-        // --- cheap pre-check: read task doc so we avoid uploading files if already full ---
         const taskRef = firebase.firestore().collection('tasks').doc(jobId);
         const taskSnap = await taskRef.get();
         const totalSlots = Number(jobData.numWorkers || (taskSnap.exists ? (taskSnap.data().numWorkers || 0) : 0));
@@ -1588,7 +1584,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
           return;
         }
 
-        // upload files (user already passed cheap pre-check)
         const uploaded = [];
         for (let i = 0; i < fileInputs.length; i++) {
           const fEl = fileInputs[i];
@@ -1599,7 +1594,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
           uploaded.push(url);
         }
 
-        // prepare payload (serverTimestamp will be set inside transaction)
         const payload = {
           taskId: jobId,
           userId: user.uid,
@@ -1609,24 +1603,20 @@ firebase.auth().onAuthStateChanged(async (user) => {
           workerEarn: jobData.workerEarn || 0
         };
 
-        // --- Run a transaction to create submission + increment occupancy atomically ---
         const db = firebase.firestore();
         const submissionsCol = db.collection('task_submissions');
-        const newSubRef = submissionsCol.doc(); // pre-generate ref so id is available after tx
+        const newSubRef = submissionsCol.doc();
 
         await db.runTransaction(async (tx) => {
-          // re-read task doc inside txn to avoid race
           const tSnap = await tx.get(taskRef);
           const tData = tSnap.exists ? (tSnap.data() || {}) : {};
           const curFilledTx = Number(tData.filledWorkers || 0);
           const totalSlotsTx = Number(jobData.numWorkers || (tData.numWorkers || 0)) || 0;
 
-          // if totalSlotsTx > 0 and already full, abort
           if (totalSlotsTx > 0 && curFilledTx >= totalSlotsTx) {
-            throw new Error('NO_SLOTS'); // upstream will catch and show friendly message
+            throw new Error('NO_SLOTS');
           }
 
-          // double-check user hasn't submitted (defensive)
           const preQuerySnapshot = await tx.get(
             db.collection('task_submissions')
               .where('taskId','==', jobId)
@@ -1637,14 +1627,11 @@ firebase.auth().onAuthStateChanged(async (user) => {
             throw new Error('ALREADY_SUBMITTED');
           }
 
-          // create submission
           tx.set(newSubRef, Object.assign({}, payload, {
             submittedAt: firebase.firestore.FieldValue.serverTimestamp()
           }));
 
-          // update / create task doc counters
           if (!tSnap.exists) {
-            // create doc with initial filledWorkers=1, approvedWorkers=0, preserve numWorkers from jobData if exists
             const init = {
               filledWorkers: 1,
               approvedWorkers: 0
@@ -1656,15 +1643,12 @@ firebase.auth().onAuthStateChanged(async (user) => {
             const curApproved = Number(tData.approvedWorkers || 0);
             tx.update(taskRef, { filledWorkers: newFilled, approvedWorkers: curApproved });
           }
-        }); // end transaction
+        });
 
-        // transaction succeeded
-        // Optional: authoritative reconcile (keeps counters honest)
         try {
           await reconcileTaskCounters(jobId);
         } catch (e) { console.warn('reconcileTaskCounters after submit failed (non-fatal)', e); }
 
-        // Update local finished cache (if used)
         window.finishedTasksCache = window.finishedTasksCache || [];
         const localCopy = Object.assign({}, payload, { id: newSubRef.id, submittedAt: new Date() });
         window.finishedTasksCache.unshift(localCopy);
@@ -1721,10 +1705,8 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
     const total = jobData.numWorkers || 0;
 
-    // One-time fetch: prefer task doc fields; fallback to counting approved submissions
     (async () => {
       try {
-        // ensure authoritative counts for display
         await reconcileTaskCounters(jobId).catch(()=>null);
         const tdoc = await firebase.firestore().collection('tasks').doc(jobId).get();
         if (tdoc.exists) {
@@ -1751,7 +1733,19 @@ firebase.auth().onAuthStateChanged(async (user) => {
     const button = document.createElement("button");
     button.textContent = "View Task";
     button.className = "mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2 rounded-lg shadow-sm transition";
-    button.addEventListener("click", () => showTaskDetails(jobId, jobData));
+    // NEW: robust click handler with await + try/catch and debug logs
+    button.addEventListener("click", async (ev) => {
+      try {
+        ev.preventDefault();
+        // defensive check
+        if (!jobId) throw new Error('Missing jobId');
+        if (!jobData || typeof jobData !== 'object') throw new Error('Missing job data');
+        await showTaskDetails(jobId, jobData);
+      } catch (err) {
+        console.error('Failed to open task details for', jobId, err);
+        alert('Failed to open task details: ' + (err && err.message ? err.message : err));
+      }
+    });
 
     content.appendChild(title);
     content.appendChild(meta);
@@ -1853,7 +1847,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
         return t2 - t1;
       });
 
-      // Preload related task counters for accuracy (reconcile those tasks)
       const taskIds = [...new Set(window.finishedTasksCache.map(s => s.taskId).filter(Boolean))];
       await Promise.all(taskIds.map(id => reconcileTaskCounters(id).catch(()=>null)));
 
@@ -1998,15 +1991,13 @@ firebase.auth().onAuthStateChanged(async (user) => {
   window.TaskProgress.decreaseTaskOccupancy = decreaseTaskOccupancy;
   window.TaskProgress.changeTaskApprovedCount = changeTaskApprovedCount;
   window.TaskProgress.handleSubmissionStatusChange = handleSubmissionStatusChange;
-  // authoritative reconcile helpers:
   window.TaskProgress.reconcileTaskCounters = reconcileTaskCounters;
   window.TaskProgress.reconcileAllTasks = reconcileAllTasks;
 
-  // Optional: small helper to enable periodic reconcile for a single task (disabled by default)
   window.TaskProgress.startAutoReconcile = function(taskId, ms = 60_000) {
     if (!taskId) throw new Error('taskId required');
     const iid = setInterval(() => reconcileTaskCounters(taskId).catch(()=>null), ms);
-    return () => clearInterval(iid); // returns stop function
+    return () => clearInterval(iid);
   };
 
 })(); // end module
