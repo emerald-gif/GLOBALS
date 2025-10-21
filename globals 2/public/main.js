@@ -1226,15 +1226,11 @@ firebase.auth().onAuthStateChanged(async (user) => {
   'use strict';
 
   // ---------- Helpers ----------
-  function escapeHtml(str) {
-    if (str == null) return "";
-    return String(str)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;')
-      .replaceAll("'", "&#39;");
-  }
+
+
+
+
+	
 
   function generateProofUploadFields(count) {
     let html = "";
