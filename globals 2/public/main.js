@@ -5076,35 +5076,31 @@ async function fetchNotificationsOnce(uid) {
     const bannerText = document.getElementById('notifBannerText');
 
     let unreadCount = 0;
-    if (notifList) notifList.innerHTML = '';
+// inside snapshot.forEach(...)
+if (notifList) {
+  const dateStr = tsDate ? timeAgo(tsDate) : 'Just now';
 
-    const snapshot = await db.collection('notifications')
-      .orderBy('timestamp', 'desc')
-      .get();
+  const card = document.createElement('div');
+  card.className = `bg-white rounded-xl p-4 shadow-md border-l-4 ${isUnread ? 'border-blue-400' : 'border-gray-200'} animate-fade-in`;
 
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      const ts = data.timestamp;
-      const tsDate = ts ? ts.toDate() : null;
+  const titleEl = document.createElement('p');
+  titleEl.className = 'text-gray-800 font-semibold truncate';
+  titleEl.textContent = data.title || 'No Title';
 
-      if (tsDate && tsDate <= joinedAtServer) return;
-      if (tsDate && tsDate <= effectiveClearedAt) return;
+  const msgEl = document.createElement('p');
+  msgEl.className = 'text-sm text-gray-600 mt-1 truncate';
+  msgEl.textContent = data.message || '';
 
-      const isUnread = tsDate ? (tsDate > effectiveLastReadAt) : false;
-      if (isUnread) unreadCount++;
+  const dateEl = document.createElement('p');
+  dateEl.className = 'text-xs text-gray-500 mt-2';
+  dateEl.textContent = dateStr;
 
-      if (notifList) {
-        const dateStr = tsDate ? timeAgo(tsDate) : 'Just now';
-        const card = document.createElement('div');
-        card.className = `bg-white rounded-xl p-4 shadow-md border-l-4 ${isUnread ? 'border-blue-400' : 'border-gray-200'} animate-fade-in`;
-        card.innerHTML = `
-          <p class="text-gray-800 font-semibold truncate">${escapeHtml(data.title || 'No Title')}</p>
-          <p class="text-sm text-gray-600 mt-1 truncate">${escapeHtml(data.message || '')}</p>
-          <p class="text-xs text-gray-500 mt-2">${escapeHtml(dateStr)}</p>
-        `;
-        notifList.appendChild(card);
-      }
-    });
+  card.appendChild(titleEl);
+  card.appendChild(msgEl);
+  card.appendChild(dateEl);
+
+  notifList.appendChild(card);
+}
 
     lastUnreadCount = unreadCount;
 
