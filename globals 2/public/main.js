@@ -1214,18 +1214,14 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
 
 
-	
-// -----------------------------
 // Robust Task Section Module
-// -----------------------------
 // Usage: call window.initTaskSection() once (e.g., from activateTab('tasks'))
 // Requires: firebase (auth + firestore) and uploadToCloudinary(file) available globally
-// -----------------------------
 
-function initTaskSectionModule() {
+(function initTaskSectionModule() {
   'use strict';
 
-  // ---------- Guard against double init ----------
+  // Single-instance guard
   if (window.__TASK_SECTION_INITIALIZED__) {
     console.warn('[TASK] initTaskSectionModule already initialized - skipping.');
     return;
@@ -1339,7 +1335,7 @@ function initTaskSectionModule() {
     const db = firebase.firestore();
     const tasksSnap = await db.collection('tasks').get();
     for (const tdoc of tasksSnap.docs) {
-      await reconcileTaskCounters(tdoc.id);
+      await reconcileTaskCounters(tdoc.id).catch(e => safeWarn('reconcileAllTasks item failed', e));
     }
   }
 
@@ -1428,14 +1424,14 @@ function initTaskSectionModule() {
     const safeSub = escapeHtml(jobData.subCategory || '');
     const safeDesc = escapeHtml(jobData.description || 'No description provided');
     const safeProofText = escapeHtml(jobData.proof || 'Provide the necessary screenshot or details.');
-    const screenshot = escapeHtml(jobData.screenshotURL || 'https://via.placeholder.com/400');
+    const screenshot = (jobData.screenshotURL && String(jobData.screenshotURL)) || 'https://via.placeholder.com/400';
 
     fullScreen.innerHTML = `
       <div class="max-w-2xl mx-auto space-y-6">
         <button id="closeTaskBtn" class="text-blue-600 font-bold text-sm underline">← Back to Tasks</button>
         <h1 class="text-2xl font-bold text-gray-800">${safeTitle}</h1>
         <p class="text-sm text-gray-500">${safeCategory} • ${safeSub}</p>
-        <img src="${screenshot}" alt="Task Preview" class="w-full h-64 object-cover rounded-xl border" />
+        <img src="${escapeHtml(screenshot)}" alt="Task Preview" class="w-full h-64 object-cover rounded-xl border" />
         <div>
           <h2 class="text-lg font-semibold text-gray-800 mb-2">Task Description</h2>
           <p class="text-gray-700 text-sm whitespace-pre-line">${safeDesc}</p>
@@ -1592,7 +1588,6 @@ function initTaskSectionModule() {
             safeWarn('Failed reading task doc for pre-check', e);
           }
         }
-
         if (totalSlots > 0 && curFilled >= totalSlots) {
           alert('No open submission slots right now. Please check back later.');
           submitBtn.disabled = false;
@@ -1605,8 +1600,13 @@ function initTaskSectionModule() {
           const fEl = fileInputs[i];
           if (!fEl.files || !fEl.files[0]) continue;
           if (typeof uploadToCloudinary !== 'function') throw new Error('uploadToCloudinary(file) not available');
-          const url = await uploadToCloudinary(fEl.files[0]);
-          uploaded.push(url);
+          const uploadResult = await uploadToCloudinary(fEl.files[0]);
+          // Accept string or object. Prefer secure_url or url fields when object.
+          const url = (typeof uploadResult === 'string')
+            ? uploadResult
+            : (uploadResult && (uploadResult.secure_url || uploadResult.url || uploadResult.public_url || uploadResult.result && (uploadResult.result.secure_url || uploadResult.result.url)) || '');
+          if (!url) throw new Error('Invalid Cloudinary response');
+          uploaded.push(String(url));
         }
 
         const payload = {
@@ -1623,6 +1623,7 @@ function initTaskSectionModule() {
         const submissionsCol = db.collection('task_submissions');
         const newSubRef = submissionsCol.doc();
 
+        // Transaction: write submission and bump counters safely
         await db.runTransaction(async (tx) => {
           const taskRef = db.collection('tasks').doc(jobId);
           const tSnap = await tx.get(taskRef);
@@ -1635,18 +1636,36 @@ function initTaskSectionModule() {
             throw new Error('NO_SLOTS');
           }
 
-          // duplicate check inside txn
-          const preQuerySnapshot = await tx.get(
-            db.collection('task_submissions')
-              .where('taskId','==', jobId)
-              .where('userId','==', user.uid)
-              .limit(1)
-          );
+          // duplicate check inside txn: using query read via tx.get(...)
+          const dupQuery = db.collection('task_submissions')
+            .where('taskId', '==', jobId)
+            .where('userId', '==', user.uid)
+            .limit(1);
+          const preQuerySnapshot = await tx.get(dupQuery);
           if (!preQuerySnapshot.empty) {
             throw new Error('ALREADY_SUBMITTED');
           }
 
-          tx.set(newSubRef, Object.assign({}, payload, {
+          // sanitize payload so Firestore only receives plain serializable types
+          const sanitized = {};
+          for (const k in payload) {
+            const v = payload[k];
+            if (v == null) {
+              sanitized[k] = null;
+            } else if (Array.isArray(v)) {
+              sanitized[k] = v.map(x => (x == null ? null : String(x)));
+            } else if (typeof v === 'object') {
+              try {
+                sanitized[k] = JSON.parse(JSON.stringify(v));
+              } catch (_) {
+                sanitized[k] = String(v);
+              }
+            } else {
+              sanitized[k] = v;
+            }
+          }
+
+          tx.set(newSubRef, Object.assign({}, sanitized, {
             submittedAt: firebase.firestore.FieldValue.serverTimestamp()
           }));
 
@@ -1724,7 +1743,6 @@ function initTaskSectionModule() {
               const filled = Number(td.filledWorkers || 0);
               const approved = Number(td.approvedWorkers || 0);
               rate.textContent = `Progress: ${filled} / ${total} (approved ${approved})`;
-
               if (total > 0 && approved >= total) { card.remove(); return; }
               else if (total > 0 && filled >= total && approved < total) {
                 card.classList.add('opacity-90');
@@ -1822,6 +1840,7 @@ function initTaskSectionModule() {
 
   // ---------- Finished tasks UI (user) ----------
   window.finishedTasksCache = window.finishedTasksCache || [];
+
   async function initFinishedTasksSectionUser() {
     try {
       const btnOpen = el("finishedTaskBtnUser");
@@ -1858,17 +1877,18 @@ function initTaskSectionModule() {
       const snap = await firebase.firestore().collection("task_submissions").where("userId","==", uid).get();
       window.finishedTasksCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       window.finishedTasksCache.sort((a,b) => {
-        const t1 = a.submittedAt?.toDate?.() || new Date(0);
-        const t2 = b.submittedAt?.toDate?.() || new Date(0);
+        const t1 = a.submittedAt && a.submittedAt.toDate ? a.submittedAt.toDate() : new Date(0);
+        const t2 = b.submittedAt && b.submittedAt.toDate ? b.submittedAt.toDate() : new Date(0);
         return t2 - t1;
       });
+
       const taskIds = [...new Set(window.finishedTasksCache.map(s => s.taskId).filter(Boolean))];
       await Promise.all(taskIds.map(id => reconcileTaskCounters(id).catch(()=>null)));
       renderFinishedTasksUser();
       let pending = window.finishedTasksCache.filter(d => (d.status || '').toLowerCase() === "on review").length;
       let approved = window.finishedTasksCache.filter(d => (d.status || '').toLowerCase() === "approved").length;
-      if (pendingCountEl) pendingCountEl.textContent = pending;
-      if (approvedCountEl) approvedCountEl.textContent = approved;
+      if (pendingCountEl) pendingCountEl.textContent = String(pending);
+      if (approvedCountEl) approvedCountEl.textContent = String(approved);
     } catch (err) {
       safeError("Error fetching finished tasks:", err);
       const listEl = el("finishedTasksListUser");
@@ -1900,7 +1920,7 @@ function initTaskSectionModule() {
         <div>
           <h3 class="font-semibold text-gray-900">${escapeHtml(jobTitle)}</h3>
           <p class="text-sm text-gray-600">Earn: ₦${data.workerEarn || 0}</p>
-          <p class="text-xs text-gray-400">${data.submittedAt?.toDate?.().toLocaleString() || ""}</p>
+          <p class="text-xs text-gray-400">${data.submittedAt && data.submittedAt.toDate ? data.submittedAt.toDate().toLocaleString() : ""}</p>
           <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded ${
             (statusKey === "approved")
               ? "bg-green-100 text-green-700"
@@ -1911,15 +1931,15 @@ function initTaskSectionModule() {
         </div>
         <button
           class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg details-btn-user"
-          data-id="${escapeHtml(data.id)}"
+          data-id="${escapeHtml(String(data.id))}"
         >Details</button>
       `;
       listEl.appendChild(card);
     }
-    if (pendingCountEl) pendingCountEl.textContent = pending;
-    if (approvedCountEl) approvedCountEl.textContent = approved;
+    if (pendingCountEl) pendingCountEl.textContent = String(pending);
+    if (approvedCountEl) approvedCountEl.textContent = String(approved);
     listEl.querySelectorAll(".details-btn-user").forEach(btn => {
-      btn.addEventListener("click", () => showTaskSubmissionDetailsUser(btn.dataset.id));
+      btn.addEventListener("click", () => showTaskSubmissionDetailsUser(String(btn.dataset.id)));
     });
     preloadTaskTitles();
   }
@@ -1941,7 +1961,7 @@ function initTaskSectionModule() {
   }
 
   async function showTaskSubmissionDetailsUser(submissionId) {
-    const sub = window.finishedTasksCache.find(d => d.id === submissionId);
+    const sub = window.finishedTasksCache.find(d => String(d.id) === String(submissionId));
     if (!sub) return alert("Submission not found in memory. Reload page.");
     const title = sub.cachedTitle || "Untitled Task";
     const modal = document.createElement("div");
@@ -1952,7 +1972,7 @@ function initTaskSectionModule() {
         <p class="text-sm"><strong>Job Title:</strong> ${escapeHtml(title)}</p>
         <p class="text-sm"><strong>Status:</strong> ${escapeHtml(sub.status)}</p>
         <p class="text-sm"><strong>Earned:</strong> ₦${sub.workerEarn || 0}</p>
-        <p class="text-sm"><strong>Submitted At:</strong> ${sub.submittedAt?.toDate?.().toLocaleString() || "—"}</p>
+        <p class="text-sm"><strong>Submitted At:</strong> ${sub.submittedAt && sub.submittedAt.toDate ? sub.submittedAt.toDate().toLocaleString() : "—"}</p>
         <p class="text-sm"><strong>Extra Proof:</strong> ${escapeHtml(sub.extraProof || "—")}</p>
         ${(sub.proofImages || []).map(url => `
           <div class="mt-3">
@@ -1987,7 +2007,6 @@ function initTaskSectionModule() {
   (async () => {
     const firebaseReady = await waitForReady(4000);
     if (!firebaseReady) safeWarn('Firebase not detected or slow to initialize — module will still run but Firestore features disabled until firebase loads.');
-
     try {
       // Initialize finished tasks UI handlers
       initFinishedTasksSectionUser();
@@ -1998,7 +2017,7 @@ function initTaskSectionModule() {
     }
   })();
 
-} // end initTaskSectionModule
+})(); // end initTaskSectionModule
 
 // -------------------------
 // Public initializer
@@ -2006,20 +2025,25 @@ function initTaskSectionModule() {
 window.initTaskSection = function() {
   // idempotent
   if (window.__TASK_SECTION_INITIALIZED__) {
-    safeLog('[TASK] initTaskSection called — already initialized');
+    console.log('[TASK] initTaskSection called — already initialized');
     return;
   }
   try {
-    initTaskSectionModule();
+    // call the module initializer again (it sets the guard)
+    // if the IIFE above has already run, this will be a no-op because of the guard
+    if (typeof initTaskSectionModule === 'function') {
+      try { initTaskSectionModule(); } catch (_) { /* module was declared as IIFE; ignore */ }
+    }
   } catch (e) {
     console.error('[TASK] initTaskSection error', e);
   }
 };
-
-
 	  
 
-	
+
+
+
+
                                     //AFFILIATE 
 
 
