@@ -648,33 +648,58 @@
 
 
 	  
-    <div onclick="activateTab('electricity-screen')" 
-         class="flex flex-col items-center cursor-pointer group">
-      <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
-                  bg-white border border-gray-100
-                  shadow-md group-hover:shadow-lg 
-                  group-hover:scale-110 transition-all duration-300">
-        <img src="ELECTRICITY1.jpg" class="w-6 h-6 object-contain" alt="Electricity">
-      </div>
-      <p class="mt-2 text-sm font-semibold text-blue-900">Electricity</p>
-	</div>
+    <!-- Electricity -->
+<div onclick="showServiceUnavailable('Electricity')" 
+     class="flex flex-col items-center cursor-pointer group">
+  <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
+              bg-white border border-gray-100
+              shadow-md group-hover:shadow-lg 
+              group-hover:scale-110 transition-all duration-300">
+    <img src="ELECTRICITY1.jpg" class="w-6 h-6 object-contain" alt="Electricity">
+  </div>
+  <p class="mt-2 text-sm font-semibold text-blue-900">Electricity</p>
+</div>
 
+<!-- TV -->
+<div onclick="showServiceUnavailable('TV')" 
+     class="flex flex-col items-center cursor-pointer group">
+  <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
+              bg-white border border-gray-100
+              shadow-md group-hover:shadow-lg 
+              group-hover:scale-110 transition-all duration-300">
+    <img src="TV1.jpg" width="24" height="24"
+         class="w-6 h-6 object-contain transition-opacity duration-200 opacity-0"
+         alt="TV" loading="eager" decoding="sync"
+         onload="this.style.opacity='1'">
+  </div>
+  <p class="mt-2 text-sm font-semibold text-blue-900">TV</p>
+</div>
 
-	  
-    <!-- TV -->
-    <div onclick="activateTab('tv-screen')" 
-         class="flex flex-col items-center cursor-pointer group">
-      <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
-                  bg-white border border-gray-100
-                  shadow-md group-hover:shadow-lg 
-                  group-hover:scale-110 transition-all duration-300">
-        <img src="TV1.jpg" width="24" height="24"
-             class="w-6 h-6 object-contain transition-opacity duration-200 opacity-0"
-             alt="TV" loading="eager" decoding="sync"
-             onload="this.style.opacity='1'">
-      </div>
-      <p class="mt-2 text-sm font-semibold text-blue-900">TV</p>
-    </div>
+<!-- Script -->
+<script>
+function showServiceUnavailable(serviceName) {
+  // Set modal title and message
+  document.getElementById('globalsModalTitle').innerText = "Notice";
+  document.getElementById('globalsModalMessage').innerText =
+    `⚙️ ${serviceName} service is currently unavailable. Please check back later.`;
+
+  // Clear previous actions and add OK button
+  const actions = document.getElementById('globalsModalActions');
+  actions.innerHTML = `<button onclick="closeGlobalsModal()" 
+                         style="background:#2196F3;color:#fff;border:none;
+                                padding:8px 20px;border-radius:8px;
+                                font-weight:600;cursor:pointer;">
+                          OK
+                        </button>`;
+
+  // Show modal
+  document.getElementById('globalsModal').style.display = 'flex';
+}
+
+function closeGlobalsModal() {
+  document.getElementById('globalsModal').style.display = 'none';
+}
+</script>
 
   </div>
 </div>
@@ -746,15 +771,17 @@
       </button>
 
       <!-- Betting -->
-      <button type="button" data-action="betting"
-           class="flex flex-col items-center cursor-pointer group focus:outline-none">
-        <div class="w-16 h-16 flex items-center justify-center rounded-2xl bg-white border border-gray-100
-                    shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200">
-          <img data-src="BETTING1.jpg" alt="Betting" width="24" height="24"
-               class="object-contain lazy" decoding="async" loading="lazy">
-        </div>
-        <p class="mt-2 text-sm font-semibold text-blue-900">Betting</p>
-      </button>
+      <!-- Betting -->
+<button type="button" onclick="showServiceUnavailable('Betting')"
+        class="flex flex-col items-center cursor-pointer group focus:outline-none">
+  <div class="w-16 h-16 flex items-center justify-center rounded-2xl bg-white border border-gray-100
+              shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200">
+    <img data-src="BETTING1.jpg" alt="Betting" width="24" height="24"
+         class="object-contain lazy" decoding="async" loading="lazy">
+  </div>
+  <p class="mt-2 text-sm font-semibold text-blue-900">Betting</p>
+</button>
+
 
       <!-- TV -->
       <button type="button" data-action="tv"
