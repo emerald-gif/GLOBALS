@@ -4545,104 +4545,113 @@ function resetAffiliateForm() {
 
 
 /*
-  Full My Jobs Module Script
-  - Supports: tasks & affiliateJobs combined
-  - Submissions: task_submissions & affiliate_submissions
-  - Money ops use transactions on `users.balance`
+  Robust My Jobs script
+  - exact statuses: "on review", "approved", "rejected"
+  - fetches tasks & affiliateJobs posted by current user (safe, client-side sort)
+  - supports multiple postedBy field name variants
 */
 
-/* ----- Helpers ----- */
-function escapeHtml(s) {
-  if (s == null) return "";
-  return String(s)
-    .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;").replaceAll("'", "&#039;");
+const ON_REVIEW_STATES = ['on review']; // exact status string(s) we treat as editable
+let currentViewingJob = null; // {id, type, jobDoc}
+let currentSubTab = 'onReview';
+
+// Wait for auth (if no currentUser, wait until auth state changes)
+function getCurrentUserAsync() {
+  return new Promise((resolve) => {
+    const u = firebase.auth().currentUser;
+    if (u) return resolve(u);
+    const un = firebase.auth().onAuthStateChanged(user => {
+      un(); // detach
+      resolve(user);
+    });
+  });
 }
-const ON_REVIEW_STATES = ["on review","on_review","pending","review"];
 
-/* ----- State ----- */
-let _currentViewingJob = null; // { id, type, jobDoc }
-let _currentSubTab = 'onReview';
-
-/* ----- Init: load both task jobs and affiliate jobs posted by current user ----- */
+// entry: call this to load jobs
 async function initMyJobsSection() {
-  const user = firebase.auth().currentUser;
+  const user = await getCurrentUserAsync();
+  const jobListEl = document.getElementById('jobList');
   if (!user) {
-    document.getElementById("jobList").innerHTML = `<div class="text-center text-gray-500">Please log in.</div>`;
+    jobListEl.innerHTML = `<div class="text-center text-gray-500">Please log in to view your jobs.</div>`;
     return;
   }
 
-  const jobList = document.getElementById("jobList");
-  jobList.innerHTML = `<div class="text-center text-gray-500">Loading your jobs...</div>`;
-
+  jobListEl.innerHTML = `<div class="text-center text-gray-500">Loading your jobs...</div>`;
   try {
-    // Fetch tasks
-    const taskSnap = await db.collection("tasks")
-      .where("postedBy.uid","==", user.uid)
-      .orderBy("postedAt","desc")
-      .get();
+    // fetch tasks and affiliateJobs (no orderBy to avoid composite index issues)
+    const [taskSnap, affiliateSnap] = await Promise.all([
+      db.collection('tasks').where('postedBy.uid', '==', user.uid).get().catch(e => { console.warn('tasks fetch via postedBy.uid failed', e); return db.collection('tasks').where('postedByUid', '==', user.uid).get().catch(e2 => { console.warn('tasks fetch via postedByUid failed', e2); return db.collection('tasks').where('ownerId','==',user.uid).get(); }); }),
+      db.collection('affiliateJobs').where('postedBy.uid', '==', user.uid).get().catch(e => { console.warn('affiliate fetch via postedBy.uid failed', e); return db.collection('affiliateJobs').where('postedByUid','==',user.uid).get().catch(e2 => { console.warn('affiliate fetch via postedByUid failed', e2); return db.collection('affiliateJobs').where('ownerId','==',user.uid).get(); }); })
+    ]);
 
-    const affiliateSnap = await db.collection("affiliateJobs")
-      .where("postedBy.uid","==", user.uid)
-      .orderBy("postedAt","desc")
-      .get();
-
-    // normalize and combine
     const jobs = [];
-    taskSnap.forEach(doc => jobs.push({ id: doc.id, type: 'task', ...doc.data() }));
-    affiliateSnap.forEach(doc => jobs.push({ id: doc.id, type: 'affiliate', ...doc.data() }));
 
-    // sort by postedAt (descending)
-    jobs.sort((a,b) => {
-      const ta = (a.postedAt && a.postedAt.toMillis) ? a.postedAt.toMillis() : 0;
-      const tb = (b.postedAt && b.postedAt.toMillis) ? b.postedAt.toMillis() : 0;
+    // normalize tasks
+    if (taskSnap && taskSnap.forEach) {
+      taskSnap.forEach(doc => {
+        jobs.push({ id: doc.id, type: 'task', ...doc.data() });
+      });
+    }
+
+    // normalize affiliate jobs
+    if (affiliateSnap && affiliateSnap.forEach) {
+      affiliateSnap.forEach(doc => {
+        jobs.push({ id: doc.id, type: 'affiliate', ...doc.data() });
+      });
+    }
+
+    // If still empty, try alternative queries scanning where postedBy may be an object in different key
+    if (!jobs.length) {
+      console.info('No jobs found using standard queries — attempting fallbacks.');
+      // fallback: attempt ownerId query (already attempted above via inner catch) — already attempted.
+    }
+
+    // sort by postedAt or createdAt client-side (newest first)
+    jobs.sort((a, b) => {
+      const ta = (a.postedAt && a.postedAt.toMillis) ? a.postedAt.toMillis() : (a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0);
+      const tb = (b.postedAt && b.postedAt.toMillis) ? b.postedAt.toMillis() : (b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0);
       return tb - ta;
     });
 
     if (!jobs.length) {
-      jobList.innerHTML = `<div class="text-center text-gray-400 mt-6">You haven't posted any jobs yet.</div>`;
+      jobListEl.innerHTML = `<div class="text-center text-gray-400 mt-6">You haven't posted any jobs yet.</div>`;
       return;
     }
 
-    // render
-    jobList.innerHTML = jobs.map(j => renderJobCard(j)).join('');
-    // attach listeners (cards use onclick with function above)
+    // render jobs
+    jobListEl.innerHTML = jobs.map(j => renderJobCard(j)).join('');
+    console.log(`Loaded ${jobs.length} jobs for user ${user.uid}`);
   } catch (err) {
-    console.error("initMyJobsSection error:", err);
-    jobList.innerHTML = `<div class="text-center text-red-500">Failed to load jobs.</div>`;
+    console.error('initMyJobsSection error:', err);
+    jobListEl.innerHTML = `<div class="text-center text-red-500">Failed to load jobs. See console.</div>`;
   }
-
-  // ensure lucide icons exist (if lucide loaded)
-  if (window.lucide && lucide.createIcons) lucide.createIcons();
 }
 
-/* ----- Job card HTML ----- */
+// render job html (safe)
 function renderJobCard(job) {
-  const s = (job.status || "on review").toString();
-  const statusLabel = escapeHtml(s);
-  const posted = job.postedAt && job.postedAt.toDate ? job.postedAt.toDate().toLocaleString() : (job.postedAt || "—");
-  const total = job.total || job.amount || 0;
-  const title = escapeHtml(job.title || "Untitled Job");
-  const category = escapeHtml(job.category || job.campaign || "Uncategorized");
+  const status = (job.status || 'on review').toString();
+  const title = escapeHtml(job.title || job.name || 'Untitled Job');
+  const cat = escapeHtml(job.category || job.campaign || 'Uncategorized');
+  const total = Number(job.total || job.amount || 0);
+  const posted = job.postedAt && job.postedAt.toDate ? job.postedAt.toDate().toLocaleString() : (job.createdAt && job.createdAt.toDate ? job.createdAt.toDate().toLocaleString() : '—');
+  const workers = job.numWorkers || job.targetWorkers || '—';
   const typeLabel = job.type === 'affiliate' ? 'Affiliate' : 'Task';
 
-  // show completed count if available (you may have stored it earlier); optional
-  const workers = job.numWorkers || job.targetWorkers || "—";
-
   return `
-    <div class="job-card" style="display:block" onclick="openJobDetails('${job.id}','${job.type}')">
-      <div class="job-title">${title} <span style="font-weight:600; font-size:12px; color:#64748b; margin-left:8px">· ${typeLabel}</span></div>
+    <div class="job-card" onclick="openJobDetails('${job.id}','${job.type}')">
+      <div class="job-title">${title} <span style="font-size:12px;color:#64748b;font-weight:600;margin-left:8px">${typeLabel}</span></div>
       <div class="job-meta">
-        <div class="pill">${category}</div>
-        <div class="pill">Status: ${statusLabel}</div>
+        <div class="pill">${cat}</div>
+        <div class="pill">Status: ${escapeHtml(status)}</div>
         <div class="pill">₦${total}</div>
         <div class="pill">Workers: ${workers}</div>
-        <div style="margin-left:auto; color:#94a3b8; font-size:12px">Posted: ${posted}</div>
+        <div style="margin-left:auto;color:#94a3b8;font-size:12px">Posted: ${posted}</div>
       </div>
-    </div>`;
+    </div>
+  `;
 }
 
-/* ----- Open Job Details ----- */
+// open job details
 async function openJobDetails(jobId, jobType) {
   showSection('jobDetailsSection');
   const content = document.getElementById('jobDetailsContent');
@@ -4651,169 +4660,142 @@ async function openJobDetails(jobId, jobType) {
   try {
     const collection = jobType === 'task' ? 'tasks' : 'affiliateJobs';
     const doc = await db.collection(collection).doc(jobId).get();
-    if (!doc.exists) {
-      content.innerHTML = `<div class="text-center text-red-500">Job not found.</div>`;
-      return;
-    }
-
+    if (!doc.exists) { content.innerHTML = `<div class="text-red-500">Job not found.</div>`; return; }
     const job = { id: doc.id, ...doc.data(), type: jobType };
-    _currentViewingJob = { id: jobId, type: jobType, jobDoc: job };
+    currentViewingJob = { id: job.id, type: job.type, jobDoc: job };
 
-    // get approved count quickly
-    const subCollection = jobType === 'task' ? 'task_submissions' : 'affiliate_submissions';
+    // compute approved count safely
     let approvedCount = 0;
     try {
-      const approvedSnap = await db.collection(subCollection).where(jobType === 'task' ? 'taskId' : 'jobId', '==', jobId).where('status','==','approved').get();
+      const subCol = jobType === 'task' ? 'task_submissions' : 'affiliate_submissions';
+      const approvedSnap = await db.collection(subCol).where(jobType === 'task' ? 'taskId' : 'jobId', '==', jobId).where('status','==','approved').get();
       approvedCount = approvedSnap.size || 0;
-    } catch(e){ /* ignore */ }
+    } catch(e) { console.warn('approved count fetch failed', e); }
 
-    const canDelete = ON_REVIEW_STATES.includes((job.status||'').toString().toLowerCase());
-    const posted = job.postedAt && job.postedAt.toDate ? job.postedAt.toDate().toLocaleString() : (job.postedAt || '—');
+    const statusLower = (job.status || '').toString().toLowerCase();
+    const canDelete = ON_REVIEW_STATES.includes(statusLower) || ON_REVIEW_STATES.includes((job.status||'').toString().toLowerCase());
 
-    const jobHTML = `
-      ${job.campaignLogoURL || job.screenshotURL ? `<img src="${escapeHtml(job.campaignLogoURL || job.screenshotURL)}" class="w-full h-44 object-cover rounded-xl" />` : ''}
-      <h3 class="text-xl font-bold">${escapeHtml(job.title || 'Untitled Job')}</h3>
-      <p class="text-gray-700">${escapeHtml(job.description || job.note || '')}</p>
+    // render details
+    content.innerHTML = `
+      ${job.screenshotURL || job.campaignLogoURL ? `<img src="${escapeHtml(job.screenshotURL || job.campaignLogoURL)}" class="w-full h-44 object-cover rounded-xl" />` : ''}
+      <h3 style="font-weight:700">${escapeHtml(job.title || job.name || 'Untitled Job')}</h3>
+      <p style="color:#374151">${escapeHtml(job.description || job.note || '')}</p>
 
-      <div class="flex flex-wrap gap-3 mt-3">
-        <div class="pill">₦${job.total || job.amount || 0}</div>
-        <div class="pill">${escapeHtml(job.status || '—')}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <div class="pill">₦${Number(job.total || job.amount || 0)}</div>
+        <div class="pill">${escapeHtml(job.status || '')}</div>
         <div class="pill">Completed: ${approvedCount}</div>
-        <div class="pill">Posted: ${posted}</div>
       </div>
 
-      <div class="mt-4 flex gap-3">
-        <button class="job-action-btn primary" onclick="viewSubmissions('${job.id}','${job.type}')">
-          <i data-lucide="eye" class="w-4 h-4"></i> View Submissions
-        </button>
-
-        ${canDelete ? `<button class="job-action-btn secondary" onclick="deleteJob('${job.id}','${job.type}')">
-          <i data-lucide="trash" class="w-4 h-4"></i> Delete Job
-        </button>` : ''}
+      <div style="margin-top:16px;display:flex;gap:10px">
+        <button class="job-action-btn primary" onclick="viewSubmissions('${job.id}','${job.type}')">View Submissions</button>
+        ${canDelete ? `<button class="job-action-btn secondary" onclick="deleteJob('${job.id}','${job.type}')">Delete Job</button>` : ''}
       </div>
     `;
-
-    content.innerHTML = jobHTML;
-    if (window.lucide && lucide.createIcons) lucide.createIcons();
   } catch (err) {
-    console.error("openJobDetails error:", err);
-    document.getElementById('jobDetailsContent').innerHTML = `<div class="text-center text-red-500">Failed to load job.</div>`;
+    console.error('openJobDetails error:', err);
+    content.innerHTML = `<div class="text-center text-red-500">Failed to load job details.</div>`;
   }
 }
 
-/* ----- Delete Job (refund to poster) ----- */
+// delete job -> only if status is exactly "on review" (case-insensitive)
 async function deleteJob(jobId, jobType) {
-  if (!confirm("Delete this job? This action will refund the job poster if job is still on review.")) return;
+  if (!confirm('Delete this job? This will refund the poster if job is still "on review".')) return;
   try {
     const collection = jobType === 'task' ? 'tasks' : 'affiliateJobs';
     const jobRef = db.collection(collection).doc(jobId);
 
     await db.runTransaction(async tx => {
       const jobDoc = await tx.get(jobRef);
-      if (!jobDoc.exists) throw new Error("Job not found.");
+      if (!jobDoc.exists) throw new Error('Job not found in transaction');
       const job = jobDoc.data();
-
       const status = (job.status || '').toString().toLowerCase();
-      if (!ON_REVIEW_STATES.includes(status)) throw new Error("Job is not on review and cannot be deleted.");
+      if (status !== 'on review') throw new Error('Job is not "on review" and cannot be deleted.');
 
-      // determine poster uid (common patterns)
-      const posterUid = (job.postedBy && job.postedBy.uid) || job.postedByUid || job.ownerUid || job.ownerId;
-      if (!posterUid) throw new Error("Poster UID missing on job.");
+      // find poster uid
+      const posterUid = (job.postedBy && job.postedBy.uid) || job.postedByUid || job.ownerUid || job.ownerId || job.postedBy;
+      if (!posterUid) throw new Error('Could not determine poster UID.');
 
-      const refundAmount = Number(job.total || job.amount || 0) || 0;
+      const refund = Number(job.total || job.amount || 0) || 0;
       const userRef = db.collection('users').doc(posterUid);
       const userDoc = await tx.get(userRef);
-      if (!userDoc.exists) throw new Error("Poster user doc not found.");
+      if (!userDoc.exists) throw new Error('Poster user doc not found.');
 
-      const currentBalance = Number(userDoc.data().balance || 0);
-      tx.update(userRef, { balance: currentBalance + refundAmount });
+      const prevBal = Number(userDoc.data().balance || 0);
+      tx.update(userRef, { balance: prevBal + refund });
 
-      // delete job doc
+      // delete job
       tx.delete(jobRef);
     });
 
-    alert("Job deleted and refund processed.");
+    alert('Job deleted and refund processed.');
     goBackToJobs();
     await initMyJobsSection();
   } catch (err) {
-    console.error("deleteJob failed:", err);
-    alert("Failed to delete job: " + (err.message || err));
+    console.error('deleteJob transaction error:', err);
+    alert('Failed to delete job: ' + (err.message || err));
   }
 }
 
-/* ----- View Submissions (loads counts + default tab onReview) ----- */
+// view submissions (loads counts + onReview by default)
 async function viewSubmissions(jobId, jobType) {
   showSection('jobSubmissionsSection');
-  _currentViewingJob = { id: jobId, type: jobType, jobDoc: null }; // jobDoc will be loaded if needed
+  currentViewingJob = { id: jobId, type: jobType, jobDoc: null };
 
-  // populate header and counts
-  const headerEl = document.getElementById('submissionsHeader');
-  headerEl.innerHTML = `<div class="text-sm text-gray-600">Loading job info...</div>`;
-
+  // header
   try {
-    const collection = jobType === 'task' ? 'tasks' : 'affiliateJobs';
-    const doc = await db.collection(collection).doc(jobId).get();
-    if (!doc.exists) headerEl.innerHTML = `<div class="text-red-500">Job not found.</div>`;
-    else {
-      _currentViewingJob.jobDoc = { id: doc.id, ...doc.data() };
-      headerEl.innerHTML = `
-        <div class="flex items-start justify-between">
-          <div>
-            <h3 class="text-lg font-bold">${escapeHtml(doc.data().title || 'Untitled Job')}</h3>
-            <p class="text-sm text-gray-500">${jobType === 'task' ? 'Task submissions' : 'Affiliate submissions'}</p>
-          </div>
-          <div class="text-sm text-gray-600">Job ID: ${doc.id}</div>
-        </div>
-      `;
-    }
+    const col = jobType === 'task' ? 'tasks' : 'affiliateJobs';
+    const doc = await db.collection(col).doc(jobId).get();
+    if (doc.exists) currentViewingJob.jobDoc = { id: doc.id, ...doc.data() };
+    const header = document.getElementById('submissionsHeader');
+    header.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <h3 style="font-weight:700">${escapeHtml(currentViewingJob.jobDoc?.title || 'Job Submissions')}</h3>
+        <p style="color:#6b7280;font-size:13px">${jobType === 'task' ? 'Task submissions' : 'Affiliate submissions'}</p>
+      </div>
+      <div style="color:#94a3b8;font-size:13px">ID: ${jobId}</div>
+    </div>`;
   } catch (err) {
-    console.error("viewSubmissions header err:", err);
+    console.warn('viewSubmissions header err', err);
   }
 
   await refreshSubmissionCounts();
   switchSubmissionTab('onReview');
 }
 
-/* ----- Refresh counts ----- */
+// refresh counts helper
 async function refreshSubmissionCounts() {
-  if (!_currentViewingJob) return;
-  const jobId = _currentViewingJob.id;
-  const type = _currentViewingJob.type;
+  if (!currentViewingJob) return;
+  const jobId = currentViewingJob.id;
+  const type = currentViewingJob.type;
   const subCollection = type === 'task' ? 'task_submissions' : 'affiliate_submissions';
   try {
-    const onReviewSnap = await db.collection(subCollection)
-      .where(type === 'task' ? 'taskId' : 'jobId', '==', jobId)
-      .where('status','==','on review')
-      .get();
-    const completedSnap = await db.collection(subCollection)
-      .where(type === 'task' ? 'taskId' : 'jobId', '==', jobId)
-      .where('status','in',['approved','rejected'])
-      .get();
-
+    const onReviewSnap = await db.collection(subCollection).where(type === 'task' ? 'taskId' : 'jobId','==',jobId).where('status','==','on review').get();
+    const completedSnap = await db.collection(subCollection).where(type === 'task' ? 'taskId' : 'jobId','==',jobId).where('status','in',['approved','rejected']).get();
     document.getElementById('countOnReview').textContent = onReviewSnap.size || 0;
     document.getElementById('countCompleted').textContent = completedSnap.size || 0;
   } catch (err) {
-    console.error("refreshSubmissionCounts error:", err);
+    console.error('refreshSubmissionCounts error', err);
     document.getElementById('countOnReview').textContent = '0';
     document.getElementById('countCompleted').textContent = '0';
   }
 }
 
-/* ----- Switch submission tab & load submissions ----- */
+// switch tab and load submissions
 async function switchSubmissionTab(tab) {
-  _currentSubTab = tab;
+  currentSubTab = tab;
   const list = document.getElementById('submissionsList');
-  list.innerHTML = `<div class="text-center text-gray-500">Loading ${tab === 'onReview' ? 'on-review' : 'completed'} submissions...</div>`;
-  if (!_currentViewingJob) { list.innerHTML = `<div class="text-red-500">No job selected.</div>`; return; }
+  list.innerHTML = `<div class="text-center text-gray-500">Loading...</div>`;
+  if (!currentViewingJob) { list.innerHTML = `<div class="text-red-500">No job selected.</div>`; return; }
 
-  const jobId = _currentViewingJob.id;
-  const type = _currentViewingJob.type;
+  const jobId = currentViewingJob.id;
+  const type = currentViewingJob.type;
   const subCollection = type === 'task' ? 'task_submissions' : 'affiliate_submissions';
 
   try {
-    let q = db.collection(subCollection).where(type === 'task' ? 'taskId' : 'jobId', '==', jobId);
+    let q = db.collection(subCollection).where(type === 'task' ? 'taskId' : 'jobId','==',jobId);
     if (tab === 'onReview') q = q.where('status','==','on review').orderBy('submittedAt','desc');
-    else q = q.where('status','in',['approved','rejected']).orderBy(type === 'task' ? 'submittedAt' : 'createdAt','desc');
+    else q = q.where('status','in',['approved','rejected']).orderBy('submittedAt','desc');
 
     const snap = await q.get();
     if (snap.empty) {
@@ -4822,88 +4804,78 @@ async function switchSubmissionTab(tab) {
       return;
     }
 
-    // find whether current user is the job owner to show approve/reject
+    // determine if current user is owner
     const currentUser = firebase.auth().currentUser;
-    const ownerUid = _currentViewingJob.jobDoc?.postedBy?.uid || _currentViewingJob.jobDoc?.postedByUid || _currentViewingJob.jobDoc?.ownerUid || _currentViewingJob.jobDoc?.ownerId;
+    const ownerUid = currentViewingJob.jobDoc?.postedBy?.uid || currentViewingJob.jobDoc?.postedByUid || currentViewingJob.jobDoc?.ownerUid || currentViewingJob.jobDoc?.ownerId;
     const isOwner = currentUser && ownerUid && currentUser.uid === ownerUid;
 
     let html = '';
     snap.forEach(doc => {
       const s = { id: doc.id, ...doc.data() };
-      html += (type === 'task') ? renderTaskSubmissionCard(s, isOwner) : renderAffiliateSubmissionCard(s, isOwner);
+      html += type === 'task' ? renderTaskSubmissionCard(s, isOwner) : renderAffiliateSubmissionCard(s, isOwner);
     });
     list.innerHTML = html;
     await refreshSubmissionCounts();
-    if (window.lucide && lucide.createIcons) lucide.createIcons();
   } catch (err) {
-    console.error("switchSubmissionTab error:", err);
+    console.error('switchSubmissionTab error', err);
     list.innerHTML = `<div class="text-center text-red-500">Failed to load submissions.</div>`;
   }
 }
 
-/* ----- Renderers for submission cards ----- */
+// renderers
 function renderTaskSubmissionCard(s, isOwner) {
   const time = s.submittedAt && s.submittedAt.toDate ? s.submittedAt.toDate().toLocaleString() : (s.submittedAt || '—');
-  const proofText = s.proofText ? `<p class="text-sm text-gray-700 mt-2">${escapeHtml(s.proofText)}</p>` : '';
-  const images = Array.isArray(s.proofImages) ? s.proofImages.map(u => `<img src="${u}" class="w-28 h-20 object-cover rounded mr-2"/>`).join('') : '';
-  const statusBadge = s.status === 'approved' ? 'text-green-600' : s.status === 'rejected' ? 'text-red-600' : 'text-yellow-600';
-
-  const approveBtn = isOwner && s.status === 'on review' ? `<button class="job-action-btn primary" onclick="approveSubmission('${s.id}','${_currentViewingJob.id}','${_currentViewingJob.type}')"><i data-lucide="check" class="w-4 h-4"></i> Approve</button>` : '';
-  const rejectBtn  = isOwner && s.status === 'on review' ? `<button class="job-action-btn secondary" onclick="rejectSubmission('${s.id}','${_currentViewingJob.id}','${_currentViewingJob.type}')"><i data-lucide="x" class="w-4 h-4"></i> Reject</button>` : '';
+  const proofText = s.proofText ? `<p style="color:#374151;margin-top:6px">${escapeHtml(s.proofText)}</p>` : '';
+  const images = Array.isArray(s.proofImages) ? s.proofImages.map(u=>`<img src="${u}" style="width:140px;height:80px;object-fit:cover;border-radius:8px;margin-right:8px">`).join('') : '';
+  const approveBtn = isOwner && s.status === 'on review' ? `<button class="job-action-btn primary" onclick="approveSubmission('${s.id}','${currentViewingJob.id}','${currentViewingJob.type}')">Approve</button>` : '';
+  const rejectBtn = isOwner && s.status === 'on review' ? `<button class="job-action-btn secondary" onclick="rejectSubmission('${s.id}','${currentViewingJob.id}','${currentViewingJob.type}')">Reject</button>` : '';
 
   return `
-    <div class="p-4 rounded-lg border border-gray-100 bg-white shadow-sm">
-      <div class="flex justify-between items-start">
+    <div style="padding:12px;border-radius:10px;border:1px solid #eef2ff;background:#fff">
+      <div style="display:flex;justify-content:space-between">
         <div>
-          <div class="text-sm text-gray-500">User: <span class="font-semibold">${escapeHtml(s.userName || s.userId || s.userUid || 'Unknown')}</span></div>
-          <div class="text-xs text-gray-400">${time}</div>
+          <div style="color:#64748b;font-size:13px">User: <strong>${escapeHtml(s.userName || s.userId || s.userUid || 'Unknown')}</strong></div>
+          <div style="color:#94a3b8;font-size:12px">${time}</div>
         </div>
-        <div class="${statusBadge} font-bold">${escapeHtml(s.status)}</div>
+        <div style="color:${s.status==='approved'?'#16a34a':s.status==='rejected'?'#dc2626':'#f59e0b'};font-weight:700">${escapeHtml(s.status)}</div>
       </div>
 
       ${proofText}
-      <div class="flex gap-2 mt-3">${images}</div>
+      <div style="display:flex;gap:8px;margin-top:8px">${images}</div>
 
-      <div class="mt-3 flex gap-2">
-        ${approveBtn} ${rejectBtn}
-      </div>
+      <div style="margin-top:10px;display:flex;gap:8px">${approveBtn}${rejectBtn}</div>
     </div>
   `;
 }
 
 function renderAffiliateSubmissionCard(s, isOwner) {
   const time = s.createdAt && s.createdAt.toDate ? s.createdAt.toDate().toLocaleString() : (s.createdAt || '—');
-  const note = s.note ? `<p class="text-sm text-gray-700 mt-2">${escapeHtml(s.note)}</p>` : '';
-  const files = Array.isArray(s.proofFiles) ? s.proofFiles.map(u => `<a href="${u}" target="_blank" class="block text-xs underline">${escapeHtml(u.split('/').pop() || u)}</a>`).join('') : '';
-  const statusBadge = s.status === 'approved' ? 'text-green-600' : s.status === 'rejected' ? 'text-red-600' : 'text-yellow-600';
-
-  const approveBtn = isOwner && s.status === 'on review' ? `<button class="job-action-btn primary" onclick="approveSubmission('${s.id}','${_currentViewingJob.id}','${_currentViewingJob.type}')"><i data-lucide="check" class="w-4 h-4"></i> Approve</button>` : '';
-  const rejectBtn  = isOwner && s.status === 'on review' ? `<button class="job-action-btn secondary" onclick="rejectSubmission('${s.id}','${_currentViewingJob.id}','${_currentViewingJob.type}')"><i data-lucide="x" class="w-4 h-4"></i> Reject</button>` : '';
+  const note = s.note ? `<p style="color:#374151;margin-top:6px">${escapeHtml(s.note)}</p>` : '';
+  const files = Array.isArray(s.proofFiles) ? s.proofFiles.map(u=>`<a href="${u}" target="_blank" style="display:block;font-size:12px">${escapeHtml(u.split('/').pop()||u)}</a>`).join('') : '';
+  const approveBtn = isOwner && s.status === 'on review' ? `<button class="job-action-btn primary" onclick="approveSubmission('${s.id}','${currentViewingJob.id}','${currentViewingJob.type}')">Approve</button>` : '';
+  const rejectBtn = isOwner && s.status === 'on review' ? `<button class="job-action-btn secondary" onclick="rejectSubmission('${s.id}','${currentViewingJob.id}','${currentViewingJob.type}')">Reject</button>` : '';
 
   return `
-    <div class="p-4 rounded-lg border border-gray-100 bg-white shadow-sm">
-      <div class="flex justify-between items-start">
+    <div style="padding:12px;border-radius:10px;border:1px solid #eef2ff;background:#fff">
+      <div style="display:flex;justify-content:space-between">
         <div>
-          <div class="text-sm text-gray-500">User: <span class="font-semibold">${escapeHtml(s.userName || s.userId || 'Unknown')}</span></div>
-          <div class="text-xs text-gray-400">${time}</div>
+          <div style="color:#64748b;font-size:13px">User: <strong>${escapeHtml(s.userName || s.userId || 'Unknown')}</strong></div>
+          <div style="color:#94a3b8;font-size:12px">${time}</div>
         </div>
-        <div class="${statusBadge} font-bold">${escapeHtml(s.status)}</div>
+        <div style="color:${s.status==='approved'?'#16a34a':s.status==='rejected'?'#dc2626':'#f59e0b'};font-weight:700">${escapeHtml(s.status)}</div>
       </div>
 
       ${note}
-      <div class="mt-3">${files}</div>
+      <div style="margin-top:8px">${files}</div>
 
-      <div class="mt-3 flex gap-2">
-        ${approveBtn} ${rejectBtn}
-      </div>
+      <div style="margin-top:10px;display:flex;gap:8px">${approveBtn}${rejectBtn}</div>
     </div>
   `;
 }
 
-/* ----- Approve submission (transaction: credit worker) ----- */
+// approve submission -> credits worker using transaction
 async function approveSubmission(submissionId, jobId, jobType) {
-  if (!confirm("Approve this submission and credit the worker?")) return;
-
+  if (!confirm('Approve and credit worker?')) return;
   const subCollection = jobType === 'task' ? 'task_submissions' : 'affiliate_submissions';
   const jobCollection = jobType === 'task' ? 'tasks' : 'affiliateJobs';
   const subRef = db.collection(subCollection).doc(submissionId);
@@ -4912,78 +4884,73 @@ async function approveSubmission(submissionId, jobId, jobType) {
   try {
     await db.runTransaction(async tx => {
       const subDoc = await tx.get(subRef);
-      if (!subDoc.exists) throw new Error("Submission not found");
-      const submission = subDoc.data();
-      if ((submission.status || '').toLowerCase() !== 'on review') throw new Error("Submission is no longer on review");
+      if (!subDoc.exists) throw new Error('Submission not found');
+      const sub = subDoc.data();
+      if ((sub.status || '').toLowerCase() !== 'on review') throw new Error('Submission not on review');
 
       const jobDoc = await tx.get(jobRef);
-      if (!jobDoc.exists) throw new Error("Job not found");
+      if (!jobDoc.exists) throw new Error('Job not found');
       const job = jobDoc.data();
 
-      // determine worker and amount
-      const workerUid = submission.userId || submission.userUid || submission.user;
-      if (!workerUid) throw new Error("Worker UID missing on submission");
-      const amount = Number(submission.workerEarn || submission.workerPay || job.workerEarn || job.workerPay || 0);
+      const workerUid = sub.userId || sub.userUid || sub.user;
+      if (!workerUid) throw new Error('Worker uid missing');
 
-      // update submission -> approved
+      const amount = Number(sub.workerEarn || sub.workerPay || job.workerEarn || job.workerPay || 0);
+      // mark submission approved
       tx.update(subRef, { status: 'approved', reviewedAt: firebase.firestore.FieldValue.serverTimestamp() });
-
       if (amount > 0) {
         const workerRef = db.collection('users').doc(workerUid);
         const workerDoc = await tx.get(workerRef);
-        if (!workerDoc.exists) throw new Error("Worker user not found");
-        const prev = Number(workerDoc.data().balance || 0);
-        tx.update(workerRef, { balance: prev + amount });
+        if (!workerDoc.exists) throw new Error('Worker user doc not found');
+        const bal = Number(workerDoc.data().balance || 0);
+        tx.update(workerRef, { balance: bal + amount });
       }
     });
 
-    alert("Submission approved and worker credited (if amount > 0).");
-    await switchSubmissionTab(_currentSubTab);
+    alert('Submission approved and worker credited (if amount > 0).');
+    await switchSubmissionTab(currentSubTab);
   } catch (err) {
-    console.error("approveSubmission error:", err);
-    alert("Failed to approve: " + (err.message || err));
+    console.error('approveSubmission error', err);
+    alert('Failed to approve: ' + (err.message || err));
   }
 }
 
-/* ----- Reject submission (no money ops) ----- */
+// reject submission -> set to rejected
 async function rejectSubmission(submissionId, jobId, jobType) {
-  if (!confirm("Reject this submission? This cannot be undone.")) return;
+  if (!confirm('Reject this submission?')) return;
   const subCollection = jobType === 'task' ? 'task_submissions' : 'affiliate_submissions';
   const subRef = db.collection(subCollection).doc(submissionId);
-
   try {
     const subDoc = await subRef.get();
-    if (!subDoc.exists) { alert("Submission not found."); return; }
+    if (!subDoc.exists) { alert('Submission not found'); return; }
     const s = subDoc.data();
-    if ((s.status || '').toLowerCase() !== 'on review') { alert("Submission is no longer on review."); return; }
-
+    if ((s.status || '').toLowerCase() !== 'on review') { alert('Submission is no longer on review'); return; }
     await subRef.update({ status: 'rejected', reviewedAt: firebase.firestore.FieldValue.serverTimestamp() });
-    alert("Submission rejected.");
-    await switchSubmissionTab(_currentSubTab);
+    alert('Submission rejected.');
+    await switchSubmissionTab(currentSubTab);
   } catch (err) {
-    console.error("rejectSubmission error:", err);
-    alert("Failed to reject submission.");
+    console.error('rejectSubmission error', err);
+    alert('Failed to reject submission.');
   }
 }
 
-/* ----- Navigation helpers ----- */
+// navigation helpers
 function goBackToJobs(){ showSection('myJobsSection'); }
 function goBackToDetails(){ showSection('jobDetailsSection'); }
 function showSection(id) {
   document.querySelectorAll('.tab-section').forEach(el => el.classList.add('hidden'));
   const el = document.getElementById(id);
   if (el) el.classList.remove('hidden');
-  if (window.lucide && lucide.createIcons) lucide.createIcons();
 }
 
-/* ----- Boot: expose init for your tabs ----- */
+// expose init
 window.initMyJobsSection = initMyJobsSection;
 
-/* Optional: auto-init when page loads and user already authenticated */
-document.addEventListener('DOMContentLoaded', () => {
-  // If user already logged in, init will show jobs later when you call initMyJobsSection()
-  if (window.lucide && lucide.createIcons) lucide.createIcons();
-});
+// helpful log so you (Bruno) can see issues quickly
+console.log('My Jobs module loaded. Call initMyJobsSection() when opening My Jobs tab.');
+
+
+
 
 
 
