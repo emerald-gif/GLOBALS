@@ -2028,8 +2028,8 @@ window.initTaskSection = function() {
       <div class="mt-3">
         <h4 class="font-semibold text-md">${safeText(job.title||'Untitled')}</h4>
         ${job.category ? `<div class="mt-1"><span class="inline-block text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded">${safeText(job.category)}</span></div>` : ''}
-        <div class="text-sm text-gray-500 mt-1">${formatNaira(job.workerPay)} · ${numWorkers} workers</div>
-        <div class="text-sm text-gray-500 mt-1">${occupancy}/${numWorkers} · Approved: ${approved}</div>
+        <div class="text-sm text-gray-500 mt-1">${formatNaira(job.workerPay)} </div>
+        <div class="text-sm text-gray-500 mt-1">${occupancy}/${numWorkers} </div>
         <div class="mt-3 flex gap-2">
           <div style="flex:1">${remaining <= 0 ? '<div class="text-xs text-red-500 font-medium">No open slots</div>' : `<div class="text-xs text-green-600 font-medium">${remaining} open</div>`}</div>
           <button class="aff2-btn-view px-4 py-2 bg-blue-600 text-white rounded-xl" data-id="${safeText(job.id)}">View Task</button>
