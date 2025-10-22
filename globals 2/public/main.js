@@ -1211,17 +1211,13 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
 
 
-
-
-
-// Robust Task Section Module
+// Robust Task Section Module (fixed)
 // Usage: call window.initTaskSection() once (e.g., from activateTab('tasks'))
 // Requires: firebase (auth + firestore) and uploadToCloudinary(file) available globally
 
-(function initTaskSectionModule() {
+function initTaskSectionModule() {
   'use strict';
-
-  // Single-instance guard
+  // ---------- Guard against double init ----------
   if (window.__TASK_SECTION_INITIALIZED__) {
     console.warn('[TASK] initTaskSectionModule already initialized - skipping.');
     return;
@@ -1229,10 +1225,9 @@ firebase.auth().onAuthStateChanged(async (user) => {
   window.__TASK_SECTION_INITIALIZED__ = true;
 
   // ---------- Small runtime helpers ----------
-  function safeLog(...args){ try{ console.log(...args); }catch(_){} }
-  function safeWarn(...args){ try{ console.warn(...args); }catch(_){} }
-  function safeError(...args){ try{ console.error(...args); }catch(_){} }
-
+  function safeLog(...args) { try { console.log(...args); } catch (_) { } }
+  function safeWarn(...args) { try { console.warn(...args); } catch (_) { } }
+  function safeError(...args) { try { console.error(...args); } catch (_) { } }
   function escapeHtml(str) {
     if (str == null) return "";
     return String(str)
@@ -1242,9 +1237,8 @@ firebase.auth().onAuthStateChanged(async (user) => {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
   }
-
   function el(id) { return document.getElementById(id); }
-  function hasFirebase() { return typeof firebase !== 'undefined' && firebase.firestore && firebase.auth; }
+  function hasFirebase() { return (typeof firebase !== 'undefined') && firebase.firestore && firebase.auth; }
 
   // ---------- Wait helpers ----------
   async function waitForReady(timeoutMs = 5000) {
@@ -1257,7 +1251,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
     }
     return hasFirebase();
   }
-
   function waitForAuthReady(timeout = 4000) {
     return new Promise((resolve) => {
       if (!hasFirebase()) return resolve(null);
@@ -1271,7 +1264,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
         if (done) return;
         done = true;
         clearTimeout(t);
-        try { unsub(); } catch (e) {}
+        try { unsub(); } catch (e) { }
         resolve(user || null);
       });
     });
@@ -1301,7 +1294,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
       tx.update(ref, { filledWorkers: newFilled, approvedWorkers: newApproved });
     });
   }
-
   async function increaseTaskOccupancy(taskId) { return applyTaskDeltas(taskId, { deltaFilled: +1 }); }
   async function decreaseTaskOccupancy(taskId) { return applyTaskDeltas(taskId, { deltaFilled: -1 }); }
   async function changeTaskApprovedCount(taskId, delta) { return applyTaskDeltas(taskId, { deltaApproved: delta }); }
@@ -1329,13 +1321,12 @@ firebase.auth().onAuthStateChanged(async (user) => {
     });
     return { filled, approved };
   }
-
   async function reconcileAllTasks() {
     if (!hasFirebase()) throw new Error('Firebase not initialized');
     const db = firebase.firestore();
     const tasksSnap = await db.collection('tasks').get();
     for (const tdoc of tasksSnap.docs) {
-      await reconcileTaskCounters(tdoc.id).catch(e => safeWarn('reconcileAllTasks item failed', e));
+      await reconcileTaskCounters(tdoc.id);
     }
   }
 
@@ -1354,22 +1345,17 @@ firebase.auth().onAuthStateChanged(async (user) => {
       const prev = (sub.status || '').toLowerCase();
       const next = newStatus.toLowerCase();
       if (prev === next) return;
-
       const taskId = sub.taskId;
       if (!taskId) throw new Error('Submission missing taskId');
-
       // Counted statuses for occupancy: 'on review' and 'approved' count as occupying
       const prevIsCounted = ['on review', 'approved'].includes(prev);
       const nextIsCounted = ['on review', 'approved'].includes(next);
       const deltaFilled = (nextIsCounted ? 1 : 0) - (prevIsCounted ? 1 : 0);
-
       const prevApproved = (prev === 'approved') ? 1 : 0;
       const nextApproved = (next === 'approved') ? 1 : 0;
       const deltaApproved = nextApproved - prevApproved;
-
       // update submission status
       tx.update(subRef, { status: newStatus });
-
       // update task counters
       const taskRef = db.collection('tasks').doc(taskId);
       const taskSnap = await tx.get(taskRef);
@@ -1424,14 +1410,13 @@ firebase.auth().onAuthStateChanged(async (user) => {
     const safeSub = escapeHtml(jobData.subCategory || '');
     const safeDesc = escapeHtml(jobData.description || 'No description provided');
     const safeProofText = escapeHtml(jobData.proof || 'Provide the necessary screenshot or details.');
-    const screenshot = (jobData.screenshotURL && String(jobData.screenshotURL)) || 'https://via.placeholder.com/400';
-
+    const screenshot = escapeHtml(jobData.screenshotURL || 'https://via.placeholder.com/400');
     fullScreen.innerHTML = `
       <div class="max-w-2xl mx-auto space-y-6">
         <button id="closeTaskBtn" class="text-blue-600 font-bold text-sm underline">← Back to Tasks</button>
         <h1 class="text-2xl font-bold text-gray-800">${safeTitle}</h1>
         <p class="text-sm text-gray-500">${safeCategory} • ${safeSub}</p>
-        <img src="${escapeHtml(screenshot)}" alt="Task Preview" class="w-full h-64 object-cover rounded-xl border" />
+        <img src="${screenshot}" alt="Task Preview" class="w-full h-64 object-cover rounded-xl border" />
         <div>
           <h2 class="text-lg font-semibold text-gray-800 mb-2">Task Description</h2>
           <p class="text-gray-700 text-sm whitespace-pre-line">${safeDesc}</p>
@@ -1461,19 +1446,15 @@ firebase.auth().onAuthStateChanged(async (user) => {
         const r = await reconcileTaskCounters(jobId);
         filled = r.filled; approved = r.approved;
       }
-    } catch (err) {
-      safeWarn('reconcile failed', err);
-    }
+    } catch (err) { safeWarn('reconcile failed', err); }
 
     const submitArea = fullScreen.querySelector('#proofSection');
-
     // If all approved => closed and show user's submission if exists
     if (total > 0 && approved >= total) {
       submitArea.innerHTML = `<div style="padding:12px;background:#f8fafc;border-radius:12px;text-align:center"><strong>All slots fully approved. This job is closed.</strong></div>`;
       await showUserSubmissionIfExists(jobId, fullScreen);
       return;
     }
-
     // If slots are filled but not all approved => no new submissions allowed, but keep job visible
     if (total > 0 && filled >= total && approved < total) {
       submitArea.innerHTML = `
@@ -1496,8 +1477,8 @@ firebase.auth().onAuthStateChanged(async (user) => {
     try {
       if (hasFirebase()) {
         const existingSnap = await firebase.firestore().collection('task_submissions')
-          .where('taskId','==', jobId)
-          .where('userId','==', user.uid)
+          .where('taskId', '==', jobId)
+          .where('userId', '==', user.uid)
           .limit(1)
           .get();
         if (!existingSnap.empty) {
@@ -1506,9 +1487,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
           return;
         }
       }
-    } catch (err) {
-      safeWarn('Error checking existing submission', err);
-    }
+    } catch (err) { safeWarn('Error checking existing submission', err); }
 
     attachSubmitHandler(fullScreen, jobId, jobData);
   }
@@ -1520,17 +1499,15 @@ firebase.auth().onAuthStateChanged(async (user) => {
       const user = firebase.auth().currentUser;
       if (!user) return;
       const snap = await firebase.firestore().collection('task_submissions')
-        .where('taskId','==', jobId)
-        .where('userId','==', user.uid)
+        .where('taskId', '==', jobId)
+        .where('userId', '==', user.uid)
         .limit(1)
         .get();
       if (!snap.empty) {
         const sub = snap.docs[0].data();
         replaceSubmitAreaWithSubmitted(sub, containerEl);
       }
-    } catch (err) {
-      safeWarn('showUserSubmissionIfExists error', err);
-    }
+    } catch (err) { safeWarn('showUserSubmissionIfExists error', err); }
   }
 
   function replaceSubmitAreaWithSubmitted(sub, containerEl) {
@@ -1564,8 +1541,8 @@ firebase.auth().onAuthStateChanged(async (user) => {
         // Duplicate check pre
         if (hasFirebase()) {
           const pre = await firebase.firestore().collection('task_submissions')
-            .where('taskId','==', jobId)
-            .where('userId','==', user.uid)
+            .where('taskId', '==', jobId)
+            .where('userId', '==', user.uid)
             .limit(1)
             .get();
           if (!pre.empty) { alert('You have already submitted this task.'); submitBtn.disabled = false; return; }
@@ -1584,9 +1561,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
             const taskSnap = await taskRef.get();
             totalSlots = Number(jobData.numWorkers || (taskSnap.exists ? (taskSnap.data().numWorkers || 0) : 0));
             curFilled = taskSnap.exists ? Number(taskSnap.data().filledWorkers || 0) : 0;
-          } catch (e) {
-            safeWarn('Failed reading task doc for pre-check', e);
-          }
+          } catch (e) { safeWarn('Failed reading task doc for pre-check', e); }
         }
         if (totalSlots > 0 && curFilled >= totalSlots) {
           alert('No open submission slots right now. Please check back later.');
@@ -1594,19 +1569,21 @@ firebase.auth().onAuthStateChanged(async (user) => {
           return;
         }
 
-        // upload files (Cloudinary) -> ensure we store only strings
+        // upload files (Cloudinary) -> normalize to strings
         const uploaded = [];
         for (let i = 0; i < fileInputs.length; i++) {
           const fEl = fileInputs[i];
           if (!fEl.files || !fEl.files[0]) continue;
           if (typeof uploadToCloudinary !== 'function') throw new Error('uploadToCloudinary(file) not available');
-          const uploadResult = await uploadToCloudinary(fEl.files[0]);
-          // Accept string or object. Prefer secure_url or url fields when object.
-          const url = (typeof uploadResult === 'string')
-            ? uploadResult
-            : (uploadResult && (uploadResult.secure_url || uploadResult.url || uploadResult.public_url || uploadResult.result && (uploadResult.result.secure_url || uploadResult.result.url)) || '');
-          if (!url) throw new Error('Invalid Cloudinary response');
-          uploaded.push(String(url));
+          const res = await uploadToCloudinary(fEl.files[0]);
+          // normalize common Cloudinary responses and ensure string URL is stored
+          let url = null;
+          if (typeof res === 'string') url = res;
+          else if (res && typeof res.secure_url === 'string') url = res.secure_url;
+          else if (res && typeof res.url === 'string') url = res.url;
+          else if (res && typeof res.data === 'string') url = res.data;
+          else throw new Error('uploadToCloudinary did not return a URL string');
+          uploaded.push(url);
         }
 
         const payload = {
@@ -1623,7 +1600,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
         const submissionsCol = db.collection('task_submissions');
         const newSubRef = submissionsCol.doc();
 
-        // Transaction: write submission and bump counters safely
+        // transaction: create submission + bump counters
         await db.runTransaction(async (tx) => {
           const taskRef = db.collection('tasks').doc(jobId);
           const tSnap = await tx.get(taskRef);
@@ -1636,38 +1613,11 @@ firebase.auth().onAuthStateChanged(async (user) => {
             throw new Error('NO_SLOTS');
           }
 
-          // duplicate check inside txn: using query read via tx.get(...)
-          const dupQuery = db.collection('task_submissions')
-            .where('taskId', '==', jobId)
-            .where('userId', '==', user.uid)
-            .limit(1);
-          const preQuerySnapshot = await tx.get(dupQuery);
-          if (!preQuerySnapshot.empty) {
-            throw new Error('ALREADY_SUBMITTED');
-          }
-
-          // sanitize payload so Firestore only receives plain serializable types
-          const sanitized = {};
-          for (const k in payload) {
-            const v = payload[k];
-            if (v == null) {
-              sanitized[k] = null;
-            } else if (Array.isArray(v)) {
-              sanitized[k] = v.map(x => (x == null ? null : String(x)));
-            } else if (typeof v === 'object') {
-              try {
-                sanitized[k] = JSON.parse(JSON.stringify(v));
-              } catch (_) {
-                sanitized[k] = String(v);
-              }
-            } else {
-              sanitized[k] = v;
-            }
-          }
-
-          tx.set(newSubRef, Object.assign({}, sanitized, {
+          // create submission doc
+          const toWrite = Object.assign({}, payload, {
             submittedAt: firebase.firestore.FieldValue.serverTimestamp()
-          }));
+          });
+          tx.set(newSubRef, toWrite);
 
           if (!tSnap.exists) {
             const init = { filledWorkers: 1, approvedWorkers: 0 };
@@ -1713,7 +1663,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
       card.className = "flex gap-4 p-4 rounded-2xl shadow-md border border-gray-200 bg-white hover:shadow-lg transition duration-300 mb-4 items-center";
       card.dataset.jobId = jobId;
       const image = document.createElement('img');
-      image.src = jobData.screenshotURL || "https://via.placeholder.com/80";
+      image.src = jobData.screenshotURL || 'https://via.placeholder.com/80';
       image.alt = "Task Preview";
       image.className = "w-20 h-20 rounded-xl object-cover";
       const content = document.createElement('div');
@@ -1735,7 +1685,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
       (async () => {
         try {
-          if (hasFirebase()) await reconcileTaskCounters(jobId).catch(()=>null);
+          if (hasFirebase()) await reconcileTaskCounters(jobId).catch(() => null);
           if (hasFirebase()) {
             const tdoc = await firebase.firestore().collection('tasks').doc(jobId).get();
             if (tdoc.exists) {
@@ -1765,23 +1715,15 @@ firebase.auth().onAuthStateChanged(async (user) => {
           } else {
             rate.textContent = `Progress: ? / ${total}`;
           }
-        } catch (err) {
-          safeWarn('progress read failed', err);
-          rate.textContent = `Progress: 0 / ${total}`;
-        }
+        } catch (err) { safeWarn('progress read failed', err); rate.textContent = `Progress: 0 / ${total}`; }
       })();
 
       const button = document.createElement('button');
       button.textContent = "View Task";
       button.className = "mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2 rounded-lg shadow-sm transition";
       button.addEventListener('click', async (ev) => {
-        try {
-          ev.preventDefault();
-          await showTaskDetails(jobId, jobData);
-        } catch (err) {
-          safeError('Failed to open task details for', jobId, err);
-          alert('Failed to open task details: ' + (err && err.message ? err.message : err));
-        }
+        try { ev.preventDefault(); await showTaskDetails(jobId, jobData); }
+        catch (err) { safeError('Failed to open task details for', jobId, err); alert('Failed to open task details: ' + (err && err.message ? err.message : err)); }
       });
 
       content.appendChild(title);
@@ -1792,9 +1734,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
       card.appendChild(image);
       card.appendChild(content);
       taskContainer.appendChild(card);
-    } catch (err) {
-      safeWarn('createTaskCard error', err);
-    }
+    } catch (err) { safeWarn('createTaskCard error', err); }
   }
 
   // ---------- Fetch tasks once (safe) ----------
@@ -1805,11 +1745,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
       const searchInput = el('taskSearch');
       const filterSelect = el('taskCategoryFilter');
       taskContainer.innerHTML = `<p class="p-4 text-gray-400 text-sm">Loading tasks...</p>`;
-      if (!hasFirebase()) {
-        taskContainer.innerHTML = `<p class="p-4 text-gray-400 text-sm">Firebase not initialized.</p>`;
-        return;
-      }
-      // original code filtered where('status','==','approved') - keep same behaviour
+      if (!hasFirebase()) { taskContainer.innerHTML = `<p class="p-4 text-gray-400 text-sm">Firebase not initialized.</p>`; return; }
       const snap = await firebase.firestore().collection('tasks').where('status', '==', 'approved').get();
       const tasks = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       taskContainer.innerHTML = "";
@@ -1829,18 +1765,11 @@ firebase.auth().onAuthStateChanged(async (user) => {
       if (searchInput) searchInput.addEventListener("input", renderTasks);
       if (filterSelect) filterSelect.addEventListener("change", renderTasks);
       renderTasks();
-    } catch (err) {
-      safeError("Failed to fetch tasks:", err);
-      const taskContainer = el("task-jobs");
-      if (taskContainer) {
-        taskContainer.innerHTML = `<p class="p-4 text-red-500 text-sm">Failed to load tasks. Please reload.</p>`;
-      }
-    }
+    } catch (err) { safeError("Failed to fetch tasks:", err); const taskContainer = el("task-jobs"); if (taskContainer) { taskContainer.innerHTML = `<p class="p-4 text-red-500 text-sm">Failed to load tasks. Please reload.</p>`; } }
   }
 
   // ---------- Finished tasks UI (user) ----------
   window.finishedTasksCache = window.finishedTasksCache || [];
-
   async function initFinishedTasksSectionUser() {
     try {
       const btnOpen = el("finishedTaskBtnUser");
@@ -1874,26 +1803,21 @@ firebase.auth().onAuthStateChanged(async (user) => {
       const approvedCountEl = el("approvedCountUser");
       if (!uid || !hasFirebase() || !listEl) return;
       listEl.innerHTML = `<p class="text-center text-gray-500">Loading...</p>`;
-      const snap = await firebase.firestore().collection("task_submissions").where("userId","==", uid).get();
+      const snap = await firebase.firestore().collection("task_submissions").where("userId", "==", uid).get();
       window.finishedTasksCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      window.finishedTasksCache.sort((a,b) => {
-        const t1 = a.submittedAt && a.submittedAt.toDate ? a.submittedAt.toDate() : new Date(0);
-        const t2 = b.submittedAt && b.submittedAt.toDate ? b.submittedAt.toDate() : new Date(0);
+      window.finishedTasksCache.sort((a, b) => {
+        const t1 = a.submittedAt?.toDate?.() || new Date(0);
+        const t2 = b.submittedAt?.toDate?.() || new Date(0);
         return t2 - t1;
       });
-
       const taskIds = [...new Set(window.finishedTasksCache.map(s => s.taskId).filter(Boolean))];
-      await Promise.all(taskIds.map(id => reconcileTaskCounters(id).catch(()=>null)));
+      await Promise.all(taskIds.map(id => reconcileTaskCounters(id).catch(() => null)));
       renderFinishedTasksUser();
       let pending = window.finishedTasksCache.filter(d => (d.status || '').toLowerCase() === "on review").length;
       let approved = window.finishedTasksCache.filter(d => (d.status || '').toLowerCase() === "approved").length;
-      if (pendingCountEl) pendingCountEl.textContent = String(pending);
-      if (approvedCountEl) approvedCountEl.textContent = String(approved);
-    } catch (err) {
-      safeError("Error fetching finished tasks:", err);
-      const listEl = el("finishedTasksListUser");
-      if (listEl) listEl.innerHTML = `<p class="text-center text-red-500">Failed to load tasks. Reload page.</p>`;
-    }
+      if (pendingCountEl) pendingCountEl.textContent = pending;
+      if (approvedCountEl) approvedCountEl.textContent = approved;
+    } catch (err) { safeError("Error fetching finished tasks:", err); const listEl = el("finishedTasksListUser"); if (listEl) listEl.innerHTML = `<p class="text-center text-red-500">Failed to load tasks. Reload page.</p>`; }
   }
 
   function renderFinishedTasksUser() {
@@ -1920,7 +1844,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
         <div>
           <h3 class="font-semibold text-gray-900">${escapeHtml(jobTitle)}</h3>
           <p class="text-sm text-gray-600">Earn: ₦${data.workerEarn || 0}</p>
-          <p class="text-xs text-gray-400">${data.submittedAt && data.submittedAt.toDate ? data.submittedAt.toDate().toLocaleString() : ""}</p>
+          <p class="text-xs text-gray-400">${data.submittedAt?.toDate?.().toLocaleString() || ""}</p>
           <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded ${
             (statusKey === "approved")
               ? "bg-green-100 text-green-700"
@@ -1931,15 +1855,15 @@ firebase.auth().onAuthStateChanged(async (user) => {
         </div>
         <button
           class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg details-btn-user"
-          data-id="${escapeHtml(String(data.id))}"
+          data-id="${escapeHtml(data.id)}"
         >Details</button>
       `;
       listEl.appendChild(card);
     }
-    if (pendingCountEl) pendingCountEl.textContent = String(pending);
-    if (approvedCountEl) approvedCountEl.textContent = String(approved);
+    if (pendingCountEl) pendingCountEl.textContent = pending;
+    if (approvedCountEl) approvedCountEl.textContent = approved;
     listEl.querySelectorAll(".details-btn-user").forEach(btn => {
-      btn.addEventListener("click", () => showTaskSubmissionDetailsUser(String(btn.dataset.id)));
+      btn.addEventListener("click", () => showTaskSubmissionDetailsUser(btn.dataset.id));
     });
     preloadTaskTitles();
   }
@@ -1948,20 +1872,20 @@ firebase.auth().onAuthStateChanged(async (user) => {
     try {
       const ids = [...new Set(window.finishedTasksCache.map(t => t.taskId).filter(Boolean))];
       if (!ids.length || !hasFirebase()) return;
-      for (let i=0;i<ids.length;i+=10) {
-        const slice = ids.slice(i, i+10);
+      for (let i = 0; i < ids.length; i += 10) {
+        const slice = ids.slice(i, i + 10);
         const snap = await firebase.firestore().collection('tasks').where(firebase.firestore.FieldPath.documentId(), "in", slice).get();
         for (const d of snap.docs) {
           const task = { id: d.id, ...d.data() };
           window.finishedTasksCache.forEach(sub => { if (sub.taskId === task.id) sub.cachedTitle = task.title || 'Untitled Task'; });
         }
       }
-      try { renderFinishedTasksUser(); } catch (_) {}
+      try { renderFinishedTasksUser(); } catch (_) { }
     } catch (err) { safeWarn('preloadTaskTitles error', err); }
   }
 
   async function showTaskSubmissionDetailsUser(submissionId) {
-    const sub = window.finishedTasksCache.find(d => String(d.id) === String(submissionId));
+    const sub = window.finishedTasksCache.find(d => d.id === submissionId);
     if (!sub) return alert("Submission not found in memory. Reload page.");
     const title = sub.cachedTitle || "Untitled Task";
     const modal = document.createElement("div");
@@ -1972,7 +1896,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
         <p class="text-sm"><strong>Job Title:</strong> ${escapeHtml(title)}</p>
         <p class="text-sm"><strong>Status:</strong> ${escapeHtml(sub.status)}</p>
         <p class="text-sm"><strong>Earned:</strong> ₦${sub.workerEarn || 0}</p>
-        <p class="text-sm"><strong>Submitted At:</strong> ${sub.submittedAt && sub.submittedAt.toDate ? sub.submittedAt.toDate().toLocaleString() : "—"}</p>
+        <p class="text-sm"><strong>Submitted At:</strong> ${sub.submittedAt?.toDate?.().toLocaleString() || "—"}</p>
         <p class="text-sm"><strong>Extra Proof:</strong> ${escapeHtml(sub.extraProof || "—")}</p>
         ${(sub.proofImages || []).map(url => `
           <div class="mt-3">
@@ -1999,7 +1923,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
   window.TaskProgress.reconcileAllTasks = reconcileAllTasks;
   window.TaskProgress.startAutoReconcile = function(taskId, ms = 60_000) {
     if (!taskId) throw new Error('taskId required');
-    const iid = setInterval(() => reconcileTaskCounters(taskId).catch(()=>null), ms);
+    const iid = setInterval(() => reconcileTaskCounters(taskId).catch(() => null), ms);
     return () => clearInterval(iid);
   };
 
@@ -2012,12 +1936,11 @@ firebase.auth().onAuthStateChanged(async (user) => {
       initFinishedTasksSectionUser();
       // Load task cards if the placeholder container exists
       fetchTasksOnce().catch(e => safeWarn('fetchTasksOnce failed', e));
-    } catch (err) {
-      safeWarn('module init failed', err);
-    }
+    } catch (err) { safeWarn('module init failed', err); }
   })();
+}
 
-})(); // end initTaskSectionModule
+// end initTaskSectionModule
 
 // -------------------------
 // Public initializer
@@ -2025,20 +1948,20 @@ firebase.auth().onAuthStateChanged(async (user) => {
 window.initTaskSection = function() {
   // idempotent
   if (window.__TASK_SECTION_INITIALIZED__) {
-    console.log('[TASK] initTaskSection called — already initialized');
+    try { console.log('[TASK] initTaskSection called — already initialized'); } catch (_) { }
     return;
   }
-  try {
-    // call the module initializer again (it sets the guard)
-    // if the IIFE above has already run, this will be a no-op because of the guard
-    if (typeof initTaskSectionModule === 'function') {
-      try { initTaskSectionModule(); } catch (_) { /* module was declared as IIFE; ignore */ }
-    }
-  } catch (e) {
-    console.error('[TASK] initTaskSection error', e);
-  }
+  try { initTaskSectionModule(); } catch (e) { console.error('[TASK] initTaskSection error', e); }
 };
-	  
+
+// Optional: auto-run if you want (commented by default)
+// window.initTaskSection();
+
+
+
+
+
+
 
 
 
