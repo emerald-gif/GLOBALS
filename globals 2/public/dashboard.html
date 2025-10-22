@@ -1578,80 +1578,51 @@
 
 
 <!-- ---------- My Jobs List ---------- -->
-<section id="myJobsSection"
-  class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6 bg-gradient-to-br from-[#f9fafb] via-white to-[#f1f5f9]">
+<section id="myJobsSection" class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6 bg-gradient-to-br from-[#f9fafb] via-white to-[#f1f5f9]">
   <div class="max-w-5xl mx-auto space-y-6">
-    <button onclick="activateTab('dashboard')"
-      class="flex items-center gap-2 text-gray-600 hover:text-gray-800 font-medium transition mb-4">
-      <i data-lucide="arrow-left" class="w-5 h-5"></i> Back
+    <button onclick="activateTab('dashboard')" class="flex items-center gap-2 text-gray-600 hover:text-gray-800 font-medium transition mb-4">
+      Back
     </button>
-
     <h2 class="text-2xl font-extrabold text-center text-gray-800 tracking-tight">My Job Posts</h2>
-
-    <div id="jobList" class="space-y-4 mt-4">
-      <!-- injected -->
-    </div>
+    <div id="jobList" class="space-y-4 mt-4"></div>
   </div>
 </section>
 
-<!-- ---------- Job Details ---------- -->
-<section id="jobDetailsSection"
-  class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6 bg-gradient-to-br from-[#f9fafb] via-white to-[#f1f5f9]">
+<section id="jobDetailsSection" class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6 bg-gradient-to-br from-[#f9fafb] via-white to-[#f1f5f9]">
   <div class="max-w-3xl mx-auto space-y-6">
     <button onclick="goBackToJobs()" class="flex items-center gap-2 text-gray-600 hover:text-gray-800 font-medium transition">
-      <i data-lucide="arrow-left" class="w-5 h-5"></i> Back to My Jobs
+      Back to My Jobs
     </button>
-
-    <div id="jobDetailsContent" class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 space-y-6 animate-fadeUp">
-      <!-- injected -->
-    </div>
+    <div id="jobDetailsContent" class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 space-y-6 animate-fadeUp"></div>
   </div>
 </section>
 
-<!-- ---------- Job Submissions (On Review / Completed) ---------- -->
-<section id="jobSubmissionsSection"
-  class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6 bg-gradient-to-br from-[#f9fafb] via-white to-[#f1f5f9]">
+<section id="jobSubmissionsSection" class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6 bg-gradient-to-br from-[#f9fafb] via-white to-[#f1f5f9]">
   <div class="max-w-4xl mx-auto space-y-6">
     <button onclick="goBackToDetails()" class="flex items-center gap-2 text-gray-600 hover:text-gray-800 font-medium transition">
-      <i data-lucide="arrow-left" class="w-5 h-5"></i> Back to Job Details
+      Back to Job Details
     </button>
-
-    <div id="submissionsHeader" class="bg-white rounded-2xl shadow-sm border p-4">
-      <!-- injected header -->
-    </div>
-
+    <div id="submissionsHeader" class="bg-white rounded-2xl shadow-sm border p-4"></div>
     <div class="bg-white rounded-2xl shadow-lg border p-4">
       <div class="flex gap-3 mb-4">
         <button id="tabOnReviewBtn" class="job-action-btn primary" onclick="switchSubmissionTab('onReview')">On review (<span id="countOnReview">0</span>)</button>
         <button id="tabCompletedBtn" class="job-action-btn secondary" onclick="switchSubmissionTab('completed')">Completed (<span id="countCompleted">0</span>)</button>
       </div>
-
-      <div id="submissionsList" class="space-y-4">
-        <!-- injected -->
-      </div>
+      <div id="submissionsList" class="space-y-4"></div>
     </div>
   </div>
 </section>
 
-<!-- ---------- Styles ---------- -->
 <style>
-@keyframes fadeUp { from { transform: translateY(14px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
-.animate-fadeUp { animation: fadeUp 0.45s ease-out forwards; }
-
-.job-card { background:#fff; border:1px solid #eef2ff; border-radius:14px; padding:16px; box-shadow:0 6px 20px rgba(14,30,80,0.04); transition:all .18s ease; cursor:pointer; }
-.job-card:hover{ transform:translateY(-4px); box-shadow:0 14px 40px rgba(59,130,246,0.08); }
-.job-title{ font-weight:700; color:#0f172a; font-size:16px; }
+/* basic styles (kept small) */
+.job-card { background:#fff;border:1px solid #eef2ff;border-radius:12px;padding:14px;cursor:pointer; }
+.job-title{ font-weight:700; color:#0f172a; }
 .job-meta{ color:#64748b; font-size:13px; display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
-.job-meta .pill{ background:#f8fafc; padding:6px 10px; border-radius:999px; font-weight:600; }
-
-.job-action-btn { display:inline-flex; gap:8px; align-items:center; padding:9px 14px; border-radius:999px; font-weight:600; font-size:14px; }
-.job-action-btn.primary { background:linear-gradient(90deg,#3b82f6,#6366f1); color:#fff; box-shadow:0 8px 22px rgba(59,130,246,0.18); }
-.job-action-btn.secondary { background:#f1f5f9; color:#475569; }
-.job-action-btn.primary:hover { transform:translateY(-2px); }
+.pill{ background:#f8fafc;padding:6px 10px;border-radius:999px;font-weight:600; }
+.job-action-btn{ padding:9px 14px; border-radius:999px; font-weight:600; }
+.job-action-btn.primary{ background:linear-gradient(90deg,#3b82f6,#6366f1); color:#fff; }
+.job-action-btn.secondary{ background:#f1f5f9; color:#475569; }
 </style>
-
-
-
 
 
 
