@@ -5055,6 +5055,7 @@ async function fetchNotificationsOnce(uid) {
 
   try {
     const stateDoc = await db.collection('notification_user_state').doc(uid).get();
+
     const joinedAtServer = (stateDoc.exists && stateDoc.data().joinedAt)
       ? stateDoc.data().joinedAt.toDate()
       : new Date();
@@ -5068,43 +5069,67 @@ async function fetchNotificationsOnce(uid) {
     const effectiveLastReadAt = lastReadAtOverride || lastReadAtServer || new Date(0);
     const effectiveClearedAt = lastClearedAtOverride || clearedAtServer || new Date(0);
 
-    const notifDot = document.getElementById('notifDot');  
-    const notifPopup = document.getElementById('notifPopup');  
-    const notifMessage = document.getElementById('notifMessage');  
-    const notifList = document.getElementById('notificationList');  
-    const banner = document.getElementById('notifBanner');  
+    const notifDot = document.getElementById('notifDot');
+    const notifPopup = document.getElementById('notifPopup');
+    const notifMessage = document.getElementById('notifMessage');
+    const notifList = document.getElementById('notificationList');
+    const banner = document.getElementById('notifBanner');
     const bannerText = document.getElementById('notifBannerText');
 
     let unreadCount = 0;
-// inside snapshot.forEach(...)
-if (notifList) {
-  const dateStr = tsDate ? timeAgo(tsDate) : 'Just now';
+    if (notifList) notifList.innerHTML = '';
 
-  const card = document.createElement('div');
-  card.className = `bg-white rounded-xl p-4 shadow-md border-l-4 ${isUnread ? 'border-blue-400' : 'border-gray-200'} animate-fade-in`;
+    // ✅ Fetch notifications from Firestore
+    const snapshot = await db.collection('notifications')
+      .orderBy('timestamp', 'desc')
+      .get();
 
-  const titleEl = document.createElement('p');
-  titleEl.className = 'text-gray-800 font-semibold truncate';
-  titleEl.textContent = data.title || 'No Title';
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const ts = data.timestamp;
+      const tsDate = ts ? ts.toDate() : null; // ✅ now tsDate exists
 
-  const msgEl = document.createElement('p');
-  msgEl.className = 'text-sm text-gray-600 mt-1 truncate';
-  msgEl.textContent = data.message || '';
+      // Filter old or cleared notifications
+      if (tsDate && tsDate <= joinedAtServer) return;
+      if (tsDate && tsDate <= effectiveClearedAt) return;
 
-  const dateEl = document.createElement('p');
-  dateEl.className = 'text-xs text-gray-500 mt-2';
-  dateEl.textContent = dateStr;
+      const isUnread = tsDate ? (tsDate > effectiveLastReadAt) : false;
+      if (isUnread) unreadCount++;
 
-  card.appendChild(titleEl);
-  card.appendChild(msgEl);
-  card.appendChild(dateEl);
+      // ✅ Build notification card safely
+      if (notifList) {
+        const dateStr = tsDate ? timeAgo(tsDate) : 'Just now';
 
-  notifList.appendChild(card);
-}
+        const card = document.createElement('div');
+        card.className = `bg-white rounded-xl p-4 shadow-md border-l-4 ${
+          isUnread ? 'border-blue-400' : 'border-gray-200'
+        } animate-fade-in`;
 
+        const titleEl = document.createElement('p');
+        titleEl.className = 'text-gray-800 font-semibold truncate';
+        titleEl.textContent = data.title || 'No Title';
+
+        const msgEl = document.createElement('p');
+        msgEl.className = 'text-sm text-gray-600 mt-1 truncate';
+        msgEl.textContent = data.message || '';
+
+        const dateEl = document.createElement('p');
+        dateEl.className = 'text-xs text-gray-500 mt-2';
+        dateEl.textContent = dateStr;
+
+        card.appendChild(titleEl);
+        card.appendChild(msgEl);
+        card.appendChild(dateEl);
+
+        notifList.appendChild(card);
+      }
+    });
+
+    // ✅ Update unread count UI
     lastUnreadCount = unreadCount;
 
     if (notifDot) notifDot.classList.toggle('hidden', unreadCount === 0);
+
     if (notifPopup && notifMessage) {
       if (unreadCount > 0) {
         notifMessage.textContent = `You have ${unreadCount} new notification${unreadCount > 1 ? 's' : ''}`;
@@ -5113,6 +5138,7 @@ if (notifList) {
         notifPopup.classList.add('hidden');
       }
     }
+
     if (banner && bannerText) {
       if (unreadCount > 0) {
         bannerText.textContent = `You have ${unreadCount} unread message${unreadCount > 1 ? 's' : ''}`;
@@ -5121,6 +5147,7 @@ if (notifList) {
         banner.classList.add('hidden');
       }
     }
+
     if (notifList && notifList.children.length === 0) {
       notifList.innerHTML = `<p class="text-gray-400 text-center py-8">No notifications yet.</p>`;
     }
