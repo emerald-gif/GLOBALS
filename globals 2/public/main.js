@@ -1217,7 +1217,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
 	
 	
 	// INSTALL AND EARN FUNCTION// main.js — Task module (combined, robust, drop-in replacement)
-(function initTaskSectionModule() {
+function initTaskSectionModule() {
   'use strict';
 
   // ---------- Small runtime helpers ----------
@@ -1995,6 +1995,13 @@ firebase.auth().onAuthStateChanged(async (user) => {
     }
   })();
 
+
+window.initTaskSection = function() {
+  if (window.__TASK_SECTION_INITIALIZED__) return;
+  window.__TASK_SECTION_INITIALIZED__ = true;
+  initTaskSectionModule();
+};
+	
 })(); // end module
 
 
