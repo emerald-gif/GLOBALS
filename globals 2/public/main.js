@@ -1215,17 +1215,28 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
 
 	
-	
-	// INSTALL AND EARN FUNCTION// main.js — Task module (combined, robust, drop-in replacement)
+// -----------------------------
+// Robust Task Section Module
+// -----------------------------
+// Usage: call window.initTaskSection() once (e.g., from activateTab('tasks'))
+// Requires: firebase (auth + firestore) and uploadToCloudinary(file) available globally
+// -----------------------------
+
 function initTaskSectionModule() {
   'use strict';
 
-  // ---------- Small runtime helpers ----------
-  function safeLog(...args) { try { console.log(...args); } catch(_){} }
-  function safeWarn(...args) { try { console.warn(...args); } catch(_){} }
-  function safeError(...args) { try { console.error(...args); } catch(_){} }
+  // ---------- Guard against double init ----------
+  if (window.__TASK_SECTION_INITIALIZED__) {
+    console.warn('[TASK] initTaskSectionModule already initialized - skipping.');
+    return;
+  }
+  window.__TASK_SECTION_INITIALIZED__ = true;
 
-  // ---------- escapeHtml (compatible) ----------
+  // ---------- Small runtime helpers ----------
+  function safeLog(...args){ try{ console.log(...args); }catch(_){} }
+  function safeWarn(...args){ try{ console.warn(...args); }catch(_){} }
+  function safeError(...args){ try{ console.error(...args); }catch(_){} }
+
   function escapeHtml(str) {
     if (str == null) return "";
     return String(str)
@@ -1236,11 +1247,10 @@ function initTaskSectionModule() {
       .replace(/'/g, '&#39;');
   }
 
-  // ---------- DOM helpers ----------
   function el(id) { return document.getElementById(id); }
   function hasFirebase() { return typeof firebase !== 'undefined' && firebase.firestore && firebase.auth; }
 
-  // ---------- Wait for Firebase & DOM ----------
+  // ---------- Wait helpers ----------
   async function waitForReady(timeoutMs = 5000) {
     if (document.readyState === 'loading') {
       await new Promise(res => document.addEventListener('DOMContentLoaded', res, { once: true }));
@@ -1252,7 +1262,6 @@ function initTaskSectionModule() {
     return hasFirebase();
   }
 
-  // ---------- Auth helper ----------
   function waitForAuthReady(timeout = 4000) {
     return new Promise((resolve) => {
       if (!hasFirebase()) return resolve(null);
@@ -1272,7 +1281,7 @@ function initTaskSectionModule() {
     });
   }
 
-  // ---------- Firestore helpers (transactions) ----------
+  // ---------- Firestore transaction helpers ----------
   async function applyTaskDeltas(taskId, { deltaFilled = 0, deltaApproved = 0 } = {}) {
     if (!taskId) throw new Error('taskId required');
     if (!hasFirebase()) throw new Error('Firebase not initialized');
@@ -1281,7 +1290,10 @@ function initTaskSectionModule() {
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
       if (!snap.exists) {
-        const init = { filledWorkers: Math.max(0, Number(deltaFilled || 0)), approvedWorkers: Math.max(0, Number(deltaApproved || 0)) };
+        const init = {
+          filledWorkers: Math.max(0, Number(deltaFilled || 0)),
+          approvedWorkers: Math.max(0, Number(deltaApproved || 0))
+        };
         tx.set(ref, init, { merge: true });
         return;
       }
@@ -1298,14 +1310,12 @@ function initTaskSectionModule() {
   async function decreaseTaskOccupancy(taskId) { return applyTaskDeltas(taskId, { deltaFilled: -1 }); }
   async function changeTaskApprovedCount(taskId, delta) { return applyTaskDeltas(taskId, { deltaApproved: delta }); }
 
-  // ---------- Reconcile helpers ----------
+  // ---------- Reconcile tasks from submissions (authoritative) ----------
   async function reconcileTaskCounters(taskId) {
     if (!taskId) throw new Error('taskId required');
     if (!hasFirebase()) throw new Error('Firebase not initialized');
     const db = firebase.firestore();
-    const occSnap = await db.collection('task_submissions')
-      .where('taskId', '==', taskId)
-      .get();
+    const occSnap = await db.collection('task_submissions').where('taskId', '==', taskId).get();
     let filled = 0, approved = 0;
     occSnap.forEach(d => {
       const s = String(d.data().status || '').toLowerCase();
@@ -1333,8 +1343,8 @@ function initTaskSectionModule() {
     }
   }
 
-  // ---------- Admin status handler (transactional) ----------
-  // Robust: updates filledWorkers and approvedWorkers correctly on status changes
+  // ---------- Admin status handler (transactional, robust) ----------
+  // submissionId: doc id of task_submissions; newStatus: 'approved' | 'rejected' | 'on review' | etc.
   async function handleSubmissionStatusChange(submissionId, newStatus) {
     if (!submissionId) throw new Error('submissionId required');
     if (typeof newStatus !== 'string') throw new Error('newStatus string required');
@@ -1352,9 +1362,7 @@ function initTaskSectionModule() {
       const taskId = sub.taskId;
       if (!taskId) throw new Error('Submission missing taskId');
 
-      // Correct delta logic:
-      // - filled counts any submission that is 'on review' OR 'approved'
-      // - approved counts only 'approved'
+      // Counted statuses for occupancy: 'on review' and 'approved' count as occupying
       const prevIsCounted = ['on review', 'approved'].includes(prev);
       const nextIsCounted = ['on review', 'approved'].includes(next);
       const deltaFilled = (nextIsCounted ? 1 : 0) - (prevIsCounted ? 1 : 0);
@@ -1363,10 +1371,10 @@ function initTaskSectionModule() {
       const nextApproved = (next === 'approved') ? 1 : 0;
       const deltaApproved = nextApproved - prevApproved;
 
-      // Update submission document
+      // update submission status
       tx.update(subRef, { status: newStatus });
 
-      // Update task counters
+      // update task counters
       const taskRef = db.collection('tasks').doc(taskId);
       const taskSnap = await tx.get(taskRef);
       if (!taskSnap.exists) {
@@ -1396,7 +1404,7 @@ function initTaskSectionModule() {
     return html;
   }
 
-  // ---------- Task details modal & submit flow ----------
+  // ---------- Show Task Details & Submission Flow ----------
   async function showTaskDetails(jobId, jobData) {
     try {
       if (!jobId) throw new Error('jobId missing');
@@ -1509,7 +1517,7 @@ function initTaskSectionModule() {
     attachSubmitHandler(fullScreen, jobId, jobData);
   }
 
-  // ---------- Show user's submission ----------
+  // ---------- Show user's submission if exists ----------
   async function showUserSubmissionIfExists(jobId, containerEl) {
     try {
       if (!hasFirebase()) return;
@@ -1548,7 +1556,7 @@ function initTaskSectionModule() {
   function attachSubmitHandler(fullScreen, jobId, jobData) {
     const submitBtn = fullScreen.querySelector('#taskSubmitBtn');
     if (!submitBtn) return;
-    if (submitBtn._attached) return;
+    if (submitBtn._attached) return; // avoid double attach
     submitBtn._attached = true;
 
     submitBtn.addEventListener('click', async () => {
@@ -1585,7 +1593,6 @@ function initTaskSectionModule() {
           }
         }
 
-        // If filled >= totalSlots and not all approved => no new submissions
         if (totalSlots > 0 && curFilled >= totalSlots) {
           alert('No open submission slots right now. Please check back later.');
           submitBtn.disabled = false;
@@ -1597,7 +1604,6 @@ function initTaskSectionModule() {
         for (let i = 0; i < fileInputs.length; i++) {
           const fEl = fileInputs[i];
           if (!fEl.files || !fEl.files[0]) continue;
-          // expect uploadToCloudinary(file) to be defined elsewhere
           if (typeof uploadToCloudinary !== 'function') throw new Error('uploadToCloudinary(file) not available');
           const url = await uploadToCloudinary(fEl.files[0]);
           uploaded.push(url);
@@ -1624,12 +1630,12 @@ function initTaskSectionModule() {
           const curFilledTx = Number(tData.filledWorkers || 0);
           const totalSlotsTx = Number(jobData.numWorkers || (tData.numWorkers || 0)) || 0;
 
-          // If totalSlotsTx > 0 and already full, block the submission
+          // race-safe check
           if (totalSlotsTx > 0 && curFilledTx >= totalSlotsTx) {
             throw new Error('NO_SLOTS');
           }
 
-          // Duplicate check inside transaction (race-safe)
+          // duplicate check inside txn
           const preQuerySnapshot = await tx.get(
             db.collection('task_submissions')
               .where('taskId','==', jobId)
@@ -1658,14 +1664,13 @@ function initTaskSectionModule() {
         // reconcile as best-effort
         try { await reconcileTaskCounters(jobId); } catch (e) { safeWarn('reconcile after submit failed', e); }
 
-        // update local cache (safe plain object)
+        // update finished tasks cache for UI
         window.finishedTasksCache = window.finishedTasksCache || [];
         const localCopy = Object.assign({}, payload, { id: newSubRef.id, submittedAt: new Date() });
         window.finishedTasksCache.unshift(localCopy);
 
         alert('✅ Task submitted for review!');
         fullScreen.remove();
-
       } catch (err) {
         safeError('Submit error', err);
         if (err && err.message === 'NO_SLOTS') {
@@ -1680,19 +1685,20 @@ function initTaskSectionModule() {
     });
   }
 
-  // ---------- Task card renderer / one-time fetch ----------
+  // ---------- Task card renderer ----------
   function createTaskCard(jobId, jobData) {
     try {
       const taskContainer = el('task-jobs');
       if (!taskContainer) return;
       const card = document.createElement('div');
       card.className = "flex gap-4 p-4 rounded-2xl shadow-md border border-gray-200 bg-white hover:shadow-lg transition duration-300 mb-4 items-center";
+      card.dataset.jobId = jobId;
       const image = document.createElement('img');
       image.src = jobData.screenshotURL || "https://via.placeholder.com/80";
       image.alt = "Task Preview";
       image.className = "w-20 h-20 rounded-xl object-cover";
       const content = document.createElement('div');
-      content.className = "flex-1";
+      content.className = "flex-1 task-content";
       const title = document.createElement('h2');
       title.textContent = jobData.title || "Untitled Task";
       title.className = "text-lg font-semibold text-gray-800";
@@ -1703,9 +1709,10 @@ function initTaskSectionModule() {
       earn.textContent = `Earn: ₦${jobData.workerEarn || 0}`;
       earn.className = "text-sm text-green-600 font-semibold mt-1";
       const rate = document.createElement('p');
-      rate.className = "text-xs text-gray-500";
+      rate.className = "text-xs text-gray-500 task-rate";
       rate.textContent = "Progress: loading...";
-      const total = jobData.numWorkers || 0;
+      const total = Number(jobData.numWorkers || 0);
+      card.dataset.total = String(total);
 
       (async () => {
         try {
@@ -1718,16 +1725,15 @@ function initTaskSectionModule() {
               const approved = Number(td.approvedWorkers || 0);
               rate.textContent = `Progress: ${filled} / ${total} (approved ${approved})`;
 
-              // If fully approved, remove card (task closed)
               if (total > 0 && approved >= total) { card.remove(); return; }
-
-              // If filled but not fully approved, keep card visible but indicate pending review
               else if (total > 0 && filled >= total && approved < total) {
                 card.classList.add('opacity-90');
-                const note = document.createElement('div');
-                note.textContent = "All slots filled, pending reviews";
-                note.className = "text-xs text-amber-500 mt-1";
-                content.appendChild(note);
+                if (!content.querySelector('.pending-note')) {
+                  const note = document.createElement('div');
+                  note.textContent = "All slots filled, pending reviews";
+                  note.className = "text-xs text-amber-500 mt-1 pending-note";
+                  content.appendChild(note);
+                }
               }
             } else {
               const aprSnap = await firebase.firestore().collection('task_submissions')
@@ -1753,8 +1759,6 @@ function initTaskSectionModule() {
       button.addEventListener('click', async (ev) => {
         try {
           ev.preventDefault();
-          if (!jobId) throw new Error('Missing jobId');
-          if (!jobData || typeof jobData !== 'object') throw new Error('Missing job data');
           await showTaskDetails(jobId, jobData);
         } catch (err) {
           safeError('Failed to open task details for', jobId, err);
@@ -1787,12 +1791,10 @@ function initTaskSectionModule() {
         taskContainer.innerHTML = `<p class="p-4 text-gray-400 text-sm">Firebase not initialized.</p>`;
         return;
       }
-
-      // NOTE: fetching only 'approved' tasks in your original code; keep behavior
+      // original code filtered where('status','==','approved') - keep same behaviour
       const snap = await firebase.firestore().collection('tasks').where('status', '==', 'approved').get();
       const tasks = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       taskContainer.innerHTML = "";
-
       function renderTasks() {
         const keyword = (searchInput && searchInput.value) ? searchInput.value.toLowerCase() : "";
         const selectedCategory = (filterSelect && filterSelect.value) ? filterSelect.value.toLowerCase() : "";
@@ -1806,7 +1808,6 @@ function initTaskSectionModule() {
           })
           .forEach(task => createTaskCard(task.id, task));
       }
-
       if (searchInput) searchInput.addEventListener("input", renderTasks);
       if (filterSelect) filterSelect.addEventListener("change", renderTasks);
       renderTasks();
@@ -1819,9 +1820,8 @@ function initTaskSectionModule() {
     }
   }
 
-  // ---------- Finished tasks UI ----------
+  // ---------- Finished tasks UI (user) ----------
   window.finishedTasksCache = window.finishedTasksCache || [];
-
   async function initFinishedTasksSectionUser() {
     try {
       const btnOpen = el("finishedTaskBtnUser");
@@ -1969,7 +1969,7 @@ function initTaskSectionModule() {
     modal.querySelector(".closeModalUser").addEventListener("click", () => modal.remove());
   }
 
-  // ---------- Expose helpers + init ----------
+  // ---------- Expose small API + start init ----------
   window.TaskProgress = window.TaskProgress || {};
   window.TaskProgress.increaseTaskOccupancy = increaseTaskOccupancy;
   window.TaskProgress.decreaseTaskOccupancy = decreaseTaskOccupancy;
@@ -1983,27 +1983,38 @@ function initTaskSectionModule() {
     return () => clearInterval(iid);
   };
 
-  // Run init after DOM + (best-effort) Firebase ready
+  // ---------- Initial UI bindings (non-blocking) ----------
   (async () => {
     const firebaseReady = await waitForReady(4000);
-    if (!firebaseReady) safeWarn('Firebase not detected or slow to initialize — module will still run but Firestore features will be disabled until firebase loads.');
+    if (!firebaseReady) safeWarn('Firebase not detected or slow to initialize — module will still run but Firestore features disabled until firebase loads.');
+
     try {
+      // Initialize finished tasks UI handlers
       initFinishedTasksSectionUser();
+      // Load task cards if the placeholder container exists
       fetchTasksOnce().catch(e => safeWarn('fetchTasksOnce failed', e));
     } catch (err) {
       safeWarn('module init failed', err);
     }
   })();
 
+} // end initTaskSectionModule
 
+// -------------------------
+// Public initializer
+// -------------------------
 window.initTaskSection = function() {
-  if (window.__TASK_SECTION_INITIALIZED__) return;
-  window.__TASK_SECTION_INITIALIZED__ = true;
-  initTaskSectionModule();
+  // idempotent
+  if (window.__TASK_SECTION_INITIALIZED__) {
+    safeLog('[TASK] initTaskSection called — already initialized');
+    return;
+  }
+  try {
+    initTaskSectionModule();
+  } catch (e) {
+    console.error('[TASK] initTaskSection error', e);
+  }
 };
-	
-})(); // end module
-
 
 
 	  
