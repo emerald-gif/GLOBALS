@@ -4233,20 +4233,19 @@ async function processReferralCreditTx(referredUserDocId, referrerUid) {
       };
 
       // Transaction: re-read and deduct balance inside transaction to avoid races
-      // 1️⃣ Deduct balance safely inside transaction
-await db.runTransaction(async (transaction) => {
-  const userSnap = await transaction.get(userDocRef);
-  if (!userSnap.exists) throw new Error("User not found during transaction");
-
-  const bal = userSnap.data().balance || 0;
-  if (bal < total) throw new Error("Insufficient balance during transaction");
-
-  transaction.update(userDocRef, { balance: bal - total });
-});
-
-// 2️⃣ Now create the task document separately (outside the transaction)
-const taskRef = db.collection("tasks").doc();
-await taskRef.set(jobData);
+    await db.runTransaction(async (transaction) => {
+        const userSnap = await transaction.get(userDocRef);
+        if (!userSnap.exists) {
+          throw new Error("User not found during transaction");
+        }
+        const bal = (userSnap.data().balance || 0);
+        if (bal < total) {
+          throw new Error("Insufficient balance during transaction");
+        }
+        transaction.update(userDocRef, { balance: bal - total });
+        const taskRef = db.collection("tasks").doc();
+        transaction.set(taskRef, jobData);
+      });
 
       alert("✅ Task successfully posted! Awaiting Admins Approval.Check Jobs in MyJobs section");
       // reset form in-place (no reload)
