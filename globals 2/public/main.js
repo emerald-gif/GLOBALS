@@ -1216,12 +1216,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
 	
 	
-	
-	//INSTALL AND EARN FUNCTION 
-
-
-
-// main.js — Task module (combined, robust, drop-in replacement)
+	// INSTALL AND EARN FUNCTION// main.js — Task module (combined, robust, drop-in replacement)
 (function initTaskSectionModule() {
   'use strict';
 
@@ -1241,23 +1236,17 @@ firebase.auth().onAuthStateChanged(async (user) => {
       .replace(/'/g, '&#39;');
   }
 
-  // ---------- Cloudinary uploader (replace with your details) ----------
-  // Make sure this is available before any upload attempt.
-  
   // ---------- DOM helpers ----------
   function el(id) { return document.getElementById(id); }
   function hasFirebase() { return typeof firebase !== 'undefined' && firebase.firestore && firebase.auth; }
 
   // ---------- Wait for Firebase & DOM ----------
   async function waitForReady(timeoutMs = 5000) {
-    // Wait for DOMContentLoaded
     if (document.readyState === 'loading') {
       await new Promise(res => document.addEventListener('DOMContentLoaded', res, { once: true }));
     }
-    // Wait for firebase.auth to be available (best-effort)
     const start = Date.now();
     while (!hasFirebase() && Date.now() - start < timeoutMs) {
-      // eslint-disable-next-line no-await-in-loop
       await new Promise(r => setTimeout(r, 100));
     }
     return hasFirebase();
@@ -1273,7 +1262,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
         done = true;
         resolve(firebase.auth().currentUser || null);
       }, timeout);
-
       const unsub = firebase.auth().onAuthStateChanged((user) => {
         if (done) return;
         done = true;
@@ -1346,11 +1334,11 @@ firebase.auth().onAuthStateChanged(async (user) => {
   }
 
   // ---------- Admin status handler (transactional) ----------
+  // Robust: updates filledWorkers and approvedWorkers correctly on status changes
   async function handleSubmissionStatusChange(submissionId, newStatus) {
     if (!submissionId) throw new Error('submissionId required');
     if (typeof newStatus !== 'string') throw new Error('newStatus string required');
     if (!hasFirebase()) throw new Error('Firebase not initialized');
-
     const db = firebase.firestore();
     const subRef = db.collection('task_submissions').doc(submissionId);
     await db.runTransaction(async (tx) => {
@@ -1364,16 +1352,21 @@ firebase.auth().onAuthStateChanged(async (user) => {
       const taskId = sub.taskId;
       if (!taskId) throw new Error('Submission missing taskId');
 
-      const prevCountsInOccupancy = (prev === 'on review' || prev === 'approved') ? 1 : 0;
-      const nextCountsInOccupancy = (next === 'on review' || next === 'approved') ? 1 : 0;
-      const deltaFilled = nextCountsInOccupancy - prevCountsInOccupancy;
+      // Correct delta logic:
+      // - filled counts any submission that is 'on review' OR 'approved'
+      // - approved counts only 'approved'
+      const prevIsCounted = ['on review', 'approved'].includes(prev);
+      const nextIsCounted = ['on review', 'approved'].includes(next);
+      const deltaFilled = (nextIsCounted ? 1 : 0) - (prevIsCounted ? 1 : 0);
 
       const prevApproved = (prev === 'approved') ? 1 : 0;
       const nextApproved = (next === 'approved') ? 1 : 0;
       const deltaApproved = nextApproved - prevApproved;
 
+      // Update submission document
       tx.update(subRef, { status: newStatus });
 
+      // Update task counters
       const taskRef = db.collection('tasks').doc(taskId);
       const taskSnap = await tx.get(taskRef);
       if (!taskSnap.exists) {
@@ -1422,19 +1415,19 @@ firebase.auth().onAuthStateChanged(async (user) => {
     const fullScreen = document.createElement('div');
     fullScreen.className = "fixed inset-0 bg-white z-50 overflow-y-auto p-6";
     const proofCount = jobData.proofFileCount || 1;
-
     const safeTitle = escapeHtml(jobData.title || 'Untitled Task');
     const safeCategory = escapeHtml(jobData.category || '');
     const safeSub = escapeHtml(jobData.subCategory || '');
     const safeDesc = escapeHtml(jobData.description || 'No description provided');
     const safeProofText = escapeHtml(jobData.proof || 'Provide the necessary screenshot or details.');
+    const screenshot = escapeHtml(jobData.screenshotURL || 'https://via.placeholder.com/400');
 
     fullScreen.innerHTML = `
       <div class="max-w-2xl mx-auto space-y-6">
         <button id="closeTaskBtn" class="text-blue-600 font-bold text-sm underline">← Back to Tasks</button>
         <h1 class="text-2xl font-bold text-gray-800">${safeTitle}</h1>
         <p class="text-sm text-gray-500">${safeCategory} • ${safeSub}</p>
-        <img src="${escapeHtml(jobData.screenshotURL || 'https://via.placeholder.com/400')}" alt="Task Preview" class="w-full h-64 object-cover rounded-xl border" />
+        <img src="${screenshot}" alt="Task Preview" class="w-full h-64 object-cover rounded-xl border" />
         <div>
           <h2 class="text-lg font-semibold text-gray-800 mb-2">Task Description</h2>
           <p class="text-gray-700 text-sm whitespace-pre-line">${safeDesc}</p>
@@ -1443,7 +1436,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
           <h2 class="text-lg font-semibold text-gray-800 mb-2">Proof Required</h2>
           <p class="text-sm text-gray-700">${safeProofText}</p>
         </div>
-
         <div id="proofSection" class="mt-6">
           <h3 class="text-base font-semibold text-gray-800 mb-3">Submit Proof</h3>
           <div id="proofInputs">${generateProofUploadFields(proofCount)}</div>
@@ -1455,7 +1447,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
         </div>
       </div>
     `;
-
     document.body.appendChild(fullScreen);
     fullScreen.querySelector('#closeTaskBtn')?.addEventListener('click', () => fullScreen.remove());
 
@@ -1471,17 +1462,26 @@ firebase.auth().onAuthStateChanged(async (user) => {
     }
 
     const submitArea = fullScreen.querySelector('#proofSection');
+
+    // If all approved => closed and show user's submission if exists
     if (total > 0 && approved >= total) {
       submitArea.innerHTML = `<div style="padding:12px;background:#f8fafc;border-radius:12px;text-align:center"><strong>All slots fully approved. This job is closed.</strong></div>`;
       await showUserSubmissionIfExists(jobId, fullScreen);
       return;
     }
-    if (total > 0 && filled >= total) {
-      submitArea.innerHTML = `<div style="padding:12px;background:#fffbeb;border-radius:12px;text-align:center"><strong>No open submission slots right now. Please check back later.</strong></div>`;
+
+    // If slots are filled but not all approved => no new submissions allowed, but keep job visible
+    if (total > 0 && filled >= total && approved < total) {
+      submitArea.innerHTML = `
+        <div style="padding:12px;background:#fffbeb;border-radius:12px;text-align:center">
+          <strong>All slots are filled (pending reviews). You can view your submission but cannot submit new proofs right now.</strong>
+        </div>
+      `;
       await showUserSubmissionIfExists(jobId, fullScreen);
       return;
     }
 
+    // Otherwise allow submit flow (or show existing submission)
     const user = await waitForAuthReady();
     if (!user) {
       const btn = fullScreen.querySelector('#taskSubmitBtn');
@@ -1496,7 +1496,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
           .where('userId','==', user.uid)
           .limit(1)
           .get();
-
         if (!existingSnap.empty) {
           const s = existingSnap.docs[0].data();
           replaceSubmitAreaWithSubmitted(s, submitArea);
@@ -1534,7 +1533,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
     const proofs = (sub.proofImages || []).map(u => `<img src="${escapeHtml(u)}" style="width:100%;max-height:220px;object-fit:contain;border-radius:8px;margin-bottom:8px">`).join('');
     const note = sub.proofText ? `<div style="margin-top:8px;color:#374151"><strong>Note:</strong> ${escapeHtml(sub.proofText)}</div>` : '';
     const status = escapeHtml(sub.status || 'on review');
-
     const html = `
       <div style="background:#f8fafc;padding:14px;border-radius:12px;text-align:center">
         <div style="color:#16a34a;font-weight:600;margin-bottom:6px">✅ Your submission</div>
@@ -1555,26 +1553,23 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
     submitBtn.addEventListener('click', async () => {
       submitBtn.disabled = true;
-      const statusEl = fullScreen.querySelector('#submitStatus');
-      if (statusEl) statusEl.textContent = 'Checking...';
-
       try {
         const user = await waitForAuthReady();
-        if (!user) { alert('Please log in to submit task.'); submitBtn.disabled = false; if (statusEl) statusEl.textContent=''; return; }
+        if (!user) { alert('Please log in to submit task.'); submitBtn.disabled = false; return; }
 
-        // duplicate check pre
+        // Duplicate check pre
         if (hasFirebase()) {
           const pre = await firebase.firestore().collection('task_submissions')
             .where('taskId','==', jobId)
             .where('userId','==', user.uid)
             .limit(1)
             .get();
-          if (!pre.empty) { alert('You have already submitted this task.'); submitBtn.disabled = false; if (statusEl) statusEl.textContent=''; return; }
+          if (!pre.empty) { alert('You have already submitted this task.'); submitBtn.disabled = false; return; }
         }
 
         const fileInputs = Array.from(fullScreen.querySelectorAll('input[type="file"]'));
         const anyFile = fileInputs.some(i => i.files && i.files[0]);
-        if (!anyFile) { alert('Please upload at least one proof image.'); submitBtn.disabled = false; if (statusEl) statusEl.textContent=''; return; }
+        if (!anyFile) { alert('Please upload at least one proof image.'); submitBtn.disabled = false; return; }
 
         // cheap pre-check slots
         let totalSlots = Number(jobData.numWorkers || 0);
@@ -1590,10 +1585,10 @@ firebase.auth().onAuthStateChanged(async (user) => {
           }
         }
 
+        // If filled >= totalSlots and not all approved => no new submissions
         if (totalSlots > 0 && curFilled >= totalSlots) {
           alert('No open submission slots right now. Please check back later.');
           submitBtn.disabled = false;
-          if (statusEl) statusEl.textContent = '';
           return;
         }
 
@@ -1602,7 +1597,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
         for (let i = 0; i < fileInputs.length; i++) {
           const fEl = fileInputs[i];
           if (!fEl.files || !fEl.files[0]) continue;
-          if (statusEl) statusEl.textContent = `Uploading ${uploaded.length+1}...`;
+          // expect uploadToCloudinary(file) to be defined elsewhere
           if (typeof uploadToCloudinary !== 'function') throw new Error('uploadToCloudinary(file) not available');
           const url = await uploadToCloudinary(fEl.files[0]);
           uploaded.push(url);
@@ -1611,15 +1606,13 @@ firebase.auth().onAuthStateChanged(async (user) => {
         const payload = {
           taskId: jobId,
           userId: user.uid,
-          proofImages: uploaded, // array of strings only
+          proofImages: uploaded,
           proofText: (fullScreen.querySelector('#taskProofNote')?.value || '').trim(),
           status: 'on review',
           workerEarn: jobData.workerEarn || 0
         };
 
-        // ensure Firebase exists for transactions
         if (!hasFirebase()) throw new Error('Firebase not initialized');
-
         const db = firebase.firestore();
         const submissionsCol = db.collection('task_submissions');
         const newSubRef = submissionsCol.doc();
@@ -1631,10 +1624,12 @@ firebase.auth().onAuthStateChanged(async (user) => {
           const curFilledTx = Number(tData.filledWorkers || 0);
           const totalSlotsTx = Number(jobData.numWorkers || (tData.numWorkers || 0)) || 0;
 
+          // If totalSlotsTx > 0 and already full, block the submission
           if (totalSlotsTx > 0 && curFilledTx >= totalSlotsTx) {
             throw new Error('NO_SLOTS');
           }
 
+          // Duplicate check inside transaction (race-safe)
           const preQuerySnapshot = await tx.get(
             db.collection('task_submissions')
               .where('taskId','==', jobId)
@@ -1678,11 +1673,9 @@ firebase.auth().onAuthStateChanged(async (user) => {
         } else if (err && err.message === 'ALREADY_SUBMITTED') {
           alert('You have already submitted this task.');
         } else {
-          // Firestore type errors (like tried to write File) will show here; be explicit
           alert('❗ Failed to submit task: ' + (err && err.message ? err.message : String(err)));
         }
         submitBtn.disabled = false;
-        if (statusEl) statusEl.textContent = '';
       }
     });
   }
@@ -1692,34 +1685,26 @@ firebase.auth().onAuthStateChanged(async (user) => {
     try {
       const taskContainer = el('task-jobs');
       if (!taskContainer) return;
-
       const card = document.createElement('div');
       card.className = "flex gap-4 p-4 rounded-2xl shadow-md border border-gray-200 bg-white hover:shadow-lg transition duration-300 mb-4 items-center";
-
       const image = document.createElement('img');
       image.src = jobData.screenshotURL || "https://via.placeholder.com/80";
       image.alt = "Task Preview";
       image.className = "w-20 h-20 rounded-xl object-cover";
-
       const content = document.createElement('div');
       content.className = "flex-1";
-
       const title = document.createElement('h2');
       title.textContent = jobData.title || "Untitled Task";
       title.className = "text-lg font-semibold text-gray-800";
-
       const meta = document.createElement('p');
       meta.className = "text-sm text-gray-500 mt-1";
       meta.textContent = `${jobData.category || ""} • ${jobData.subCategory || ""}`;
-
       const earn = document.createElement('p');
       earn.textContent = `Earn: ₦${jobData.workerEarn || 0}`;
       earn.className = "text-sm text-green-600 font-semibold mt-1";
-
       const rate = document.createElement('p');
       rate.className = "text-xs text-gray-500";
       rate.textContent = "Progress: loading...";
-
       const total = jobData.numWorkers || 0;
 
       (async () => {
@@ -1732,7 +1717,18 @@ firebase.auth().onAuthStateChanged(async (user) => {
               const filled = Number(td.filledWorkers || 0);
               const approved = Number(td.approvedWorkers || 0);
               rate.textContent = `Progress: ${filled} / ${total} (approved ${approved})`;
+
+              // If fully approved, remove card (task closed)
               if (total > 0 && approved >= total) { card.remove(); return; }
+
+              // If filled but not fully approved, keep card visible but indicate pending review
+              else if (total > 0 && filled >= total && approved < total) {
+                card.classList.add('opacity-90');
+                const note = document.createElement('div');
+                note.textContent = "All slots filled, pending reviews";
+                note.className = "text-xs text-amber-500 mt-1";
+                content.appendChild(note);
+              }
             } else {
               const aprSnap = await firebase.firestore().collection('task_submissions')
                 .where('taskId', '==', jobId)
@@ -1771,7 +1767,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
       content.appendChild(earn);
       content.appendChild(rate);
       content.appendChild(button);
-
       card.appendChild(image);
       card.appendChild(content);
       taskContainer.appendChild(card);
@@ -1787,14 +1782,13 @@ firebase.auth().onAuthStateChanged(async (user) => {
       if (!taskContainer) return;
       const searchInput = el('taskSearch');
       const filterSelect = el('taskCategoryFilter');
-
       taskContainer.innerHTML = `<p class="p-4 text-gray-400 text-sm">Loading tasks...</p>`;
-
       if (!hasFirebase()) {
         taskContainer.innerHTML = `<p class="p-4 text-gray-400 text-sm">Firebase not initialized.</p>`;
         return;
       }
 
+      // NOTE: fetching only 'approved' tasks in your original code; keep behavior
       const snap = await firebase.firestore().collection('tasks').where('status', '==', 'approved').get();
       const tasks = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       taskContainer.innerHTML = "";
@@ -1802,9 +1796,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
       function renderTasks() {
         const keyword = (searchInput && searchInput.value) ? searchInput.value.toLowerCase() : "";
         const selectedCategory = (filterSelect && filterSelect.value) ? filterSelect.value.toLowerCase() : "";
-
         taskContainer.innerHTML = "";
-
         tasks
           .filter(task => {
             const taskCategory = (task.category || "").toLowerCase();
@@ -1865,18 +1857,14 @@ firebase.auth().onAuthStateChanged(async (user) => {
       listEl.innerHTML = `<p class="text-center text-gray-500">Loading...</p>`;
       const snap = await firebase.firestore().collection("task_submissions").where("userId","==", uid).get();
       window.finishedTasksCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
       window.finishedTasksCache.sort((a,b) => {
         const t1 = a.submittedAt?.toDate?.() || new Date(0);
         const t2 = b.submittedAt?.toDate?.() || new Date(0);
         return t2 - t1;
       });
-
       const taskIds = [...new Set(window.finishedTasksCache.map(s => s.taskId).filter(Boolean))];
       await Promise.all(taskIds.map(id => reconcileTaskCounters(id).catch(()=>null)));
-
       renderFinishedTasksUser();
-
       let pending = window.finishedTasksCache.filter(d => (d.status || '').toLowerCase() === "on review").length;
       let approved = window.finishedTasksCache.filter(d => (d.status || '').toLowerCase() === "approved").length;
       if (pendingCountEl) pendingCountEl.textContent = pending;
@@ -1894,20 +1882,17 @@ firebase.auth().onAuthStateChanged(async (user) => {
     const approvedCountEl = el("approvedCountUser");
     if (!listEl) return;
     listEl.innerHTML = "";
-
     if (!window.finishedTasksCache.length) {
       listEl.innerHTML = `<p class="text-center text-gray-500">No finished tasks yet.</p>`;
       if (pendingCountEl) pendingCountEl.textContent = "0";
       if (approvedCountEl) approvedCountEl.textContent = "0";
       return;
     }
-
     let pending = 0, approved = 0;
     for (const data of window.finishedTasksCache) {
       const statusKey = (data.status || '').toLowerCase();
       if (statusKey === "on review") pending++;
       if (statusKey === "approved") approved++;
-
       const jobTitle = data.cachedTitle || data.taskTitle || "Loading...";
       const card = document.createElement("div");
       card.className = "p-4 bg-white shadow rounded-xl flex items-center justify-between mb-3";
@@ -1931,14 +1916,11 @@ firebase.auth().onAuthStateChanged(async (user) => {
       `;
       listEl.appendChild(card);
     }
-
     if (pendingCountEl) pendingCountEl.textContent = pending;
     if (approvedCountEl) approvedCountEl.textContent = approved;
-
     listEl.querySelectorAll(".details-btn-user").forEach(btn => {
       btn.addEventListener("click", () => showTaskSubmissionDetailsUser(btn.dataset.id));
     });
-
     preloadTaskTitles();
   }
 
@@ -1948,7 +1930,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
       if (!ids.length || !hasFirebase()) return;
       for (let i=0;i<ids.length;i+=10) {
         const slice = ids.slice(i, i+10);
-        const snap = await firebase.firestore().collection("tasks").where(firebase.firestore.FieldPath.documentId(), "in", slice).get();
+        const snap = await firebase.firestore().collection('tasks').where(firebase.firestore.FieldPath.documentId(), "in", slice).get();
         for (const d of snap.docs) {
           const task = { id: d.id, ...d.data() };
           window.finishedTasksCache.forEach(sub => { if (sub.taskId === task.id) sub.cachedTitle = task.title || 'Untitled Task'; });
@@ -1961,9 +1943,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
   async function showTaskSubmissionDetailsUser(submissionId) {
     const sub = window.finishedTasksCache.find(d => d.id === submissionId);
     if (!sub) return alert("Submission not found in memory. Reload page.");
-
     const title = sub.cachedTitle || "Untitled Task";
-
     const modal = document.createElement("div");
     modal.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50";
     modal.innerHTML = `
@@ -2007,12 +1987,8 @@ firebase.auth().onAuthStateChanged(async (user) => {
   (async () => {
     const firebaseReady = await waitForReady(4000);
     if (!firebaseReady) safeWarn('Firebase not detected or slow to initialize — module will still run but Firestore features will be disabled until firebase loads.');
-
-    // Minimal safe init: only call if DOM elements exist
     try {
-      // Init UI listeners
       initFinishedTasksSectionUser();
-      // Fetch tasks (if possible)
       fetchTasksOnce().catch(e => safeWarn('fetchTasksOnce failed', e));
     } catch (err) {
       safeWarn('module init failed', err);
@@ -2020,8 +1996,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
   })();
 
 })(); // end module
-
-
 
 
 
