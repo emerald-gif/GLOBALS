@@ -2474,7 +2474,7 @@ function closeGlobalsModal() {
 
   <!-- back -->
   <button onclick="activateTab && activateTab('dashboard')" 
-    class="flex items-center gap-2 text-gray-300 hover:text-white font-medium transition-colors">
+    class="flex items-center gap-2 text-blue-500 hover:text-white font-medium transition-colors">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
     </svg>
@@ -2540,133 +2540,15 @@ function closeGlobalsModal() {
 
   <!-- transactions -->
   <div>
-    <button id="transactions-screen" onclick="openTransactions()"
+    <div id="transactions-screen"
       class="w-full py-3 rounded-xl bg-white text-blue-700 font-semibold shadow-sm hover:bg-blue-50 transition">
       View Transaction History
-    </button>
+    </div>
   </div>
 </div>
 
 <!-- ===== scripts ===== -->
-<script>
-  // Ensure Lucide icons (if used) are instantiated
-  try { if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons(); } catch(e){/*ignore*/}
 
-  // --- Airtime / Data / Transactions handlers ---
-  function airtimeOpen () {
-    // prefer native tab system
-    if (typeof activateTab === 'function') {
-      activateTab('airtimeSection'); // your airtime tab id
-      return;
-    }
-    // fallback: open a simple overlay/modal if no activateTab
-    showFallbackOverlay('Airtime purchase coming soon — implement `activateTab(\"airtimeSection\")`');
-  }
-
-  function dataOpen () {
-    if (typeof activateTab === 'function') {
-      activateTab('dataSection'); // your data tab id
-      return;
-    }
-    showFallbackOverlay('Data purchase coming soon — implement `activateTab(\"dataSection\")`');
-  }
-
-  function openTransactions () {
-    if (typeof activateTab === 'function') {
-      activateTab('transactionsSection'); // your transactions tab id
-      return;
-    }
-    showFallbackOverlay('Transactions coming soon — implement `activateTab(\"transactionsSection\")`');
-  }
-
-  // small helper fallback overlay
-  function showFallbackOverlay (msg) {
-    const el = document.createElement('div');
-    el.style.position = 'fixed';
-    el.style.left = '50%';
-    el.style.top = '20%';
-    el.style.transform = 'translateX(-50%)';
-    el.style.background = 'white';
-    el.style.color = '#0b5cff';
-    el.style.padding = '14px 18px';
-    el.style.borderRadius = '12px';
-    el.style.boxShadow = '0 8px 30px rgba(11,92,255,0.12)';
-    el.style.zIndex = 9999;
-    el.textContent = msg;
-    document.body.appendChild(el);
-    setTimeout(() => { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; }, 2200);
-    setTimeout(() => el.remove(), 2600);
-  }
-
-  // --- Ensure your __balanceCtrl is started and balance element exists ---
-  (function ensureBalanceController() {
-    function fallbackFetchOnce() {
-      // If firebase is available, try to read once and render
-      try {
-        if (!window.firebase || !firebase.auth || !firebase.firestore) return;
-        const user = firebase.auth().currentUser;
-        if (!user) {
-          // wait for auth
-          firebase.auth().onAuthStateChanged(u => { if (u) fetchAndSet(u.uid); });
-          return;
-        }
-        fetchAndSet(user.uid);
-      } catch (err) {
-        console.warn('Fallback balance fetch failed', err);
-      }
-
-      function fetchAndSet(uid) {
-        firebase.firestore().collection('users').doc(uid).get()
-          .then(doc => {
-            if (!doc.exists) return;
-            const val = doc.data().balance ?? 0;
-            animateSetBalance(Number(val));
-          })
-          .catch(e => console.error('Error fetch balance fallback:', e));
-      }
-    }
-
-    function animateSetBalance(n) {
-      const el = document.getElementById('balance');
-      if (!el) return;
-      // reuse your fmt via localized formatting with 2 decimals
-      const fmt = (v) => '₦' + (Number(v) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      // gentle animation
-      const start = performance.now();
-      const from = (el.dataset._last ? Number(el.dataset._last) : 0);
-      const to = Number(n || 0);
-      const dur = 700;
-      cancelAnimationFrame(el.__rafId);
-      const step = (t) => {
-        const p = Math.min((t - start) / dur, 1);
-        const eased = 1 - Math.pow(1 - p, 3);
-        const val = from + (to - from) * eased;
-        el.textContent = fmt(val);
-        if (p < 1) el.__rafId = requestAnimationFrame(step);
-        else el.dataset._last = String(to);
-      };
-      el.__rafId = requestAnimationFrame(step);
-    }
-
-    // if your __balanceCtrl exists, ensure it started and balance element present
-    if (window.__balanceCtrl && typeof window.__balanceCtrl.start === 'function') {
-      // give it a small tick to initialize DOM-first
-      setTimeout(() => {
-        try {
-          window.__balanceCtrl.init && window.__balanceCtrl.init();
-          window.__balanceCtrl.start && window.__balanceCtrl.start();
-        } catch (e) { console.warn('balanceCtrl start failed', e); }
-      }, 60);
-    } else {
-      // fallback: try to fetch once after DOM ready
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', fallbackFetchOnce, { once: true });
-      } else {
-        fallbackFetchOnce();
-      }
-    }
-  })();
-</script>
 
 
 
