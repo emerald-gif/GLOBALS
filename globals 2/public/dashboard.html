@@ -2469,66 +2469,204 @@ function closeGlobalsModal() {
 <!-- 🔵 PAYMENT SECTION -->
 
 
-<!-- 💸 Payment Section -->
-<div id="payment" class="tab-section hidden max-w-md mx-auto px-5 py-8 space-y-8">
+<!-- ===== payment section (drop-in) ===== -->
+<div id="payment" class="tab-section hidden max-w-md mx-auto px-5 py-8 space-y-6">
 
-  <!-- 🔙 Back -->
-  <button onclick="activateTab('dashboard')" 
-    class="flex items-center gap-2 text-gray-500 hover:text-blue-600 font-medium transition-colors">
+  <!-- back -->
+  <button onclick="activateTab && activateTab('dashboard')" 
+    class="flex items-center gap-2 text-gray-300 hover:text-white font-medium transition-colors">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
     </svg>
     Back
   </button>
 
-  <!-- 🌌 Balance Card -->
+  <!-- balance card -->
   <div class="relative rounded-3xl overflow-hidden shadow-lg bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white text-center py-12">
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent)]"></div>
-    
-    <div class="relative space-y-2">
-      <h2 id="balance" data-value="0" class="text-4xl font-extrabold tracking-tight">₦0.00</h2>
-      <p class="text-blue-100 text-sm">Available Balance</p>
+    <div class="absolute inset-0 pointer-events-none"
+         style="background: radial-gradient(circle at 25% 20%, rgba(255,255,255,0.06), transparent 20%); mix-blend-mode: overlay;"></div>
+
+    <div class="relative">
+      <!-- IMPORTANT: id="balance" used by __balanceCtrl -->
+      <h2 id="balance" data-value="0" class="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight">₦0.00</h2>
+      <p class="text-blue-100 text-sm mt-1">Available Balance</p>
     </div>
 
     <div class="relative flex justify-center gap-4 mt-6">
-      <button onclick="activateTab('depositSection')" 
-        class="px-6 py-3 rounded-full bg-white text-blue-700 font-semibold shadow hover:bg-blue-50 transition">
+      <button id="btn-deposit" onclick="activateTab && activateTab('depositSection')"
+        class="px-6 py-3 rounded-full bg-white text-blue-700 font-semibold shadow hover:bg-blue-50 transform transition">
         Deposit
       </button>
-      <button onclick="activateTab('withdrawFundsSection')" 
-        class="px-6 py-3 rounded-full bg-blue-950/40 border border-white/30 text-white font-semibold shadow hover:bg-blue-950/60 transition">
+
+      <button id="btn-withdraw" onclick="activateTab && activateTab('withdrawFundsSection')"
+        class="px-6 py-3 rounded-full bg-white/10 border border-white/20 text-white font-semibold shadow hover:bg-white/5 transition">
         Withdraw
       </button>
     </div>
   </div>
 
-  <!-- ⚡ Other Actions -->
+  <!-- quick actions (Airtime / Data) -->
   <div class="grid grid-cols-2 gap-4">
     <!-- Airtime -->
-    <button id="airtime-screen"
-      class="flex flex-col items-center justify-center p-4 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-200 text-blue-800 font-semibold shadow-inner hover:shadow-md transition">
-      <i data-lucide="phone" class="w-6 h-6 mb-2"></i>
-      Airtime Purchase
-    </button>
+    <div id="airtime-card" onclick="airtimeOpen()" role="button" tabindex="0"
+         class="flex flex-col items-center cursor-pointer group">
+      <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
+                  bg-white border border-gray-100/20
+                  shadow-md group-hover:shadow-lg 
+                  group-hover:scale-110 transition-all duration-300">
+        <img src="AIRTIME1.jpg" width="24" height="24"
+             class="w-6 h-6 object-contain transition-opacity duration-200 opacity-0"
+             alt="Airtime" loading="eager" decoding="sync"
+             onload="this.style.opacity='1'">
+      </div>
+      <p class="mt-2 text-sm font-semibold text-blue-100">Airtime</p>
+    </div>
 
     <!-- Data -->
-    <button id="data-screen"
-      class="flex flex-col items-center justify-center p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-200 text-blue-800 font-semibold shadow-inner hover:shadow-md transition">
-      <i data-lucide="wifi" class="w-6 h-6 mb-2"></i>
-      Data Purchase
-    </button>
+    <div id="data-card" onclick="dataOpen()" role="button" tabindex="0"
+         class="flex flex-col items-center cursor-pointer group">
+      <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
+                  bg-white border border-gray-100/20
+                  shadow-md group-hover:shadow-lg 
+                  group-hover:scale-110 transition-all duration-300">
+        <img src="DATA1.jpg" width="24" height="24"
+             class="w-6 h-6 object-contain transition-opacity duration-200 opacity-0"
+             alt="Data" loading="eager" decoding="sync"
+             onload="this.style.opacity='1'">
+      </div>
+      <p class="mt-2 text-sm font-semibold text-blue-100">Data</p>
+    </div>
   </div>
 
-  <!-- 🧾 Transactions -->
+  <!-- transactions -->
   <div>
-    <button id="transactions-screen"
-      class="w-full py-3 rounded-xl bg-white border border-gray-200 text-gray-900 font-semibold shadow-sm hover:bg-gray-50 transition">
+    <button id="transactions-screen" onclick="openTransactions()"
+      class="w-full py-3 rounded-xl bg-white text-blue-700 font-semibold shadow-sm hover:bg-blue-50 transition">
       View Transaction History
     </button>
   </div>
 </div>
 
+<!-- ===== scripts ===== -->
+<script>
+  // Ensure Lucide icons (if used) are instantiated
+  try { if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons(); } catch(e){/*ignore*/}
 
+  // --- Airtime / Data / Transactions handlers ---
+  function airtimeOpen () {
+    // prefer native tab system
+    if (typeof activateTab === 'function') {
+      activateTab('airtimeSection'); // your airtime tab id
+      return;
+    }
+    // fallback: open a simple overlay/modal if no activateTab
+    showFallbackOverlay('Airtime purchase coming soon — implement `activateTab(\"airtimeSection\")`');
+  }
+
+  function dataOpen () {
+    if (typeof activateTab === 'function') {
+      activateTab('dataSection'); // your data tab id
+      return;
+    }
+    showFallbackOverlay('Data purchase coming soon — implement `activateTab(\"dataSection\")`');
+  }
+
+  function openTransactions () {
+    if (typeof activateTab === 'function') {
+      activateTab('transactionsSection'); // your transactions tab id
+      return;
+    }
+    showFallbackOverlay('Transactions coming soon — implement `activateTab(\"transactionsSection\")`');
+  }
+
+  // small helper fallback overlay
+  function showFallbackOverlay (msg) {
+    const el = document.createElement('div');
+    el.style.position = 'fixed';
+    el.style.left = '50%';
+    el.style.top = '20%';
+    el.style.transform = 'translateX(-50%)';
+    el.style.background = 'white';
+    el.style.color = '#0b5cff';
+    el.style.padding = '14px 18px';
+    el.style.borderRadius = '12px';
+    el.style.boxShadow = '0 8px 30px rgba(11,92,255,0.12)';
+    el.style.zIndex = 9999;
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; }, 2200);
+    setTimeout(() => el.remove(), 2600);
+  }
+
+  // --- Ensure your __balanceCtrl is started and balance element exists ---
+  (function ensureBalanceController() {
+    function fallbackFetchOnce() {
+      // If firebase is available, try to read once and render
+      try {
+        if (!window.firebase || !firebase.auth || !firebase.firestore) return;
+        const user = firebase.auth().currentUser;
+        if (!user) {
+          // wait for auth
+          firebase.auth().onAuthStateChanged(u => { if (u) fetchAndSet(u.uid); });
+          return;
+        }
+        fetchAndSet(user.uid);
+      } catch (err) {
+        console.warn('Fallback balance fetch failed', err);
+      }
+
+      function fetchAndSet(uid) {
+        firebase.firestore().collection('users').doc(uid).get()
+          .then(doc => {
+            if (!doc.exists) return;
+            const val = doc.data().balance ?? 0;
+            animateSetBalance(Number(val));
+          })
+          .catch(e => console.error('Error fetch balance fallback:', e));
+      }
+    }
+
+    function animateSetBalance(n) {
+      const el = document.getElementById('balance');
+      if (!el) return;
+      // reuse your fmt via localized formatting with 2 decimals
+      const fmt = (v) => '₦' + (Number(v) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      // gentle animation
+      const start = performance.now();
+      const from = (el.dataset._last ? Number(el.dataset._last) : 0);
+      const to = Number(n || 0);
+      const dur = 700;
+      cancelAnimationFrame(el.__rafId);
+      const step = (t) => {
+        const p = Math.min((t - start) / dur, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+        const val = from + (to - from) * eased;
+        el.textContent = fmt(val);
+        if (p < 1) el.__rafId = requestAnimationFrame(step);
+        else el.dataset._last = String(to);
+      };
+      el.__rafId = requestAnimationFrame(step);
+    }
+
+    // if your __balanceCtrl exists, ensure it started and balance element present
+    if (window.__balanceCtrl && typeof window.__balanceCtrl.start === 'function') {
+      // give it a small tick to initialize DOM-first
+      setTimeout(() => {
+        try {
+          window.__balanceCtrl.init && window.__balanceCtrl.init();
+          window.__balanceCtrl.start && window.__balanceCtrl.start();
+        } catch (e) { console.warn('balanceCtrl start failed', e); }
+      }, 60);
+    } else {
+      // fallback: try to fetch once after DOM ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fallbackFetchOnce, { once: true });
+      } else {
+        fallbackFetchOnce();
+      }
+    }
+  })();
+</script>
 
 
 
