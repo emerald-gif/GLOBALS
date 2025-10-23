@@ -2867,13 +2867,7 @@ let isUploadingProof = false;
 const SUBMIT_KEY = "whatsappTaskSubmitted"; // 🔑 localStorage key
 
 
-function copyWhatsappMessage() {
-  const msg = document.getElementById("whatsapp-text").innerText;
-  navigator.clipboard.writeText(msg).then(() => {
-    alert("📋 Message copied! Paste it in 3 WhatsApp groups.");
-  });
-}
-	  
+
 async function handleProofUpload(input, previewId) {
   const file = input.files && input.files[0];
   const previewEl = document.getElementById(previewId);
