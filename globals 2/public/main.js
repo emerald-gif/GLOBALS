@@ -2016,28 +2016,45 @@ window.initTaskSection = function() {
 
   /* ---------- Job Card (with category + rate) ---------- */
   function makeJobCard(job, occupancy = 0, approved = 0) {
-    const wrap = document.createElement('div');
-    wrap.className = 'aff2-job-card bg-white rounded-xl p-3 shadow-sm mb-4';
-    const img = job.campaignLogoURL || job.image || '/assets/default-thumb.jpg';
-    const numWorkers = Number(job.numWorkers || 0);
-    const remaining = Math.max(0, numWorkers - occupancy);
-    wrap.innerHTML = `
-      <div class="overflow-hidden rounded-lg">
-        <img src="${safeText(img)}" alt="${safeText(job.title||'')}" class="w-full h-36 object-cover rounded-lg"/>
-      </div>
-      <div class="mt-3">
-        <h4 class="font-semibold text-md">${safeText(job.title||'Untitled')}</h4>
-        ${job.category ? `<div class="mt-1"><span class="inline-block text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded">${safeText(job.category)}</span></div>` : ''}
-        <div class="text-sm text-gray-500 mt-1">${formatNaira(job.workerPay)} </div>
-        <div class="text-sm text-gray-500 mt-1">${occupancy}/${numWorkers} </div>
-        <div class="mt-3 flex gap-2">
-          <div style="flex:1">${remaining <= 0 ? '<div class="text-xs text-red-500 font-medium">No open slots</div>' : `<div class="text-xs text-green-600 font-medium">${remaining} open</div>`}</div>
-          <button class="aff2-btn-view px-4 py-2 bg-blue-600 text-white rounded-xl" data-id="${safeText(job.id)}">View Task</button>
+  const wrap = document.createElement('div');
+  wrap.className = 'aff2-job-card bg-white rounded-xl p-3 shadow-sm mb-4';
+
+  const img = job.campaignLogoURL || job.image || '/assets/default-thumb.jpg';
+  const numWorkers = Number(job.numWorkers || 0);
+  const remaining = Math.max(0, numWorkers - occupancy);
+
+  wrap.innerHTML = `
+    <div class="overflow-hidden rounded-lg">
+      <img src="${safeText(img)}" alt="${safeText(job.title||'')}" class="w-full h-36 object-cover rounded-lg"/>
+    </div>
+
+    <div class="mt-3">
+      <h4 class="font-semibold text-md">${safeText(job.title || 'Untitled')}</h4>
+
+      ${job.category ? `<div class="mt-1">
+        <span class="inline-block text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded">
+          ${safeText(job.category)}
+        </span>
+      </div>` : ''}
+
+      <div class="text-sm text-blue-600 mt-1 font-medium">${formatNaira(job.workerPay)}</div>
+      <div class="text-sm text-gray-500 mt-1">${occupancy}/${numWorkers} workers</div>
+
+      <div class="mt-3 flex items-center justify-between">
+        <div>
+          ${remaining <= 0 
+            ? '<div class="text-xs text-red-500 font-medium">No open slots</div>'
+            : `<div class="text-xs text-green-600 font-medium">${remaining} open</div>`}
         </div>
+        <button class="aff2-btn-view px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg" data-id="${safeText(job.id)}">
+          View Task
+        </button>
       </div>
-    `;
-    return wrap;
-  }
+    </div>
+  `;
+
+  return wrap;
+}
 
   /* ---------- Load jobs (explicit get, compute occupancy & approved) ---------- */
   async function loadAndRenderJobs() {
@@ -2120,14 +2137,16 @@ window.initTaskSection = function() {
       body.className = 'p-6 space-y-4';
       body.innerHTML = `
         <div>
-          <h2 class="text-2xl font-bold">${safeText(job.title || 'Untitled')}</h2>
+          <h2 class="text-2xl font-bold">${safeText(job.title || 'Untitled')}</h2> 
           <div class="mt-1">${job.category ? `<span class="inline-block text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded">${safeText(job.category)}</span>` : ''}</div>
           <p class="text-sm text-gray-500 mt-2">${formatNaira(job.workerPay)} · ${Number(job.numWorkers || 0)} workers</p>
         </div>
 
         ${job.instructions ? `<div class="text-gray-700 text-sm"><strong>Instructions:</strong><br>${safeText(job.instructions)}</div>` : ''}
         ${job.targetLink ? `<div><strong class="text-sm text-gray-700">Target Link:</strong> <a href="${safeText(job.targetLink)}" target="_blank" class="text-blue-600 underline break-all">${safeText(job.targetLink)}</a></div>` : ''}
+        ${job.proofRequired ? `<div class="text-gray-700 text-sm"><strong>Proof Required:</strong><br>${safeText(job.proofRequired)}</div>` : ''}
 
+		
         <div>
           <div class="text-sm text-gray-500 mb-1">Occupancy</div>
           <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
