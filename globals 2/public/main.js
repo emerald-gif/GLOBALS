@@ -3,7 +3,7 @@
 
 
 
-// Firebase config & init
+// Firebase config & inits
 const firebaseConfig = {
   apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
   authDomain: "globals-17bf7.firebaseapp.com",
