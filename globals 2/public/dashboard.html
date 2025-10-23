@@ -2466,15 +2466,10 @@ function closeGlobalsModal() {
 
 
 
-<!-- 🔵 PAYMENT SECTION -->
-
-
-<!-- ===== payment section (drop-in) ===== -->
 <div id="payment" class="tab-section hidden max-w-md mx-auto px-5 py-8 space-y-6">
-
   <!-- back -->
-  <button onclick="activateTab && activateTab('dashboard')" 
-    class="flex items-center gap-2 text-blue-500 hover:text-white font-medium transition-colors">
+  <button onclick="activateTab && activateTab('dashboard')"
+    class="flex items-center gap-2 text-blue-700 hover:text-blue-900 font-medium transition-colors">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
     </svg>
@@ -2482,9 +2477,21 @@ function closeGlobalsModal() {
   </button>
 
   <!-- balance card -->
-  <div class="relative rounded-3xl overflow-hidden shadow-lg bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white text-center py-12">
+  <div class="relative rounded-3xl overflow-hidden shadow-lg text-white text-center py-12"
+       style="background: linear-gradient(135deg,#0b63ff 0%, #0046b3 50%, #022a66 100%);">
+    <!-- SVG 2029 accent (keeps layout intact) -->
+    <svg aria-hidden class="absolute -top-12 -left-10 w-56 h-56 pointer-events-none opacity-30" viewBox="0 0 200 200">
+      <defs>
+        <radialGradient id="rgrad" cx="30%" cy="30%">
+          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08"></stop>
+          <stop offset="100%" stop-color="#ffffff" stop-opacity="0"></stop>
+        </radialGradient>
+      </defs>
+      <circle cx="100" cy="100" r="80" fill="url(#rgrad)"/>
+    </svg>
+
     <div class="absolute inset-0 pointer-events-none"
-         style="background: radial-gradient(circle at 25% 20%, rgba(255,255,255,0.06), transparent 20%); mix-blend-mode: overlay;"></div>
+         style="background: radial-gradient(circle at 25% 20%, rgba(255,255,255,0.03), transparent 20%); mix-blend-mode: overlay;"></div>
 
     <div class="relative">
       <!-- IMPORTANT: id="balance" used by __balanceCtrl -->
@@ -2510,41 +2517,109 @@ function closeGlobalsModal() {
     <!-- Airtime -->
     <div id="airtime-card" onclick="airtimeOpen()" role="button" tabindex="0"
          class="flex flex-col items-center cursor-pointer group">
-      <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
+      <div class="w-16 h-16 flex items-center justify-center rounded-2xl
                   bg-white border border-gray-100/20
-                  shadow-md group-hover:shadow-lg 
+                  shadow-md group-hover:shadow-lg
                   group-hover:scale-110 transition-all duration-300">
         <img src="AIRTIME1.jpg" width="24" height="24"
              class="w-6 h-6 object-contain transition-opacity duration-200 opacity-0"
              alt="Airtime" loading="eager" decoding="sync"
              onload="this.style.opacity='1'">
       </div>
-      <p class="mt-2 text-sm font-semibold text-blue-100">Airtime</p>
+      <p class="mt-2 text-sm font-semibold text-blue-700">Airtime</p>
     </div>
 
     <!-- Data -->
     <div id="data-card" onclick="dataOpen()" role="button" tabindex="0"
          class="flex flex-col items-center cursor-pointer group">
-      <div class="w-16 h-16 flex items-center justify-center rounded-2xl 
+      <div class="w-16 h-16 flex items-center justify-center rounded-2xl
                   bg-white border border-gray-100/20
-                  shadow-md group-hover:shadow-lg 
+                  shadow-md group-hover:shadow-lg
                   group-hover:scale-110 transition-all duration-300">
         <img src="DATA1.jpg" width="24" height="24"
              class="w-6 h-6 object-contain transition-opacity duration-200 opacity-0"
              alt="Data" loading="eager" decoding="sync"
              onload="this.style.opacity='1'">
       </div>
-      <p class="mt-2 text-sm font-semibold text-blue-100">Data</p>
+      <p class="mt-2 text-sm font-semibold text-blue-700">Data</p>
     </div>
   </div>
 
   <!-- transactions -->
-  
 </div>
 
-<!-- ===== scripts ===== -->
+<!-- minimal script to ensure balance works (uses your __balanceCtrl if present, otherwise a one-time Firestore read + animate) -->
+<script>
+  (function () {
+    // formatting helper
+    function fmtNaira(n) {
+      return '₦' + (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
 
+    // simple animation for fallback
+    function animateNumber(el, from, to, duration = 700) {
+      if (!el) return;
+      const start = performance.now();
+      const diff = to - from;
+      cancelAnimationFrame(el.__rafId);
+      const step = (t) => {
+        const p = Math.min((t - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = fmtNaira(from + diff * eased);
+        if (p < 1) el.__rafId = requestAnimationFrame(step);
+      };
+      el.__rafId = requestAnimationFrame(step);
+    }
 
+    function fallbackFetchOnce() {
+      if (!window.firebase || !firebase.auth || !firebase.firestore) return;
+      const el = document.getElementById('balance');
+      if (!el) return;
+
+      function applyVal(n) {
+        const prev = Number(el.dataset._last || 0);
+        animateNumber(el, prev, Number(n || 0), 700);
+        el.dataset._last = String(Number(n || 0));
+      }
+
+      const user = firebase.auth().currentUser;
+      if (user) {
+        firebase.firestore().collection('users').doc(user.uid).get()
+          .then(doc => { if (doc.exists) applyVal(doc.data().balance ?? 0); })
+          .catch(e => console.error('balance fetch error', e));
+      } else {
+        firebase.auth().onAuthStateChanged(u => {
+          if (!u) return;
+          firebase.firestore().collection('users').doc(u.uid).get()
+            .then(doc => { if (doc.exists) applyVal(doc.data().balance ?? 0); })
+            .catch(e => console.error('balance fetch error', e));
+        });
+      }
+    }
+
+    // Start or fallback. Keeps your existing __balanceCtrl behavior.
+    function ensureBalance() {
+      const el = document.getElementById('balance');
+      if (!el) return;
+      try {
+        if (window.__balanceCtrl && typeof window.__balanceCtrl.start === 'function') {
+          // re-init then start to ensure element binding
+          window.__balanceCtrl.init && window.__balanceCtrl.init();
+          window.__balanceCtrl.start && window.__balanceCtrl.start();
+          return;
+        }
+      } catch (e) {
+        console.warn('__balanceCtrl start failed', e);
+      }
+      // fallback
+      fallbackFetchOnce();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', ensureBalance, { once: true });
+    } else ensureBalance();
+  })();
+</script>
 
 
 
