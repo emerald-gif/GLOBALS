@@ -4975,7 +4975,7 @@ function renderSubmissionList(list, jobType) {
 
   list.forEach(item => {
     const card = document.createElement("div");
-    card.className = "p-4 bg-white rounded-xl shadow-sm border";
+    card.className = "p-4 bg-white rounded-xl shadow-sm border hover:shadow-md transition";
 
     let inner = `<div class="flex justify-between items-start">
       <div>
@@ -5001,8 +5001,10 @@ function renderSubmissionList(list, jobType) {
 
     if (isOnReview && isOwner) {
       inner += `<div class="flex flex-col gap-2">
-        <button class="job-action-btn primary" data-action="approve" data-id="${item.id}">Approve</button>
-        <button class="job-action-btn secondary" data-action="reject" data-id="${item.id}">Reject</button>
+        <button class="job-action-btn bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg py-1.5 text-sm font-semibold hover:scale-[1.03] transition"
+          data-action="approve" data-id="${item.id}">✅ Approve</button>
+        <button class="job-action-btn bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg py-1.5 text-sm font-semibold hover:scale-[1.03] transition"
+          data-action="reject" data-id="${item.id}">❌ Reject</button>
       </div>`;
     } else {
       inner += `<div class="text-xs text-gray-500">No actions</div>`;
@@ -5010,12 +5012,12 @@ function renderSubmissionList(list, jobType) {
 
     inner += `</div></div>`;
 
-    // Show proof details
+    // ===== Proof Section =====
     if (jobType === "task") {
       inner += `<div class="mt-3 text-sm text-gray-600"><strong>Proof text:</strong> ${item.proofText ? escapeHtml(item.proofText).slice(0, 300) : "—"}</div>`;
       if (Array.isArray(item.proofImages) && item.proofImages.length) {
         inner += `<div class="mt-2 flex gap-2 overflow-x-auto">${item.proofImages
-          .map(url => `<img src="${url}" class="w-20 h-20 rounded object-cover border">`)
+          .map(url => `<img src="${url}" onclick="openImagePreview('${url}')" class="w-20 h-20 rounded-lg object-cover border cursor-pointer hover:opacity-80 transition">`)
           .join("")}</div>`;
       }
       inner += `<div class="mt-2 text-xs text-gray-500"><strong>Worker Earn:</strong> ₦${item.workerEarn || "0"}</div>`;
@@ -5023,7 +5025,12 @@ function renderSubmissionList(list, jobType) {
       inner += `<div class="mt-3 text-sm text-gray-600"><strong>Note:</strong> ${item.note ? escapeHtml(item.note).slice(0, 300) : "—"}</div>`;
       if (Array.isArray(item.proofFiles) && item.proofFiles.length) {
         inner += `<div class="mt-2 flex gap-2 overflow-x-auto">${item.proofFiles
-          .map(url => `<a href="${url}" target="_blank" class="text-xs underline">${url.split("/").pop()}</a>`)
+          .map(url => {
+            const isImage = /\.(png|jpg|jpeg|gif|webp)$/i.test(url);
+            return isImage
+              ? `<img src="${url}" onclick="openImagePreview('${url}')" class="w-20 h-20 rounded-lg object-cover border cursor-pointer hover:opacity-80 transition">`
+              : `<a href="${url}" target="_blank" class="text-xs underline text-blue-600 break-all">${url.split("/").pop()}</a>`;
+          })
           .join("")}</div>`;
       }
     }
@@ -5038,6 +5045,25 @@ function renderSubmissionList(list, jobType) {
   });
 }
 
+/* ============ IMAGE PREVIEW OVERLAY ============ */
+function openImagePreview(url) {
+  let overlay = document.getElementById("imgPreviewOverlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "imgPreviewOverlay";
+    overlay.className = "fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4";
+    overlay.innerHTML = `
+      <img id="previewImg" src="" class="max-h-[90vh] max-w-[90vw] rounded-lg shadow-lg border border-gray-300">
+      <button id="closePreviewBtn" class="absolute top-5 right-5 text-white text-2xl font-bold">×</button>
+    `;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector("#closePreviewBtn").onclick = () => overlay.remove();
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  }
+  overlay.querySelector("#previewImg").src = url;
+  overlay.style.display = "flex";
+}
 /* =================== APPROVE SUBMISSION =================== */
 async function approveSubmission(submissionId, jobId, jobType, submissionObj = null) {
   console.log("[approveSubmission] start", submissionId, jobId, jobType);
