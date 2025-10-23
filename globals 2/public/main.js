@@ -4554,10 +4554,8 @@ function resetAffiliateForm() {
 
 
 
-// MY JOB POST FUNCTION
 
-// === Fetch and Display Jobs (same as before) ===
-// === Fetch & Display User Jobs (Fast, One-Time, No Snapshot) ===
+// === Fetch & Display User Jobs ===
 async function fetchAndDisplayUserJobs() {
   const jobList = document.getElementById("jobList");
   jobList.innerHTML = "<p class='text-center text-gray-500'>Loading your jobs...</p>";
@@ -4578,23 +4576,42 @@ async function fetchAndDisplayUserJobs() {
     const uid = user.uid;
     let allJobs = [];
 
-    // helper to count approved submissions quickly
-    async function getApprovedCount(collection, jobId) {
+    // --- Dynamic Progress Calculator ---
+    async function getDynamicProgress(collection, jobId, type) {
       try {
-        const snap = await firebase
-          .firestore()
-          .collection(collection)
-          .where("jobId", "==", jobId)
-          .where("status", "==", "approved")
-          .get();
-        return snap.size || 0;
+        const colRef = firebase.firestore().collection(collection).where("jobId", "==", jobId);
+
+        // choose proper timestamp field
+        let orderField =
+          type === "task" ? "submittedAt" : "createdAt";
+
+        let query;
+        try {
+          query = colRef.orderBy(orderField, "desc");
+        } catch {
+          query = colRef.orderBy("timestamp", "desc");
+        }
+
+        const snap = await query.get();
+        let progress = 0;
+
+        snap.forEach((doc) => {
+          const data = doc.data();
+          const status = data.status || "on review";
+
+          if (status === "on review") progress += 1;
+          else if (status === "rejected") progress -= 1;
+          else if (status === "approved") progress += 0;
+        });
+
+        return Math.max(progress, 0);
       } catch (e) {
-        console.error("getApprovedCount error:", e);
+        console.error("getDynamicProgress error:", e);
         return 0;
       }
     }
 
-    // render jobs instantly once tasks load
+    // --- Render Job Cards ---
     function renderJobs(jobs, append = false) {
       if (!append) jobList.innerHTML = "";
       if (!jobs.length && !append) {
@@ -4606,7 +4623,7 @@ async function fetchAndDisplayUserJobs() {
       jobList.insertAdjacentHTML(append ? "beforeend" : "afterbegin", html);
     }
 
-    // === STEP 1: Fetch Tasks first (primary load)
+    // === STEP 1: Fetch Tasks ===
     const taskSnap = await firebase
       .firestore()
       .collection("tasks")
@@ -4618,15 +4635,15 @@ async function fetchAndDisplayUserJobs() {
       taskSnap.docs.map(async (doc) => {
         const data = doc.data();
         const job = { ...data, id: doc.id, type: "task" };
-        job.completed = await getApprovedCount("task_submissions", job.id);
+        job.completed = await getDynamicProgress("task_submissions", job.id, "task");
         return job;
       })
     );
 
     allJobs.push(...taskJobs);
-    renderJobs(taskJobs); // render tasks immediately
+    renderJobs(taskJobs);
 
-    // === STEP 2: Fetch Affiliate Jobs next (background)
+    // === STEP 2: Fetch Affiliate Jobs ===
     setTimeout(async () => {
       const affiliateSnap = await firebase
         .firestore()
@@ -4639,19 +4656,21 @@ async function fetchAndDisplayUserJobs() {
         affiliateSnap.docs.map(async (doc) => {
           const data = doc.data();
           const job = { ...data, id: doc.id, type: "affiliate" };
-          job.completed = await getApprovedCount("affiliate_submissions", job.id);
+          job.completed = await getDynamicProgress("affiliate_submissions", job.id, "affiliate");
           return job;
         })
       );
 
       allJobs.push(...affiliateJobs);
-      // sort all combined
+
+      // Sort combined jobs
       allJobs.sort(
         (a, b) =>
           (b.postedAt?.toMillis?.() || 0) - (a.postedAt?.toMillis?.() || 0)
       );
+
       renderJobs(allJobs);
-    }, 300); // small delay for faster perceived loading
+    }, 300);
   } catch (error) {
     console.error("fetchAndDisplayUserJobs Error:", error);
     jobList.innerHTML =
@@ -4674,7 +4693,7 @@ function renderJobCard(job) {
   const totalWorkers = job.numWorkers || 0;
   const completed = job.completed || 0;
   const progress = totalWorkers
-    ? Math.round((completed / totalWorkers) * 100)
+    ? Math.min(Math.round((completed / totalWorkers) * 100), 100)
     : 0;
 
   return `
@@ -4711,7 +4730,7 @@ function renderJobCard(job) {
   `;
 }
 
-// === Check Job Details (fetch once) ===
+// === Check Job Details ===
 async function checkJobDetails(jobId, jobType) {
   try {
     const collection = jobType === "task" ? "tasks" : "affiliateJobs";
@@ -4719,16 +4738,12 @@ async function checkJobDetails(jobId, jobType) {
       jobType === "task" ? "task_submissions" : "affiliate_submissions";
     const doc = await firebase.firestore().collection(collection).doc(jobId).get();
     if (!doc.exists) return;
+
     const job = { ...doc.data(), id: doc.id, type: jobType };
-    const approvedSnap = await firebase
-      .firestore()
-      .collection(subCollection)
-      .where("jobId", "==", job.id)
-      .where("status", "==", "approved")
-      .get();
-    job.completed = approvedSnap.size;
+    job.completed = await getDynamicProgress(subCollection, job.id, jobType);
     renderJobDetails(job);
 attachJobDetailActions(job);
+    
     activateTab("jobDetailsSection");
   } catch (err) {
     console.error("checkJobDetails error:", err);
@@ -4741,7 +4756,7 @@ function renderJobDetails(job) {
   const totalWorkers = job.numWorkers || 0;
   const completed = job.completed || 0;
   const progress = totalWorkers
-    ? Math.round((completed / totalWorkers) * 100)
+    ? Math.min(Math.round((completed / totalWorkers) * 100), 100)
     : 0;
 
   let content = `
@@ -4790,6 +4805,8 @@ function goBackToJobs() {
 document.addEventListener("DOMContentLoaded", fetchAndDisplayUserJobs);
 
 
+
+    
 
 
 
