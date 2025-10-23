@@ -2866,6 +2866,14 @@ let whatsappProofs = [];
 let isUploadingProof = false;
 const SUBMIT_KEY = "whatsappTaskSubmitted"; // 🔑 localStorage key
 
+
+function copyWhatsappMessage() {
+  const msg = document.getElementById("whatsapp-text").innerText;
+  navigator.clipboard.writeText(msg).then(() => {
+    alert("📋 Message copied! Paste it in 3 Active WhatsApp groups.");
+  });
+}
+	  
 async function handleProofUpload(input, previewId) {
   const file = input.files && input.files[0];
   const previewEl = document.getElementById(previewId);
@@ -5001,13 +5009,13 @@ function renderSubmissionList(list, jobType) {
 
     if (isOnReview && isOwner) {
       inner += `<div class="flex flex-col gap-2">
-        <button class="job-action-btn bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg py-1.5 text-sm font-semibold hover:scale-[1.03] transition"
+        <button class="job-action-btn bg-gradient-to-r from-green-500 to-green-600 text-white rounded-sm py-1.5 text-sm font-semibold hover:scale-[1.03] transition"
           data-action="approve" data-id="${item.id}">✅ Approve</button>
-        <button class="job-action-btn bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg py-1.5 text-sm font-semibold hover:scale-[1.03] transition"
+        <button class="job-action-btn bg-gradient-to-r from-red-500 to-red-600 text-white rounded-sm py-1.5 text-sm font-semibold hover:scale-[1.03] transition"
           data-action="reject" data-id="${item.id}">❌ Reject</button>
       </div>`;
     } else {
-      inner += `<div class="text-xs text-gray-500">No actions</div>`;
+      inner += `<div class="text-xs text-gray-500"></div>`;
     }
 
     inner += `</div></div>`;
