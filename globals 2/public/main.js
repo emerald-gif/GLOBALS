@@ -2870,7 +2870,7 @@ const SUBMIT_KEY = "whatsappTaskSubmitted"; // 🔑 localStorage key
 function copyWhatsappMessage() {
   const msg = document.getElementById("whatsapp-text").innerText;
   navigator.clipboard.writeText(msg).then(() => {
-    alert("📋 Message copied! Paste it in 3 Active WhatsApp groups.");
+    alert("📋 Message copied! Paste it in 3 WhatsApp groups.");
   });
 }
 	  
