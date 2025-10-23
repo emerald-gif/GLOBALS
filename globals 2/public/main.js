@@ -1432,7 +1432,7 @@ function initTaskSectionModule() {
           <div class="mt-3">
             <button id="taskSubmitBtn" class="w-full py-3 bg-blue-600 text-white rounded-xl">Submit Proof</button>
           </div>
-          <p class="text-xs text-gray-400 mt-2">Submissions are reviewed by admin.</p>
+          <p class="text-xs text-gray-400 mt-2">Job is Running.</p>
         </div>
       </div>
     `;
@@ -1462,8 +1462,7 @@ function initTaskSectionModule() {
           <strong>All slots are filled (pending reviews). You can view your submission but cannot submit new proofs right now.</strong>
         </div>
       `;
-      await showUserSubmissionIfExists(jobId, fullScreen);
-      return;
+      
     }
 
     // Otherwise allow submit flow (or show existing submission)
@@ -2041,11 +2040,7 @@ window.initTaskSection = function() {
       <div class="text-sm text-gray-500 mt-1">${occupancy}/${numWorkers} workers</div>
 
       <div class="mt-3 flex items-center justify-between">
-        <div>
-          ${remaining <= 0 
-            ? '<div class="text-xs text-red-500 font-medium">No open slots</div>'
-            : `<div class="text-xs text-green-600 font-medium">${remaining} open</div>`}
-        </div>
+        
         <button class="aff2-btn-view px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg" data-id="${safeText(job.id)}">
           View Task
         </button>
@@ -2147,13 +2142,7 @@ window.initTaskSection = function() {
         ${job.proofRequired ? `<div class="text-gray-700 text-sm"><strong>Proof Required:</strong><br>${safeText(job.proofRequired)}</div>` : ''}
 
 		
-        <div>
-          <div class="text-sm text-gray-500 mb-1">Occupancy</div>
-          <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-            <div id="aff2_detailProgressBar" class="h-2 bg-blue-500 rounded-full" style="width:0%"></div>
-          </div>
-          <div id="aff2_detailProgressText" class="text-sm text-gray-500 mt-1">0/0 (0%)</div>
-        </div>
+        
 
         <div id="aff2_submitArea" class="mt-6 border-t pt-4">
           <h3 class="text-base font-semibold text-gray-800 mb-3">Submit Proof</h3>
@@ -2170,7 +2159,7 @@ window.initTaskSection = function() {
             <button id="aff2_detailSubmitBtn" class="w-full py-3 bg-blue-600 text-white rounded-xl">Submit Proof</button>
           </div>
 
-          <p class="text-xs text-gray-400 mt-2">Submissions are reviewed by admin. Approved submissions finalize a slot; rejected frees it again.</p>
+          <p class="text-xs text-gray-400 mt-2">Job is Running.</p>
         </div>
       `;
       wrapper.appendChild(body);
