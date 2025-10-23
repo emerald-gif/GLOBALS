@@ -2469,52 +2469,64 @@ function closeGlobalsModal() {
 <!-- 🔵 PAYMENT SECTION -->
 
 
+<!-- 💸 Payment Section -->
 <div id="payment" class="tab-section hidden max-w-md mx-auto px-5 py-8 space-y-8">
 
-  <!-- ⬅️ Back Button -->
+  <!-- 🔙 Back -->
   <button onclick="activateTab('dashboard')" 
-    class="flex items-center gap-2 text-gray-600 hover:text-blue-600 font-medium mb-2 transition-colors">
+    class="flex items-center gap-2 text-gray-500 hover:text-blue-600 font-medium transition-colors">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
     </svg>
     Back
   </button>
 
-  <!-- ⚡ Quick Actions -->
-  <div class="grid grid-cols-2 gap-4">
-    <!-- Deposit -->
-    <button onclick="activateTab('depositSection')" 
-      class="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-transform hover:-translate-y-1">
-      <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 grid place-items-center mb-2 shadow-inner">
-        <i data-lucide="arrow-down-circle" class="w-5 h-5"></i>
-      </div>
-      <span class="text-sm font-semibold text-gray-800">Deposit</span>
-    </button>
+  <!-- 🌌 Balance Card -->
+  <div class="relative rounded-3xl overflow-hidden shadow-lg bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white text-center py-12">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent)]"></div>
+    
+    <div class="relative space-y-2">
+      <h2 id="balance" data-value="0" class="text-4xl font-extrabold tracking-tight">₦0.00</h2>
+      <p class="text-blue-100 text-sm">Available Balance</p>
+    </div>
 
-    <!-- Withdraw -->
-    <button onclick="activateTab('withdrawFundsSection')" 
-      class="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-transform hover:-translate-y-1">
-      <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 grid place-items-center mb-2 shadow-inner">
-        <i data-lucide="arrow-up-circle" class="w-5 h-5"></i>
-      </div>
-      <span class="text-sm font-semibold text-gray-800">Withdraw</span>
-    </button>
-  </div>
-
-  <!-- 🌌 Banner -->
-  <div class="relative rounded-3xl overflow-hidden shadow-md border border-gray-100">
-    <img src="MOON1.jpeg" alt="Promo Banner" class="w-full h-44 object-cover">
-    <div class="absolute inset-0 bg-gradient-to-t from-gray-900/70 via-gray-700/20 to-transparent"></div>
-    <div class="absolute bottom-4 left-4 text-white">
-      <h3 class="text-lg font-bold">Globals 2025 Fintech</h3>
-      <p class="text-xs opacity-80">Experience the future of money today</p>
+    <div class="relative flex justify-center gap-4 mt-6">
+      <button onclick="activateTab('depositSection')" 
+        class="px-6 py-3 rounded-full bg-white text-blue-700 font-semibold shadow hover:bg-blue-50 transition">
+        Deposit
+      </button>
+      <button onclick="activateTab('withdrawFundsSection')" 
+        class="px-6 py-3 rounded-full bg-blue-950/40 border border-white/30 text-white font-semibold shadow hover:bg-blue-950/60 transition">
+        Withdraw
+      </button>
     </div>
   </div>
 
-  
+  <!-- ⚡ Other Actions -->
+  <div class="grid grid-cols-2 gap-4">
+    <!-- Airtime -->
+    <button id="airtime-screen"
+      class="flex flex-col items-center justify-center p-4 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-200 text-blue-800 font-semibold shadow-inner hover:shadow-md transition">
+      <i data-lucide="phone" class="w-6 h-6 mb-2"></i>
+      Airtime Purchase
+    </button>
 
+    <!-- Data -->
+    <button id="data-screen"
+      class="flex flex-col items-center justify-center p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-200 text-blue-800 font-semibold shadow-inner hover:shadow-md transition">
+      <i data-lucide="wifi" class="w-6 h-6 mb-2"></i>
+      Data Purchase
+    </button>
+  </div>
+
+  <!-- 🧾 Transactions -->
+  <div>
+    <button id="transactions-screen"
+      class="w-full py-3 rounded-xl bg-white border border-gray-200 text-gray-900 font-semibold shadow-sm hover:bg-gray-50 transition">
+      View Transaction History
+    </button>
+  </div>
 </div>
-
 
 
 
