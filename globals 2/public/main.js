@@ -1446,31 +1446,38 @@ function initTaskSectionModule() {
       </div>
     `;
     document.body.appendChild(fullScreen);
-
-
-      // ---------- Image Preview Overlay ----------
-const previewImg = fullScreen.querySelector('#taskPreviewImage');
-if (previewImg) {
-  previewImg.addEventListener('click', () => {
-    const overlay = document.createElement('div');
-    overlay.className = "fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[100]";
-    overlay.innerHTML = `
-      <img src="${previewImg.src}" alt="Preview" class="max-w-full max-h-full object-contain rounded-lg shadow-lg" />
-      <button class="absolute top-4 right-4 text-white text-3xl font-bold">&times;</button>
-    `;
-    document.body.appendChild(overlay);
-    overlay.querySelector('button').addEventListener('click', () => overlay.remove());
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) overlay.remove();
-    });
-  });
-}
-
 	  
     fullScreen.querySelector('#closeTaskBtn')?.addEventListener('click', () => fullScreen.remove());
 
 
 
+
+     // ---------- Image Preview Overlay ----------
+
+
+setTimeout(() => {
+  const previewImg = fullScreen.querySelector('#taskPreviewImage');
+  if (previewImg) {
+    previewImg.addEventListener('click', () => {
+      const overlay = document.createElement('div');
+      overlay.className = "fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[100]";
+      overlay.innerHTML = `
+        <img src="${previewImg.src}" alt="Preview" class="max-w-full max-h-full object-contain rounded-lg shadow-lg" />
+        <button class="absolute top-4 right-4 text-white text-3xl font-bold">&times;</button>
+      `;
+      document.body.appendChild(overlay);
+      overlay.querySelector('button').addEventListener('click', () => overlay.remove());
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.remove();
+      });
+    });
+  }
+}, 50);
+
+	  
+
+
+	  
     // Get authoritative counts (best-effort)
     let filled = 0, approved = 0, total = Number(jobData.numWorkers || 0);
     try {
