@@ -2682,6 +2682,7 @@ function closeGlobalsModal() {
 
 
 <div id="payment" class="tab-section hidden max-w-md mx-auto px-5 py-8 space-y-6">
+
   <!-- back -->
   <button onclick="activateTab && activateTab('dashboard')"
     class="flex items-center gap-2 text-blue-700 hover:text-blue-900 font-medium transition-colors">
@@ -2691,8 +2692,41 @@ function closeGlobalsModal() {
     Back
   </button>
 
-  <!-- quick actions (Airtime / Data) -->
-  <div class="grid grid-cols-2 gap-4">
+  <!-- Deposit / Withdraw Buttons -->
+  <div class="relative rounded-3xl overflow-hidden shadow-lg text-white text-center py-10"
+       style="background: linear-gradient(135deg,#0b63ff 0%, #0046b3 50%, #022a66 100%);">
+    <svg aria-hidden class="absolute -top-12 -left-10 w-56 h-56 pointer-events-none opacity-30" viewBox="0 0 200 200">
+      <defs>
+        <radialGradient id="rgrad" cx="30%" cy="30%">
+          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08"></stop>
+          <stop offset="100%" stop-color="#ffffff" stop-opacity="0"></stop>
+        </radialGradient>
+      </defs>
+      <circle cx="100" cy="100" r="80" fill="url(#rgrad)" />
+    </svg>
+
+    <div class="absolute inset-0 pointer-events-none"
+         style="background: radial-gradient(circle at 25% 20%, rgba(255,255,255,0.03), transparent 20%); mix-blend-mode: overlay;">
+    </div>
+
+    <div class="relative flex justify-center gap-4 mt-2">
+      <button id="btn-deposit" onclick="activateTab && activateTab('depositSection')"
+        class="px-6 py-3 rounded-full bg-white text-blue-700 font-semibold shadow hover:bg-blue-50 transform transition">
+        Deposit
+      </button>
+
+      <button id="btn-withdraw" onclick="activateTab && activateTab('withdrawFundsSection')"
+        class="px-6 py-3 rounded-full bg-white/10 border border-white/20 text-white font-semibold shadow hover:bg-white/5 transition">
+        Withdraw
+      </button>
+    </div>
+  </div>
+
+  <!-- Quick Actions Header -->
+  <h3 class="text-lg font-bold text-gray-800 text-center mt-6">Quick Actions</h3>
+
+  <!-- Quick Actions (Airtime / Data) -->
+  <div class="grid grid-cols-2 gap-4 mt-2">
     <!-- Airtime -->
     <div id="airtime-card" onclick="airtimeOpen()" role="button" tabindex="0"
          class="flex flex-col items-center cursor-pointer group">
@@ -2724,15 +2758,7 @@ function closeGlobalsModal() {
     </div>
   </div>
 
-  <!-- transactions -->
 </div>
-
-<!-- minimal script to ensure balance works (uses your __balanceCtrl if present, otherwise a one-time Firestore read + animate) -->
-
-
-
-
-		
 
 
 		
