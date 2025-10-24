@@ -1417,7 +1417,15 @@ function initTaskSectionModule() {
         <h1 class="text-2xl font-bold text-gray-800">${safeTitle}</h1>
         <p class="text-sm text-gray-500">${safeCategory} • ${safeSub}</p>
 
-	<img src="${screenshot}" alt="Task Preview" class="w-full h-64 object-cover rounded-xl border" />
+	<div class="relative">
+  <img 
+    id="taskPreviewImage" 
+    src="${screenshot}" 
+    alt="Task Preview" 
+    class="w-full h-72 object-cover rounded-xl border cursor-pointer hover:opacity-90 transition"
+  />
+  <p class="text-xs text-center text-gray-500 mt-2">Tap image to preview fullscreen</p>
+</div>
 		<div>
           <h2 class="text-lg font-semibold text-gray-800 mb-2">Task Description</h2>
           <p class="text-gray-700 text-sm whitespace-pre-line">${safeDesc}</p>
@@ -1438,6 +1446,27 @@ function initTaskSectionModule() {
       </div>
     `;
     document.body.appendChild(fullScreen);
+
+
+      // ---------- Image Preview Overlay ----------
+const previewImg = fullScreen.querySelector('#taskPreviewImage');
+if (previewImg) {
+  previewImg.addEventListener('click', () => {
+    const overlay = document.createElement('div');
+    overlay.className = "fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[100]";
+    overlay.innerHTML = `
+      <img src="${previewImg.src}" alt="Preview" class="max-w-full max-h-full object-contain rounded-lg shadow-lg" />
+      <button class="absolute top-4 right-4 text-white text-3xl font-bold">&times;</button>
+    `;
+    document.body.appendChild(overlay);
+    overlay.querySelector('button').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+  });
+}
+
+	  
     fullScreen.querySelector('#closeTaskBtn')?.addEventListener('click', () => fullScreen.remove());
 
 
