@@ -1595,44 +1595,57 @@ function closeGlobalsModal() {
                                               <!-- 📂 My Jobs Section (2025 UIUX Design) -->
 
 	
-<section id="myJobsSection"  class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6 bg-gradient-to-br from-[#f9fafb] via-white to-[#f1f5f9]">  
-  <!-- Back Button -->  
-  <button onclick="activateTab('dashboard')"    
-    class="flex items-center gap-2 text-gray-600 hover:text-gray-800 font-medium transition mb-6">    
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">      
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />    
-    </svg>    
-    Back  
-  </button>  
+<section id="myJobsSection" class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6 bg-gradient-to-br from-[#f9fafb] via-white to-[#f1f5f9]">
+  <!-- Back Button -->
+  <button onclick="activateTab('dashboard')"
+    class="flex items-center gap-2 text-gray-600 hover:text-gray-800 font-medium transition mb-6">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back
+  </button>
 
-  <!-- Job List -->  
-  <div class="max-w-5xl mx-auto space-y-6">    
-    <h2 class="text-2xl font-extrabold text-center text-gray-800 tracking-tight">My Job Posts</h2>    
-    
-    <!-- Dynamic job list -->    
-    <div id="jobList" class="space-y-4">      
-      <!-- Jobs will be injected by JS -->    
-    </div>  
+  <div class="max-w-5xl mx-auto space-y-6">
+    <h2 class="text-2xl font-extrabold text-center text-gray-800 tracking-tight">My Job Posts</h2>
+
+    <!-- ⚠️ Review Warning -->
+    <div class="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl shadow-sm">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mt-0.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 9v2m0 4h.01M10.29 3.86l-6.6 11.42A2 2 0 005.24 19h13.52a2 2 0 001.55-3.72l-6.6-11.42a2 2 0 00-3.42 0z" />
+      </svg>
+      <p class="text-sm leading-relaxed">
+        Please note: If you don't <span class="font-semibold">review or respond</span> to job submissions within
+        <span class="font-semibold text-amber-700">24 hours</span>, they will be
+        <span class="font-semibold">automatically marked as approved</span>.
+      </p>
+    </div>
+
+    <!-- Dynamic job list -->
+    <div id="jobList" class="space-y-4">
+      <!-- Jobs will be injected by JS -->
+    </div>
   </div>
 </section>
 
 <!-- ✅ Job Details Section -->
-<section id="jobDetailsSection"  class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6 bg-gradient-to-br from-[#f9fafb] via-white to-[#f1f5f9]">  
-  <div class="max-w-3xl mx-auto space-y-6">    
-    <!-- Back Button -->    
-    <button onclick="goBackToJobs()"      
-      class="flex items-center gap-2 text-gray-600 hover:text-gray-800 font-medium transition">      
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">        
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />      
-      </svg>      
-      Back to My Jobs    
-    </button>    
+<section id="jobDetailsSection"
+  class="tab-section hidden w-full h-full overflow-y-auto px-4 py-6 bg-gradient-to-br from-[#f9fafb] via-white to-[#f1f5f9]">
+  <div class="max-w-3xl mx-auto space-y-6">
+    <!-- Back Button -->
+    <button onclick="goBackToJobs()"
+      class="flex items-center gap-2 text-gray-600 hover:text-gray-800 font-medium transition">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      Back to My Jobs
+    </button>
 
-    <!-- Job Content -->    
-    <div id="jobDetailsContent"      
-      class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 space-y-6 animate-fadeUp">      
-      <!-- Dynamic job details go here -->    
-    </div>  
+    <!-- Job Content -->
+    <div id="jobDetailsContent"
+      class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 space-y-6 animate-fadeUp">
+      <!-- Dynamic job details go here -->
+    </div>
   </div>
 </section>
 
