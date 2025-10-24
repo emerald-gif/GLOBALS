@@ -1416,8 +1416,23 @@ function initTaskSectionModule() {
         <button id="closeTaskBtn" class="text-blue-600 font-bold text-sm underline">← Back to Tasks</button>
         <h1 class="text-2xl font-bold text-gray-800">${safeTitle}</h1>
         <p class="text-sm text-gray-500">${safeCategory} • ${safeSub}</p>
-        <img src="${screenshot}" alt="Task Preview" class="w-full h-64 object-cover rounded-xl border" />
-        <div>
+
+		
+     
+		<div class="relative group">
+  <img 
+    src="${screenshot}" 
+    alt="Task Preview" 
+    id="taskPreviewImg"
+    class="w-full h-64 object-cover rounded-xl border shadow-sm transition-transform duration-300 group-hover:scale-105 cursor-pointer" 
+  />
+  <div class="absolute inset-0 bg-black/20 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+    <span class="text-white text-sm">Click to view</span>
+  </div>
+</div>
+        
+		
+		<div>
           <h2 class="text-lg font-semibold text-gray-800 mb-2">Task Description</h2>
           <p class="text-gray-700 text-sm whitespace-pre-line">${safeDesc}</p>
         </div>
@@ -1438,6 +1453,32 @@ function initTaskSectionModule() {
     `;
     document.body.appendChild(fullScreen);
     fullScreen.querySelector('#closeTaskBtn')?.addEventListener('click', () => fullScreen.remove());
+
+
+
+
+    // Handle image overlay preview
+const img = fullScreen.querySelector('#taskPreviewImg');
+if (img) {
+  img.addEventListener('click', () => {
+    const overlay = document.createElement('div');
+    overlay.className = "fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center";
+    overlay.innerHTML = `
+      <div class="relative max-w-[90%] max-h-[90%]">
+        <img src="${screenshot}" alt="Preview" class="rounded-lg w-full h-auto object-contain" />
+        <button id="closeOverlayBtn" class="absolute top-3 right-3 bg-white/80 text-black px-3 py-1 rounded-md text-sm font-semibold hover:bg-white">✕ Close</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#closeOverlayBtn')?.addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+  });
+}
+
+	  
 
     // Get authoritative counts (best-effort)
     let filled = 0, approved = 0, total = Number(jobData.numWorkers || 0);
