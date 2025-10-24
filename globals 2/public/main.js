@@ -2110,68 +2110,111 @@ window.initTaskSection = function() {
 
   /* ---------- Open Job Detail (get only) ---------- */
 async function openJobDetail(jobId) {
-if (!db) { alert('Database not ready'); return; }
-try {
-const doc = await db.collection('affiliateJobs').doc(jobId).get();
-if (!doc.exists) { alert('Job not found'); return; }
-const job = { id: doc.id, ...doc.data() };
-state.currentJobId = job.id;
-state.localOccupancyIncrement = 0;
+  if (!db) { 
+    alert('Database not ready'); 
+    return; 
+  }
 
-const content = el('aff2_jobDetailContent');
-if (!content) { alert('Detail container missing'); return; }
-content.innerHTML = '';
+  try {
+    const doc = await db.collection('affiliateJobs').doc(jobId).get();
+    if (!doc.exists) { 
+      alert('Job not found'); 
+      return; 
+    }
 
-// build UI
-const wrapper = document.createElement('div');
-wrapper.className = 'bg-white rounded-2xl shadow-md overflow-hidden max-w-3xl mx-auto my-6';
+    const job = { id: doc.id, ...doc.data() };
+    state.currentJobId = job.id;
+    state.localOccupancyIncrement = 0;
 
-const banner = document.createElement('img');
-banner.src = job.image || job.campaignLogoURL || '/assets/default-banner.jpg';
-banner.className = 'w-full h-56 object-cover';
-wrapper.appendChild(banner);
+    const content = el('aff2_jobDetailContent');
+    if (!content) { 
+      alert('Detail container missing'); 
+      return; 
+    }
 
-const body = document.createElement('div');
-body.className = 'p-6 space-y-4';
-body.innerHTML =     <div>     <h2 class="text-2xl font-bold">${safeText(job.title || 'Untitled')}</h2>      <div class="mt-1">${job.category ?<span class="inline-block text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded">${safeText(job.category)}</span>` : ''}</div>
-<p class="text-sm text-gray-500 mt-2">${formatNaira(job.workerPay)} · ${Number(job.numWorkers || 0)} workers</p>
-</div>
+    content.innerHTML = '';
 
-${job.instructions ? `<div class="text-gray-700 text-sm"><strong>Instructions:</strong><br>${safeText(job.instructions)}</div>` : ''}    
-${job.targetLink ? `<div><strong class="text-sm text-gray-700">Target Link:</strong> <a href="${safeText(job.targetLink)}" target="_blank" class="text-blue-600 underline break-all">${safeText(job.targetLink)}</a></div>` : ''}    
-${job.proofRequired ? `<div class="text-gray-700 text-sm"><strong>Proof Required:</strong><br>${safeText(job.proofRequired)}</div>` : ''}    
+    // build UI
+    const wrapper = document.createElement('div');
+    wrapper.className = 'bg-white rounded-2xl shadow-md overflow-hidden max-w-3xl mx-auto my-6';
 
-    
-    
+    const banner = document.createElement('img');
+    banner.src = job.image || job.campaignLogoURL || '/assets/default-banner.jpg';
+    banner.className = 'w-full h-56 object-cover';
+    wrapper.appendChild(banner);
 
-<div id="aff2_submitArea" class="mt-6 border-t pt-4">    
-  <h3 class="text-base font-semibold text-gray-800 mb-3">Submit Proof</h3>    
+    const body = document.createElement('div');
+    body.className = 'p-6 space-y-4';
+    body.innerHTML = `
+      <div>
+        <h2 class="text-2xl font-bold">${safeText(job.title || 'Untitled')}</h2>
+        <div class="mt-1">
+          ${job.category 
+            ? `<span class="inline-block text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded">${safeText(job.category)}</span>` 
+            : ''
+          }
+        </div>
+        <p class="text-sm text-gray-500 mt-2">
+          ${formatNaira(job.workerPay)} · ${Number(job.numWorkers || 0)} workers
+        </p>
+      </div>
 
-  <div class="space-y-3">    
-    <div><label class="text-sm text-gray-700">Proof File 1</label><input type="file" id="proofFile1" accept="image/*" class="block w-full border rounded-md p-2"></div>    
-    <div><label class="text-sm text-gray-700">Proof File 2</label><input type="file" id="proofFile2" accept="image/*" class="block w-full border rounded-md p-2"></div>    
-    <div><label class="text-sm text-gray-700">Proof File 3</label><input type="file" id="proofFile3" accept="image/*" class="block w-full border rounded-md p-2"></div>    
-  </div>    
+      ${job.instructions 
+        ? `<div class="text-gray-700 text-sm"><strong>Instructions:</strong><br>${safeText(job.instructions)}</div>` 
+        : ''
+      }
 
-  <textarea id="aff2_detailSubmissionNote" placeholder="Optional note..." class="w-full border rounded-md p-3 mt-3 h-28"></textarea>    
+      ${job.targetLink 
+        ? `<div><strong class="text-sm text-gray-700">Target Link:</strong> 
+            <a href="${safeText(job.targetLink)}" target="_blank" class="text-blue-600 underline break-all">
+              ${safeText(job.targetLink)}
+            </a>
+           </div>` 
+        : ''
+      }
 
-  <div class="mt-3">    
-    <button id="aff2_detailSubmitBtn" class="w-full py-3 bg-blue-600 text-white rounded-xl">Submit Proof</button>    
-  </div>    
+      ${job.proofRequired 
+        ? `<div class="text-gray-700 text-sm"><strong>Proof Required:</strong><br>${safeText(job.proofRequired)}</div>` 
+        : ''
+      }
 
-  <p class="text-xs text-gray-400 mt-2">Job is Running.</p>    
-</div>
+      <div id="aff2_submitArea" class="mt-6 border-t pt-4">
+        <h3 class="text-base font-semibold text-gray-800 mb-3">Submit Proof</h3>
+        <div class="space-y-3">
+          <div>
+            <label class="text-sm text-gray-700">Proof File 1</label>
+            <input type="file" id="proofFile1" accept="image/*" class="block w-full border rounded-md p-2">
+          </div>
+          <div>
+            <label class="text-sm text-gray-700">Proof File 2</label>
+            <input type="file" id="proofFile2" accept="image/*" class="block w-full border rounded-md p-2">
+          </div>
+          <div>
+            <label class="text-sm text-gray-700">Proof File 3</label>
+            <input type="file" id="proofFile3" accept="image/*" class="block w-full border rounded-md p-2">
+          </div>
+        </div>
 
-`;
-wrapper.appendChild(body);
-content.appendChild(wrapper);
+        <textarea 
+          id="aff2_detailSubmissionNote" 
+          placeholder="Optional note..." 
+          class="w-full border rounded-md p-3 mt-3 h-28">
+        </textarea>
 
+        <div class="mt-3">
+          <button id="aff2_detailSubmitBtn" class="w-full py-3 bg-blue-600 text-white rounded-xl">
+            Submit Proof
+          </button>
+        </div>
 
+        <p class="text-xs text-gray-400 mt-2">Job is Running.</p>
+      </div>
+    `;
 
-
-
-	
-      // show/hide screens
+    wrapper.appendChild(body);
+    content.appendChild(wrapper);
+  	  
+	  // show/hide screens
       el('aff2_jobsContainer')?.classList.add('aff2-hidden');
       el('aff2_finishedScreen')?.classList.add('aff2-hidden');
       el('aff2_jobDetailScreen')?.classList.remove('aff2-hidden');
