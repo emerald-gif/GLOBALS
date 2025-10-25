@@ -1420,12 +1420,14 @@ function initTaskSectionModule() {
 	<div class="relative">
   <img 
     id="taskPreviewImage" 
+    class="js-previewable w-full h-72 object-cover rounded-xl border cursor-pointer hover:opacity-90 transition"
     src="${screenshot}" 
+    data-src="${screenshot}" 
     alt="Task Preview" 
-    class="w-full h-72 object-cover rounded-xl border cursor-pointer hover:opacity-90 transition"
   />
   <p class="text-xs text-center text-gray-500 mt-2">Tap image to preview fullscreen</p>
 </div>
+
 		<div>
           <h2 class="text-lg font-semibold text-gray-800 mb-2">Task Description</h2>
           <p class="text-gray-700 text-sm whitespace-pre-line">${safeDesc}</p>
@@ -1455,24 +1457,54 @@ function initTaskSectionModule() {
      // ---------- Image Preview Overlay ----------
 
 
-setTimeout(() => {
-  const previewImg = fullScreen.querySelector('#taskPreviewImage');
-  if (previewImg) {
-    previewImg.addEventListener('click', () => {
-      const overlay = document.createElement('div');
-      overlay.className = "fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[100]";
-      overlay.innerHTML = `
-        <img src="${previewImg.src}" alt="Preview" class="max-w-full max-h-full object-contain rounded-lg shadow-lg" />
-        <button class="absolute top-4 right-4 text-white text-3xl font-bold">&times;</button>
-      `;
-      document.body.appendChild(overlay);
-      overlay.querySelector('button').addEventListener('click', () => overlay.remove());
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) overlay.remove();
-      });
-    });
-  }
-}, 50);
+// ---------- Image Preview Overlay (delegated — robust) ----------
+document.body.appendChild(fullScreen);
+
+// delegated click handler on the modal so it always catches clicks on previewable images
+fullScreen.addEventListener('click', function delegatedPreviewHandler(e) {
+  // find the nearest element clicked that has our previewable class
+  const img = e.target.closest && e.target.closest('.js-previewable');
+  if (!img || !fullScreen.contains(img)) return;
+
+  // stop other handlers (important if some parent also listens)
+  e.preventDefault();
+  e.stopPropagation();
+
+  // get source (prefer data-src if lazy)
+  const src = img.getAttribute('data-src') || img.src;
+  if (!src) return;
+
+  // build overlay
+  const overlay = document.createElement('div');
+  overlay.className = "fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[99999]";
+  overlay.innerHTML = `
+    <div class="relative max-w-[98vw] max-h-[98vh] flex items-center justify-center">
+      <img src="${src}" alt="Preview" class="max-w-full max-h-full object-contain rounded-lg shadow-lg" />
+      <button aria-label="Close preview" class="absolute top-3 right-3 text-white text-3xl font-bold leading-none px-3 py-0 bg-transparent">×</button>
+    </div>
+  `;
+
+  // append and wire close
+  document.body.appendChild(overlay);
+  const closeBtn = overlay.querySelector('button');
+  const removeOverlay = () => { overlay.remove(); };
+
+  closeBtn?.addEventListener('click', removeOverlay);
+  overlay.addEventListener('click', (ev) => {
+    // close when clicking outside the image area
+    if (ev.target === overlay) removeOverlay();
+  });
+
+  // optional: esc key to close
+  const escHandler = (ev) => { if (ev.key === 'Escape') removeOverlay(); };
+  document.addEventListener('keydown', escHandler);
+  overlay.addEventListener('remove', () => document.removeEventListener('keydown', escHandler));
+});
+
+
+
+
+
 
 	  
 
