@@ -4822,7 +4822,13 @@ function renderJobDetails(job) {
   let content = `
     ${
       job.campaignLogoURL || job.screenshotURL
-        ? `<img src="${job.campaignLogoURL || job.screenshotURL}" class="w-full h-48 object-cover rounded-xl" />`
+        ? `<div class="relative w-full h-48 bg-gray-100 rounded-xl overflow-hidden flex items-center justify-center border">
+  <img 
+    src="${job.campaignLogoURL || job.screenshotURL}" 
+    alt="Job Image" 
+    class="max-w-full max-h-full object-contain rounded-lg"
+  />
+</div>`
         : ""
     }
     <h4 class="text-lg font-bold text-blue-900 mt-3">${job.title || "Untitled Job"}</h4>
