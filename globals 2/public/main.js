@@ -1417,14 +1417,12 @@ function initTaskSectionModule() {
         <h1 class="text-2xl font-bold text-gray-800">${safeTitle}</h1>
         <p class="text-sm text-gray-500">${safeCategory} • ${safeSub}</p>
 
-	<div class="relative">
+	<div class="relative w-full h-64 bg-gray-100 rounded-xl border flex items-center justify-center overflow-hidden">
   <img 
-    id="taskPreviewImage"
     src="${screenshot}" 
-    alt="Task Preview" 
-    class="w-full h-72 object-cover rounded-xl border cursor-pointer hover:opacity-90 transition"
+    alt="Task Image" 
+    class="max-w-full max-h-full object-contain rounded-lg"
   />
-  <p class="text-xs text-center text-gray-500 mt-2">Tap image to preview</p>
 </div>
 
 		<div>
@@ -1452,51 +1450,6 @@ function initTaskSectionModule() {
 
 
 
-
-     // ---------- Image Preview Overlay ----------
-
-
-// ---------- Image Preview Overlay (delegated — robust) ----------
-
-
-// ---------- Image Overlay (not fullscreen) ----------
-requestAnimationFrame(() => {
-  const previewImg = fullScreen.querySelector('#taskPreviewImage');
-  if (!previewImg) return;
-
-  previewImg.addEventListener('click', (e) => {
-    e.stopPropagation();
-
-    // create overlay container (just covers screen lightly)
-    const overlay = document.createElement('div');
-    overlay.className = `
-      fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[9999] backdrop-blur-sm
-      animate-fadeIn
-    `;
-    overlay.innerHTML = `
-      <div class="relative bg-white rounded-xl p-2 shadow-2xl max-w-[90vw] max-h-[90vh]">
-        <img src="${previewImg.src}" class="max-w-full max-h-[80vh] object-contain rounded-lg" />
-        <button class="absolute top-2 right-3 text-gray-700 text-3xl font-bold hover:text-black">&times;</button>
-      </div>
-    `;
-    
-    document.body.appendChild(overlay);
-
-    const close = () => overlay.remove();
-    overlay.querySelector('button').addEventListener('click', close);
-    overlay.addEventListener('click', (ev) => {
-      if (ev.target === overlay) close();
-    });
-  });
-});
-
-
-
-	  
-	  
-
-
-	  
     // Get authoritative counts (best-effort)
     let filled = 0, approved = 0, total = Number(jobData.numWorkers || 0);
     try {
@@ -2193,11 +2146,19 @@ async function openJobDetail(jobId) {
     const wrapper = document.createElement('div');
     wrapper.className = 'bg-white rounded-2xl shadow-md overflow-hidden max-w-3xl mx-auto my-6';
 
-    const banner = document.createElement('img');
-    banner.src = job.image || job.campaignLogoURL || '/assets/default-banner.jpg';
-    banner.className = 'w-full h-56 object-cover';
-    wrapper.appendChild(banner);
+    const bannerWrapper = document.createElement('div');
+bannerWrapper.className = 'relative w-full h-56 bg-gray-100 rounded-xl overflow-hidden flex items-center justify-center border';
 
+const banner = document.createElement('img');
+banner.src = job.image || job.campaignLogoURL || '/assets/default-banner.jpg';
+banner.className = 'max-w-full max-h-full object-contain rounded-lg';
+
+bannerWrapper.appendChild(banner);
+wrapper.appendChild(bannerWrapper);
+
+
+
+	  
     const body = document.createElement('div');
     body.className = 'p-6 space-y-4';
     body.innerHTML = `
