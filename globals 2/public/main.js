@@ -7531,7 +7531,7 @@ function startCheckinListener() {
 
 
 /* ============================
-   Visibility & Suspend Manager
+   Visibility & Suspend Managers
    (Paste after firebase init and db available)
    ============================ */
 const VisibilityManager = (function () {
