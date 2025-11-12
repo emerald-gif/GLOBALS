@@ -7422,68 +7422,144 @@ function startCheckinListener() {
 
 
 
-
-/* ===== Persist & restore active tab (final robust wrapper for Globals) ===== */
+/* ===== GLOBALS: robust tab-persistence wrapper =====
+   Paste this at the VERY END of main.js (after every other code block).
+   This will:
+   - capture any existing tab functions (global and window.*),
+   - wrap them to persist the active tab to localStorage,
+   - restore the last tab on load by calling activateTab + switchTab.
+*/
 (function () {
-  const STORAGE_KEY = "globals_active_tab_v2";
+  const STORAGE_KEY = "globals_active_tab_final_v1";
 
-  function validTabId(tabId) {
-    return !!(tabId && document.getElementById(tabId));
+  function validTabId(id) {
+    return !!(id && document.getElementById(id));
   }
 
-  async function callMaybeAsync(fn, tabId) {
-    if (typeof fn !== "function") return;
+  // capture any existing implementations (global function or window property)
+  const orig_window_switch = (typeof window !== "undefined") ? window.switchTab : undefined;
+  const orig_global_switch = (typeof switchTab === "function") ? switchTab : undefined;
+
+  const orig_window_activate = (typeof window !== "undefined") ? window.activateTab : undefined;
+  const orig_global_activate = (typeof activateTab === "function") ? activateTab : undefined;
+
+  // helper to call a possible async original function safely
+  async function callOriginal(origFn, tabId) {
+    if (!origFn) return;
     try {
-      const result = fn(tabId);
-      if (result && typeof result.then === "function") await result;
+      const r = origFn(tabId);
+      if (r && typeof r.then === "function") await r;
     } catch (err) {
-      console.error("[TAB WRAPPER] error:", err);
+      // don't break main flow if original fails
+      console.error("[TAB PERSIST] original function threw:", err);
     }
   }
 
-  const origSwitch = window.switchTab || null;
-  const origActivate = window.activateTab || null;
-
-  window.switchTab = async function (tabId) {
-    await callMaybeAsync(origSwitch, tabId);
-    if (validTabId(tabId)) {
+  // persist to localStorage + update hash
+  function persist(tabId) {
+    try {
+      if (!validTabId(tabId)) return;
       localStorage.setItem(STORAGE_KEY, tabId);
-      try { history.replaceState(null, "", `#${tabId}`); } catch (_) {}
+      try { history.replaceState(null, "", `#${tabId}`); } catch (e) { /* ignore */ }
+    } catch (e) {
+      console.warn("[TAB PERSIST] cannot save tab:", e);
     }
-  };
+  }
 
-  window.activateTab = async function (tabId) {
-    await callMaybeAsync(origActivate, tabId);
-    if (validTabId(tabId)) {
-      localStorage.setItem(STORAGE_KEY, tabId);
-      try { history.replaceState(null, "", `#${tabId}`); } catch (_) {}
-    }
+  // OVERRIDE global function switchTab(sectionId)
+  // Keep a reference to any existing implementations to avoid recursion
+  const _origGlobalSwitch = orig_global_switch || orig_window_switch || null;
+  window.switchTab = async function (sectionId) {
+    // if there was a global function (declaration), call that first
+    await callOriginal(_origGlobalSwitch, sectionId);
+    // persist the tab id
+    persist(sectionId);
   };
-
-  document.addEventListener("DOMContentLoaded", async () => {
-    let tab = null;
-    const hash = (location.hash || "").replace(/^#/, "");
-    if (validTabId(hash)) tab = hash;
-    if (!tab) {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (validTabId(saved)) tab = saved;
+  // also ensure the global named function (non-window) calls our wrapper
+  // this ensures calls to `switchTab('x')` (without window.) hit our wrapper too.
+  window.switchTab = window.switchTab; // keep assignment for safety
+  try {
+    // replace global function name too (if declared with function switchTab(...))
+    // this creates/replaces the global function symbol to forward to our wrapper
+    if (typeof window.switchTab === "function") {
+      // eslint-disable-next-line no-unused-vars
+      function switchTab(sectionId) { return window.switchTab(sectionId); }
     }
-    if (!tab) {
-      if (window.currentActiveTab && validTabId(window.currentActiveTab)) tab = window.currentActiveTab;
-      else if (validTabId("dashboard")) tab = "dashboard";
-      else {
-        const first = document.querySelector(".tab-section");
-        if (first && first.id) tab = first.id;
+  } catch (e) {
+    // ignore if strict mode or other env blocks
+  }
+
+  // OVERRIDE activateTab similarly
+  const _origGlobalActivate = orig_global_activate || orig_window_activate || null;
+  window.activateTab = async function (sectionId) {
+    // call original
+    await callOriginal(_origGlobalActivate, sectionId);
+    // persist
+    persist(sectionId);
+  };
+  window.activateTab = window.activateTab;
+  try {
+    if (typeof window.activateTab === "function") {
+      // eslint-disable-next-line no-unused-vars
+      function activateTab(sectionId) { return window.activateTab(sectionId); }
+    }
+  } catch (e) { /* ignore */ }
+
+  // Extra safety: listen for clicks on nav buttons (class 'nav-btn' or data-tab) and persist
+  document.addEventListener("click", (ev) => {
+    try {
+      const btn = ev.target.closest && ev.target.closest('.nav-btn, [data-tab]');
+      if (!btn) return;
+      const tid = btn.getAttribute('data-tab') || btn.id && btn.id.replace(/^nav-/, '') || btn.getAttribute('href') && btn.getAttribute('href').replace(/^#/, '');
+      if (tid && validTabId(tid)) {
+        // give the normal handlers a tick to run, then persist (avoids racing)
+        setTimeout(() => persist(tid), 50);
       }
+    } catch (e) { /* ignore */ }
+  }, { passive: true });
+
+  // On DOMContentLoaded (registered last so this handler runs after earlier initializers),
+  // restore preference: prefer location.hash, then saved localStorage, then fallback.
+  document.addEventListener("DOMContentLoaded", async () => {
+    try {
+      let candidate = null;
+      const hash = (location.hash || "").replace(/^#/, "");
+      if (validTabId(hash)) candidate = hash;
+
+      if (!candidate) {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (validTabId(saved)) candidate = saved;
+      }
+
+      if (!candidate) {
+        if (window.currentActiveTab && validTabId(window.currentActiveTab)) candidate = window.currentActiveTab;
+        else if (validTabId('dashboard')) candidate = 'dashboard';
+        else {
+          const first = document.querySelector('.tab-section');
+          if (first && first.id) candidate = first.id;
+        }
+      }
+
+      if (candidate) {
+        // call activateTab then switchTab to ensure UI highlight + content are consistent
+        if (typeof window.activateTab === "function") await window.activateTab(candidate);
+        if (typeof window.switchTab === "function") await window.switchTab(candidate);
+        // small delay to let any lazy init run
+        setTimeout(() => persist(candidate), 150);
+      }
+    } catch (err) {
+      console.error("[TAB PERSIST] restore failed:", err);
     }
-    if (tab) {
-      if (typeof window.switchTab === "function") await window.switchTab(tab);
-      if (typeof window.activateTab === "function") await window.activateTab(tab);
-    }
-  });
+  }, { once: true });
+
+  // debug helper (remove if you want silence)
+  window.__globals_tab_persist = {
+    storageKey: STORAGE_KEY,
+    getSaved() { try { return localStorage.getItem(STORAGE_KEY); } catch (e) { return null; } },
+    validTabId
+  };
+
 })();
-
-
 
 
 
