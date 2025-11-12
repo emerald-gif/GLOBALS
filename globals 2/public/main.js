@@ -7420,6 +7420,116 @@ function startCheckinListener() {
 
 
 
+
+
+
+
+
+/* ===== Persist active tab across reloads (add this near the top of main.js) =====
+   This wraps any existing window.switchTab implementation so we don't break your
+   existing logic. It saves the active tab to localStorage and restores it on load.
+*/
+
+(function () {
+  const STORAGE_KEY = "globals_active_tab_v1";
+
+  // Helper: validate tabId exists in DOM
+  function validTabId(tabId) {
+    return !!(tabId && document.getElementById(tabId));
+  }
+
+  // Wrap existing switchTab if present, otherwise create a simple one as fallback
+  const _originalSwitch = window.switchTab;
+  window.switchTab = function (tabId) {
+    // If original exists, call it (keeps all existing logic)
+    if (typeof _originalSwitch === "function") {
+      try {
+        _originalSwitch(tabId);
+      } catch (err) {
+        console.error("Original switchTab failed:", err);
+      }
+    } else {
+      // Fallback simple implementation (keeps behaviour safe if original not loaded yet)
+      document.querySelectorAll(".tab-section").forEach(s => s.classList.add("hidden"));
+      const el = document.getElementById(tabId);
+      if (el) {
+        el.classList.remove("hidden");
+        window.scrollTo({ top: 0 });
+      }
+    }
+
+    // Persist the active tab
+    try {
+      if (validTabId(tabId)) {
+        localStorage.setItem(STORAGE_KEY, tabId);
+        // Also update hash so direct links / bookmarks work
+        try {
+          history.replaceState(null, "", `#${tabId}`);
+        } catch (e) {
+          // some browsers restrict replaceState in certain contexts; ignore silently
+        }
+      }
+    } catch (err) {
+      console.warn("Could not persist active tab:", err);
+    }
+  };
+
+  // Restore on load — prefer URL hash (if valid), otherwise localStorage, otherwise default
+  document.addEventListener("DOMContentLoaded", () => {
+    let candidate = null;
+
+    // 1) URL hash (highest priority)
+    try {
+      const h = (location.hash || "").replace(/^#/, "");
+      if (validTabId(h)) candidate = h;
+    } catch (_) {}
+
+    // 2) localStorage saved tab
+    if (!candidate) {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (validTabId(saved)) candidate = saved;
+      } catch (_) {}
+    }
+
+    // 3) fallback to any existing window.currentActiveTab or 'dashboard' or first .tab-section
+    if (!candidate) {
+      if (window.currentActiveTab && validTabId(window.currentActiveTab)) {
+        candidate = window.currentActiveTab;
+      } else if (validTabId("dashboard")) {
+        candidate = "dashboard";
+      } else {
+        // find first .tab-section that exists
+        const first = document.querySelector(".tab-section");
+        if (first && first.id) candidate = first.id;
+      }
+    }
+
+    // Finally switch to candidate
+    if (candidate) {
+      try {
+        window.switchTab(candidate);
+      } catch (err) {
+        console.error("Error restoring tab:", err);
+      }
+    }
+  });
+
+})();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* ============================
    Visibility & Suspend Manager
    (Paste after firebase init and db available)
