@@ -5513,27 +5513,25 @@ async function fetchNotificationsOnce(uid) {
         const dateStr = tsDate ? timeAgo(tsDate) : 'Just now';
 
         const card = document.createElement('div');
-card.className = `notification-card border-l-4 ${
-  isUnread ? 'border-blue-400' : 'border-gray-200'
-}`;
+card.className = 'notif-card' + (isUnread ? ' unread' : '');
 
-        const titleEl = document.createElement('p');
-        titleEl.className = 'text-gray-800 font-semibold truncate';
-        titleEl.textContent = data.title || 'No Title';
+const titleEl = document.createElement('p');
+titleEl.className = 'notif-title';
+titleEl.textContent = data.title || 'No Title';
 
-        const msgEl = document.createElement('p');
-        msgEl.className = 'text-sm text-gray-600 mt-1 truncate';
-        msgEl.textContent = data.message || '';
+const msgEl = document.createElement('p');
+msgEl.className = 'notif-message';
+msgEl.textContent = data.message || '';
 
-        const dateEl = document.createElement('p');
-        dateEl.className = 'text-xs text-gray-500 mt-2';
-        dateEl.textContent = dateStr;
+const dateEl = document.createElement('p');
+dateEl.className = 'notif-date';
+dateEl.textContent = dateStr;
 
-        card.appendChild(titleEl);
-        card.appendChild(msgEl);
-        card.appendChild(dateEl);
+card.appendChild(titleEl);
+card.appendChild(msgEl);
+card.appendChild(dateEl);
 
-        notifList.appendChild(card);
+notifList.appendChild(card);
       }
     });
 
