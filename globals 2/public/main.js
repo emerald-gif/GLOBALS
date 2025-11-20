@@ -5513,9 +5513,9 @@ async function fetchNotificationsOnce(uid) {
         const dateStr = tsDate ? timeAgo(tsDate) : 'Just now';
 
         const card = document.createElement('div');
-        card.className = `bg-white rounded-xl p-4 shadow-md border-l-4 ${
-          isUnread ? 'border-blue-400' : 'border-gray-200'
-        } animate-fade-in`;
+card.className = `notification-card border-l-4 ${
+  isUnread ? 'border-blue-400' : 'border-gray-200'
+}`;
 
         const titleEl = document.createElement('p');
         titleEl.className = 'text-gray-800 font-semibold truncate';
