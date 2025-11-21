@@ -7259,38 +7259,46 @@ async function handleCheckInPress(cycleDocSnap) {
   try {
     const uid = firebase.auth().currentUser && firebase.auth().currentUser.uid;
     if (!uid) return;
+
+    // 🔒 PREMIUM CHECK
+    const userRef = db.collection('users').doc(uid);
+    const userSnap = await userRef.get();
+
+    if (!userSnap.exists || userSnap.data().is_Premium !== true) {
+      alert("🚀 Premium Required: You must upgrade to Premium to use daily check-in rewards.");
+      return; // ⛔ Stop check-in
+    }
+
+    // Continue normal check-in
     const d = cycleDocSnap.data();
     const diff = dayDiff(d.cycleStartDate, todayStrLocal());
     if (diff < 0 || diff > 6) return;
     if (d.days && d.days[diff]) return;
 
-    // immediate UI feedback
-    const btn = document.getElementById('checkin-btn');
-    if (btn) {
-      btn.disabled = true;
-      btn.classList.add('opacity-50', 'cursor-not-allowed');
-      btn.textContent = 'Checking...';
+    // immediate UI feedback  
+    const btn = document.getElementById('checkin-btn');  
+    if (btn) {  
+      btn.disabled = true;  
+      btn.classList.add('opacity-50', 'cursor-not-allowed');  
+      btn.textContent = 'Checking...';  
+    }  
+
+    const arr = Array.isArray(d.days) ? [...d.days] : Array(7).fill(false);  
+    arr[diff] = true;  
+
+    await cyclesRef(uid).doc(cycleDocSnap.id).update({  
+      days: arr,  
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()  
+    });  
+
+    alert('✅ Check-in Successful');
+
+    if (diff === 6) {  
+      await finalizeCycle(uid, cycleDocSnap.id);  
     }
 
-    const arr = Array.isArray(d.days) ? [...d.days] : Array(7).fill(false);
-    arr[diff] = true;
-
-    // update days atomically (simple update)
-    await cyclesRef(uid).doc(cycleDocSnap.id).update({
-      days: arr,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    // optional user alert
-    try { alert('✅ Check-in Successful'); } catch (e) { /* ignore alerts failing in headless */ }
-
-    // If last day -> finalize (award or fail)
-    if (diff === 6) {
-      await finalizeCycle(uid, cycleDocSnap.id);
-    }
   } catch (err) {
     console.error('handleCheckInPress error', err);
-    // try to re-enable button on failure so user can retry
     const btn = document.getElementById('checkin-btn');
     if (btn) {
       btn.disabled = false;
@@ -7413,152 +7421,6 @@ function startCheckinListener() {
 /* initialize */
   startCheckinListener();
 }
-
-
-
-
-
-
-
-/* ===== GLOBALS: robust tab-persistence wrapper =====
-   Paste this at the VERY END of main.js (after every other code block).
-   This will:
-   - capture any existing tab functions (global and window.*),
-   - wrap them to persist the active tab to localStorage,
-   - restore the last tab on load by calling activateTab + switchTab.
-*/
-(function () {
-  const STORAGE_KEY = "globals_active_tab_final_v1";
-
-  function validTabId(id) {
-    return !!(id && document.getElementById(id));
-  }
-
-  // capture any existing implementations (global function or window property)
-  const orig_window_switch = (typeof window !== "undefined") ? window.switchTab : undefined;
-  const orig_global_switch = (typeof switchTab === "function") ? switchTab : undefined;
-
-  const orig_window_activate = (typeof window !== "undefined") ? window.activateTab : undefined;
-  const orig_global_activate = (typeof activateTab === "function") ? activateTab : undefined;
-
-  // helper to call a possible async original function safely
-  async function callOriginal(origFn, tabId) {
-    if (!origFn) return;
-    try {
-      const r = origFn(tabId);
-      if (r && typeof r.then === "function") await r;
-    } catch (err) {
-      // don't break main flow if original fails
-      console.error("[TAB PERSIST] original function threw:", err);
-    }
-  }
-
-  // persist to localStorage + update hash
-  function persist(tabId) {
-    try {
-      if (!validTabId(tabId)) return;
-      localStorage.setItem(STORAGE_KEY, tabId);
-      try { history.replaceState(null, "", `#${tabId}`); } catch (e) { /* ignore */ }
-    } catch (e) {
-      console.warn("[TAB PERSIST] cannot save tab:", e);
-    }
-  }
-
-  // OVERRIDE global function switchTab(sectionId)
-  // Keep a reference to any existing implementations to avoid recursion
-  const _origGlobalSwitch = orig_global_switch || orig_window_switch || null;
-  window.switchTab = async function (sectionId) {
-    // if there was a global function (declaration), call that first
-    await callOriginal(_origGlobalSwitch, sectionId);
-    // persist the tab id
-    persist(sectionId);
-  };
-  // also ensure the global named function (non-window) calls our wrapper
-  // this ensures calls to `switchTab('x')` (without window.) hit our wrapper too.
-  window.switchTab = window.switchTab; // keep assignment for safety
-  try {
-    // replace global function name too (if declared with function switchTab(...))
-    // this creates/replaces the global function symbol to forward to our wrapper
-    if (typeof window.switchTab === "function") {
-      // eslint-disable-next-line no-unused-vars
-      function switchTab(sectionId) { return window.switchTab(sectionId); }
-    }
-  } catch (e) {
-    // ignore if strict mode or other env blocks
-  }
-
-  // OVERRIDE activateTab similarly
-  const _origGlobalActivate = orig_global_activate || orig_window_activate || null;
-  window.activateTab = async function (sectionId) {
-    // call original
-    await callOriginal(_origGlobalActivate, sectionId);
-    // persist
-    persist(sectionId);
-  };
-  window.activateTab = window.activateTab;
-  try {
-    if (typeof window.activateTab === "function") {
-      // eslint-disable-next-line no-unused-vars
-      function activateTab(sectionId) { return window.activateTab(sectionId); }
-    }
-  } catch (e) { /* ignore */ }
-
-  // Extra safety: listen for clicks on nav buttons (class 'nav-btn' or data-tab) and persist
-  document.addEventListener("click", (ev) => {
-    try {
-      const btn = ev.target.closest && ev.target.closest('.nav-btn, [data-tab]');
-      if (!btn) return;
-      const tid = btn.getAttribute('data-tab') || btn.id && btn.id.replace(/^nav-/, '') || btn.getAttribute('href') && btn.getAttribute('href').replace(/^#/, '');
-      if (tid && validTabId(tid)) {
-        // give the normal handlers a tick to run, then persist (avoids racing)
-        setTimeout(() => persist(tid), 50);
-      }
-    } catch (e) { /* ignore */ }
-  }, { passive: true });
-
-  // On DOMContentLoaded (registered last so this handler runs after earlier initializers),
-  // restore preference: prefer location.hash, then saved localStorage, then fallback.
-  document.addEventListener("DOMContentLoaded", async () => {
-    try {
-      let candidate = null;
-      const hash = (location.hash || "").replace(/^#/, "");
-      if (validTabId(hash)) candidate = hash;
-
-      if (!candidate) {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (validTabId(saved)) candidate = saved;
-      }
-
-      if (!candidate) {
-        if (window.currentActiveTab && validTabId(window.currentActiveTab)) candidate = window.currentActiveTab;
-        else if (validTabId('dashboard')) candidate = 'dashboard';
-        else {
-          const first = document.querySelector('.tab-section');
-          if (first && first.id) candidate = first.id;
-        }
-      }
-
-      if (candidate) {
-        // call activateTab then switchTab to ensure UI highlight + content are consistent
-        if (typeof window.activateTab === "function") await window.activateTab(candidate);
-        if (typeof window.switchTab === "function") await window.switchTab(candidate);
-        // small delay to let any lazy init run
-        setTimeout(() => persist(candidate), 150);
-      }
-    } catch (err) {
-      console.error("[TAB PERSIST] restore failed:", err);
-    }
-  }, { once: true });
-
-  // debug helper (remove if you want silence)
-  window.__globals_tab_persist = {
-    storageKey: STORAGE_KEY,
-    getSaved() { try { return localStorage.getItem(STORAGE_KEY); } catch (e) { return null; } },
-    validTabId
-  };
-
-})();
-
 
 
 
