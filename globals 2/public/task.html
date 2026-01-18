@@ -1,17 +1,17 @@
-     <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tasks</title>
 
-  <!-- Tailwind / Global Styles -->
-  <link rel="stylesheet" href="styles.css" />
+  <!-- Tailwind CSS (REQUIRED) -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <!-- Firebase (global) -->
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -19,14 +19,15 @@
   <!-- Firebase Init -->
   <script src="firebase.js"></script>
 </head>
+
 <body class="bg-gray-50 min-h-screen">
 
-  <!-- ================= TASK SECTION ================= -->
-  <div id="taskSection" class="px-4 py-6">
+  <!-- ================= TASKS ================= -->
+  <div id="taskSection" class="px-4 py-6 max-w-6xl mx-auto">
 
     <!-- Back Button -->
-    <button onclick="window.location.href='dashboard.html'"
-      class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
+    <button onclick="window.location.href='index.html'"
+      class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-6">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
            viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round"
@@ -36,34 +37,31 @@
     </button>
 
     <!-- Search & Filters -->
-    <div class="w-full px-4 py-5 bg-white rounded-2xl shadow-lg mb-6 border border-gray-100">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div class="bg-white rounded-2xl shadow-md p-5 mb-6 border border-gray-100">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
 
         <!-- Search -->
-        <div class="relative w-full sm:w-1/2">
+        <div class="relative w-full md:w-1/2">
           <input
             type="text"
             id="taskSearch"
             placeholder="Search tasks by name or category..."
-            class="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-full bg-gray-50
-                   shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500
-                   transition-all duration-300 text-sm"
+            class="w-full pl-12 pr-4 py-3 rounded-full border border-gray-200 bg-gray-50
+                   focus:ring-2 focus:ring-blue-500 outline-none text-sm"
           />
-          <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
-                 viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1110.5 3a7.5 7.5 0 016.15 13.65z" />
-            </svg>
-          </span>
+          <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+               fill="none" stroke="currentColor" stroke-width="2"
+               viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
         </div>
 
-        <!-- Category & Finished -->
+        <!-- Filters -->
         <div class="flex items-center gap-3">
           <select id="taskCategoryFilter"
-            class="px-4 py-2 border border-gray-200 rounded-xl text-sm
-                   shadow-sm bg-gray-50 focus:ring-2 focus:ring-blue-500">
+            class="px-4 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm
+                   focus:ring-2 focus:ring-blue-500">
             <option value="">All Categories</option>
             <option>WhatsApp</option>
             <option>Telegram</option>
@@ -79,9 +77,8 @@
           </select>
 
           <button id="finishedTaskBtnUser"
-            class="bg-gradient-to-r from-blue-600 to-indigo-600
-                   hover:opacity-90 text-white px-5 py-2 rounded-xl
-                   text-sm font-medium shadow-md transition">
+            class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white
+                   px-5 py-2 rounded-xl text-sm font-medium shadow hover:opacity-90">
             Finished Tasks
           </button>
         </div>
@@ -89,42 +86,41 @@
       </div>
     </div>
 
-    <!-- Tasks Grid -->
-    <div id="task-jobs" class="grid gap-5 pb-12"></div>
+    <!-- Task List -->
+    <div id="task-jobs" class="grid gap-5 pb-10"></div>
   </div>
 
   <!-- ================= FINISHED TASKS ================= -->
-  <div id="finishedTasksScreenUser" class="hidden px-4 py-8">
+  <div id="finishedTasksScreenUser" class="hidden px-4 py-8 max-w-6xl mx-auto">
 
     <div class="flex items-center justify-between mb-8">
       <button id="backToMainBtnUser"
-        class="text-blue-600 font-medium flex items-center gap-1 hover:underline">
+        class="text-blue-600 font-medium hover:underline">
         ← Back
       </button>
-      <h2 class="text-xl font-bold tracking-tight">Finished Tasks</h2>
+      <h2 class="text-xl font-bold">Finished Tasks</h2>
     </div>
 
-    <!-- Stats -->
     <div class="grid grid-cols-2 gap-4 mb-8">
-      <div class="text-center bg-yellow-50 border border-yellow-200 rounded-2xl py-4 shadow-sm">
-        <p id="pendingCountUser" class="text-3xl font-extrabold text-yellow-600">0</p>
-        <p class="text-sm text-gray-600">Pending Tasks</p>
+      <div class="bg-yellow-50 border border-yellow-200 rounded-2xl py-4 text-center">
+        <p id="pendingCountUser" class="text-3xl font-bold text-yellow-600">0</p>
+        <p class="text-sm text-gray-600">Pending</p>
       </div>
-      <div class="text-center bg-green-50 border border-green-200 rounded-2xl py-4 shadow-sm">
-        <p id="approvedCountUser" class="text-3xl font-extrabold text-green-600">0</p>
-        <p class="text-sm text-gray-600">Approved Tasks</p>
+      <div class="bg-green-50 border border-green-200 rounded-2xl py-4 text-center">
+        <p id="approvedCountUser" class="text-3xl font-bold text-green-600">0</p>
+        <p class="text-sm text-gray-600">Approved</p>
       </div>
     </div>
 
-    <!-- Finished List -->
     <div id="finishedTasksListUser" class="grid gap-5"></div>
   </div>
 
-  <!-- Page Logic -->
+  <!-- Page Script -->
   <script src="task.js"></script>
 
   <script>
     lucide.createIcons();
   </script>
+
 </body>
 </html>
