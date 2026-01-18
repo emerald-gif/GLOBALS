@@ -1,4 +1,24 @@
 
+
+
+// Firebase config & init
+const firebaseConfig = {
+  apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
+  authDomain: "globals-17bf7.firebaseapp.com",
+  projectId: "globals-17bf7",
+  storageBucket: "globals-17bf7.appspot.com",
+  messagingSenderId: "603274362994",
+  appId: "1:603274362994:web:c312c10cf0a42938e882eb"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore(); 
+
+
+
+
+
                                                                  //OVERVIEW SECTION (ME SECTION) FUNCTION
 
 
