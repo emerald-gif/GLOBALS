@@ -1,680 +1,781 @@
-/* ==========================================================================
-   FIREBASE CONFIGURATION & INITIALIZATION
-   ========================================================================== */
+
+
+
+
+// Firebase config & inits
 const firebaseConfig = {
-    apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
-    authDomain: "globals-17bf7.firebaseapp.com",
-    projectId: "globals-17bf7",
-    storageBucket: "globals-17bf7.appspot.com",
-    messagingSenderId: "603274362994",
-    appId: "1:603274362994:web:c312c10cf0a42938e882eb"
+  apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
+  authDomain: "globals-17bf7.firebaseapp.com",
+  projectId: "globals-17bf7",
+  storageBucket: "globals-17bf7.appspot.com",
+  messagingSenderId: "603274362994",
+  appId: "1:603274362994:web:c312c10cf0a42938e882eb"
 };
 
-// Prevent double initialization
-if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore(); 
+
+
+
+
+
+
+
+// Robust Task Section Module (fixed)
+// Usage: call window.initTaskSection() once (e.g., from activateTab('tasks'))
+// Requires: firebase (auth + firestore) and uploadToCloudinary(file) available globally
+
+function initTaskSectionModule() {
+  'use strict';
+  // ---------- Guard against double init ----------
+  if (window.__TASK_SECTION_INITIALIZED__) {
+    console.warn('[TASK] initTaskSectionModule already initialized - skipping.');
+    return;
+  }
+  window.__TASK_SECTION_INITIALIZED__ = true;
+
+  // ---------- Small runtime helpers ----------
+  function safeLog(...args) { try { console.log(...args); } catch (_) { } }
+  function safeWarn(...args) { try { console.warn(...args); } catch (_) { } }
+  function safeError(...args) { try { console.error(...args); } catch (_) { } }
+  function escapeHtml(str) {
+    if (str == null) return "";
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+  function el(id) { return document.getElementById(id); }
+  function hasFirebase() { return (typeof firebase !== 'undefined') && firebase.firestore && firebase.auth; }
+
+  // ---------- Wait helpers ----------
+  async function waitForReady(timeoutMs = 5000) {
+    if (document.readyState === 'loading') {
+      await new Promise(res => document.addEventListener('DOMContentLoaded', res, { once: true }));
+    }
+    const start = Date.now();
+    while (!hasFirebase() && Date.now() - start < timeoutMs) {
+      await new Promise(r => setTimeout(r, 100));
+    }
+    return hasFirebase();
+  }
+  function waitForAuthReady(timeout = 4000) {
+    return new Promise((resolve) => {
+      if (!hasFirebase()) return resolve(null);
+      let done = false;
+      const t = setTimeout(() => {
+        if (done) return;
+        done = true;
+        resolve(firebase.auth().currentUser || null);
+      }, timeout);
+      const unsub = firebase.auth().onAuthStateChanged((user) => {
+        if (done) return;
+        done = true;
+        clearTimeout(t);
+        try { unsub(); } catch (e) { }
+        resolve(user || null);
+      });
+    });
+  }
+
+  // ---------- Firestore transaction helpers ----------
+  async function applyTaskDeltas(taskId, { deltaFilled = 0, deltaApproved = 0 } = {}) {
+    if (!taskId) throw new Error('taskId required');
+    if (!hasFirebase()) throw new Error('Firebase not initialized');
+    const db = firebase.firestore();
+    const ref = db.collection('tasks').doc(taskId);
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) {
+        const init = {
+          filledWorkers: Math.max(0, Number(deltaFilled || 0)),
+          approvedWorkers: Math.max(0, Number(deltaApproved || 0))
+        };
+        tx.set(ref, init, { merge: true });
+        return;
+      }
+      const data = snap.data() || {};
+      const curFilled = Number(data.filledWorkers || 0);
+      const curApproved = Number(data.approvedWorkers || 0);
+      const newFilled = Math.max(0, curFilled + Number(deltaFilled || 0));
+      const newApproved = Math.max(0, curApproved + Number(deltaApproved || 0));
+      tx.update(ref, { filledWorkers: newFilled, approvedWorkers: newApproved });
+    });
+  }
+  async function increaseTaskOccupancy(taskId) { return applyTaskDeltas(taskId, { deltaFilled: +1 }); }
+  async function decreaseTaskOccupancy(taskId) { return applyTaskDeltas(taskId, { deltaFilled: -1 }); }
+  async function changeTaskApprovedCount(taskId, delta) { return applyTaskDeltas(taskId, { deltaApproved: delta }); }
+
+  // ---------- Reconcile tasks from submissions (authoritative) ----------
+  async function reconcileTaskCounters(taskId) {
+    if (!taskId) throw new Error('taskId required');
+    if (!hasFirebase()) throw new Error('Firebase not initialized');
+    const db = firebase.firestore();
+    const occSnap = await db.collection('task_submissions').where('taskId', '==', taskId).get();
+    let filled = 0, approved = 0;
+    occSnap.forEach(d => {
+      const s = String(d.data().status || '').toLowerCase();
+      if (s === 'approved') { filled += 1; approved += 1; }
+      else if (s === 'on review') { filled += 1; }
+    });
+    await db.runTransaction(async (tx) => {
+      const ref = db.collection('tasks').doc(taskId);
+      const snap = await tx.get(ref);
+      if (!snap.exists) {
+        tx.set(ref, { filledWorkers: filled, approvedWorkers: approved }, { merge: true });
+      } else {
+        tx.update(ref, { filledWorkers: filled, approvedWorkers: approved });
+      }
+    });
+    return { filled, approved };
+  }
+  async function reconcileAllTasks() {
+    if (!hasFirebase()) throw new Error('Firebase not initialized');
+    const db = firebase.firestore();
+    const tasksSnap = await db.collection('tasks').get();
+    for (const tdoc of tasksSnap.docs) {
+      await reconcileTaskCounters(tdoc.id);
+    }
+  }
+
+  // ---------- Admin status handler (transactional, robust) ----------
+  // submissionId: doc id of task_submissions; newStatus: 'approved' | 'rejected' | 'on review' | etc.
+  async function handleSubmissionStatusChange(submissionId, newStatus) {
+    if (!submissionId) throw new Error('submissionId required');
+    if (typeof newStatus !== 'string') throw new Error('newStatus string required');
+    if (!hasFirebase()) throw new Error('Firebase not initialized');
+    const db = firebase.firestore();
+    const subRef = db.collection('task_submissions').doc(submissionId);
+    await db.runTransaction(async (tx) => {
+      const subSnap = await tx.get(subRef);
+      if (!subSnap.exists) throw new Error('Submission not found');
+      const sub = subSnap.data() || {};
+      const prev = (sub.status || '').toLowerCase();
+      const next = newStatus.toLowerCase();
+      if (prev === next) return;
+      const taskId = sub.taskId;
+      if (!taskId) throw new Error('Submission missing taskId');
+      // Counted statuses for occupancy: 'on review' and 'approved' count as occupying
+      const prevIsCounted = ['on review', 'approved'].includes(prev);
+      const nextIsCounted = ['on review', 'approved'].includes(next);
+      const deltaFilled = (nextIsCounted ? 1 : 0) - (prevIsCounted ? 1 : 0);
+      const prevApproved = (prev === 'approved') ? 1 : 0;
+      const nextApproved = (next === 'approved') ? 1 : 0;
+      const deltaApproved = nextApproved - prevApproved;
+      // update submission status
+      tx.update(subRef, { status: newStatus });
+      // update task counters
+      const taskRef = db.collection('tasks').doc(taskId);
+      const taskSnap = await tx.get(taskRef);
+      if (!taskSnap.exists) {
+        const initial = { filledWorkers: Math.max(0, deltaFilled), approvedWorkers: Math.max(0, deltaApproved) };
+        tx.set(taskRef, initial, { merge: true });
+      } else {
+        const t = taskSnap.data() || {};
+        const curFilled = Number(t.filledWorkers || 0);
+        const curApproved = Number(t.approvedWorkers || 0);
+        const newFilled = Math.max(0, curFilled + deltaFilled);
+        const newApproved = Math.max(0, curApproved + deltaApproved);
+        tx.update(taskRef, { filledWorkers: newFilled, approvedWorkers: newApproved });
+      }
+    });
+  }
+
+  // ---------- UI helpers ----------
+  function generateProofUploadFields(count) {
+    let html = "";
+    for (let i = 1; i <= count; i++) {
+      html += `
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Upload Proof ${i}</label>
+        <input id="proof-file-${i}" type="file" accept="image/*" class="w-full p-2 border border-gray-300 rounded-lg text-sm" />
+      </div>`;
+    }
+    return html;
+  }
+
+  // ---------- Show Task Details & Submission Flow ----------
+  async function showTaskDetails(jobId, jobData) {
+    try {
+      if (!jobId) throw new Error('jobId missing');
+      if (!jobData || typeof jobData !== 'object') {
+        if (!hasFirebase()) throw new Error('jobData missing and Firebase not available to load it');
+        const tdoc = await firebase.firestore().collection('tasks').doc(jobId).get();
+        if (tdoc.exists) jobData = Object.assign({}, jobData || {}, tdoc.data());
+      }
+      if (!jobData || typeof jobData !== 'object') throw new Error('jobData missing or invalid');
+    } catch (err) {
+      safeError('showTaskDetails early check failed', err);
+      alert('Failed to open task details: ' + (err && err.message ? err.message : err));
+      return;
+    }
+
+    const fullScreen = document.createElement('div');
+    fullScreen.className = "fixed inset-0 bg-white z-50 overflow-y-auto p-6";
+    const proofCount = jobData.proofFileCount || 1;
+    const safeTitle = escapeHtml(jobData.title || 'Untitled Task');
+    const safeCategory = escapeHtml(jobData.category || '');
+    const safeSub = escapeHtml(jobData.subCategory || '');
+    const safeDesc = escapeHtml(jobData.description || 'No description provided');
+    const safeProofText = escapeHtml(jobData.proof || 'Provide the necessary screenshot or details.');
+    const screenshot = escapeHtml(jobData.screenshotURL || 'https://via.placeholder.com/400');
+    fullScreen.innerHTML = `
+      <div class="max-w-2xl mx-auto space-y-6">
+        <button id="closeTaskBtn" class="text-blue-600 font-bold text-sm underline">← Back to Tasks</button>
+        <h1 class="text-2xl font-bold text-gray-800">${safeTitle}</h1>
+        <p class="text-sm text-gray-500">${safeCategory} • ${safeSub}</p>
+
+	<div class="relative w-full h-64 bg-gray-100 rounded-xl border flex items-center justify-center overflow-hidden">
+  <img 
+    src="${screenshot}" 
+    alt="Task Image" 
+    class="max-w-full max-h-full object-contain rounded-lg"
+  />
+</div>
+
+		<div>
+          <h2 class="text-lg font-semibold text-gray-800 mb-2">Task Description</h2>
+          <p class="text-gray-700 text-sm whitespace-pre-line">${safeDesc}</p>
+        </div>
+        <div>
+          <h2 class="text-lg font-semibold text-gray-800 mb-2">Proof Required</h2>
+          <p class="text-sm text-gray-700">${safeProofText}</p>
+        </div>
+        <div id="proofSection" class="mt-6">
+          <h3 class="text-base font-semibold text-gray-800 mb-3">Submit Proof</h3>
+          <div id="proofInputs">${generateProofUploadFields(proofCount)}</div>
+          <textarea id="taskProofNote" placeholder="Optional note..." class="w-full border rounded-md p-3 mt-3 h-24"></textarea>
+          <div class="mt-3">
+            <button id="taskSubmitBtn" class="w-full py-3 bg-blue-600 text-white rounded-xl">Submit Proof</button>
+          </div>
+          <p class="text-xs text-gray-400 mt-2">Job is Running.</p>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(fullScreen);
+	  
+    fullScreen.querySelector('#closeTaskBtn')?.addEventListener('click', () => fullScreen.remove());
+
+
+
+    // Get authoritative counts (best-effort)
+    let filled = 0, approved = 0, total = Number(jobData.numWorkers || 0);
+    try {
+      if (hasFirebase()) {
+        const r = await reconcileTaskCounters(jobId);
+        filled = r.filled; approved = r.approved;
+      }
+    } catch (err) { safeWarn('reconcile failed', err); }
+
+    const submitArea = fullScreen.querySelector('#proofSection');
+    // If all approved => closed and show user's submission if exists
+    if (total > 0 && approved >= total) {
+      submitArea.innerHTML = `<div style="padding:12px;background:#f8fafc;border-radius:12px;text-align:center"><strong>All slots fully approved. This job is closed.</strong></div>`;
+      await showUserSubmissionIfExists(jobId, fullScreen);
+      return;
+    }
+    // If slots are filled but not all approved => no new submissions allowed, but keep job visible
+    if (total > 0 && filled >= total && approved < total) {
+      submitArea.innerHTML = `
+        <div style="padding:12px;background:#fffbeb;border-radius:12px;text-align:center">
+          <strong>All slots are filled (pending reviews). You can view your submission but cannot submit new proofs right now.</strong>
+        </div>
+      `;
+      
+    }
+
+    // Otherwise allow submit flow (or show existing submission)
+    const user = await waitForAuthReady();
+    if (!user) {
+      const btn = fullScreen.querySelector('#taskSubmitBtn');
+      if (btn) btn.onclick = () => alert('Please log in to submit proof.');
+      return;
+    }
+
+    try {
+      if (hasFirebase()) {
+        const existingSnap = await firebase.firestore().collection('task_submissions')
+          .where('taskId', '==', jobId)
+          .where('userId', '==', user.uid)
+          .limit(1)
+          .get();
+        if (!existingSnap.empty) {
+          const s = existingSnap.docs[0].data();
+          replaceSubmitAreaWithSubmitted(s, submitArea);
+          return;
+        }
+      }
+    } catch (err) { safeWarn('Error checking existing submission', err); }
+
+    attachSubmitHandler(fullScreen, jobId, jobData);
+  }
+
+  // ---------- Show user's submission if exists ----------
+  async function showUserSubmissionIfExists(jobId, containerEl) {
+    try {
+      if (!hasFirebase()) return;
+      const user = firebase.auth().currentUser;
+      if (!user) return;
+      const snap = await firebase.firestore().collection('task_submissions')
+        .where('taskId', '==', jobId)
+        .where('userId', '==', user.uid)
+        .limit(1)
+        .get();
+      if (!snap.empty) {
+        const sub = snap.docs[0].data();
+        replaceSubmitAreaWithSubmitted(sub, containerEl);
+      }
+    } catch (err) { safeWarn('showUserSubmissionIfExists error', err); }
+  }
+
+  function replaceSubmitAreaWithSubmitted(sub, containerEl) {
+    const proofs = (sub.proofImages || []).map(u => `<img src="${escapeHtml(u)}" style="width:100%;max-height:220px;object-fit:contain;border-radius:8px;margin-bottom:8px">`).join('');
+    const note = sub.proofText ? `<div style="margin-top:8px;color:#374151"><strong>Note:</strong> ${escapeHtml(sub.proofText)}</div>` : '';
+    const status = escapeHtml(sub.status || 'on review');
+    const html = `
+      <div style="background:#f8fafc;padding:14px;border-radius:12px;text-align:center">
+        <div style="color:#16a34a;font-weight:600;margin-bottom:6px">✅ Your submission</div>
+        <div style="font-size:13px;color:#6b7280;margin-bottom:8px">Status: <strong style="color:#111827">${status}</strong></div>
+        ${proofs || '<div style="color:#9ca3af;font-size:13px">No proof images</div>'}
+        ${note}
+      </div>
+    `;
+    if (containerEl) containerEl.innerHTML = html;
+  }
+
+  // ---------- Submit handler (transaction-safe) ----------
+  function attachSubmitHandler(fullScreen, jobId, jobData) {
+    const submitBtn = fullScreen.querySelector('#taskSubmitBtn');
+    if (!submitBtn) return;
+    if (submitBtn._attached) return; // avoid double attach
+    submitBtn._attached = true;
+
+    submitBtn.addEventListener('click', async () => {
+      submitBtn.disabled = true;
+      try {
+        const user = await waitForAuthReady();
+        if (!user) { alert('Please log in to submit task.'); submitBtn.disabled = false; return; }
+
+        // Duplicate check pre
+        if (hasFirebase()) {
+          const pre = await firebase.firestore().collection('task_submissions')
+            .where('taskId', '==', jobId)
+            .where('userId', '==', user.uid)
+            .limit(1)
+            .get();
+          if (!pre.empty) { alert('You have already submitted this task.'); submitBtn.disabled = false; return; }
+        }
+
+        const fileInputs = Array.from(fullScreen.querySelectorAll('input[type="file"]'));
+        const anyFile = fileInputs.some(i => i.files && i.files[0]);
+        if (!anyFile) { alert('Please upload at least one proof image.'); submitBtn.disabled = false; return; }
+
+        // cheap pre-check slots
+        let totalSlots = Number(jobData.numWorkers || 0);
+        let curFilled = 0;
+        if (hasFirebase()) {
+          try {
+            const taskRef = firebase.firestore().collection('tasks').doc(jobId);
+            const taskSnap = await taskRef.get();
+            totalSlots = Number(jobData.numWorkers || (taskSnap.exists ? (taskSnap.data().numWorkers || 0) : 0));
+            curFilled = taskSnap.exists ? Number(taskSnap.data().filledWorkers || 0) : 0;
+          } catch (e) { safeWarn('Failed reading task doc for pre-check', e); }
+        }
+        if (totalSlots > 0 && curFilled >= totalSlots) {
+          alert('No open submission slots right now. Please check back later.');
+          submitBtn.disabled = false;
+          return;
+        }
+
+        // upload files (Cloudinary) -> normalize to strings
+        const uploaded = [];
+        for (let i = 0; i < fileInputs.length; i++) {
+          const fEl = fileInputs[i];
+          if (!fEl.files || !fEl.files[0]) continue;
+          if (typeof uploadToCloudinary !== 'function') throw new Error('uploadToCloudinary(file) not available');
+          const res = await uploadToCloudinary(fEl.files[0]);
+          // normalize common Cloudinary responses and ensure string URL is stored
+          let url = null;
+          if (typeof res === 'string') url = res;
+          else if (res && typeof res.secure_url === 'string') url = res.secure_url;
+          else if (res && typeof res.url === 'string') url = res.url;
+          else if (res && typeof res.data === 'string') url = res.data;
+          else throw new Error('uploadToCloudinary did not return a URL string');
+          uploaded.push(url);
+        }
+
+        const payload = {
+          taskId: jobId,
+          userId: user.uid,
+          proofImages: uploaded,
+          proofText: (fullScreen.querySelector('#taskProofNote')?.value || '').trim(),
+          status: 'on review',
+          workerEarn: jobData.workerEarn || 0
+        };
+
+        if (!hasFirebase()) throw new Error('Firebase not initialized');
+        const db = firebase.firestore();
+        const submissionsCol = db.collection('task_submissions');
+        const newSubRef = submissionsCol.doc();
+
+        // transaction: create submission + bump counters
+        await db.runTransaction(async (tx) => {
+          const taskRef = db.collection('tasks').doc(jobId);
+          const tSnap = await tx.get(taskRef);
+          const tData = tSnap.exists ? (tSnap.data() || {}) : {};
+          const curFilledTx = Number(tData.filledWorkers || 0);
+          const totalSlotsTx = Number(jobData.numWorkers || (tData.numWorkers || 0)) || 0;
+
+          // race-safe check
+          if (totalSlotsTx > 0 && curFilledTx >= totalSlotsTx) {
+            throw new Error('NO_SLOTS');
+          }
+
+          // create submission doc
+          const toWrite = Object.assign({}, payload, {
+            submittedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          tx.set(newSubRef, toWrite);
+
+          if (!tSnap.exists) {
+            const init = { filledWorkers: 1, approvedWorkers: 0 };
+            if (jobData.numWorkers != null) init.numWorkers = Number(jobData.numWorkers);
+            tx.set(taskRef, init, { merge: true });
+          } else {
+            const newFilled = Math.max(0, curFilledTx + 1);
+            const curApproved = Number(tData.approvedWorkers || 0);
+            tx.update(taskRef, { filledWorkers: newFilled, approvedWorkers: curApproved });
+          }
+        });
+
+        // reconcile as best-effort
+        try { await reconcileTaskCounters(jobId); } catch (e) { safeWarn('reconcile after submit failed', e); }
+
+        // update finished tasks cache for UI
+        window.finishedTasksCache = window.finishedTasksCache || [];
+        const localCopy = Object.assign({}, payload, { id: newSubRef.id, submittedAt: new Date() });
+        window.finishedTasksCache.unshift(localCopy);
+
+        alert('✅ Task submitted for review!');
+        fullScreen.remove();
+      } catch (err) {
+        safeError('Submit error', err);
+        if (err && err.message === 'NO_SLOTS') {
+          alert('Sorry — by the time you tried to submit the slots were taken. Please check later.');
+        } else if (err && err.message === 'ALREADY_SUBMITTED') {
+          alert('You have already submitted this task.');
+        } else {
+          alert('❗ Failed to submit task: ' + (err && err.message ? err.message : String(err)));
+        }
+        submitBtn.disabled = false;
+      }
+    });
+  }
+
+  // ---------- Task card renderer ----------
+  function createTaskCard(jobId, jobData) {
+    try {
+      const taskContainer = el('task-jobs');
+      if (!taskContainer) return;
+      const card = document.createElement('div');
+      card.className = "flex gap-4 p-4 rounded-2xl shadow-md border border-gray-200 bg-white hover:shadow-lg transition duration-300 mb-4 items-center";
+      card.dataset.jobId = jobId;
+      const image = document.createElement('img');
+      image.src = jobData.screenshotURL || 'https://via.placeholder.com/80';
+      image.alt = "Task Preview";
+      image.className = "w-20 h-20 rounded-xl object-cover";
+      const content = document.createElement('div');
+      content.className = "flex-1 task-content";
+      const title = document.createElement('h2');
+      title.textContent = jobData.title || "Untitled Task";
+      title.className = "text-lg font-semibold text-gray-800";
+      const meta = document.createElement('p');
+      meta.className = "text-sm text-gray-500 mt-1";
+      meta.textContent = `${jobData.category || ""} • ${jobData.subCategory || ""}`;
+      const earn = document.createElement('p');
+      earn.textContent = `Earn: ₦${jobData.workerEarn || 0}`;
+      earn.className = "text-sm text-green-600 font-semibold mt-1";
+      const rate = document.createElement('p');
+      rate.className = "text-xs text-gray-500 task-rate";
+      rate.textContent = "Progress: loading...";
+      const total = Number(jobData.numWorkers || 0);
+      card.dataset.total = String(total);
+
+      (async () => {
+        try {
+          if (hasFirebase()) await reconcileTaskCounters(jobId).catch(() => null);
+          if (hasFirebase()) {
+            const tdoc = await firebase.firestore().collection('tasks').doc(jobId).get();
+            if (tdoc.exists) {
+              const td = tdoc.data() || {};
+              const filled = Number(td.filledWorkers || 0);
+              const approved = Number(td.approvedWorkers || 0);
+              rate.textContent = `Progress: ${filled} / ${total} (approved ${approved})`;
+              if (total > 0 && approved >= total) { card.remove(); return; }
+              else if (total > 0 && filled >= total && approved < total) {
+                card.classList.add('opacity-90');
+                if (!content.querySelector('.pending-note')) {
+                  const note = document.createElement('div');
+                  note.textContent = "All slots filled, pending reviews";
+                  note.className = "text-xs text-amber-500 mt-1 pending-note";
+                  content.appendChild(note);
+                }
+              }
+            } else {
+              const aprSnap = await firebase.firestore().collection('task_submissions')
+                .where('taskId', '==', jobId)
+                .where('status', '==', 'approved')
+                .get();
+              const done = aprSnap.size;
+              rate.textContent = `Progress: ${done} / ${total}`;
+              if (total > 0 && done >= total) { card.remove(); return; }
+            }
+          } else {
+            rate.textContent = `Progress: ? / ${total}`;
+          }
+        } catch (err) { safeWarn('progress read failed', err); rate.textContent = `Progress: 0 / ${total}`; }
+      })();
+
+      const button = document.createElement('button');
+      button.textContent = "View Task";
+      button.className = "mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2 rounded-lg shadow-sm transition";
+      button.addEventListener('click', async (ev) => {
+        try { ev.preventDefault(); await showTaskDetails(jobId, jobData); }
+        catch (err) { safeError('Failed to open task details for', jobId, err); alert('Failed to open task details: ' + (err && err.message ? err.message : err)); }
+      });
+
+      content.appendChild(title);
+      content.appendChild(meta);
+      content.appendChild(earn);
+      content.appendChild(rate);
+      content.appendChild(button);
+      card.appendChild(image);
+      card.appendChild(content);
+      taskContainer.appendChild(card);
+    } catch (err) { safeWarn('createTaskCard error', err); }
+  }
+
+  // ---------- Fetch tasks once (safe) ----------
+  async function fetchTasksOnce() {
+    try {
+      const taskContainer = el('task-jobs');
+      if (!taskContainer) return;
+      const searchInput = el('taskSearch');
+      const filterSelect = el('taskCategoryFilter');
+      taskContainer.innerHTML = `<p class="p-4 text-gray-400 text-sm">Loading tasks...</p>`;
+      if (!hasFirebase()) { taskContainer.innerHTML = `<p class="p-4 text-gray-400 text-sm">Firebase not initialized.</p>`; return; }
+      const snap = await firebase.firestore().collection('tasks').where('status', '==', 'approved').get();
+      const tasks = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      taskContainer.innerHTML = "";
+      function renderTasks() {
+        const keyword = (searchInput && searchInput.value) ? searchInput.value.toLowerCase() : "";
+        const selectedCategory = (filterSelect && filterSelect.value) ? filterSelect.value.toLowerCase() : "";
+        taskContainer.innerHTML = "";
+        tasks
+          .filter(task => {
+            const taskCategory = (task.category || "").toLowerCase();
+            const matchesCategory = selectedCategory === "" || taskCategory === selectedCategory;
+            const matchesSearch = (task.title || "").toLowerCase().includes(keyword);
+            return matchesCategory && matchesSearch;
+          })
+          .forEach(task => createTaskCard(task.id, task));
+      }
+      if (searchInput) searchInput.addEventListener("input", renderTasks);
+      if (filterSelect) filterSelect.addEventListener("change", renderTasks);
+      renderTasks();
+    } catch (err) { safeError("Failed to fetch tasks:", err); const taskContainer = el("task-jobs"); if (taskContainer) { taskContainer.innerHTML = `<p class="p-4 text-red-500 text-sm">Failed to load tasks. Please reload.</p>`; } }
+  }
+
+  // ---------- Finished tasks UI (user) ----------
+  window.finishedTasksCache = window.finishedTasksCache || [];
+  async function initFinishedTasksSectionUser() {
+    try {
+      const btnOpen = el("finishedTaskBtnUser");
+      const btnBack = el("backToMainBtnUser");
+      if (btnOpen) {
+        btnOpen.addEventListener("click", () => {
+          el("taskSection")?.classList.add("hidden");
+          el("finishedTasksScreenUser")?.classList.remove("hidden");
+          renderFinishedTasksUser();
+        });
+      }
+      if (btnBack) {
+        btnBack.addEventListener("click", () => {
+          el("finishedTasksScreenUser")?.classList.add("hidden");
+          el("taskSection")?.classList.remove("hidden");
+        });
+      }
+      if (hasFirebase()) {
+        firebase.auth().onAuthStateChanged(async user => {
+          if (!user) return;
+          await fetchFinishedTasksOnce(user.uid);
+        });
+      }
+    } catch (err) { safeWarn('initFinishedTasksSectionUser error', err); }
+  }
+
+  async function fetchFinishedTasksOnce(uid) {
+    try {
+      const listEl = el("finishedTasksListUser");
+      const pendingCountEl = el("pendingCountUser");
+      const approvedCountEl = el("approvedCountUser");
+      if (!uid || !hasFirebase() || !listEl) return;
+      listEl.innerHTML = `<p class="text-center text-gray-500">Loading...</p>`;
+      const snap = await firebase.firestore().collection("task_submissions").where("userId", "==", uid).get();
+      window.finishedTasksCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      window.finishedTasksCache.sort((a, b) => {
+        const t1 = a.submittedAt?.toDate?.() || new Date(0);
+        const t2 = b.submittedAt?.toDate?.() || new Date(0);
+        return t2 - t1;
+      });
+      const taskIds = [...new Set(window.finishedTasksCache.map(s => s.taskId).filter(Boolean))];
+      await Promise.all(taskIds.map(id => reconcileTaskCounters(id).catch(() => null)));
+      renderFinishedTasksUser();
+      let pending = window.finishedTasksCache.filter(d => (d.status || '').toLowerCase() === "on review").length;
+      let approved = window.finishedTasksCache.filter(d => (d.status || '').toLowerCase() === "approved").length;
+      if (pendingCountEl) pendingCountEl.textContent = pending;
+      if (approvedCountEl) approvedCountEl.textContent = approved;
+    } catch (err) { safeError("Error fetching finished tasks:", err); const listEl = el("finishedTasksListUser"); if (listEl) listEl.innerHTML = `<p class="text-center text-red-500">Failed to load tasks. Reload page.</p>`; }
+  }
+
+  function renderFinishedTasksUser() {
+    const listEl = el("finishedTasksListUser");
+    const pendingCountEl = el("pendingCountUser");
+    const approvedCountEl = el("approvedCountUser");
+    if (!listEl) return;
+    listEl.innerHTML = "";
+    if (!window.finishedTasksCache.length) {
+      listEl.innerHTML = `<p class="text-center text-gray-500">No finished tasks yet.</p>`;
+      if (pendingCountEl) pendingCountEl.textContent = "0";
+      if (approvedCountEl) approvedCountEl.textContent = "0";
+      return;
+    }
+    let pending = 0, approved = 0;
+    for (const data of window.finishedTasksCache) {
+      const statusKey = (data.status || '').toLowerCase();
+      if (statusKey === "on review") pending++;
+      if (statusKey === "approved") approved++;
+      const jobTitle = data.cachedTitle || data.taskTitle || "Loading...";
+      const card = document.createElement("div");
+      card.className = "p-4 bg-white shadow rounded-xl flex items-center justify-between mb-3";
+      card.innerHTML = `
+        <div>
+          <h3 class="font-semibold text-gray-900">${escapeHtml(jobTitle)}</h3>
+          <p class="text-sm text-gray-600">Earn: ₦${data.workerEarn || 0}</p>
+          <p class="text-xs text-gray-400">${data.submittedAt?.toDate?.().toLocaleString() || ""}</p>
+          <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded ${
+            (statusKey === "approved")
+              ? "bg-green-100 text-green-700"
+              : (statusKey === "rejected")
+                ? "bg-red-100 text-red-700"
+                : "bg-yellow-100 text-yellow-700"
+          }">${escapeHtml(data.status)}</span>
+        </div>
+        <button
+          class="px-3 py-1 text-sm font-medium bg-blue-600 text-white rounded-lg details-btn-user"
+          data-id="${escapeHtml(data.id)}"
+        >Details</button>
+      `;
+      listEl.appendChild(card);
+    }
+    if (pendingCountEl) pendingCountEl.textContent = pending;
+    if (approvedCountEl) approvedCountEl.textContent = approved;
+    listEl.querySelectorAll(".details-btn-user").forEach(btn => {
+      btn.addEventListener("click", () => showTaskSubmissionDetailsUser(btn.dataset.id));
+    });
+    preloadTaskTitles();
+  }
+
+  async function preloadTaskTitles() {
+    try {
+      const ids = [...new Set(window.finishedTasksCache.map(t => t.taskId).filter(Boolean))];
+      if (!ids.length || !hasFirebase()) return;
+      for (let i = 0; i < ids.length; i += 10) {
+        const slice = ids.slice(i, i + 10);
+        const snap = await firebase.firestore().collection('tasks').where(firebase.firestore.FieldPath.documentId(), "in", slice).get();
+        for (const d of snap.docs) {
+          const task = { id: d.id, ...d.data() };
+          window.finishedTasksCache.forEach(sub => { if (sub.taskId === task.id) sub.cachedTitle = task.title || 'Untitled Task'; });
+        }
+      }
+      try { renderFinishedTasksUser(); } catch (_) { }
+    } catch (err) { safeWarn('preloadTaskTitles error', err); }
+  }
+
+  async function showTaskSubmissionDetailsUser(submissionId) {
+    const sub = window.finishedTasksCache.find(d => d.id === submissionId);
+    if (!sub) return alert("Submission not found in memory. Reload page.");
+    const title = sub.cachedTitle || "Untitled Task";
+    const modal = document.createElement("div");
+    modal.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50";
+    modal.innerHTML = `
+      <div class="bg-white rounded-xl shadow-lg p-6 w-96 max-h-[90vh] overflow-y-auto relative">
+        <h2 class="text-lg font-bold mb-3">Submission Details</h2>
+        <p class="text-sm"><strong>Job Title:</strong> ${escapeHtml(title)}</p>
+        <p class="text-sm"><strong>Status:</strong> ${escapeHtml(sub.status)}</p>
+        <p class="text-sm"><strong>Earned:</strong> ₦${sub.workerEarn || 0}</p>
+        <p class="text-sm"><strong>Submitted At:</strong> ${sub.submittedAt?.toDate?.().toLocaleString() || "—"}</p>
+        <p class="text-sm"><strong>Extra Proof:</strong> ${escapeHtml(sub.extraProof || "—")}</p>
+        ${(sub.proofImages || []).map(url => `
+          <div class="mt-3">
+            <p class="text-sm font-medium text-gray-700 mb-1">Uploaded Proof:</p>
+            <img src="${escapeHtml(url)}" alt="Proof" class="rounded-lg border w-full max-h-60 object-contain mb-2" />
+          </div>
+        `).join("")}
+        <div class="mt-4 flex justify-end sticky bottom-0 bg-white pt-3">
+          <button class="closeModalUser px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700">Close</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector(".closeModalUser").addEventListener("click", () => modal.remove());
+  }
+
+  // ---------- Expose small API + start init ----------
+  window.TaskProgress = window.TaskProgress || {};
+  window.TaskProgress.increaseTaskOccupancy = increaseTaskOccupancy;
+  window.TaskProgress.decreaseTaskOccupancy = decreaseTaskOccupancy;
+  window.TaskProgress.changeTaskApprovedCount = changeTaskApprovedCount;
+  window.TaskProgress.handleSubmissionStatusChange = handleSubmissionStatusChange;
+  window.TaskProgress.reconcileTaskCounters = reconcileTaskCounters;
+  window.TaskProgress.reconcileAllTasks = reconcileAllTasks;
+  window.TaskProgress.startAutoReconcile = function(taskId, ms = 60_000) {
+    if (!taskId) throw new Error('taskId required');
+    const iid = setInterval(() => reconcileTaskCounters(taskId).catch(() => null), ms);
+    return () => clearInterval(iid);
+  };
+
+  // ---------- Initial UI bindings (non-blocking) ----------
+  (async () => {
+    const firebaseReady = await waitForReady(4000);
+    if (!firebaseReady) safeWarn('Firebase not detected or slow to initialize — module will still run but Firestore features disabled until firebase loads.');
+    try {
+      // Initialize finished tasks UI handlers
+      initFinishedTasksSectionUser();
+      // Load task cards if the placeholder container exists
+      fetchTasksOnce().catch(e => safeWarn('fetchTasksOnce failed', e));
+    } catch (err) { safeWarn('module init failed', err); }
+  })();
 }
 
-/* ==========================================================================
-   ROBUST TASK MODULE (Live, Secure, UI/UX Upgraded)
-   ========================================================================== */
-(function() {
-    'use strict';
+// end initTaskSectionModule
+
+// -------------------------
+// Public initializer
+// -------------------------
+window.initTaskSection = function() {
+  // idempotent
+  if (window.__TASK_SECTION_INITIALIZED__) {
+    try { console.log('[TASK] initTaskSection called — already initialized'); } catch (_) { }
+    return;
+  }
+  try { initTaskSectionModule(); } catch (e) { console.error('[TASK] initTaskSection error', e); }
+};
+
+// Optional: auto-run if you want (commented by default)
+// window.initTaskSection();
 
-    // Singleton Guard
-    if (window.__TASK_MODULE_LOADED__) return;
-    window.__TASK_MODULE_LOADED__ = true;
 
-    // --- References & State ---
-    const db = firebase.firestore();
-    const auth = firebase.auth();
-    const el = id => document.getElementById(id);
-    
-    // Store active listeners to prevent memory leaks
-    const state = {
-        listListener: null,
-        detailListener: null,
-        submissionListener: null
-    };
-
-    // --- Helpers ---
-    const escapeHtml = str => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    const formatNaira = n => '₦' + Number(n || 0).toLocaleString('en-NG');
-
-    // 1. Social Media Logo Helper (For the Card)
-    function getCategoryIcon(category) {
-        const c = (category || '').toLowerCase();
-        if (c.includes('instagram')) return 'https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg';
-        if (c.includes('facebook')) return 'https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg';
-        if (c.includes('twitter') || c.includes('x')) return 'https://upload.wikimedia.org/wikipedia/commons/c/ce/X_logo_2023.svg';
-        if (c.includes('tiktok')) return 'https://upload.wikimedia.org/wikipedia/en/a/a9/TikTok_logo.svg';
-        if (c.includes('youtube')) return 'https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg';
-        if (c.includes('whatsapp')) return 'https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg';
-        if (c.includes('telegram')) return 'https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg';
-        if (c.includes('linkedin')) return 'https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png';
-        if (c.includes('spotify')) return 'https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg';
-        // Fallback Icon
-        return 'https://cdn-icons-png.flaticon.com/512/10856/10856858.png';
-    }
-
-    /* ==========================================================================
-       PART 1: LIVE TASK FEED (The List)
-       ========================================================================== */
-    function initLiveTaskFeed() {
-        const container = el('task-jobs');
-        const searchInput = el('taskSearch');
-        const filterSelect = el('taskCategoryFilter');
-
-        if (!container) return; // Exit if HTML not present
-
-        // Cleanup previous listener
-        if (state.listListener) state.listListener();
-
-        container.innerHTML = `
-            <div class="flex flex-col items-center justify-center py-12">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <p class="text-gray-400 mt-2 text-sm">Syncing tasks...</p>
-            </div>`;
-
-        // Live Query
-        state.listListener = db.collection('tasks')
-            .where('status', '==', 'approved')
-            .orderBy('createdAt', 'desc')
-            .onSnapshot(snapshot => {
-                const tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
-                // Filter Logic (Client Side)
-                const render = () => {
-                    const q = (searchInput?.value || "").toLowerCase().trim();
-                    const cat = (filterSelect?.value || "").toLowerCase().trim();
-
-                    const filtered = tasks.filter(t => {
-                        const filled = Number(t.filledWorkers || 0);
-                        const total = Number(t.numWorkers || 0);
-                        const approved = Number(t.approvedWorkers || 0);
-                        
-                        // Hide if completely finished (all slots approved)
-                        if (total > 0 && approved >= total) return false;
-
-                        const matchSearch = (t.title || "").toLowerCase().includes(q);
-                        const matchCat = cat === "" || (t.category || "").toLowerCase() === cat;
-                        return matchSearch && matchCat;
-                    });
-
-                    container.innerHTML = '';
-                    if (filtered.length === 0) {
-                        container.innerHTML = `<div class="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed">No tasks found matching your criteria.</div>`;
-                        return;
-                    }
-                    filtered.forEach(t => container.appendChild(createTaskCard(t)));
-                };
-
-                render();
-                // Attach UI filter events
-                if (searchInput) searchInput.oninput = render;
-                if (filterSelect) filterSelect.onchange = render;
-
-            }, err => {
-                console.error("Feed Error:", err);
-                container.innerHTML = `<p class="text-red-500 text-center py-4">Connection lost. Refresh page.</p>`;
-            });
-    }
-
-    // --- Card Component ---
-    function createTaskCard(job) {
-        const card = document.createElement('div');
-        card.className = "group bg-white rounded-2xl p-4 mb-4 shadow-sm hover:shadow-md border border-gray-100 transition-all cursor-pointer relative overflow-hidden";
-        
-        const logo = getCategoryIcon(job.category);
-        const filled = Number(job.filledWorkers || 0);
-        const total = Number(job.numWorkers || 0);
-        const percent = total > 0 ? Math.min(100, (filled / total) * 100) : 0;
-
-        card.innerHTML = `
-            <div class="flex items-start gap-4 z-10 relative">
-                <div class="w-14 h-14 flex-shrink-0 bg-gray-50 rounded-xl p-2 flex items-center justify-center border border-gray-200">
-                    <img src="${logo}" alt="Icon" class="w-full h-full object-contain">
-                </div>
-                
-                <div class="flex-1 min-w-0">
-                    <div class="flex justify-between items-start">
-                        <div class="pr-2">
-                            <h3 class="font-bold text-gray-800 text-base truncate leading-tight">${escapeHtml(job.title)}</h3>
-                            <p class="text-xs text-gray-500 mt-1 capitalize">${escapeHtml(job.category)} &bull; ${escapeHtml(job.subCategory)}</p>
-                        </div>
-                        <span class="bg-green-50 text-green-700 text-xs font-extrabold px-2.5 py-1 rounded-lg border border-green-100 whitespace-nowrap">
-                            ${formatNaira(job.workerEarn)}
-                        </span>
-                    </div>
-
-                    <div class="mt-4">
-                        <div class="flex justify-between text-[10px] text-gray-400 mb-1 font-bold uppercase tracking-wider">
-                            <span>Progress</span>
-                            <span>${filled} / ${total} Taken</span>
-                        </div>
-                        <div class="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-                            <div class="bg-blue-600 h-1.5 rounded-full transition-all duration-500" style="width: ${percent}%"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="absolute inset-0 bg-blue-50/0 group-hover:bg-blue-50/30 transition-colors pointer-events-none"></div>
-        `;
-        
-        card.addEventListener('click', () => openTaskDetails(job.id));
-        return card;
-    }
-
-    /* ==========================================================================
-       PART 2: LIVE DETAILS MODAL (The Core UX)
-       ========================================================================== */
-    function openTaskDetails(taskId) {
-        // Create Modal Structure
-        const modal = document.createElement('div');
-        modal.id = 'task_details_modal';
-        modal.className = "fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 transition-opacity duration-300";
-        
-        modal.innerHTML = `
-            <div class="bg-white w-full max-w-5xl h-[85vh] md:h-auto md:max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row transform scale-95 transition-transform duration-300" id="task_modal_content">
-                <div class="flex-1 flex items-center justify-center">
-                    <div class="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-
-        // Animate In
-        requestAnimationFrame(() => {
-            modal.classList.remove('opacity-0');
-            modal.querySelector('#task_modal_content').classList.remove('scale-95');
-        });
-
-        const closeModal = () => {
-            // Unsubscribe listeners
-            if (state.detailListener) state.detailListener();
-            if (state.submissionListener) state.submissionListener();
-            
-            modal.classList.add('opacity-0');
-            modal.querySelector('#task_modal_content').classList.add('scale-95');
-            setTimeout(() => modal.remove(), 300);
-        };
-
-        // Close on backdrop click
-        modal.addEventListener('click', e => {
-            if (e.target === modal) closeModal();
-        });
-
-        // LIVE DATA: Fetch Task Details
-        state.detailListener = db.collection('tasks').doc(taskId).onSnapshot(doc => {
-            const contentBox = modal.querySelector('#task_modal_content');
-            
-            if (!doc.exists) {
-                contentBox.innerHTML = `<div class="p-8 text-center text-red-500">This task has been removed. <br><button class="mt-4 px-4 py-2 bg-gray-200 rounded text-sm text-black">Close</button></div>`;
-                contentBox.querySelector('button').onclick = closeModal;
-                return;
-            }
-
-            const job = { id: doc.id, ...doc.data() };
-            
-            // Build UI Structure
-            renderDetailsInterface(contentBox, job, closeModal);
-
-            // LIVE DATA: Check User Submission
-            const user = auth.currentUser;
-            if (user) {
-                state.submissionListener = db.collection('task_submissions')
-                    .where('taskId', '==', job.id)
-                    .where('userId', '==', user.uid)
-                    .onSnapshot(snap => {
-                        const submission = snap.empty ? null : snap.docs[0].data();
-                        updateActionPanel(contentBox, job, submission, user);
-                    });
-            } else {
-                updateActionPanel(contentBox, job, null, null);
-            }
-
-        }, err => {
-            console.error(err);
-            alert("Error loading task details");
-            closeModal();
-        });
-    }
-
-    // --- Render Logic ---
-    function renderDetailsInterface(container, job, closeFn) {
-        // Prevent full re-render if inputs are active (simple check)
-        if (container.querySelector('#taskSubmitForm')) {
-            // Just update stats texts if needed, but for stability we won't wipe the form
-            const availText = container.querySelector('.availability-text');
-            if(availText) {
-                const left = Math.max(0, (job.numWorkers||0) - (job.filledWorkers||0));
-                availText.textContent = `${left} / ${job.numWorkers} left`;
-            }
-            return; 
-        }
-
-        // Owner's Image (Screenshot) - NOT the logo
-        const heroImage = job.screenshotURL || job.image || 'https://via.placeholder.com/800x400?text=Task+Preview';
-        const filled = Number(job.filledWorkers || 0);
-        const total = Number(job.numWorkers || 0);
-        const left = Math.max(0, total - filled);
-
-        container.innerHTML = `
-            <!-- LEFT: Info Scrollable -->
-            <div class="w-full md:w-3/5 bg-gray-50 h-full overflow-y-auto custom-scrollbar relative">
-                <button id="modal_close_btn" class="absolute top-4 left-4 z-20 bg-white/90 p-2 rounded-full shadow-md hover:bg-white text-gray-800 transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                </button>
-
-                <div class="relative w-full aspect-video bg-gray-200 group">
-                    <img src="${heroImage}" class="w-full h-full object-contain mix-blend-multiply" alt="Proof Requirement">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-                    <div class="absolute bottom-0 left-0 p-6 w-full">
-                        <span class="inline-block bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide mb-2 shadow-sm">
-                            ${escapeHtml(job.category)}
-                        </span>
-                        <h2 class="text-2xl font-bold text-white leading-tight shadow-black drop-shadow-md">
-                            ${escapeHtml(job.title)}
-                        </h2>
-                    </div>
-                </div>
-
-                <div class="p-6 space-y-6">
-                    <!-- Stats -->
-                    <div class="flex gap-4">
-                        <div class="flex-1 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                            <p class="text-xs text-gray-400 font-bold uppercase">You Earn</p>
-                            <p class="text-xl font-extrabold text-green-600">${formatNaira(job.workerEarn)}</p>
-                        </div>
-                        <div class="flex-1 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                            <p class="text-xs text-gray-400 font-bold uppercase">Slots</p>
-                            <p class="text-xl font-bold text-gray-800 availability-text">${left} <span class="text-sm font-normal text-gray-400">/ ${total} left</span></p>
-                        </div>
-                    </div>
-
-                    <!-- Description -->
-                    <div>
-                        <h3 class="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                            <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                            Instructions
-                        </h3>
-                        <p class="text-gray-600 text-sm leading-relaxed whitespace-pre-line bg-white p-4 rounded-xl border border-gray-100">
-                            ${escapeHtml(job.description || "Follow the instructions carefully.")}
-                        </p>
-                    </div>
-
-                    <!-- Proof Requirements -->
-                    ${job.proof ? `
-                    <div class="bg-amber-50 p-4 rounded-xl border border-amber-100 border-l-4 border-l-amber-400">
-                        <h3 class="font-bold text-amber-900 mb-1 text-sm">📸 Proof Required</h3>
-                        <p class="text-amber-800 text-sm">${escapeHtml(job.proof)}</p>
-                    </div>` : ''}
-
-                    <!-- External Link -->
-                    ${job.taskLink ? `
-                    <div class="pt-2">
-                        <a href="${job.taskLink}" target="_blank" class="flex items-center justify-center gap-2 w-full py-3 bg-blue-50 text-blue-700 font-bold rounded-xl border border-blue-200 hover:bg-blue-100 transition shadow-sm group">
-                            <span>Open Task Link</span>
-                            <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                        </a>
-                    </div>` : ''}
-                </div>
-            </div>
-
-            <!-- RIGHT: Action Panel (Sticky on Desktop) -->
-            <div class="w-full md:w-2/5 bg-white border-l border-gray-100 flex flex-col h-[500px] md:h-full z-10 shadow-[-10px_0_20px_rgba(0,0,0,0.02)]">
-                <div class="p-5 border-b border-gray-100 bg-white">
-                    <h3 class="font-bold text-gray-800">Submit Proof</h3>
-                </div>
-                
-                <div id="action_panel_body" class="flex-1 p-6 overflow-y-auto flex flex-col">
-                    <!-- Dynamic State Loaded Here -->
-                </div>
-            </div>
-        `;
-
-        container.querySelector('#modal_close_btn').onclick = closeFn;
-    }
-
-    function updateActionPanel(container, job, submission, user) {
-        const body = container.querySelector('#action_panel_body');
-        if (!body) return;
-
-        // STATE 1: Not Logged In
-        if (!user) {
-            body.innerHTML = `
-                <div class="flex-1 flex flex-col items-center justify-center text-center">
-                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-2xl">🔒</div>
-                    <h4 class="font-bold text-gray-800 mb-2">Login Required</h4>
-                    <p class="text-gray-500 text-sm mb-6">You must be signed in to perform tasks.</p>
-                </div>
-            `;
-            return;
-        }
-
-        // STATE 2: Already Submitted
-        if (submission) {
-            const statusMap = {
-                'approved': { color: 'green', label: 'Approved' },
-                'rejected': { color: 'red', label: 'Rejected' },
-                'on review': { color: 'blue', label: 'Under Review' }
-            };
-            const s = statusMap[submission.status?.toLowerCase()] || statusMap['on review'];
-
-            body.innerHTML = `
-                <div class="flex-1 flex flex-col">
-                    <div class="bg-${s.color}-50 border border-${s.color}-100 p-5 rounded-2xl text-center mb-6">
-                        <p class="text-xs font-bold text-${s.color}-600 uppercase tracking-wider mb-1">Status</p>
-                        <p class="text-2xl font-extrabold text-${s.color}-700">${s.label}</p>
-                    </div>
-
-                    <h4 class="font-bold text-gray-800 mb-3 text-sm">Your Proofs</h4>
-                    <div class="grid grid-cols-2 gap-2 mb-4 overflow-y-auto max-h-48 custom-scrollbar">
-                        ${(submission.proofImages || []).map(url => `
-                            <div class="rounded-lg overflow-hidden border border-gray-200 aspect-square bg-gray-50">
-                                <img src="${url}" class="w-full h-full object-cover">
-                            </div>
-                        `).join('')}
-                    </div>
-
-                    ${submission.proofText ? `
-                    <div class="mt-2 bg-gray-50 p-3 rounded-xl border border-gray-100 text-sm text-gray-600">
-                        <span class="font-bold text-gray-800">Note:</span> ${escapeHtml(submission.proofText)}
-                    </div>` : ''}
-
-                    <div class="mt-auto pt-4 text-center text-xs text-gray-400">
-                        Submitted: ${submission.submittedAt?.toDate().toLocaleString() || 'N/A'}
-                    </div>
-                </div>
-            `;
-            return;
-        }
-
-        // STATE 3: Task Closed (Fully Approved)
-        const approved = Number(job.approvedWorkers || 0);
-        const total = Number(job.numWorkers || 0);
-        if (total > 0 && approved >= total) {
-            body.innerHTML = `
-                <div class="flex-1 flex flex-col items-center justify-center text-center p-6 bg-red-50 rounded-2xl border border-red-100">
-                    <p class="text-3xl mb-2">🚫</p>
-                    <h4 class="font-bold text-red-700 mb-1">Task Closed</h4>
-                    <p class="text-sm text-red-500">All available slots have been approved.</p>
-                </div>
-            `;
-            return;
-        }
-
-        // STATE 4: Task Full (Pending Reviews)
-        const filled = Number(job.filledWorkers || 0);
-        if (total > 0 && filled >= total) {
-            body.innerHTML = `
-                <div class="flex-1 flex flex-col items-center justify-center text-center p-6 bg-yellow-50 rounded-2xl border border-yellow-100">
-                    <p class="text-3xl mb-2">⏳</p>
-                    <h4 class="font-bold text-yellow-700 mb-1">Slots Full</h4>
-                    <p class="text-sm text-yellow-600">Submissions are currently under review. <br>Check back later.</p>
-                </div>
-            `;
-            return;
-        }
-
-        // STATE 5: Active Submission Form
-        // Do not re-render if form exists (preserves inputs)
-        if (body.querySelector('form')) return;
-
-        body.innerHTML = `
-            <form id="taskSubmitForm" class="flex flex-col h-full gap-4">
-                <div class="flex-1 space-y-5 overflow-y-auto pr-2 custom-scrollbar">
-                    
-                    <!-- File Inputs -->
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-3">Upload Proofs</label>
-                        <div class="space-y-3">
-                            ${generateFileInputs(job.proofFileCount || 1)}
-                        </div>
-                    </div>
-
-                    <!-- Note -->
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Additional Note</label>
-                        <textarea id="submitNote" class="w-full h-24 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none transition" placeholder="Enter username or details..."></textarea>
-                    </div>
-                </div>
-
-                <div class="pt-4 border-t border-gray-100">
-                    <button type="submit" id="submitBtn" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all transform active:scale-95 flex items-center justify-center">
-                        Submit Task
-                    </button>
-                </div>
-            </form>
-        `;
-
-        const form = body.querySelector('#taskSubmitForm');
-        form.onsubmit = (e) => {
-            e.preventDefault();
-            handleSubmission(job, user, form);
-        };
-    }
-
-    function generateFileInputs(count) {
-        let html = '';
-        for (let i = 1; i <= count; i++) {
-            html += `
-                <label class="flex items-center gap-3 p-3 bg-white border border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition group">
-                    <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-blue-500 transition">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-gray-600 truncate" id="fileName_${i}">Click to upload Proof ${i}</p>
-                    </div>
-                    <input type="file" class="hidden" accept="image/*" onchange="document.getElementById('fileName_${i}').textContent = this.files[0] ? this.files[0].name : 'Click to upload Proof ${i}'; this.parentElement.classList.add('border-blue-500','bg-blue-50')">
-                </label>
-            `;
-        }
-        return html;
-    }
-
-    /* ==========================================================================
-       PART 3: SUBMISSION LOGIC (Transaction Safe)
-       ========================================================================== */
-    async function handleSubmission(job, user, form) {
-        const btn = form.querySelector('#submitBtn');
-        const inputs = form.querySelectorAll('input[type="file"]');
-        const note = form.querySelector('#submitNote').value.trim();
-
-        // Validation
-        const files = Array.from(inputs).map(i => i.files[0]).filter(Boolean);
-        if (files.length === 0) {
-            alert("⚠️ Please upload at least one proof image.");
-            return;
-        }
-
-        // UX: Loading State
-        btn.disabled = true;
-        const originalText = btn.innerHTML;
-        btn.innerHTML = `<svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
-
-        try {
-            // Check global upload helper
-            if (typeof window.uploadToCloudinary !== 'function') {
-                throw new Error("Upload service not available. Contact support.");
-            }
-
-            // 1. Upload Images
-            const proofUrls = [];
-            for (const file of files) {
-                const result = await window.uploadToCloudinary(file);
-                // Handle various return formats from cloudinary helpers
-                const url = typeof result === 'string' ? result : (result.secure_url || result.url);
-                if (url) proofUrls.push(url);
-            }
-
-            if (proofUrls.length === 0) throw new Error("Image upload failed.");
-
-            // 2. Firestore Transaction (Race Condition Prevention)
-            await db.runTransaction(async (transaction) => {
-                const taskRef = db.collection('tasks').doc(job.id);
-                const taskDoc = await transaction.get(taskRef);
-
-                if (!taskDoc.exists) throw new Error("Task no longer exists.");
-                
-                const tData = taskDoc.data();
-                const currentFilled = tData.filledWorkers || 0;
-                const max = tData.numWorkers || 0;
-
-                // Strict Check
-                if (max > 0 && currentFilled >= max) {
-                    throw new Error("TASK_FULL");
-                }
-
-                // Check for duplicate submission inside transaction
-                const duplicateCheck = await db.collection('task_submissions')
-                    .where('taskId', '==', job.id)
-                    .where('userId', '==', user.uid)
-                    .limit(1)
-                    .get(); // Note: Queries inside transactions must be careful, but here we can't easily scope a query to transaction without direct doc ref. 
-                            // Standard pattern: Query first, then transaction write. 
-                            // But for simplicity/robustness here, we trust the transaction on the taskRef counter primarily.
-
-                const newSubRef = db.collection('task_submissions').doc();
-
-                transaction.set(newSubRef, {
-                    taskId: job.id,
-                    userId: user.uid,
-                    taskTitle: job.title,
-                    proofImages: proofUrls,
-                    proofText: note,
-                    status: 'on review',
-                    workerEarn: job.workerEarn,
-                    submittedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-
-                transaction.update(taskRef, {
-                    filledWorkers: currentFilled + 1
-                });
-            });
-
-            alert("✅ Task Submitted Successfully!");
-            // UI updates automatically via onSnapshot
-
-        } catch (error) {
-            console.error(error);
-            if (error.message === 'TASK_FULL') {
-                alert("❌ Sorry, this task filled up while you were uploading.");
-            } else {
-                alert("❌ Submission Failed: " + error.message);
-            }
-            // Reset Button
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-        }
-    }
-
-    /* ==========================================================================
-       PART 4: FINISHED TASKS (History)
-       ========================================================================== */
-    function initFinishedTasks() {
-        const btn = el('finishedTaskBtnUser');
-        const backBtn = el('backToMainBtnUser');
-        const screen = el('finishedTasksScreenUser');
-        const mainScreen = el('taskSection'); // Adjust ID if your main wrapper is different
-
-        if (!btn || !screen) return;
-
-        btn.addEventListener('click', () => {
-            if(mainScreen) mainScreen.classList.add('hidden');
-            screen.classList.remove('hidden');
-            loadFinishedHistory();
-        });
-
-        if (backBtn) {
-            backBtn.addEventListener('click', () => {
-                screen.classList.add('hidden');
-                if(mainScreen) mainScreen.classList.remove('hidden');
-            });
-        }
-    }
-
-    async function loadFinishedHistory() {
-        const list = el('finishedTasksListUser');
-        if (!list) return;
-
-        const user = auth.currentUser;
-        if (!user) {
-            list.innerHTML = `<div class="p-8 text-center text-gray-500">Please login to view history.</div>`;
-            return;
-        }
-
-        list.innerHTML = `<div class="p-8 text-center"><div class="animate-spin inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full"></div></div>`;
-
-        try {
-            const snap = await db.collection('task_submissions')
-                .where('userId', '==', user.uid)
-                .orderBy('submittedAt', 'desc')
-                .limit(50)
-                .get();
-
-            if (snap.empty) {
-                list.innerHTML = `<div class="p-8 text-center text-gray-400 bg-gray-50 rounded-xl border border-dashed">No submissions yet.</div>`;
-                return;
-            }
-
-            list.innerHTML = '';
-            snap.forEach(doc => {
-                const d = doc.data();
-                const colors = d.status === 'approved' ? 'bg-green-100 text-green-700' : 
-                               d.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-blue-50 text-blue-600';
-                
-                const item = document.createElement('div');
-                item.className = "bg-white p-4 mb-3 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between";
-                item.innerHTML = `
-                    <div>
-                        <h4 class="font-bold text-gray-800 text-sm">${escapeHtml(d.taskTitle)}</h4>
-                        <p class="text-xs text-gray-500 mt-1">${d.submittedAt?.toDate().toLocaleDateString()}</p>
-                    </div>
-                    <div class="text-right">
-                        <span class="inline-block px-2 py-1 rounded-md text-[10px] font-bold uppercase ${colors}">${escapeHtml(d.status)}</span>
-                        <div class="text-sm font-bold text-gray-700 mt-1">${formatNaira(d.workerEarn)}</div>
-                    </div>
-                `;
-                list.appendChild(item);
-            });
-
-        } catch (e) {
-            console.error(e);
-            list.innerHTML = `<div class="p-4 text-center text-red-500">Failed to load history.</div>`;
-        }
-    }
-
-    /* ==========================================================================
-       INITIALIZATION
-       ========================================================================== */
-    function init() {
-        console.log("[TASK] Module Initializing...");
-        
-        // Start Live Feed
-        initLiveTaskFeed();
-        
-        // Setup History Buttons
-        initFinishedTasks();
-
-        // Listen for Auth Changes to refresh specific views if needed
-        auth.onAuthStateChanged(user => {
-            // If details modal is open, it will auto-update via snapshot
-            // If history is open, reload it
-            if (user && !el('finishedTasksScreenUser')?.classList.contains('hidden')) {
-                loadFinishedHistory();
-            }
-        });
-    }
-
-    // Run Init
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
-
-    // Expose global init manually if needed
-    window.initTaskSection = init;
-
-})();
