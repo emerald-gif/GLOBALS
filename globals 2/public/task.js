@@ -512,48 +512,45 @@ function initTaskSectionModule() {
 
   // Messaging
   if (c.includes('whatsapp'))
-    return 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/whatsapp.svg';
+    return 'https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg';
 
   if (c.includes('telegram'))
-    return 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/telegram.svg';
+    return 'https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg';
 
   // Social Media
   if (c.includes('instagram'))
-    return 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/instagram.svg';
+    return 'https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg';
 
   if (c.includes('tiktok'))
-    return 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/tiktok.svg';
+    return 'https://upload.wikimedia.org/wikipedia/commons/a/a9/TikTok_logo.svg';
 
   if (c.includes('facebook'))
-    return 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/facebook.svg';
+    return 'https://upload.wikimedia.org/wikipedia/commons/1/1b/Facebook_icon.svg';
 
-  if (c.includes('twitter'))
-    return 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/x.svg';
+  if (c.includes('twitter') || c.includes('x'))
+    return 'https://upload.wikimedia.org/wikipedia/commons/5/53/X_logo_2023.svg';
 
   if (c.includes('youtube'))
-    return 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/youtube.svg';
+    return 'https://upload.wikimedia.org/wikipedia/commons/b/b8/YouTube_Logo_2017.svg';
 
   // Platforms / Web
   if (c.includes('website'))
-    return 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/googlechrome.svg';
+    return 'https://upload.wikimedia.org/wikipedia/commons/8/87/Google_Chrome_icon_%282011%29.png';
 
   if (c.includes('app'))
-    return 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/android.svg';
+    return 'https://upload.wikimedia.org/wikipedia/commons/d/d7/Android_robot.svg';
 
   // Engagement / Actions
   if (c.includes('vote'))
-    return 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/ballot.svg';
+    return 'https://cdn-icons-png.flaticon.com/512/2910/2910791.png';
 
   // Music
   if (c.includes('music'))
-    return 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/spotify.svg';
+    return 'https://upload.wikimedia.org/wikipedia/commons/8/84/Spotify_icon.svg';
 
   // Default fallback
-  return 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/globe.svg';
+  return 'https://cdn-icons-png.flaticon.com/512/841/841364.png';
 }
-
-
-
 	
   // ---------- Task card renderer ----------
   function createTaskCard(jobId, jobData) {
@@ -576,7 +573,7 @@ function initTaskSectionModule() {
 
     const logo = document.createElement('img');
     logo.src = getCategoryLogo(jobData.category);
-    logo.className = "w-5 h-5";
+    logo.className = "w-6 h-6 object-contain";
     logo.alt = jobData.category || "Task";
 
     logoWrap.appendChild(logo);
@@ -599,8 +596,7 @@ function initTaskSectionModule() {
 
     const earn = document.createElement('span');
     earn.textContent = `₦${jobData.workerEarn || 0}`;
-    earn.className =
-      "text-xs font-semibold text-green-600";
+    earn.className = "text-xs font-semibold text-green-600";
 
     meta.appendChild(category);
     meta.appendChild(earn);
@@ -625,7 +621,7 @@ function initTaskSectionModule() {
       }
     });
 
-    // Progress logic (unchanged, just cleaner output)
+    // Progress logic
     (async () => {
       try {
         if (!hasFirebase()) {
@@ -634,7 +630,10 @@ function initTaskSectionModule() {
         }
 
         await reconcileTaskCounters(jobId).catch(() => null);
-        const tdoc = await firebase.firestore().collection('tasks').doc(jobId).get();
+        const tdoc = await firebase.firestore()
+          .collection('tasks')
+          .doc(jobId)
+          .get();
 
         if (!tdoc.exists) return;
 
@@ -661,10 +660,12 @@ function initTaskSectionModule() {
     card.appendChild(button);
 
     taskContainer.appendChild(card);
+
   } catch (err) {
     safeWarn('createTaskCard error', err);
   }
 }
+	
   // ---------- Fetch tasks once (safe) ----------
   async function fetchTasksOnce() {
     try {
