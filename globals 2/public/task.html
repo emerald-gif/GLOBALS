@@ -25,45 +25,50 @@
   <div id="taskSection" class="px-4 py-6">
 
     <!-- Back Button -->
-    <!-- ================= STICKY HEADER ================= -->
-<div class="w-full px-4 py-4 bg-white shadow-lg border-b border-gray-100 sticky top-0 z-50">
-  
-  <!-- Back Button -->
-  <div class="flex items-center mb-4">
-    <button onclick="window.location.href='dashboard.html'"
-      class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
-           viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M15 19l-7-7 7-7" />
-      </svg>
-      Back
-    </button>
-  </div>
+    
+<!-- Back Button (Non-Sticky, Upgraded) -->
+<div class="flex items-center mb-4">
+  <button onclick="window.location.href='dashboard.html'"
+    class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-semibold transition-all duration-200">
+    
+    <!-- Modern Back SVG -->
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+    </svg>
+    
+    Back
+  </button>
+</div>
 
-  <!-- Controls for Searching and Filtering -->
+<!-- Sticky Search & Filter Bar -->
+<div class="w-full px-4 py-4 bg-white rounded-2xl shadow-md mb-6 border border-gray-200 sticky top-0 z-50">
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
     
-    <!-- Search Input -->
+    <!-- Search Input (Upgraded) -->
     <div class="relative w-full sm:w-1/2">
-      <input type="text" id="taskSearch" placeholder="🔍 Search tasks by name or category..."
-        class="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-full bg-gray-50 shadow-sm
-               focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300
-               placeholder-gray-400 text-sm" />
+      <input type="text" id="taskSearch" placeholder="Search tasks by name or category..."
+        class="w-full pl-14 pr-4 py-3 border border-gray-300 rounded-full bg-gray-50 shadow-sm
+               focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400
+               transition-all duration-300 placeholder-gray-400 text-sm font-medium" />
+      
+      <!-- Modern Search Icon SVG -->
       <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
-             viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
                 d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1110.5 3a7.5 7.5 0 016.15 13.65z" />
         </svg>
       </span>
     </div>
 
-    <!-- Category & Finished Button -->
+    <!-- Category Filter & Finished Button (Upgraded) -->
     <div class="flex items-center gap-3 sm:gap-4">
+      
+      <!-- Category Dropdown -->
       <select id="taskCategoryFilter"
-        class="px-4 py-2 border border-gray-200 rounded-xl text-sm shadow-sm bg-gray-50
-               focus:ring-2 focus:ring-blue-500 transition">
+        class="px-4 py-2 border border-gray-300 rounded-xl text-sm bg-gray-50 shadow-sm
+               focus:ring-2 focus:ring-blue-500 focus:border-blue-400 transition-all duration-300 font-medium">
         <option value="">All Categories</option>
         <option>WhatsApp</option>
         <option>Telegram</option>
@@ -78,13 +83,19 @@
         <option>Music Player</option>
       </select>
 
+      <!-- Finished Tasks Button -->
       <button id="finishedTaskBtnUser"
-        class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white
-               px-5 py-2 rounded-xl text-sm font-medium shadow-md transition-all duration-300">
-        ✅ Finished Tasks
+        class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:scale-105 hover:shadow-lg
+               text-white px-5 py-2 rounded-xl text-sm font-medium shadow-md transition-all duration-300 flex items-center gap-1">
+        <!-- Nice Check SVG -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+        Finished Tasks
       </button>
-    </div>
 
+    </div>
   </div>
 </div>
     <!-- Tasks Container -->
