@@ -3,25 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tasks</title>
+  <title>Task Jobs</title>
 
-  <!-- Tailwind CSS (assumed already used across your project) -->
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Firebase (if used) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <!-- Firebase Init -->
+  <script src="firebase.js"></script>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-50 min-h-screen">
 
-  <!-- ================= INSTALL AND EARN ================= -->
-  <div id="taskSection" class="tab-section hidden">
+  <!-- ================= TASK SECTION ================= -->
+  <div id="taskSection" class="px-4 py-6">
 
-    <button onclick="activateTab('dashboard')"
+    <!-- Back Button -->
+    <button onclick="window.location.href='dashboard.html'"
       class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-4">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
-        viewBox="0 0 24 24" stroke="currentColor">
+           viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M15 19l-7-7 7-7" />
+              d="M15 19l-7-7 7-7" />
       </svg>
       Back
     </button>
@@ -32,27 +41,24 @@
 
         <!-- Search Input -->
         <div class="relative w-full sm:w-1/2">
-          <input
-            type="text"
-            id="taskSearch"
-            placeholder="🔍 Search tasks by name or category..."
-            class="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-full bg-gray-50 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 placeholder-gray-400 text-sm"
-          />
+          <input type="text" id="taskSearch" placeholder="🔍 Search tasks by name or category..."
+            class="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-full bg-gray-50 shadow-sm
+                   focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300
+                   placeholder-gray-400 text-sm" />
           <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
-              viewBox="0 0 24 24" stroke="currentColor">
+                 viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1110.5 3a7.5 7.5 0 016.15 13.65z" />
+                    d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1110.5 3a7.5 7.5 0 016.15 13.65z" />
             </svg>
           </span>
         </div>
 
         <!-- Category & Finished Button -->
         <div class="flex items-center gap-3 sm:gap-4">
-          <select
-            id="taskCategoryFilter"
-            class="px-4 py-2 border border-gray-200 rounded-xl text-sm shadow-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 transition"
-          >
+          <select id="taskCategoryFilter"
+            class="px-4 py-2 border border-gray-200 rounded-xl text-sm shadow-sm bg-gray-50
+                   focus:ring-2 focus:ring-blue-500 transition">
             <option value="">All Categories</option>
             <option>WhatsApp</option>
             <option>Telegram</option>
@@ -67,10 +73,9 @@
             <option>Music Player</option>
           </select>
 
-          <button
-            id="finishedTaskBtnUser"
-            class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white px-5 py-2 rounded-xl text-sm font-medium shadow-md transition-all duration-300"
-          >
+          <button id="finishedTaskBtnUser"
+            class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white
+                   px-5 py-2 rounded-xl text-sm font-medium shadow-md transition-all duration-300">
             ✅ Finished Tasks
           </button>
         </div>
@@ -78,7 +83,7 @@
       </div>
     </div>
 
-    <!-- Tasks container -->
+    <!-- Tasks Container -->
     <div id="task-jobs" class="grid gap-5 px-4 pb-12"></div>
   </div>
 
@@ -87,10 +92,8 @@
 
     <!-- Header -->
     <div class="flex items-center justify-between mb-8">
-      <button
-        id="backToMainBtnUser"
-        class="text-blue-600 font-medium flex items-center gap-1 hover:underline"
-      >
+      <button id="backToMainBtnUser"
+        class="text-blue-600 font-medium flex items-center gap-1 hover:underline">
         ← Back
       </button>
       <h2 class="text-xl font-bold tracking-tight">Finished Tasks</h2>
@@ -108,13 +111,14 @@
       </div>
     </div>
 
-    <!-- Finished tasks list -->
+    <!-- Finished Tasks List -->
     <div id="finishedTasksListUser" class="grid gap-5"></div>
   </div>
 
+  <!-- Page Logic -->
+  <script src="task.js"></script>
   <script>
     lucide.createIcons();
   </script>
-
 </body>
 </html>
