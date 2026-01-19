@@ -21,6 +21,35 @@ const db = firebase.firestore();
 
 
 
+// ==== Cloudinary Global Config ====
+const CLOUD_NAME = "dyquovrg3"; // Your Cloudinary cloud name
+const UPLOAD_PRESET = "globals_tasks_proofs"; // Default upload preset
+
+// ==== Universal Upload Function ====
+async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", preset);
+
+    try {
+        const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+            method: "POST",
+            body: formData
+        });
+        const cloudData = await cloudRes.json();
+        if (cloudData.secure_url) {
+            return cloudData.secure_url;
+        } else {
+            throw new Error(cloudData.error?.message || "Unknown Cloudinary error");
+        }
+    } catch (error) {
+        console.error("Cloudinary upload error:", error);
+        throw error;
+    }
+}
+
+
+
 
 // Robust Task Section Module (fixed)
 // Usage: call window.initTaskSection() once (e.g., from activateTab('tasks'))
@@ -855,5 +884,18 @@ window.initTaskSection = function() {
 
 // Optional: auto-run if you want (commented by default)
 // window.initTaskSection();
+
+
+
+
+
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (window.initTaskSection) {
+    window.initTaskSection();
+  } else {
+    console.error("initTaskSection not found");
+  }
+});
 
 
