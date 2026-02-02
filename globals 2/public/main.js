@@ -370,31 +370,83 @@ function openTransactionDetails(id) {
       : "text-yellow-600";
 
   // Extra info for Withdraw type
-  let extraHTML = "";
-  if ((tx.type || "").toLowerCase() === "withdraw") {
-    extraHTML = `
-      <div class="border-t pt-4 mt-4 space-y-2">
-        <h3 class="font-semibold text-gray-800 text-sm">Bank Details</h3>
-        <div class="flex justify-between text-sm"><span>Bank:</span><span>${tx.bankName || "—"}</span></div>
-        <div class="flex justify-between text-sm"><span>Account Name:</span><span>${tx.account_name || "—"}</span></div>
-        <div class="flex justify-between text-sm"><span>Account Number:</span><span>${tx.accNum || "—"}</span></div>
-      </div>
-    `;
-  }
+  // Extra info for Withdraw type
+let extraHTML = "";
 
-  document.getElementById("transaction-details-content").innerHTML = `
-    <div class="bg-white rounded-2xl p-6 shadow space-y-3 border-t-4 border-blue-600">
-      <div class="flex justify-between"><span class="font-medium text-gray-700">Type</span><span>${tx.type}</span></div>
-      <div class="flex justify-between"><span class="font-medium text-gray-700">Amount</span><span class="font-semibold ${amountClass}">${formatAmount(tx.amount)}</span></div>
-      <div class="flex justify-between"><span class="font-medium text-gray-700">Status</span><span>${tx.status}</span></div>
-      <div class="flex justify-between"><span class="font-medium text-gray-700">Date</span><span>${formatDatePretty(ts)}</span></div>
-      <div class="flex justify-between"><span class="font-medium text-gray-700">Transaction ID</span><span>${tx.id}</span></div>
-      ${extraHTML}
+if ((tx.type || "").toLowerCase() === "withdraw") {
+  extraHTML = `
+    <div class="mt-6 rounded-xl bg-gray-50 p-4 space-y-3">
+      <div class="flex items-center gap-2 text-sm font-semibold text-gray-700">
+        <!-- Bank icon -->
+        <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 2L2 7v2h20V7L12 2zm8 9H4v9h16v-9z"/>
+        </svg>
+        Bank Details
+      </div>
+
+      <div class="flex justify-between text-sm text-gray-600">
+        <span>Bank</span>
+        <span class="font-medium text-gray-800">${tx.bankName || "—"}</span>
+      </div>
+
+      <div class="flex justify-between text-sm text-gray-600">
+        <span>Account Name</span>
+        <span class="font-medium text-gray-800">${tx.account_name || "—"}</span>
+      </div>
+
+      <div class="flex justify-between text-sm text-gray-600">
+        <span>Account Number</span>
+        <span class="font-mono tracking-wide text-gray-800">${tx.accNum || "—"}</span>
+      </div>
     </div>
   `;
-
-  activateTab("transaction-details-screen");
 }
+
+document.getElementById("transaction-details-content").innerHTML = `
+  <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-5">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M13 2H6a2 2 0 0 0-2 2v16l4-4h9a2 2 0 0 0 2-2V7l-6-5z"/>
+        </svg>
+        <h2 class="text-sm font-semibold text-gray-800">Transaction Details</h2>
+      </div>
+      <span class="text-xs text-gray-400">${formatDatePretty(ts)}</span>
+    </div>
+
+    <!-- Detail rows -->
+    <div class="space-y-4 divide-y divide-gray-100">
+
+      <div class="pt-4 flex justify-between text-sm">
+        <span class="text-gray-500">Type</span>
+        <span class="font-medium text-gray-800">${tx.type}</span>
+      </div>
+
+      <div class="pt-4 flex justify-between text-sm">
+        <span class="text-gray-500">Amount</span>
+        <span class="font-semibold ${amountClass}">
+          ${formatAmount(tx.amount)}
+        </span>
+      </div>
+
+      <div class="pt-4 flex justify-between text-sm">
+        <span class="text-gray-500">Status</span>
+        <span class="font-medium text-gray-800">${tx.status}</span>
+      </div>
+
+      <div class="pt-4 flex justify-between text-sm">
+        <span class="text-gray-500">Transaction ID</span>
+        <span class="font-mono text-xs text-gray-700">${tx.id}</span>
+      </div>
+    </div>
+
+    ${extraHTML}
+  </div>
+`;
+
+activateTab("transaction-details-screen");
 
 /* ---------- Fetch once ---------- */
 async function fetchTransactionsOnce(uid) {
@@ -2416,39 +2468,83 @@ function generateReferralCard(user) {
   const amount = user.premium ? 500 : 0;
 
   return `
-    <div class="bg-white/80 backdrop-blur-md rounded-3xl shadow-lg p-4 flex items-center justify-between gap-4 hover:shadow-2xl transition duration-300 ease-in-out">
-      <!-- Left: Avatar & Info -->
-      <div class="flex items-center gap-4">
-        ${user.profile
-          ? `<img src="${user.profile}" class="w-12 h-12 rounded-full object-cover border-2 border-indigo-500" alt="${user.username}">`
-          : `<div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-lg border-2 border-indigo-300">${initials}</div>`
+    <div
+      class="bg-white/90 backdrop-blur-md rounded-2xl p-4 flex items-center justify-between gap-4
+             border border-gray-100 shadow-sm
+             hover:shadow-xl hover:-translate-y-[2px]
+             transition-all duration-300 ease-out"
+      aria-label="Referral user ${user.username}"
+    >
+
+      <!-- LEFT: Avatar + Info -->
+      <div class="flex items-center gap-3 min-w-0">
+
+        ${
+          user.profile
+            ? `
+              <img
+                src="${user.profile}"
+                alt="${user.username}"
+                class="w-11 h-11 rounded-full object-cover ring-2 ring-indigo-500/40"
+              />
+            `
+            : `
+              <div
+                class="w-11 h-11 rounded-full flex items-center justify-center
+                       bg-gradient-to-br from-indigo-500 to-blue-600
+                       text-white font-semibold text-sm shadow-inner">
+                ${initials}
+              </div>
+            `
         }
-        <div class="flex flex-col">
-          <p class="font-semibold text-gray-900 text-sm md:text-base">${user.username}</p>
-          <span class="inline-flex items-center gap-1 text-xs md:text-sm font-medium ${
-            user.premium ? "text-indigo-600" : "text-gray-500"
-          }">
-            ${user.premium 
-              ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Premium` 
-              : "Signed up"
-            }
-          </span>
+
+        <div class="flex flex-col min-w-0">
+          <p class="font-semibold text-gray-900 text-sm truncate">
+            ${user.username}
+          </p>
+
+          <!-- Status Chip -->
+          ${
+            user.premium
+              ? `
+                <span class="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5
+                             rounded-full text-xs font-medium
+                             bg-yellow-100 text-yellow-700 w-fit">
+                  <svg class="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/>
+                  </svg>
+                  Premium
+                </span>
+              `
+              : `
+                <span class="inline-flex mt-0.5 px-2 py-0.5 rounded-full
+                             text-xs text-gray-500 bg-gray-100 w-fit">
+                  Signed up
+                </span>
+              `
+          }
         </div>
       </div>
 
-      <!-- Right: Commission -->
-      <div class="flex flex-col items-end justify-center gap-1">
-        <span class="px-3 py-1 rounded-full text-sm md:text-base font-semibold ${
-          amount > 0 ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-400"
-        } transition-all duration-300">
+      <!-- RIGHT: Commission -->
+      <div class="flex flex-col items-end gap-1 shrink-0">
+        <span
+          class="px-3 py-1 rounded-full text-sm font-semibold
+                 ${amount > 0
+                   ? "bg-green-100 text-green-700"
+                   : "bg-gray-100 text-gray-400"}"
+          data-amount="${amount}">
           ${money(amount)}
         </span>
-        <span class="text-[10px] md:text-xs text-gray-400">Commission</span>
+
+        <span class="text-[10px] uppercase tracking-wide text-gray-400">
+          Commission
+        </span>
       </div>
+
     </div>
   `;
 }
-
 /**
  * ✅ Atomic + idempotent credit:
  * - Reads referred doc and referrer doc in a transaction
@@ -3260,15 +3356,18 @@ async function fetchAndDisplayUserJobs() {
 // === Render Job Card ===
 function renderJobCard(job) {
   const status = job.status || "on review";
-  const statusColor =
-    status === "approved"
-      ? "bg-green-100 text-green-700"
-      : status === "rejected"
-      ? "bg-red-100 text-red-700"
-      : "bg-yellow-100 text-yellow-700";
+
+  const statusStyles = {
+    approved: "bg-green-100 text-green-700",
+    rejected: "bg-red-100 text-red-700",
+    "on review": "bg-yellow-100 text-yellow-700",
+  };
+
+  const statusClass = statusStyles[status] || statusStyles["on review"];
+
   const jobTypeLabel = job.type === "task" ? "Task" : "Affiliate";
-  const logo =
-    job.type === "affiliate" ? job.campaignLogoURL : job.screenshotURL;
+  const logo = job.type === "affiliate" ? job.campaignLogoURL : job.screenshotURL;
+
   const totalWorkers = job.numWorkers || 0;
   const completed = job.completed || 0;
   const progress = totalWorkers
@@ -3276,42 +3375,105 @@ function renderJobCard(job) {
     : 0;
 
   return `
-  <div class="p-5 rounded-2xl bg-white shadow-md border border-gray-200 hover:shadow-lg transition">
-    <div class="flex justify-between items-center">
-      <h3 class="text-lg font-semibold text-blue-900">${job.title || "Untitled Job"}</h3>
-      <span class="px-3 py-1 rounded-full text-xs font-bold ${statusColor}">
-        ${status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    </div>
-    <div class="flex items-center gap-4 mt-3">
-      ${
-        logo
-          ? `<img src="${logo}" class="w-14 h-14 rounded-lg object-cover border" />`
-          : ""
-      }
-      <div>
-        <p class="text-sm text-gray-500">${jobTypeLabel} • ${job.category || "Uncategorized"}</p>
-        <p class="text-sm text-gray-700"><span class="font-semibold">Workers:</span> ${completed}/${totalWorkers}</p>
+    <div
+      class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm
+             hover:shadow-xl hover:-translate-y-[2px]
+             transition-all duration-300 ease-out"
+    >
+
+      <!-- Header -->
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <h3 class="text-base font-semibold text-gray-900 truncate">
+            ${job.title || "Untitled Job"}
+          </h3>
+          <p class="text-xs text-gray-500 mt-0.5">
+            ${jobTypeLabel} • ${job.category || "Uncategorized"}
+          </p>
+        </div>
+
+        <span
+          class="px-2.5 py-1 rounded-full text-[11px] font-medium uppercase tracking-wide ${statusClass}">
+          ${status}
+        </span>
       </div>
-    </div>
-    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
-      <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width:${progress}%;"></div>
-    </div>
-    <p class="text-xs text-gray-500 mt-1">${progress}% completed</p>
-    <div class="grid grid-cols-2 gap-4 text-sm text-gray-700 mt-3">
-      <div><span class="font-semibold">Cost:</span> ₦${job.total || 0}</div>
-      <div><span class="font-semibold">Worker Pay:</span> ₦${job.workerEarn || job.workerPay || 0}</div>
-      <div><span class="font-semibold">Posted:</span> ${job.postedAt?.toDate().toLocaleDateString() || "—"}</div>
-    </div>
-    <div class="mt-4">
-      <button onclick="checkJobDetails('${job.id}', '${job.type}')"
-        class="w-full py-2 px-4 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700 transition">
+
+      <!-- Body -->
+      <div class="flex items-center gap-3 mt-4">
+
+        ${
+          logo
+            ? `
+              <img
+                src="${logo}"
+                class="w-12 h-12 rounded-xl object-cover border border-gray-200"
+              />
+            `
+            : `
+              <div
+                class="w-12 h-12 rounded-xl flex items-center justify-center
+                       bg-gray-100 text-gray-400 text-xs font-semibold">
+                No Image
+              </div>
+            `
+        }
+
+        <div class="flex-1">
+          <p class="text-sm text-gray-700">
+            <span class="font-medium">${completed}</span> / ${totalWorkers}
+            <span class="text-gray-400"> workers</span>
+          </p>
+
+          <!-- Progress -->
+          <div class="mt-2 flex items-center gap-2">
+            <div class="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+              <div
+                class="bg-blue-600 h-full rounded-full transition-all duration-500"
+                style="width:${progress}%"
+              ></div>
+            </div>
+            <span class="text-xs text-gray-500 min-w-[32px] text-right">
+              ${progress}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Meta grid -->
+      <div class="grid grid-cols-2 gap-y-2 gap-x-4 text-sm text-gray-600 mt-4">
+        <div>
+          <span class="text-gray-400">Cost</span><br />
+          <span class="font-medium text-gray-800">₦${job.total || 0}</span>
+        </div>
+
+        <div>
+          <span class="text-gray-400">Worker Pay</span><br />
+          <span class="font-medium text-gray-800">
+            ₦${job.workerEarn || job.workerPay || 0}
+          </span>
+        </div>
+
+        <div class="col-span-2">
+          <span class="text-gray-400">Posted</span><br />
+          <span class="font-medium text-gray-800">
+            ${job.postedAt?.toDate().toLocaleDateString() || "—"}
+          </span>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <button
+        onclick="checkJobDetails('${job.id}', '${job.type}')"
+        class="mt-5 w-full py-2.5 rounded-xl
+               bg-blue-600 text-white text-sm font-semibold
+               hover:bg-blue-700 hover:shadow-md
+               transition-all">
         View Details
       </button>
-    </div>
-  </div>`;
-}
 
+    </div>
+  `;
+}
 // === Check Job Details ===
 async function checkJobDetails(jobId, jobType) {
   try {
@@ -3345,55 +3507,128 @@ async function checkJobDetails(jobId, jobType) {
 function renderJobDetails(job) {
   const totalWorkers = job.numWorkers || 0;
   const completed = job.completed || 0;
-  const progress = totalWorkers ? Math.round((completed / totalWorkers) * 100) : 0;
+  const progress = totalWorkers
+    ? Math.round((completed / totalWorkers) * 100)
+    : 0;
 
   let content = `
+    <!-- Media -->
     ${
       job.campaignLogoURL || job.screenshotURL
-        ? `<div class="relative w-full h-48 bg-gray-100 rounded-xl overflow-hidden flex items-center justify-center border">
-  <img 
-    src="${job.campaignLogoURL || job.screenshotURL}" 
-    alt="Job Image" 
-    class="max-w-full max-h-full object-contain rounded-lg"
-  />
-</div>`
+        ? `
+          <div class="relative w-full aspect-video rounded-2xl overflow-hidden
+                      bg-gray-100 border border-gray-200 mb-5">
+            <img
+              src="${job.campaignLogoURL || job.screenshotURL}"
+              alt="Job media"
+              class="w-full h-full object-contain"
+            />
+          </div>
+        `
         : ""
     }
-    <h4 class="text-lg font-bold text-blue-900 mt-3">${job.title || "Untitled Job"}</h4>
-    <p class="text-gray-600 text-sm">${job.category || "Uncategorized"}</p>
-    <div class="mt-3 grid grid-cols-2 gap-4 text-sm text-gray-700">
-      <div><span class="font-semibold">Cost:</span> ₦${job.total || 0}</div>
-      <div><span class="font-semibold">Worker Pay:</span> ₦${job.workerEarn || job.workerPay || 0}</div>
-      <div><span class="font-semibold">Completed:</span> ${completed}/${totalWorkers}</div>
-      <div><span class="font-semibold">Posted:</span> ${job.postedAt?.toDate().toLocaleString() || "—"}</div>
+
+    <!-- Title -->
+    <div class="mb-4">
+      <h4 class="text-lg font-semibold text-gray-900">
+        ${job.title || "Untitled Job"}
+      </h4>
+      <p class="text-sm text-gray-500 mt-0.5">
+        ${job.category || "Uncategorized"}
+      </p>
     </div>
-    <div class="mt-3">
-      <div class="w-full bg-gray-200 rounded-full h-2">
-        <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: ${progress}%"></div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 gap-3 mb-5">
+      <div class="rounded-xl border border-gray-100 p-3 bg-gray-50">
+        <p class="text-xs text-gray-400">Total Cost</p>
+        <p class="font-semibold text-gray-900">₦${job.total || 0}</p>
       </div>
-      <p class="text-xs text-gray-500 mt-1">${progress}% completed</p>
+
+      <div class="rounded-xl border border-gray-100 p-3 bg-gray-50">
+        <p class="text-xs text-gray-400">Worker Pay</p>
+        <p class="font-semibold text-gray-900">
+          ₦${job.workerEarn || job.workerPay || 0}
+        </p>
+      </div>
+
+      <div class="rounded-xl border border-gray-100 p-3 bg-gray-50">
+        <p class="text-xs text-gray-400">Completed</p>
+        <p class="font-semibold text-gray-900">
+          ${completed} / ${totalWorkers}
+        </p>
+      </div>
+
+      <div class="rounded-xl border border-gray-100 p-3 bg-gray-50">
+        <p class="text-xs text-gray-400">Posted</p>
+        <p class="font-semibold text-gray-900">
+          ${job.postedAt?.toDate().toLocaleString() || "—"}
+        </p>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="mb-6">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-xs text-gray-500">Progress</span>
+        <span class="text-xs text-gray-500">${progress}%</span>
+      </div>
+      <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div
+          class="h-full bg-blue-600 rounded-full transition-all duration-500"
+          style="width:${progress}%"
+        ></div>
+      </div>
     </div>
   `;
 
   if (job.type === "affiliate") {
     content += `
-      <div class="mt-4 space-y-2">
-        <p><span class="font-semibold">Target Link:</span> <a href="${job.targetLink || "#"}" class="text-blue-600 underline">${job.targetLink || "—"}</a></p>
-        <p><span class="font-semibold">Proof Required:</span> ${job.proofRequired || "—"}</p>
+      <!-- Affiliate Section -->
+      <div class="border-t border-gray-100 pt-4 space-y-3">
+        <h5 class="text-sm font-semibold text-gray-800">
+          Affiliate Details
+        </h5>
+
+        <div class="text-sm text-gray-700">
+          <span class="text-gray-400">Target Link</span><br />
+          <a
+            href="${job.targetLink || "#"}"
+            target="_blank"
+            class="text-blue-600 break-all hover:underline">
+            ${job.targetLink || "—"}
+          </a>
+        </div>
+
+        <div class="text-sm text-gray-700">
+          <span class="text-gray-400">Proof Required</span><br />
+          ${job.proofRequired || "—"}
+        </div>
       </div>
     `;
   } else {
     content += `
-      <div class="mt-4 space-y-2">
-        <p><span class="font-semibold">Description:</span> ${job.description || "—"}</p>
-        <p><span class="font-semibold">Proof:</span> ${job.proof || "—"}</p>
+      <!-- Task Section -->
+      <div class="border-t border-gray-100 pt-4 space-y-3">
+        <h5 class="text-sm font-semibold text-gray-800">
+          Task Instructions
+        </h5>
+
+        <div class="text-sm text-gray-700">
+          <span class="text-gray-400">Description</span><br />
+          ${job.description || "—"}
+        </div>
+
+        <div class="text-sm text-gray-700">
+          <span class="text-gray-400">Proof Required</span><br />
+          ${job.proof || "—"}
+        </div>
       </div>
     `;
   }
 
   document.getElementById("jobDetailsContent").innerHTML = content;
 }
-
 // === Back Button ===
 function goBackToJobs() {
   activateTab("myJobsSection");
@@ -3570,79 +3805,179 @@ function renderSubmissionList(list, jobType) {
   container.innerHTML = "";
 
   if (!list.length) {
-    container.innerHTML = `<p class="text-center text-gray-500">No submissions in this tab.</p>`;
+    container.innerHTML = `
+      <div class="text-center text-gray-400 py-12 text-sm">
+        No submissions available in this tab.
+      </div>
+    `;
     return;
   }
 
+  const currentUser = firebase.auth().currentUser;
+
   list.forEach(item => {
-    const card = document.createElement("div");
-    card.className = "p-4 bg-white rounded-xl shadow-sm border hover:shadow-md transition";
+    const status = (item.status || "on review").toLowerCase();
 
-    let inner = `<div class="flex justify-between items-start">
-      <div>
-        <div class="text-sm text-gray-700"><strong>User:</strong> ${item.userName || item.userId || "Unknown"}</div>
-        <div class="text-xs text-gray-500 mt-1"><strong>Submitted:</strong> ${
-          item.submittedAt?.toDate
-            ? item.submittedAt.toDate().toLocaleString()
-            : item.createdAt?.toDate
-            ? item.createdAt.toDate().toLocaleString()
-            : "—"
-        }</div>
-        <div class="text-xs text-gray-500 mt-1"><strong>Status:</strong> ${(item.status || "on review")}</div>
-      </div>
-      <div class="text-right">`;
+    const statusStyle = {
+      approved: "bg-green-100 text-green-700",
+      rejected: "bg-red-100 text-red-700",
+      "on review": "bg-yellow-100 text-yellow-700",
+      pending: "bg-yellow-100 text-yellow-700",
+    }[status] || "bg-gray-100 text-gray-600";
 
-    const isOnReview = ["on review", "pending", ""].includes((item.status || "").toLowerCase());
-    const currentUser = firebase.auth().currentUser;
     const isOwner =
       currentSubJob &&
       (currentSubJob.postedBy?.uid === currentUser?.uid ||
         currentSubJob.postedByUid === currentUser?.uid ||
         currentSubJob.ownerUid === currentUser?.uid);
 
-    if (isOnReview && isOwner) {
-      inner += `<div class="flex flex-col gap-2">
-        <button class="job-action-btn bg-gradient-to-r from-green-500 to-green-600 text-white rounded-sm py-1.5 text-sm font-semibold hover:scale-[1.03] transition"
-          data-action="approve" data-id="${item.id}">✅ Approve</button>
-        <button class="job-action-btn bg-gradient-to-r from-red-500 to-red-600 text-white rounded-sm py-1.5 text-sm font-semibold hover:scale-[1.03] transition"
-          data-action="reject" data-id="${item.id}">❌ Reject</button>
-      </div>`;
+    const isOnReview = ["on review", "pending", ""].includes(status);
+
+    const card = document.createElement("div");
+    card.className = `
+      bg-white rounded-2xl p-4 border border-gray-100 shadow-sm
+      hover:shadow-md transition-all
+    `;
+
+    let inner = `
+      <!-- Header -->
+      <div class="flex justify-between items-start gap-3 mb-3">
+
+        <div class="flex items-start gap-3 min-w-0">
+          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-blue-600
+                      flex items-center justify-center text-white text-xs font-semibold">
+            ${(item.userName || item.userId || "U").charAt(0).toUpperCase()}
+          </div>
+
+          <div class="min-w-0">
+            <p class="text-sm font-semibold text-gray-900 truncate">
+              ${item.userName || "Unknown user"}
+            </p>
+            <p class="text-xs text-gray-400">
+              ${
+                item.submittedAt?.toDate
+                  ? item.submittedAt.toDate().toLocaleString()
+                  : item.createdAt?.toDate
+                  ? item.createdAt.toDate().toLocaleString()
+                  : "—"
+              }
+            </p>
+          </div>
+        </div>
+
+        <span class="px-2.5 py-1 rounded-full text-[11px] font-medium uppercase ${statusStyle}">
+          ${status}
+        </span>
+      </div>
+    `;
+
+    /* ===== Proof Section ===== */
+    if (jobType === "task") {
+      inner += `
+        <div class="text-sm text-gray-700 mb-2">
+          <span class="text-gray-400">Proof Text</span><br />
+          ${item.proofText ? escapeHtml(item.proofText).slice(0, 300) : "—"}
+        </div>
+      `;
+
+      if (Array.isArray(item.proofImages) && item.proofImages.length) {
+        inner += `
+          <div class="flex gap-2 overflow-x-auto mb-2">
+            ${item.proofImages
+              .map(
+                url => `
+                <img
+                  src="${url}"
+                  onclick="openImagePreview('${url}')"
+                  class="w-16 h-16 rounded-lg object-cover border cursor-pointer
+                         hover:scale-105 transition"
+                />
+              `
+              )
+              .join("")}
+          </div>
+        `;
+      }
+
+      inner += `
+        <div class="text-xs text-gray-500">
+          Worker Earn: <span class="font-medium text-gray-800">₦${item.workerEarn || 0}</span>
+        </div>
+      `;
     } else {
-      inner += `<div class="text-xs text-gray-500"></div>`;
+      inner += `
+        <div class="text-sm text-gray-700 mb-2">
+          <span class="text-gray-400">Note</span><br />
+          ${item.note ? escapeHtml(item.note).slice(0, 300) : "—"}
+        </div>
+      `;
+
+      if (Array.isArray(item.proofFiles) && item.proofFiles.length) {
+        inner += `
+          <div class="flex gap-2 overflow-x-auto mb-2">
+            ${item.proofFiles
+              .map(url => {
+                const isImage = /\.(png|jpg|jpeg|gif|webp)$/i.test(url);
+                return isImage
+                  ? `
+                    <img
+                      src="${url}"
+                      onclick="openImagePreview('${url}')"
+                      class="w-16 h-16 rounded-lg object-cover border cursor-pointer
+                             hover:scale-105 transition"
+                    />
+                  `
+                  : `
+                    <a
+                      href="${url}"
+                      target="_blank"
+                      class="text-xs text-blue-600 underline break-all">
+                      ${url.split("/").pop()}
+                    </a>
+                  `;
+              })
+              .join("")}
+          </div>
+        `;
+      }
     }
 
-    inner += `</div></div>`;
+    /* ===== Actions ===== */
+    if (isOnReview && isOwner) {
+      inner += `
+        <div class="flex gap-3 mt-4">
+          <button
+            data-action="approve"
+            class="flex-1 py-2 rounded-xl text-sm font-semibold text-white
+                   bg-gradient-to-r from-green-500 to-green-600
+                   hover:shadow-md hover:scale-[1.02] transition">
+            Approve
+          </button>
 
-    // ===== Proof Section =====
-    if (jobType === "task") {
-      inner += `<div class="mt-3 text-sm text-gray-600"><strong>Proof text:</strong> ${item.proofText ? escapeHtml(item.proofText).slice(0, 300) : "—"}</div>`;
-      if (Array.isArray(item.proofImages) && item.proofImages.length) {
-        inner += `<div class="mt-2 flex gap-2 overflow-x-auto">${item.proofImages
-          .map(url => `<img src="${url}" onclick="openImagePreview('${url}')" class="w-20 h-20 rounded-lg object-cover border cursor-pointer hover:opacity-80 transition">`)
-          .join("")}</div>`;
-      }
-      inner += `<div class="mt-2 text-xs text-gray-500"><strong>Worker Earn:</strong> ₦${item.workerEarn || "0"}</div>`;
-    } else {
-      inner += `<div class="mt-3 text-sm text-gray-600"><strong>Note:</strong> ${item.note ? escapeHtml(item.note).slice(0, 300) : "—"}</div>`;
-      if (Array.isArray(item.proofFiles) && item.proofFiles.length) {
-        inner += `<div class="mt-2 flex gap-2 overflow-x-auto">${item.proofFiles
-          .map(url => {
-            const isImage = /\.(png|jpg|jpeg|gif|webp)$/i.test(url);
-            return isImage
-              ? `<img src="${url}" onclick="openImagePreview('${url}')" class="w-20 h-20 rounded-lg object-cover border cursor-pointer hover:opacity-80 transition">`
-              : `<a href="${url}" target="_blank" class="text-xs underline text-blue-600 break-all">${url.split("/").pop()}</a>`;
-          })
-          .join("")}</div>`;
-      }
+          <button
+            data-action="reject"
+            class="flex-1 py-2 rounded-xl text-sm font-semibold text-white
+                   bg-gradient-to-r from-red-500 to-red-600
+                   hover:shadow-md hover:scale-[1.02] transition">
+            Reject
+          </button>
+        </div>
+      `;
     }
 
     card.innerHTML = inner;
     container.appendChild(card);
 
-    const approveBtn = card.querySelector('button[data-action="approve"]');
-    const rejectBtn = card.querySelector('button[data-action="reject"]');
-    if (approveBtn) approveBtn.onclick = () => approveSubmission(item.id, currentSubJob.id, jobType, item);
-    if (rejectBtn) rejectBtn.onclick = () => rejectSubmission(item.id, currentSubJob.id, jobType, item);
+    const approveBtn = card.querySelector('[data-action="approve"]');
+    const rejectBtn = card.querySelector('[data-action="reject"]');
+
+    if (approveBtn)
+      approveBtn.onclick = () =>
+        approveSubmission(item.id, currentSubJob.id, jobType, item);
+
+    if (rejectBtn)
+      rejectBtn.onclick = () =>
+        rejectSubmission(item.id, currentSubJob.id, jobType, item);
   });
 }
 
