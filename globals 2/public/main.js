@@ -447,6 +447,7 @@ document.getElementById("transaction-details-content").innerHTML = `
 `;
 
 activateTab("transaction-details-screen");
+}
 
 /* ---------- Fetch once ---------- */
 async function fetchTransactionsOnce(uid) {
