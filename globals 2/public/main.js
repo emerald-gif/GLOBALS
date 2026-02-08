@@ -273,6 +273,85 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
 
 
 
+/* ==========================
+   TRANSACTIONS (Static Fetch Only)
+   ========================== */
+
+let transactionsCache = [];
+let activeCollectionName = null;
+
+const txListEl = document.getElementById("transactions-list");
+const txEmptyEl = document.getElementById("transactions-empty");
+const categoryEl = document.getElementById("category-filter");
+const statusEl = document.getElementById("status-filter");
+
+/* ---------- Helpers ---------- */
+function parseTimestamp(val) {
+  if (!val) return null;
+  if (typeof val === "object" && typeof val.toDate === "function") return val.toDate();
+  if (val instanceof Date) return val;
+  if (typeof val === "number") return new Date(val);
+  if (typeof val === "string") {
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+
+function formatDatePretty(d) {
+  if (!d) return "No Timestamp";
+  return d.toLocaleString();
+}
+
+function formatAmount(amount) {
+  const n = Number(amount || 0);
+  return `₦${n.toFixed(2)}`;
+}
+
+/* ---------- Render Cards ---------- */
+function cardHtml(tx) {
+  const ts = parseTimestamp(tx.timestamp || tx.createdAt || tx.time);
+  const amountClass =
+    tx.status === "successful"
+      ? "text-green-600"
+      : tx.status === "failed"
+      ? "text-red-600"
+      : "text-yellow-600";
+
+  return `
+    <div class="cursor-pointer bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition"
+         onclick="openTransactionDetails('${tx.id || ""}')">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-semibold text-gray-900">${tx.type || "Unknown"}</p>
+          <p class="text-xs text-gray-400 mt-1">${formatDatePretty(ts)}</p>
+        </div>
+        <div class="text-right">
+          <p class="text-base font-bold ${amountClass}">${formatAmount(tx.amount)}</p>
+          <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${amountClass} bg-opacity-10">
+            ${tx.status || "—"}
+          </span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderTransactions(list) {
+  if (!txListEl || !txEmptyEl) return;
+  if (!list.length) {
+    txListEl.innerHTML = "";
+    txEmptyEl.classList.remove("hidden");
+    return;
+  }
+  txEmptyEl.classList.add("hidden");
+  txListEl.innerHTML = list.map(tx => cardHtml(tx)).join("");
+}
+
+
+		
+
+
 
 function openTransactionDetails(tx) {
   const ts = parseTimestamp(tx.timestamp || tx.createdAt || tx.time);
