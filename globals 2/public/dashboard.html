@@ -24,7 +24,11 @@
   <!-- 📊 JS Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.6.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
+
+	
   <!-- 🎨 Optional: Dashboard floating shapes -->
   <style>
     .float-shape { position:absolute; border-radius:999px; filter: blur(18px); opacity:.9; animation: floaty 7s ease-in-out infinite; pointer-events:none; }
@@ -2813,6 +2817,17 @@ function closeGlobalsModal() {
   </div>
 
   <div id="transaction-details-content" class="p-6 space-y-4"></div>
+
+
+<div class="flex gap-4 mt-4">
+  <button id="download-pdf-btn" class="bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700">
+    Download PDF
+  </button>
+  <button id="share-btn" class="bg-green-600 text-white px-4 py-2 rounded-xl hover:bg-green-700">
+    Share Receipt
+  </button>
+</div>
+	
 </div>
 
 
