@@ -357,157 +357,137 @@ function renderTransactions(list) {
 }
 
 /* ---------- Open Details ---------- */
-function openTransactionDetails(id) {
-  const tx = transactionsCache.find(t => t.id === id);
-  if (!tx) return;
 
-  const ts = parseTimestamp(tx.timestamp || tx.createdAt || tx.time);
-  const amountClass =
-    tx.status === "successful"
-      ? "text-green-600"
-      : tx.status === "failed"
-      ? "text-red-600"
-      : "text-yellow-600";
 
-  // Extra info for Withdraw type
-  // Extra info for Withdraw type
-let extraHTML = "";
-
-if ((tx.type || "").toLowerCase() === "withdraw") {
-  extraHTML = `
-    <div class="mt-6 rounded-xl bg-gray-50 p-4 space-y-3">
-      <div class="flex items-center gap-2 text-sm font-semibold text-gray-700">
-        <!-- Bank icon -->
-        <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2L2 7v2h20V7L12 2zm8 9H4v9h16v-9z"/>
-        </svg>
-        Bank Details
-      </div>
-
-      <div class="flex justify-between text-sm text-gray-600">
-        <span>Bank</span>
-        <span class="font-medium text-gray-800">${tx.bankName || "—"}</span>
-      </div>
-
-      <div class="flex justify-between text-sm text-gray-600">
-        <span>Account Name</span>
-        <span class="font-medium text-gray-800">${tx.account_name || "—"}</span>
-      </div>
-
-      <div class="flex justify-between text-sm text-gray-600">
-        <span>Account Number</span>
-        <span class="font-mono tracking-wide text-gray-800">${tx.accNum || "—"}</span>
-      </div>
-    </div>
-  `;
+    /* ---------- Helper: load image for jsPDF ---------- */
+function loadImage(url) {
+return new Promise((resolve, reject) => {
+const img = new Image();
+img.crossOrigin = "anonymous";
+img.src = url;
+img.onload = () => resolve(img);
+img.onerror = (e) => reject(e);
+});
 }
 
+/* ---------- Open Transaction Details ---------- */
+function openTransactionDetails(tx) {
+const ts = parseTimestamp(tx.timestamp || tx.createdAt || tx.time);
+
+const amountClass =
+tx.status === "successful"
+? "text-green-600"
+: tx.status === "failed"
+? "text-red-600"
+: "text-yellow-600";
+
+// Extra info for Withdraw
+let extraHTML = "";
+if ((tx.type || "").toLowerCase() === "withdraw") {
+extraHTML =   <div class="mt-6 rounded-xl bg-gray-50 p-4 space-y-3">   <div class="flex items-center gap-2 text-sm font-semibold text-gray-700">   <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24">   <path d="M12 2L2 7v2h20V7L12 2zm8 9H4v9h16v-9z"/>   </svg>   Bank Details   </div>   <div class="flex justify-between text-sm text-gray-600">   <span>Bank</span>   <span class="font-medium text-gray-800">${tx.bankName || "—"}</span>   </div>   <div class="flex justify-between text-sm text-gray-600">   <span>Account Name</span>   <span class="font-medium text-gray-800">${tx.account_name || "—"}</span>   </div>   <div class="flex justify-between text-sm text-gray-600">   <span>Account Number</span>   <span class="font-mono tracking-wide text-gray-800">${tx.accNum || "—"}</span>   </div>   </div>  ;
+}
+
+// Render Details + Buttons
 document.getElementById("transaction-details-content").innerHTML = `
-  <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-5">
+<div class="bg-white relative rounded-2xl p-6 shadow-sm border border-gray-100 space-y-5">
+<!-- Header -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+<path d="M13 2H6a2 2 0 0 0-2 2v16l4-4h9a2 2 0 0 0 2-2V7l-6-5z"/>
+</svg>
+<h2 class="text-sm font-semibold text-gray-800">Transaction Details</h2>
+</div>
+<span class="text-xs text-gray-400">${formatDatePretty(ts)}</span>
+</div>
+<!-- Detail rows -->
+<div class="space-y-4 divide-y divide-gray-100">
+<div class="pt-4 flex justify-between text-sm">
+<span class="text-gray-500">Type</span>
+<span class="font-medium text-gray-800">${tx.type}</span>
+</div>
+<div class="pt-4 flex justify-between text-sm">
+<span class="text-gray-500">Amount</span>
+<span class="font-semibold ${amountClass}">${formatAmount(tx.amount)}</span>
+</div>
+<div class="pt-4 flex justify-between text-sm">
+<span class="text-gray-500">Status</span>
+<span class="font-medium text-gray-800">${tx.status}</span>
+</div>
+<div class="pt-4 flex justify-between text-sm">
+<span class="text-gray-500">Transaction ID</span>
+<span class="font-mono text-xs text-gray-700">${tx.id}</span>
+</div>
+</div>
+${extraHTML}
 
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M13 2H6a2 2 0 0 0-2 2v16l4-4h9a2 2 0 0 0 2-2V7l-6-5z"/>
-        </svg>
-        <h2 class="text-sm font-semibold text-gray-800">Transaction Details</h2>
-      </div>
-      <span class="text-xs text-gray-400">${formatDatePretty(ts)}</span>
-    </div>
+<!-- Buttons -->  
+  <div class="flex gap-3 mt-4">  
+    <button id="download-pdf-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Download PDF</button>  
+    <button id="share-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">Share</button>  
+  </div>  
+</div>
 
-    <!-- Detail rows -->
-    <div class="space-y-4 divide-y divide-gray-100">
-
-      <div class="pt-4 flex justify-between text-sm">
-        <span class="text-gray-500">Type</span>
-        <span class="font-medium text-gray-800">${tx.type}</span>
-      </div>
-
-      <div class="pt-4 flex justify-between text-sm">
-        <span class="text-gray-500">Amount</span>
-        <span class="font-semibold ${amountClass}">
-          ${formatAmount(tx.amount)}
-        </span>
-      </div>
-
-      <div class="pt-4 flex justify-between text-sm">
-        <span class="text-gray-500">Status</span>
-        <span class="font-medium text-gray-800">${tx.status}</span>
-      </div>
-
-      <div class="pt-4 flex justify-between text-sm">
-        <span class="text-gray-500">Transaction ID</span>
-        <span class="font-mono text-xs text-gray-700">${tx.id}</span>
-      </div>
-    </div>
-
-    ${extraHTML}
-  </div>
 `;
 
 activateTab("transaction-details-screen");
+
+/* ---------- PDF Download ---------- */
+document.getElementById("download-pdf-btn").onclick = async () => {
+const { jsPDF } = window.jspdf;
+const doc = new jsPDF();
+try {
+const logo = await loadImage('https://res.cloudinary.com/dyquovrg3/image/upload/v1770534119/wcl6sd2jl7tzwgnk4sal.png');
+doc.addImage(logo, 'PNG', 15, 10, 40, 15);
+} catch (e) { console.warn("Logo failed to load", e); }
+
+let y = 40;  
+doc.setFontSize(12);  
+doc.text("Transaction Receipt", 105, y, null, null, 'center'); y += 10;  
+doc.setFontSize(10);  
+doc.text(`Transaction ID: ${tx.id}`, 20, y); y += 7;  
+doc.text(`Type: ${tx.type}`, 20, y); y += 7;  
+doc.text(`Amount: ₦${tx.amount}`, 20, y); y += 7;  
+doc.text(`Status: ${tx.status}`, 20, y); y += 7;  
+doc.text(`Date: ${formatDatePretty(parseTimestamp(tx.timestamp))}`, 20, y); y += 10;  
+
+if ((tx.type || "").toLowerCase() === "withdraw") {  
+  doc.text(`Bank: ${tx.bankName || "—"}`, 20, y); y += 7;  
+  doc.text(`Account Name: ${tx.account_name || "—"}`, 20, y); y += 7;  
+  doc.text(`Account Number: ${tx.accNum || "—"}`, 20, y); y += 7;  
+}  
+
+doc.save(`Globals_Receipt_${tx.id}.pdf`);
+
+};
+
+/* ---------- Share Image ---------- */
+document.getElementById("share-btn").onclick = async () => {
+const card = document.querySelector("#transaction-details-content .bg-white");
+if (!card) return;
+
+const canvas = await html2canvas(card, { scale: 2 });  
+const imgData = canvas.toDataURL("image/png");  
+
+// Download  
+const link = document.createElement("a");  
+link.href = imgData;  
+link.download = `Globals_Receipt_${tx.id}.png`;  
+link.click();  
+
+// Web Share API (optional)  
+if (navigator.share) {  
+  const blob = await (await fetch(imgData)).blob();  
+  const file = new File([blob], `Globals_Receipt_${tx.id}.png`, { type: blob.type });  
+  navigator.share({  
+    title: 'Globals Receipt',  
+    text: 'Here is my transaction receipt from Globals.',  
+    files: [file],  
+  });  
 }
 
-/* ---------- Fetch once ---------- */
-async function fetchTransactionsOnce(uid) {
-  const candidates = ["Transaction", "transaction", "transactions", "Transactions"];
-  for (const coll of candidates) {
-    try {
-      const snap = await firebase.firestore()
-        .collection(coll)
-        .where("userId", "==", uid)
-        .orderBy("timestamp", "desc")
-        .get();
-
-      if (!snap.empty) {
-        activeCollectionName = coll;
-        transactionsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderTransactions(transactionsCache);
-        return;
-      }
-    } catch (e) {
-      console.error("Failed for", coll, e);
-    }
-  }
-  txListEl.innerHTML = `<p class="text-center p-6 text-red-500">No transactions found.</p>`;
+};
 }
-
-/* ---------- Filters ---------- */
-function applyFiltersClient(category, status) {
-  let filtered = transactionsCache.slice();
-  if (category && category !== "All") {
-    filtered = filtered.filter(tx => (tx.type || "").toLowerCase() === category.toLowerCase());
-  }
-  if (status && status !== "All") {
-    filtered = filtered.filter(tx => (tx.status || "").toLowerCase() === status.toLowerCase());
-  }
-  renderTransactions(filtered);
-}
-
-/* ---------- Init ---------- */
-function initTransactionSection() {
-  const user = firebase.auth().currentUser;
-  if (!user) {
-    firebase.auth().onAuthStateChanged(u => u && fetchTransactionsOnce(u.uid));
-  } else {
-    fetchTransactionsOnce(user.uid);
-  }
-
-  if (categoryEl) categoryEl.onchange = () =>
-    applyFiltersClient(categoryEl.value, statusEl?.value || "All");
-  if (statusEl) statusEl.onchange = () =>
-    applyFiltersClient(categoryEl?.value || "All", statusEl.value);
-}
-
-if (window.registerPage) {
-  window.registerPage("transactions-screen", initTransactionSection);
-} else {
-  initTransactionSection();
-}
-
-
-
 
 
 
