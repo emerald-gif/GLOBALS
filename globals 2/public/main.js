@@ -273,54 +273,93 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
 
 
 
-/* ==========================
-   TRANSACTIONS (Static Fetch Only)
-   ========================== */
+(() => {
+  /* ==========================
+     Globals & DOM elements
+     ========================== */
+  window.transactionsCache = window.transactionsCache || [];
+  window.activeCollectionName = window.activeCollectionName || null;
 
-let transactionsCache = [];
-let activeCollectionName = null;
+  const txListEl = document.getElementById("transactions-list");
+  const txEmptyEl = document.getElementById("transactions-empty");
+  const categoryEl = document.getElementById("category-filter");
+  const statusEl = document.getElementById("status-filter");
+  const txDetailsContainer = document.getElementById("transaction-details-content");
 
-const txListEl = document.getElementById("transactions-list");
-const txEmptyEl = document.getElementById("transactions-empty");
-const categoryEl = document.getElementById("category-filter");
-const statusEl = document.getElementById("status-filter");
-
-/* ---------- Helpers ---------- */
-function parseTimestamp(val) {
-  if (!val) return null;
-  if (typeof val === "object" && typeof val.toDate === "function") return val.toDate();
-  if (val instanceof Date) return val;
-  if (typeof val === "number") return new Date(val);
-  if (typeof val === "string") {
-    const d = new Date(val);
-    return isNaN(d.getTime()) ? null : d;
+  if (!txListEl || !txEmptyEl || !txDetailsContainer) {
+    console.warn("Transactions: missing expected DOM elements (#transactions-list, #transactions-empty, #transaction-details-content). Ensure these IDs exist.");
   }
-  return null;
-}
 
-function formatDatePretty(d) {
-  if (!d) return "No Timestamp";
-  return d.toLocaleString();
-}
+  /* ==========================
+     Helpers
+     ========================== */
+  function parseTimestamp(val) {
+    if (!val) return null;
+    // firebase Timestamp
+    if (typeof val === "object" && typeof val.toDate === "function") return val.toDate();
+    if (val instanceof Date) return val;
+    if (typeof val === "number") return new Date(val);
+    if (typeof val === "string") {
+      const d = new Date(val);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  }
 
-function formatAmount(amount) {
-  const n = Number(amount || 0);
-  return `₦${n.toFixed(2)}`;
-}
+  function formatDatePretty(d) {
+    if (!d) return "No Timestamp";
+    try {
+      return d.toLocaleString();
+    } catch (e) {
+      return String(d);
+    }
+  }
 
-/* ---------- Render Cards ---------- */
-function cardHtml(tx) {
-  const ts = parseTimestamp(tx.timestamp || tx.createdAt || tx.time);
-  const amountClass =
-    tx.status === "successful"
-      ? "text-green-600"
-      : tx.status === "failed"
-      ? "text-red-600"
+  function formatAmount(amount) {
+    const n = Number(amount || 0);
+    // show two decimals
+    return `₦${n.toFixed(2)}`;
+  }
+
+  /* ---------- get jsPDF constructor safely ---------- */
+  function getJsPDFCtor() {
+    if (!window.jspdf) return null;
+    if (window.jspdf.jsPDF) return window.jspdf.jsPDF;
+    // Some older libs may expose constructor directly
+    return window.jspdf;
+  }
+
+  /* ---------- load image for jsPDF (with CORS attempt) ---------- */
+  function loadImage(url) {
+    return new Promise((resolve, reject) => {
+      try {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        // Add tiny cache buster to avoid stale/tainted results
+        img.src = url + (url.indexOf("?") === -1 ? `?_cb=${Date.now()}` : `&_cb=${Date.now()}`);
+        img.onload = () => resolve(img);
+        img.onerror = (e) => reject(new Error("Image load failed: " + url));
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  /* ==========================
+     Card creation & rendering
+     ========================== */
+  function createCardElement(tx) {
+    const ts = parseTimestamp(tx.timestamp || tx.createdAt || tx.time);
+    const amountClass =
+      tx.status === "successful" ? "text-green-600"
+      : tx.status === "failed" ? "text-red-600"
       : "text-yellow-600";
 
-  return `
-    <div class="cursor-pointer bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition"
-         onclick="openTransactionDetails('${tx.id || ""}')">
+    const wrapper = document.createElement("div");
+    wrapper.className = "cursor-pointer bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition";
+    wrapper.dataset.txid = tx.id || "";
+
+    wrapper.innerHTML = `
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm font-semibold text-gray-900">${tx.type || "Unknown"}</p>
@@ -333,162 +372,328 @@ function cardHtml(tx) {
           </span>
         </div>
       </div>
-    </div>
-  `;
-}
-
-function renderTransactions(list) {
-  if (!txListEl || !txEmptyEl) return;
-  if (!list.length) {
-    txListEl.innerHTML = "";
-    txEmptyEl.classList.remove("hidden");
-    return;
-  }
-  txEmptyEl.classList.add("hidden");
-  txListEl.innerHTML = list.map(tx => cardHtml(tx)).join("");
-}
-
-
-		
-
-
-
-function openTransactionDetails(tx) {
-  const ts = parseTimestamp(tx.timestamp || tx.createdAt || tx.time);
-
-  const amountClass =
-    tx.status === "successful"
-      ? "text-green-600"
-      : tx.status === "failed"
-      ? "text-red-600"
-      : "text-yellow-600";
-
-  // Extra info for Withdraw
-  let extraHTML = "";
-  if ((tx.type || "").toLowerCase() === "withdraw") {
-    extraHTML = `
-      <div class="mt-6 rounded-xl bg-gray-50 p-4 space-y-3">
-        <div class="flex items-center gap-2 text-sm font-semibold text-gray-700">
-          <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2L2 7v2h20V7L12 2zm8 9H4v9h16v-9z"/>
-          </svg>
-          Bank Details
-        </div>
-        <div class="flex justify-between text-sm text-gray-600">
-          <span>Bank</span>
-          <span class="font-medium text-gray-800">${tx.bankName || "—"}</span>
-        </div>
-        <div class="flex justify-between text-sm text-gray-600">
-          <span>Account Name</span>
-          <span class="font-medium text-gray-800">${tx.account_name || "—"}</span>
-        </div>
-        <div class="flex justify-between text-sm text-gray-600">
-          <span>Account Number</span>
-          <span class="font-mono tracking-wide text-gray-800">${tx.accNum || "—"}</span>
-        </div>
-      </div>
     `;
+
+    wrapper.addEventListener("click", () => {
+      try {
+        openTransactionDetails(tx.id);
+      } catch (err) {
+        console.error("openTransactionDetails error:", err);
+      }
+    });
+
+    return wrapper;
   }
 
-  // Render Details + Buttons
-  document.getElementById("transaction-details-content").innerHTML = `
-    <div class="bg-white relative rounded-2xl p-6 shadow-sm border border-gray-100 space-y-5">
-      <!-- Header -->
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M13 2H6a2 2 0 0 0-2 2v16l4-4h9a2 2 0 0 0 2-2V7l-6-5z"/>
-          </svg>
-          <h2 class="text-sm font-semibold text-gray-800">Transaction Details</h2>
-        </div>
-        <span class="text-xs text-gray-400">${formatDatePretty(ts)}</span>
-      </div>
-
-      <!-- Detail rows -->
-      <div class="space-y-4 divide-y divide-gray-100">
-        <div class="pt-4 flex justify-between text-sm">
-          <span class="text-gray-500">Type</span>
-          <span class="font-medium text-gray-800">${tx.type}</span>
-        </div>
-        <div class="pt-4 flex justify-between text-sm">
-          <span class="text-gray-500">Amount</span>
-          <span class="font-semibold ${amountClass}">${formatAmount(tx.amount)}</span>
-        </div>
-        <div class="pt-4 flex justify-between text-sm">
-          <span class="text-gray-500">Status</span>
-          <span class="font-medium text-gray-800">${tx.status}</span>
-        </div>
-        <div class="pt-4 flex justify-between text-sm">
-          <span class="text-gray-500">Transaction ID</span>
-          <span class="font-mono text-xs text-gray-700">${tx.id}</span>
-        </div>
-      </div>
-      ${extraHTML}
-
-      <!-- Buttons -->  
-      <div class="flex gap-3 mt-4">
-        <button id="download-pdf-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Download PDF</button>
-        <button id="share-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">Share</button>
-      </div>
-    </div>
-  `;
-
-  activateTab("transaction-details-screen");
-
-  /* ---------- PDF Download ---------- */
-  document.getElementById("download-pdf-btn").onclick = async () => {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+  function renderTransactions(list) {
+    // This function overrides the old one in the global scope
+    if (!txListEl || !txEmptyEl) return;
     try {
-      const logo = await loadImage('https://res.cloudinary.com/dyquovrg3/image/upload/v1770534119/wcl6sd2jl7tzwgnk4sal.png');
-      doc.addImage(logo, 'PNG', 15, 10, 40, 15);
-    } catch (e) { console.warn("Logo failed to load", e); }
-
-    let y = 40;
-    doc.setFontSize(12);
-    doc.text("Transaction Receipt", 105, y, null, null, 'center'); y += 10;
-    doc.setFontSize(10);
-    doc.text(`Transaction ID: ${tx.id}`, 20, y); y += 7;
-    doc.text(`Type: ${tx.type}`, 20, y); y += 7;
-    doc.text(`Amount: ₦${tx.amount}`, 20, y); y += 7;
-    doc.text(`Status: ${tx.status}`, 20, y); y += 7;
-    doc.text(`Date: ${formatDatePretty(parseTimestamp(tx.timestamp))}`, 20, y); y += 10;
-
-    if ((tx.type || "").toLowerCase() === "withdraw") {
-      doc.text(`Bank: ${tx.bankName || "—"}`, 20, y); y += 7;
-      doc.text(`Account Name: ${tx.account_name || "—"}`, 20, y); y += 7;
-      doc.text(`Account Number: ${tx.accNum || "—"}`, 20, y); y += 7;
-    }
-
-    doc.save(`Globals_Receipt_${tx.id}.pdf`);
-  };
-
-  /* ---------- Share Image ---------- */
-  document.getElementById("share-btn").onclick = async () => {
-    const card = document.querySelector("#transaction-details-content .bg-white");
-    if (!card) return;
-
-    const canvas = await html2canvas(card, { scale: 2 });
-    const imgData = canvas.toDataURL("image/png");
-
-    // Download
-    const link = document.createElement("a");
-    link.href = imgData;
-    link.download = `Globals_Receipt_${tx.id}.png`;
-    link.click();
-
-    // Web Share API (optional)
-    if (navigator.share) {
-      const blob = await (await fetch(imgData)).blob();
-      const file = new File([blob], `Globals_Receipt_${tx.id}.png`, { type: blob.type });
-      navigator.share({
-        title: 'Globals Receipt',
-        text: 'Here is my transaction receipt from Globals.',
-        files: [file],
+      if (!Array.isArray(list) || list.length === 0) {
+        txListEl.innerHTML = "";
+        txEmptyEl.classList.remove("hidden");
+        return;
+      }
+      txEmptyEl.classList.add("hidden");
+      txListEl.innerHTML = "";
+      list.forEach(tx => {
+        const el = createCardElement(tx);
+        txListEl.appendChild(el);
       });
+    } catch (err) {
+      console.error("renderTransactions error:", err);
+    }
+  }
+
+  // expose for other parts of the app (keeps name compatibility)
+  window.renderTransactions = renderTransactions;
+
+  /* ==========================
+     Transaction details + PDF/Share
+     ========================== */
+  window.openTransactionDetails = function openTransactionDetails(id) {
+    try {
+      if (!id) return console.warn("openTransactionDetails called without id");
+      const tx = (window.transactionsCache || []).find(t => t.id === id);
+      if (!tx) {
+        console.warn("Transaction not found for id:", id);
+        if (txDetailsContainer) {
+          txDetailsContainer.innerHTML = `<p class="text-center text-red-500 p-6">Transaction not found.</p>`;
+        }
+        if (typeof activateTab === "function") activateTab("transaction-details-screen");
+        return;
+      }
+
+      const ts = parseTimestamp(tx.timestamp || tx.createdAt || tx.time);
+      const amountClass =
+        tx.status === "successful" ? "text-green-600"
+        : tx.status === "failed" ? "text-red-600"
+        : "text-yellow-600";
+
+      let extraHTML = "";
+      if ((tx.type || "").toLowerCase() === "withdraw") {
+        extraHTML = `
+          <div class="mt-6 rounded-xl bg-gray-50 p-4 space-y-3">
+            <div class="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7v2h20V7L12 2zm8 9H4v9h16v-9z"/></svg>
+              Bank Details
+            </div>
+            <div class="flex justify-between text-sm text-gray-600"><span>Bank</span><span class="font-medium text-gray-800">${tx.bankName || "—"}</span></div>
+            <div class="flex justify-between text-sm text-gray-600"><span>Account Name</span><span class="font-medium text-gray-800">${tx.account_name || "—"}</span></div>
+            <div class="flex justify-between text-sm text-gray-600"><span>Account Number</span><span class="font-mono tracking-wide text-gray-800">${tx.accNum || "—"}</span></div>
+          </div>
+        `;
+      }
+
+      if (!txDetailsContainer) return;
+
+      txDetailsContainer.innerHTML = `
+        <div class="bg-white relative rounded-2xl p-6 shadow-sm border border-gray-100 space-y-5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16l4-4h9a2 2 0 0 0 2-2V7l-6-5z"/></svg>
+              <h2 class="text-sm font-semibold text-gray-800">Transaction Details</h2>
+            </div>
+            <span class="text-xs text-gray-400">${formatDatePretty(ts)}</span>
+          </div>
+
+          <div class="space-y-4 divide-y divide-gray-100">
+            <div class="pt-4 flex justify-between text-sm"><span class="text-gray-500">Type</span><span class="font-medium text-gray-800">${tx.type}</span></div>
+            <div class="pt-4 flex justify-between text-sm"><span class="text-gray-500">Amount</span><span class="font-semibold ${amountClass}">${formatAmount(tx.amount)}</span></div>
+            <div class="pt-4 flex justify-between text-sm"><span class="text-gray-500">Status</span><span class="font-medium text-gray-800">${tx.status}</span></div>
+            <div class="pt-4 flex justify-between text-sm"><span class="text-gray-500">Transaction ID</span><span class="font-mono text-xs text-gray-700">${tx.id}</span></div>
+          </div>
+
+          ${extraHTML}
+
+          <div class="flex gap-3 mt-4">
+            <button id="download-pdf-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Download PDF</button>
+            <button id="share-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">Share</button>
+          </div>
+        </div>
+      `;
+
+      // Switch to details screen
+      if (typeof activateTab === "function") {
+        activateTab("transaction-details-screen");
+      } else {
+        const screen = document.getElementById("transaction-details-screen");
+        if (screen) screen.classList.remove("hidden");
+      }
+
+      // Attach handlers - remove old ones safely by replacing nodes
+      const downloadBtn = document.getElementById("download-pdf-btn");
+      const shareBtn = document.getElementById("share-btn");
+
+      if (downloadBtn) {
+        const newDownload = downloadBtn.cloneNode(true);
+        downloadBtn.parentNode.replaceChild(newDownload, downloadBtn);
+      }
+      if (shareBtn) {
+        const newShare = shareBtn.cloneNode(true);
+        shareBtn.parentNode.replaceChild(newShare, shareBtn);
+      }
+
+      const finalDownloadBtn = document.getElementById("download-pdf-btn");
+      const finalShareBtn = document.getElementById("share-btn");
+
+      if (finalDownloadBtn) {
+        finalDownloadBtn.addEventListener("click", async () => {
+          try {
+            const JsPDFCtor = getJsPDFCtor();
+            if (!JsPDFCtor) {
+              console.error("jsPDF not found. Include jspdf before this script.");
+              alert("Failed to generate PDF: jsPDF library missing.");
+              return;
+            }
+            const doc = new JsPDFCtor();
+
+            try {
+              const logo = await loadImage('https://res.cloudinary.com/dyquovrg3/image/upload/v1770534119/wcl6sd2jl7tzwgnk4sal.png');
+              doc.addImage(logo, 'PNG', 15, 10, 40, 15);
+            } catch (e) {
+              console.warn("Could not load logo for PDF:", e);
+            }
+
+            let y = 40;
+            doc.setFontSize(12);
+            // center title
+            try { doc.text("Transaction Receipt", 105, y, { align: "center" }); } catch { doc.text("Transaction Receipt", 105, y); }
+            y += 10;
+            doc.setFontSize(10);
+            doc.text(`Transaction ID: ${tx.id}`, 20, y); y += 7;
+            doc.text(`Type: ${tx.type}`, 20, y); y += 7;
+            doc.text(`Amount: ₦${tx.amount}`, 20, y); y += 7;
+            doc.text(`Status: ${tx.status}`, 20, y); y += 7;
+            doc.text(`Date: ${formatDatePretty(ts)}`, 20, y); y += 10;
+
+            if ((tx.type || "").toLowerCase() === "withdraw") {
+              doc.text(`Bank: ${tx.bankName || "—"}`, 20, y); y += 7;
+              doc.text(`Account Name: ${tx.account_name || "—"}`, 20, y); y += 7;
+              doc.text(`Account Number: ${tx.accNum || "—"}`, 20, y); y += 7;
+            }
+
+            doc.save(`Globals_Receipt_${tx.id}.pdf`);
+          } catch (err) {
+            console.error("Download PDF error:", err);
+            alert("Failed to generate PDF. See console for details.");
+          }
+        });
+      } else {
+        console.warn("Download button not found in DOM.");
+      }
+
+      if (finalShareBtn) {
+        finalShareBtn.addEventListener("click", async () => {
+          try {
+            if (!window.html2canvas) {
+              console.error("html2canvas not found. Include html2canvas before this script.");
+              alert("Failed to create image: html2canvas library missing.");
+              return;
+            }
+
+            const card = document.querySelector("#transaction-details-content .bg-white");
+            if (!card) {
+              console.warn("Card element not found for screenshot.");
+              return;
+            }
+
+            // html2canvas returns a promise
+            const canvas = await window.html2canvas(card, { scale: 2 });
+            const imgData = canvas.toDataURL("image/png");
+
+            // Download image automatically
+            const link = document.createElement("a");
+            link.href = imgData;
+            link.download = `Globals_Receipt_${tx.id}.png`;
+            link.click();
+
+            // Optional: share via Web Share API if available
+            if (navigator.share) {
+              const blob = await (await fetch(imgData)).blob();
+              const file = new File([blob], `Globals_Receipt_${tx.id}.png`, { type: blob.type });
+              try {
+                await navigator.share({
+                  title: 'Globals Receipt',
+                  text: 'Here is my transaction receipt from Globals.',
+                  files: [file],
+                });
+              } catch (shareErr) {
+                console.warn("Web Share failed or was cancelled:", shareErr);
+              }
+            }
+          } catch (err) {
+            console.error("Share error:", err);
+            alert("Failed to share image. See console for details.");
+          }
+        });
+      } else {
+        console.warn("Share button not found in DOM.");
+      }
+    } catch (err) {
+      console.error("openTransactionDetails wrapper error:", err);
     }
   };
-}
+
+  /* ==========================
+     Fetching (once), Filters, Init
+     ========================== */
+  async function fetchTransactionsOnce(uid) {
+    if (!uid) {
+      console.warn("fetchTransactionsOnce called without uid");
+      return;
+    }
+
+    const candidates = ["Transaction", "transaction", "transactions", "Transactions"];
+    for (const coll of candidates) {
+      try {
+        if (!window.firebase || !firebase.firestore) {
+          console.warn("Firebase not available. Ensure firebase is loaded before calling fetchTransactionsOnce.");
+          break;
+        }
+
+        const snap = await firebase.firestore()
+          .collection(coll)
+          .where("userId", "==", uid)
+          .orderBy("timestamp", "desc")
+          .get();
+
+        if (!snap.empty) {
+          window.activeCollectionName = coll;
+          window.transactionsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          renderTransactions(window.transactionsCache);
+          return;
+        }
+      } catch (e) {
+        console.error("Failed for", coll, e);
+      }
+    }
+
+    if (txListEl) txListEl.innerHTML = `<p class="text-center p-6 text-red-500">No transactions found.</p>`;
+  }
+
+  function applyFiltersClient(category, status) {
+    let filtered = (window.transactionsCache || []).slice();
+    if (category && category !== "All") {
+      filtered = filtered.filter(tx => (tx.type || "").toLowerCase() === category.toLowerCase());
+    }
+    if (status && status !== "All") {
+      filtered = filtered.filter(tx => (tx.status || "").toLowerCase() === status.toLowerCase());
+    }
+    renderTransactions(filtered);
+  }
+
+  function initTransactionSection() {
+    // Auth + fetch
+    try {
+      const user = firebase?.auth?.().currentUser;
+      if (!user) {
+        if (firebase && firebase.auth) {
+          firebase.auth().onAuthStateChanged(u => {
+            if (u) fetchTransactionsOnce(u.uid);
+          });
+        } else {
+          console.warn("Firebase auth not available. Call fetchTransactionsOnce(uid) manually when you have the uid.");
+        }
+      } else {
+        fetchTransactionsOnce(user.uid);
+      }
+    } catch (err) {
+      console.warn("initTransactionSection firebase check failed:", err);
+    }
+
+    // Filters event wiring
+    if (categoryEl) categoryEl.onchange = () => applyFiltersClient(categoryEl.value, statusEl?.value || "All");
+    if (statusEl) statusEl.onchange = () => applyFiltersClient(categoryEl?.value || "All", statusEl.value);
+  }
+
+  if (window.registerPage && typeof window.registerPage === "function") {
+    window.registerPage("transactions-screen", initTransactionSection);
+  } else {
+    // run immediately as fallback
+    initTransactionSection();
+  }
+
+  // If transactionsCache already had items (preloaded), render them now
+  if (Array.isArray(window.transactionsCache) && window.transactionsCache.length) {
+    renderTransactions(window.transactionsCache);
+  }
+
+  // small debug helper (optional)
+  window.__tx_helpers = {
+    renderTransactions,
+    openTransactionDetails,
+    fetchTransactionsOnce,
+    applyFiltersClient,
+    initTransactionSection,
+  };
+
+  console.log("transactions.js loaded: renderer and details handlers installed.");
+})();
+
+
+
+
 
 
 
