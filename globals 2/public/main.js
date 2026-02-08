@@ -269,14 +269,36 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
 
 
 
-// ---------- TRANSACTION HISTORY ----------
-
-
+/**
+ * transactions.js
+ * Complete drop-in replacement for transactions functionality.
+ * - Renders transactions (static fetch once)
+ * - Filters (category/status)
+ * - Transaction details screen
+ * - Download PDF (jsPDF) - dynamically loaded if missing
+ * - Share receipt image (html2canvas) - optimized clone, no surprise downloads
+ *
+ * Usage:
+ * - Include this file after your firebase/init code.
+ * - Optionally preload libs:
+ *    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+ *    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+ *
+ * Drop this file in place of your old transaction JS. It will attach to:
+ * - #transactions-list
+ * - #transactions-empty
+ * - #transaction-details-content
+ * - #category-filter (optional)
+ * - #status-filter (optional)
+ * - #transaction-details-screen (optional, used to reveal details)
+ *
+ * The code is defensive and logs helpful messages in console.
+ */
 
 (() => {
-  /* ==========================
-     Globals & DOM elements
-     ========================== */
+  /* =========================================
+     Globals & DOM refs
+     ========================================= */
   window.transactionsCache = window.transactionsCache || [];
   window.activeCollectionName = window.activeCollectionName || null;
 
@@ -287,15 +309,14 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
   const txDetailsContainer = document.getElementById("transaction-details-content");
 
   if (!txListEl || !txEmptyEl || !txDetailsContainer) {
-    console.warn("Transactions: missing expected DOM elements (#transactions-list, #transactions-empty, #transaction-details-content). Ensure these IDs exist.");
+    console.warn("transactions.js: expected DOM elements missing (#transactions-list, #transactions-empty, #transaction-details-content).");
   }
 
-  /* ==========================
+  /* =========================================
      Helpers
-     ========================== */
+     ========================================= */
   function parseTimestamp(val) {
     if (!val) return null;
-    // firebase Timestamp
     if (typeof val === "object" && typeof val.toDate === "function") return val.toDate();
     if (val instanceof Date) return val;
     if (typeof val === "number") return new Date(val);
@@ -308,52 +329,71 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
 
   function formatDatePretty(d) {
     if (!d) return "No Timestamp";
-    try {
-      return d.toLocaleString();
-    } catch (e) {
-      return String(d);
-    }
+    try { return d.toLocaleString(); } catch { return String(d); }
   }
 
   function formatAmount(amount) {
     const n = Number(amount || 0);
-    // show two decimals
     return `₦${n.toFixed(2)}`;
   }
 
-  /* ---------- get jsPDF constructor safely ---------- */
   function getJsPDFCtor() {
     if (!window.jspdf) return null;
     if (window.jspdf.jsPDF) return window.jspdf.jsPDF;
-    // Some older libs may expose constructor directly
     return window.jspdf;
   }
 
-  /* ---------- load image for jsPDF (with CORS attempt) ---------- */
   function loadImage(url) {
     return new Promise((resolve, reject) => {
       try {
         const img = new Image();
         img.crossOrigin = "anonymous";
-        // Add tiny cache buster to avoid stale/tainted results
-        img.src = url + (url.indexOf("?") === -1 ? `?_cb=${Date.now()}` : `&_cb=${Date.now()}`);
         img.onload = () => resolve(img);
         img.onerror = (e) => reject(new Error("Image load failed: " + url));
+        img.src = url + (url.indexOf("?") === -1 ? `?_cb=${Date.now()}` : `&_cb=${Date.now()}`);
       } catch (err) {
         reject(err);
       }
     });
   }
 
-  /* ==========================
+  // Dynamically load a script (returns when loaded)
+  function loadScript(url) {
+    return new Promise((resolve, reject) => {
+      try {
+        // If a script tag with this src exists, wait for it
+        const existing = Array.from(document.querySelectorAll('script[src]')).find(s => s.src && s.src.indexOf(url) !== -1);
+        if (existing) {
+          if (existing.hasAttribute('data-loaded') || existing.readyState === 'complete' || existing.readyState === 'loaded') {
+            return resolve();
+          }
+          existing.addEventListener('load', () => resolve());
+          existing.addEventListener('error', () => reject(new Error("Script failed to load: " + url)));
+          return;
+        }
+        const s = document.createElement('script');
+        s.src = url;
+        s.async = true;
+        s.onload = () => {
+          try { s.setAttribute('data-loaded', '1'); } catch {}
+          resolve();
+        };
+        s.onerror = () => reject(new Error("Script failed to load: " + url));
+        document.head.appendChild(s);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  /* =========================================
      Card creation & rendering
-     ========================== */
+     ========================================= */
   function createCardElement(tx) {
     const ts = parseTimestamp(tx.timestamp || tx.createdAt || tx.time);
-    const amountClass =
-      tx.status === "successful" ? "text-green-600"
-      : tx.status === "failed" ? "text-red-600"
-      : "text-yellow-600";
+    const amountClass = tx.status === "successful" ? "text-green-600"
+                        : tx.status === "failed" ? "text-red-600"
+                        : "text-yellow-600";
 
     const wrapper = document.createElement("div");
     wrapper.className = "cursor-pointer bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition";
@@ -367,26 +407,19 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
         </div>
         <div class="text-right">
           <p class="text-base font-bold ${amountClass}">${formatAmount(tx.amount)}</p>
-          <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${amountClass} bg-opacity-10">
-            ${tx.status || "—"}
-          </span>
+          <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${amountClass} bg-opacity-10">${tx.status || "—"}</span>
         </div>
       </div>
     `;
 
     wrapper.addEventListener("click", () => {
-      try {
-        openTransactionDetails(tx.id);
-      } catch (err) {
-        console.error("openTransactionDetails error:", err);
-      }
+      try { openTransactionDetails(tx.id); } catch (err) { console.error("openTransactionDetails error:", err); }
     });
 
     return wrapper;
   }
 
   function renderTransactions(list) {
-    // This function overrides the old one in the global scope
     if (!txListEl || !txEmptyEl) return;
     try {
       if (!Array.isArray(list) || list.length === 0) {
@@ -396,39 +429,34 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
       }
       txEmptyEl.classList.add("hidden");
       txListEl.innerHTML = "";
-      list.forEach(tx => {
+      for (const tx of list) {
         const el = createCardElement(tx);
         txListEl.appendChild(el);
-      });
+      }
     } catch (err) {
       console.error("renderTransactions error:", err);
     }
   }
-
-  // expose for other parts of the app (keeps name compatibility)
   window.renderTransactions = renderTransactions;
 
-  /* ==========================
+  /* =========================================
      Transaction details + PDF/Share
-     ========================== */
+     ========================================= */
   window.openTransactionDetails = function openTransactionDetails(id) {
     try {
       if (!id) return console.warn("openTransactionDetails called without id");
       const tx = (window.transactionsCache || []).find(t => t.id === id);
       if (!tx) {
         console.warn("Transaction not found for id:", id);
-        if (txDetailsContainer) {
-          txDetailsContainer.innerHTML = `<p class="text-center text-red-500 p-6">Transaction not found.</p>`;
-        }
+        if (txDetailsContainer) txDetailsContainer.innerHTML = `<p class="text-center text-red-500 p-6">Transaction not found.</p>`;
         if (typeof activateTab === "function") activateTab("transaction-details-screen");
         return;
       }
 
       const ts = parseTimestamp(tx.timestamp || tx.createdAt || tx.time);
-      const amountClass =
-        tx.status === "successful" ? "text-green-600"
-        : tx.status === "failed" ? "text-red-600"
-        : "text-yellow-600";
+      const amountClass = tx.status === "successful" ? "text-green-600"
+                          : tx.status === "failed" ? "text-red-600"
+                          : "text-yellow-600";
 
       let extraHTML = "";
       if ((tx.type || "").toLowerCase() === "withdraw") {
@@ -445,10 +473,14 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
         `;
       }
 
-      if (!txDetailsContainer) return;
+      if (!txDetailsContainer) {
+        console.warn("transaction-details-content element missing");
+        return;
+      }
 
+      // Render details with data-txid on the card container
       txDetailsContainer.innerHTML = `
-        <div class="bg-white relative rounded-2xl p-6 shadow-sm border border-gray-100 space-y-5">
+        <div class="bg-white relative rounded-2xl p-6 shadow-sm border border-gray-100 space-y-5" data-txid="${tx.id}">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16l4-4h9a2 2 0 0 0 2-2V7l-6-5z"/></svg>
@@ -473,7 +505,7 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
         </div>
       `;
 
-      // Switch to details screen
+      // reveal details screen (compatible with activateTab or plain show)
       if (typeof activateTab === "function") {
         activateTab("transaction-details-screen");
       } else {
@@ -481,43 +513,55 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
         if (screen) screen.classList.remove("hidden");
       }
 
-      // Attach handlers - remove old ones safely by replacing nodes
-      const downloadBtn = document.getElementById("download-pdf-btn");
-      const shareBtn = document.getElementById("share-btn");
+      /* =========================
+         Attach handlers (robust)
+         - dynamic script loading
+         - optimized share (no auto-download)
+         - clone-based html2canvas render (fast)
+         ========================= */
 
-      if (downloadBtn) {
-        const newDownload = downloadBtn.cloneNode(true);
-        downloadBtn.parentNode.replaceChild(newDownload, downloadBtn);
-      }
-      if (shareBtn) {
-        const newShare = shareBtn.cloneNode(true);
-        shareBtn.parentNode.replaceChild(newShare, shareBtn);
-      }
+      // cleanup old handlers by replacing nodes
+      const oldDownload = document.getElementById("download-pdf-btn");
+      const oldShare = document.getElementById("share-btn");
+      if (oldDownload) oldDownload.parentNode.replaceChild(oldDownload.cloneNode(true), oldDownload);
+      if (oldShare) oldShare.parentNode.replaceChild(oldShare.cloneNode(true), oldShare);
 
       const finalDownloadBtn = document.getElementById("download-pdf-btn");
       const finalShareBtn = document.getElementById("share-btn");
 
+      // Download PDF handler
       if (finalDownloadBtn) {
         finalDownloadBtn.addEventListener("click", async () => {
           try {
-            const JsPDFCtor = getJsPDFCtor();
+            finalDownloadBtn.disabled = true;
+            finalDownloadBtn.innerText = "Preparing...";
+            // ensure jsPDF exists, otherwise try to load it dynamically
+            let JsPDFCtor = getJsPDFCtor();
             if (!JsPDFCtor) {
-              console.error("jsPDF not found. Include jspdf before this script.");
+              try {
+                await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+                JsPDFCtor = getJsPDFCtor();
+              } catch (e) {
+                console.error("Failed to load jsPDF dynamically:", e);
+              }
+            }
+            if (!JsPDFCtor) {
               alert("Failed to generate PDF: jsPDF library missing.");
               return;
             }
-            const doc = new JsPDFCtor();
 
+            const doc = new JsPDFCtor();
+            // try load logo (doesn't block if fails)
             try {
               const logo = await loadImage('https://res.cloudinary.com/dyquovrg3/image/upload/v1770534119/wcl6sd2jl7tzwgnk4sal.png');
               doc.addImage(logo, 'PNG', 15, 10, 40, 15);
             } catch (e) {
-              console.warn("Could not load logo for PDF:", e);
+              // not critical
+              console.warn("Logo load failed for PDF:", e);
             }
 
             let y = 40;
             doc.setFontSize(12);
-            // center title
             try { doc.text("Transaction Receipt", 105, y, { align: "center" }); } catch { doc.text("Transaction Receipt", 105, y); }
             y += 10;
             doc.setFontSize(10);
@@ -537,67 +581,140 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
           } catch (err) {
             console.error("Download PDF error:", err);
             alert("Failed to generate PDF. See console for details.");
+          } finally {
+            finalDownloadBtn.disabled = false;
+            finalDownloadBtn.innerText = "Download PDF";
           }
         });
-      } else {
-        console.warn("Download button not found in DOM.");
       }
 
+      // Share handler (optimized)
       if (finalShareBtn) {
         finalShareBtn.addEventListener("click", async () => {
-          try {
-            if (!window.html2canvas) {
-              console.error("html2canvas not found. Include html2canvas before this script.");
-              alert("Failed to create image: html2canvas library missing.");
-              return;
-            }
+          finalShareBtn.disabled = true;
+          finalShareBtn.innerText = "Preparing...";
 
-            const card = document.querySelector("#transaction-details-content .bg-white");
-            if (!card) {
-              console.warn("Card element not found for screenshot.");
-              return;
-            }
-
-            // html2canvas returns a promise
-            const canvas = await window.html2canvas(card, { scale: 2 });
-            const imgData = canvas.toDataURL("image/png");
-
-            // Download image automatically
-            const link = document.createElement("a");
-            link.href = imgData;
-            link.download = `Globals_Receipt_${tx.id}.png`;
-            link.click();
-
-            // Optional: share via Web Share API if available
-            if (navigator.share) {
-              const blob = await (await fetch(imgData)).blob();
-              const file = new File([blob], `Globals_Receipt_${tx.id}.png`, { type: blob.type });
-              try {
-                await navigator.share({
-                  title: 'Globals Receipt',
-                  text: 'Here is my transaction receipt from Globals.',
-                  files: [file],
-                });
-              } catch (shareErr) {
-                console.warn("Web Share failed or was cancelled:", shareErr);
+          // give UI a beat to update
+          setTimeout(async () => {
+            let clone = null;
+            try {
+              // ensure html2canvas exists (load if missing)
+              if (!window.html2canvas) {
+                try {
+                  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+                } catch (e) {
+                  console.error("Failed to load html2canvas dynamically:", e);
+                }
               }
+              if (!window.html2canvas) {
+                alert("Failed to share: html2canvas library missing.");
+                return;
+              }
+
+              // clone the visible card and simplify it to reduce render cost
+              const originalCard = document.querySelector("#transaction-details-content .bg-white");
+              if (!originalCard) {
+                console.warn("Share: card element not found.");
+                return;
+              }
+
+              clone = originalCard.cloneNode(true);
+
+              // Simplify visuals on the clone to speed up rendering
+              clone.style.boxShadow = "none";
+              clone.style.background = "#ffffff";
+              clone.style.transform = "none";
+              clone.style.width = originalCard.offsetWidth + "px";
+              clone.style.maxWidth = originalCard.offsetWidth + "px";
+              clone.querySelectorAll("img").forEach(img => img.remove());
+              clone.querySelectorAll("*").forEach(el => {
+                el.style.filter = "none";
+                el.style.backgroundImage = "none";
+                el.style.textShadow = "none";
+                el.style.transition = "none";
+                // remove heavy backdrops if any
+                if (getComputedStyle(el).backdropFilter) el.style.backdropFilter = "none";
+              });
+
+              clone.style.position = "fixed";
+              clone.style.left = "-9999px";
+              clone.style.top = "0";
+              clone.style.zIndex = "999999";
+              document.body.appendChild(clone);
+
+              // render with scale:1 for speed
+              const canvas = await window.html2canvas(clone, { scale: 1, useCORS: true, logging: false });
+
+              // remove clone ASAP
+              try { document.body.removeChild(clone); clone = null; } catch (e) { /* ignore */ }
+
+              // Try Web Share API with files (if supported)
+              let shared = false;
+              try {
+                const canShareFiles = !!navigator.canShare && typeof navigator.canShare === "function";
+                const blob = await new Promise(res => canvas.toBlob(res, "image/png"));
+                const file = new File([blob], `Globals_Receipt_${tx.id}.png`, { type: "image/png" });
+
+                if (navigator.share && canShareFiles) {
+                  try {
+                    await navigator.share({
+                      title: `Globals Receipt (${tx.id})`,
+                      text: `Transaction ${tx.id} — ${formatAmount(tx.amount)}`,
+                      files: [file],
+                    });
+                    shared = true;
+                  } catch (shareErr) {
+                    console.warn("Web Share failed/cancelled:", shareErr);
+                  }
+                } else if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                  // some environments accept this check
+                  try {
+                    await navigator.share({
+                      title: `Globals Receipt (${tx.id})`,
+                      text: `Transaction ${tx.id} — ${formatAmount(tx.amount)}`,
+                      files: [file],
+                    });
+                    shared = true;
+                  } catch (shareErr) {
+                    console.warn("Web Share failed/cancelled:", shareErr);
+                  }
+                }
+
+                if (!shared) {
+                  // fallback: ask user if they want to download
+                  const doDownload = confirm("Sharing not available on this device. Would you like to download the receipt image instead?");
+                  if (doDownload) {
+                    const dataUrl = canvas.toDataURL("image/png");
+                    const link = document.createElement("a");
+                    link.href = dataUrl;
+                    link.download = `Globals_Receipt_${tx.id}.png`;
+                    link.click();
+                  }
+                }
+              } catch (err) {
+                console.error("Share fallback error:", err);
+                alert("Failed to prepare sharing. See console for details.");
+              }
+            } catch (err) {
+              console.error("Share handler error:", err);
+              alert("Failed to share receipt. See console for details.");
+              try { if (clone) document.body.removeChild(clone); } catch (e) { /* ignore */ }
+            } finally {
+              finalShareBtn.disabled = false;
+              finalShareBtn.innerText = "Share";
             }
-          } catch (err) {
-            console.error("Share error:", err);
-            alert("Failed to share image. See console for details.");
-          }
+          }, 60);
         });
-      } else {
-        console.warn("Share button not found in DOM.");
       }
+
     } catch (err) {
-      console.error("openTransactionDetails wrapper error:", err);
+      console.error("openTransactionDetails error:", err);
     }
   };
 
-  /* ==========================
-     Fetching (once), Filters, Init
-     ========================== */
+  /* =========================================
+     Fetching once, filters, init
+     ========================================= */
   async function fetchTransactionsOnce(uid) {
     if (!uid) {
       console.warn("fetchTransactionsOnce called without uid");
@@ -625,7 +742,7 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
           return;
         }
       } catch (e) {
-        console.error("Failed for", coll, e);
+        console.error("Failed fetching from collection", coll, e);
       }
     }
 
@@ -644,14 +761,11 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
   }
 
   function initTransactionSection() {
-    // Auth + fetch
     try {
       const user = firebase?.auth?.().currentUser;
       if (!user) {
         if (firebase && firebase.auth) {
-          firebase.auth().onAuthStateChanged(u => {
-            if (u) fetchTransactionsOnce(u.uid);
-          });
+          firebase.auth().onAuthStateChanged(u => { if (u) fetchTransactionsOnce(u.uid); });
         } else {
           console.warn("Firebase auth not available. Call fetchTransactionsOnce(uid) manually when you have the uid.");
         }
@@ -662,7 +776,6 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
       console.warn("initTransactionSection firebase check failed:", err);
     }
 
-    // Filters event wiring
     if (categoryEl) categoryEl.onchange = () => applyFiltersClient(categoryEl.value, statusEl?.value || "All");
     if (statusEl) statusEl.onchange = () => applyFiltersClient(categoryEl?.value || "All", statusEl.value);
   }
@@ -670,16 +783,15 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
   if (window.registerPage && typeof window.registerPage === "function") {
     window.registerPage("transactions-screen", initTransactionSection);
   } else {
-    // run immediately as fallback
     initTransactionSection();
   }
 
-  // If transactionsCache already had items (preloaded), render them now
+  // Render if cache already present
   if (Array.isArray(window.transactionsCache) && window.transactionsCache.length) {
     renderTransactions(window.transactionsCache);
   }
 
-  // small debug helper (optional)
+  // debug helpers
   window.__tx_helpers = {
     renderTransactions,
     openTransactionDetails,
@@ -688,8 +800,11 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
     initTransactionSection,
   };
 
-  console.log("transactions.js loaded: renderer and details handlers installed.");
+  console.log("transactions.js loaded: renderer + details handlers installed.");
 })();
+      
+              
+            
 
 
 
