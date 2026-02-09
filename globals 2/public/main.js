@@ -266,14 +266,14 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
 
 
 
-
 /**
- * transactions-complete.js (updated)
- * - Same portrait receipt design preserved
- * - Removed new-tab fallback; added in-page share modal + clipboard fallback
- * - Tries navigator.share(with files) first; then shows modal for copy/share
+ * transactions-complete.js (image-only share)
+ * - Preserves portrait receipt design
+ * - ONLY shares the receipt image (files) via Web Share API when supported
+ * - If file-sharing isn't supported, shows an in-page modal where user can COPY the image (clipboard) or long-press to save/share
+ * - No text share fallback, no new-tab fallback
  *
- * Include after firebase/init and after DOM ready.
+ * Include after firebase/init and after the page DOM is ready.
  * Optionally preload html2canvas:
  *   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
  */
@@ -282,8 +282,738 @@ async function uploadToCloudinary(file, preset = UPLOAD_PRESET) {
   /* =========================================
      Globals & DOM refs
      ========================================= */
-  
-    const 
+  window.transactionsCache = window.transactionsCache || [];
+  window.activeCollectionName = window.activeCollectionName || null;
+
+  const txListEl = document.getElementById("transactions-list");
+  const txEmptyEl = document.getElementById("transactions-empty");
+  const categoryEl = document.getElementById("category-filter");
+  const statusEl = document.getElementById("status-filter");
+  const txDetailsContainer = document.getElementById("transaction-details-content");
+
+  if (!txListEl || !txEmptyEl || !txDetailsContainer) {
+    console.warn("transactions-complete: expected DOM elements missing (#transactions-list, #transactions-empty, #transaction-details-content).");
+  }
+
+  /* =========================================
+     Helpers
+     ========================================= */
+  function parseTimestamp(val) {
+    if (!val) return null;
+    if (typeof val === "object" && typeof val.toDate === "function") return val.toDate();
+    if (val instanceof Date) return val;
+    if (typeof val === "number") return new Date(val);
+    if (typeof val === "string") {
+      const d = new Date(val);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  }
+
+  function formatDatePretty(d) {
+    if (!d) return "No Timestamp";
+    try { return d.toLocaleString(); } catch { return String(d); }
+  }
+
+  function formatAmount(amount) {
+    const n = Number(amount || 0);
+    return `₦${n.toFixed(2)}`;
+  }
+
+  // minimal dynamic script loader (for html2canvas)
+  function loadScript(url) {
+    return new Promise((resolve, reject) => {
+      try {
+        const existing = Array.from(document.querySelectorAll('script[src]')).find(s => s.src && s.src.indexOf(url) !== -1);
+        if (existing) {
+          if (existing.hasAttribute('data-loaded') || existing.readyState === 'complete' || existing.readyState === 'loaded') return resolve();
+          existing.addEventListener('load', () => resolve());
+          existing.addEventListener('error', () => reject(new Error("Script failed to load: " + url)));
+          return;
+        }
+        const s = document.createElement('script');
+        s.src = url;
+        s.async = true;
+        s.onload = () => { try { s.setAttribute('data-loaded', '1'); } catch {} resolve(); };
+        s.onerror = () => reject(new Error("Script failed to load: " + url));
+        document.head.appendChild(s);
+      } catch (err) { reject(err); }
+    });
+  }
+
+  /* =========================================
+     Card creation & rendering
+     ========================================= */
+  function createCardElement(tx) {
+    const ts = parseTimestamp(tx.timestamp || tx.createdAt || tx.time);
+    const amountClass = tx.status === "successful" ? "text-green-600"
+                        : tx.status === "failed" ? "text-red-600"
+                        : "text-yellow-600";
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "cursor-pointer bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition";
+    wrapper.dataset.txid = tx.id || "";
+
+    wrapper.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-semibold text-gray-900">${tx.type || "Unknown"}</p>
+          <p class="text-xs text-gray-400 mt-1">${formatDatePretty(ts)}</p>
+        </div>
+        <div class="text-right">
+          <p class="text-base font-bold ${amountClass}">${formatAmount(tx.amount)}</p>
+          <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${amountClass} bg-opacity-10">${tx.status || "—"}</span>
+        </div>
+      </div>
+    `;
+
+    wrapper.addEventListener("click", () => {
+      try { openTransactionDetails(tx.id); } catch (err) { console.error("openTransactionDetails error:", err); }
+    });
+
+    return wrapper;
+  }
+
+  function renderTransactions(list) {
+    if (!txListEl || !txEmptyEl) return;
+    try {
+      if (!Array.isArray(list) || list.length === 0) {
+        txListEl.innerHTML = "";
+        txEmptyEl.classList.remove("hidden");
+        return;
+      }
+      txEmptyEl.classList.add("hidden");
+      txListEl.innerHTML = "";
+      for (const tx of list) {
+        const el = createCardElement(tx);
+        txListEl.appendChild(el);
+      }
+    } catch (err) {
+      console.error("renderTransactions error:", err);
+    }
+  }
+  window.renderTransactions = renderTransactions;
+
+  /* =========================================
+     Portrait Receipt Builder (unchanged style)
+     ========================================= */
+  function buildPortraitReceipt(tx) {
+    const ts = parseTimestamp(tx.timestamp || tx.createdAt || tx.time);
+
+    const wrapper = document.createElement("div");
+    wrapper.style.width = "420px";
+    wrapper.style.padding = "20px";
+    wrapper.style.background = "#ffffff";
+    wrapper.style.borderRadius = "18px";
+    wrapper.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial";
+    wrapper.style.color = "#0f172a";
+    wrapper.style.boxSizing = "border-box";
+    wrapper.style.lineHeight = "1.4";
+
+    // Header
+    const header = document.createElement("div");
+    header.style.display = "flex";
+    header.style.alignItems = "center";
+    header.style.gap = "12px";
+    header.style.marginBottom = "16px";
+
+    const logo = document.createElement("img");
+    logo.src = "https://res.cloudinary.com/dyquovrg3/image/upload/v1770534119/wcl6sd2jl7tzwgnk4sal.png";
+    logo.crossOrigin = "anonymous";
+    logo.alt = "Globals";
+    logo.style.height = "32px";
+    logo.style.objectFit = "contain";
+
+    const companyBlock = document.createElement("div");
+    const companyName = document.createElement("div");
+    companyName.textContent = "Globals";
+    companyName.style.fontSize = "18px";
+    companyName.style.fontWeight = "700";
+    companyName.style.color = "#2563eb";
+
+    const companyTag = document.createElement("div");
+    companyTag.textContent = "Transaction Receipt";
+    companyTag.style.fontSize = "12px";
+    companyTag.style.color = "#64748b";
+    companyTag.style.marginTop = "2px";
+
+    companyBlock.appendChild(companyName);
+    companyBlock.appendChild(companyTag);
+
+    header.appendChild(logo);
+    header.appendChild(companyBlock);
+    wrapper.appendChild(header);
+
+    // Divider
+    const hr = document.createElement("div");
+    hr.style.height = "1px";
+    hr.style.background = "#e5e7eb";
+    hr.style.margin = "6px 0 16px 0";
+    wrapper.appendChild(hr);
+
+    // Main card
+    const card = document.createElement("div");
+    card.style.background = "#f8fafc";
+    card.style.borderRadius = "14px";
+    card.style.padding = "16px";
+
+    const amountBlock = document.createElement("div");
+    amountBlock.style.textAlign = "center";
+    amountBlock.style.marginBottom = "16px";
+
+    const amountLabel = document.createElement("div");
+    amountLabel.textContent = "Amount";
+    amountLabel.style.fontSize = "14px";
+    amountLabel.style.color = "#64748b";
+
+    const amountValue = document.createElement("div");
+    amountValue.textContent = `₦${Number(tx.amount || 0).toFixed(2)}`;
+    amountValue.style.fontSize = "26px";
+    amountValue.style.fontWeight = "800";
+    amountValue.style.color = tx.status === "successful" ? "#16a34a" : tx.status === "failed" ? "#dc2626" : "#ca8a04";
+
+    const amountStatus = document.createElement("div");
+    amountStatus.textContent = tx.status?.toUpperCase() || "";
+    amountStatus.style.fontSize = "12px";
+    amountStatus.style.marginTop = "4px";
+    amountStatus.style.color = "#475569";
+
+    amountBlock.appendChild(amountLabel);
+    amountBlock.appendChild(amountValue);
+    amountBlock.appendChild(amountStatus);
+    card.appendChild(amountBlock);
+
+    // details grid
+    const grid = document.createElement("div");
+    grid.style.display = "grid";
+    grid.style.gridTemplateColumns = "1fr 1fr";
+    grid.style.gap = "12px";
+    grid.style.fontSize = "13px";
+
+    function cell(label, value, full = false) {
+      const c = document.createElement("div");
+      c.style.display = "flex";
+      c.style.flexDirection = "column";
+      if (full) c.style.gridColumn = "1 / -1";
+      const lab = document.createElement("div");
+      lab.textContent = label;
+      lab.style.color = "#94a3b8";
+      lab.style.fontSize = "12px";
+      lab.style.marginBottom = "6px";
+      const val = document.createElement("div");
+      val.textContent = value;
+      val.style.fontWeight = "600";
+      val.style.color = "#0f172a";
+      c.appendChild(lab);
+      c.appendChild(val);
+      return c;
+    }
+
+    grid.appendChild(cell("Type", tx.type || "—"));
+    grid.appendChild(cell("Date", formatDatePretty(ts)));
+    grid.appendChild(cell("Transaction ID", tx.id || "—", true));
+    grid.appendChild(cell("Amount", formatAmount(tx.amount), true));
+
+    if ((tx.type || "").toLowerCase() === "withdraw") {
+      grid.appendChild(cell("Bank", tx.bankName || "—"));
+      grid.appendChild(cell("Account Name", tx.account_name || "—"));
+      grid.appendChild(cell("Account Number", tx.accNum || "—", true));
+    }
+
+    card.appendChild(grid);
+    wrapper.appendChild(card);
+
+    // footer text
+    const footerDivider = document.createElement("div");
+    footerDivider.style.height = "1px";
+    footerDivider.style.background = "#eef2ff";
+    footerDivider.style.margin = "18px 0";
+    wrapper.appendChild(footerDivider);
+
+    const footer = document.createElement("div");
+    footer.style.textAlign = "center";
+    footer.style.fontSize = "11px";
+    footer.style.color = "#94a3b8";
+    footer.textContent = "This receipt is system generated and valid without signature.";
+    wrapper.appendChild(footer);
+
+    return wrapper;
+  }
+
+  /* =========================================
+     In-page share modal (image-only)
+     ========================================= */
+  function createShareModal() {
+    // If already present, return it
+    let existing = document.getElementById("globals-share-modal");
+    if (existing) return existing.__refs;
+
+    const overlay = document.createElement("div");
+    overlay.id = "globals-share-modal";
+    overlay.style.position = "fixed";
+    overlay.style.inset = "0";
+    overlay.style.background = "rgba(15,23,42,0.6)";
+    overlay.style.display = "flex";
+    overlay.style.alignItems = "center";
+    overlay.style.justifyContent = "center";
+    overlay.style.zIndex = "1000000";
+    overlay.style.padding = "20px";
+
+    const card = document.createElement("div");
+    card.style.width = "min(520px, 96vw)";
+    card.style.maxHeight = "90vh";
+    card.style.overflow = "auto";
+    card.style.background = "#fff";
+    card.style.borderRadius = "12px";
+    card.style.boxShadow = "0 8px 40px rgba(2,6,23,0.32)";
+    card.style.padding = "14px";
+    card.style.display = "flex";
+    card.style.flexDirection = "column";
+    card.style.gap = "12px";
+
+    // header
+    const header = document.createElement("div");
+    header.style.display = "flex";
+    header.style.justifyContent = "space-between";
+    header.style.alignItems = "center";
+
+    const title = document.createElement("div");
+    title.textContent = "Share Receipt";
+    title.style.fontWeight = "700";
+    title.style.fontSize = "15px";
+
+    const closeBtn = document.createElement("button");
+    closeBtn.innerText = "Close";
+    closeBtn.style.background = "transparent";
+    closeBtn.style.border = "none";
+    closeBtn.style.cursor = "pointer";
+    closeBtn.style.fontWeight = "600";
+    closeBtn.addEventListener("click", () => {
+      try { document.body.removeChild(overlay); } catch (e) { /* ignore */ }
+    });
+
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+
+    // image container
+    const imgWrap = document.createElement("div");
+    imgWrap.style.display = "flex";
+    imgWrap.style.alignItems = "center";
+    imgWrap.style.justifyContent = "center";
+    imgWrap.style.padding = "10px 0";
+
+    const imgEl = document.createElement("img");
+    imgEl.alt = "Globals Receipt";
+    imgEl.style.maxWidth = "100%";
+    imgEl.style.borderRadius = "8px";
+    imgEl.style.boxShadow = "0 6px 18px rgba(15,23,42,.08)";
+    imgEl.style.touchAction = "manipulation"; // better mobile long-press
+
+    imgWrap.appendChild(imgEl);
+
+    // buttons
+    const btnRow = document.createElement("div");
+    btnRow.style.display = "flex";
+    btnRow.style.gap = "8px";
+    btnRow.style.justifyContent = "flex-end";
+
+    const copyBtn = document.createElement("button");
+    copyBtn.id = "globals-copy-image";
+    copyBtn.innerText = "Copy Image";
+    copyBtn.style.padding = "8px 12px";
+    copyBtn.style.borderRadius = "8px";
+    copyBtn.style.border = "1px solid #e6e9ef";
+    copyBtn.style.cursor = "pointer";
+    copyBtn.style.background = "#fff";
+    copyBtn.style.fontWeight = "600";
+
+    const systemShareBtn = document.createElement("button");
+    systemShareBtn.id = "globals-system-share";
+    systemShareBtn.innerText = "Share (System)";
+    systemShareBtn.style.padding = "8px 12px";
+    systemShareBtn.style.borderRadius = "8px";
+    systemShareBtn.style.border = "none";
+    systemShareBtn.style.cursor = "pointer";
+    systemShareBtn.style.fontWeight = "600";
+    systemShareBtn.style.background = "#6366f1";
+    systemShareBtn.style.color = "#fff";
+
+    // help text
+    const helpText = document.createElement("div");
+    helpText.style.fontSize = "12px";
+    helpText.style.color = "#475569";
+    helpText.style.marginTop = "6px";
+    helpText.textContent = "If 'Copy Image' isn't supported, long-press the image on mobile to save or share it.";
+
+    btnRow.appendChild(copyBtn);
+    btnRow.appendChild(systemShareBtn);
+
+    card.appendChild(header);
+    card.appendChild(imgWrap);
+    card.appendChild(btnRow);
+    card.appendChild(helpText);
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    // refs
+    const refs = {
+      overlay,
+      imgEl,
+      copyBtn,
+      systemShareBtn,
+      close: () => { try { document.body.removeChild(overlay); } catch (e) {} },
+    };
+
+    // attach simple close on overlay click (but not when clicking card)
+    overlay.addEventListener("click", (ev) => {
+      if (ev.target === overlay) refs.close();
+    });
+
+    // store refs on element for reuse
+    overlay.__refs = refs;
+    return refs;
+  }
+
+  /* =========================================
+     Share-only portrait flow (image-only)
+     ========================================= */
+  async function shareReceiptPortrait(tx) {
+    // ensure html2canvas
+    if (!window.html2canvas) {
+      try {
+        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+      } catch (e) {
+        console.error("Failed to load html2canvas:", e);
+        alert("Sharing is unavailable. Please try on a supported device.");
+        return;
+      }
+    }
+
+    // Build portrait receipt DOM
+    const receiptEl = buildPortraitReceipt(tx);
+
+    // Offscreen render
+    receiptEl.style.position = "fixed";
+    receiptEl.style.left = "-9999px";
+    receiptEl.style.top = "0";
+    receiptEl.style.zIndex = "999999";
+    document.body.appendChild(receiptEl);
+
+    // Small delay to let styles apply
+    await new Promise(r => setTimeout(r, 60));
+
+    let canvas;
+    try {
+      canvas = await window.html2canvas(receiptEl, { scale: 1, useCORS: true, backgroundColor: "#ffffff", logging: false });
+    } catch (err) {
+      try { document.body.removeChild(receiptEl); } catch (e) {}
+      console.error("html2canvas render failed:", err);
+      alert("Failed to prepare receipt image.");
+      return;
+    }
+
+    // remove from DOM
+    try { document.body.removeChild(receiptEl); } catch (e) { /* ignore */ }
+
+    let blob;
+    try {
+      blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+    } catch (err) {
+      console.error("canvas.toBlob error:", err);
+      alert("Failed to prepare receipt image.");
+      return;
+    }
+
+    if (!blob) {
+      alert("Failed to prepare receipt image.");
+      return;
+    }
+
+    const file = new File([blob], `Globals_Receipt_${tx.id || "receipt"}.png`, { type: "image/png" });
+
+    // Try to share the file directly via Web Share API (files)
+    let canShareFiles = false;
+    try {
+      if (navigator.canShare && typeof navigator.canShare === "function") {
+        try {
+          canShareFiles = navigator.canShare({ files: [file] });
+        } catch (err) {
+          // some browsers throw; treat as unsupported
+          canShareFiles = false;
+        }
+      }
+    } catch (err) {
+      canShareFiles = false;
+    }
+
+    if (canShareFiles && navigator.share) {
+      try {
+        await navigator.share({
+          title: `Globals Receipt (${tx.id})`,
+          files: [file],
+        });
+        return; // success, end here
+      } catch (err) {
+        console.warn("navigator.share(files) failed/cancelled:", err);
+        // fall back to modal (image-only) so user can copy/save manually
+      }
+    }
+
+    // If we reach here: direct file-sharing not available or failed.
+    // Show in-page modal that displays the image and allows COPY (image-only).
+    const modal = createShareModal();
+    const dataUrl = canvas.toDataURL("image/png");
+    modal.imgEl.src = dataUrl;
+
+    // Hide system share button when file-sharing is not available
+    if (!canShareFiles) {
+      modal.systemShareBtn.style.display = "none";
+    } else {
+      // If it is available but previous share attempt failed, keep the button visible so user can try again
+      modal.systemShareBtn.style.display = "";
+    }
+
+    // Attach copy handler (image-only)
+    modal.copyBtn.onclick = async () => {
+      modal.copyBtn.disabled = true;
+      const prev = modal.copyBtn.innerText;
+      modal.copyBtn.innerText = "Copying...";
+      try {
+        if (navigator.clipboard && navigator.clipboard.write) {
+          try {
+            const item = new ClipboardItem({ "image/png": blob });
+            await navigator.clipboard.write([item]);
+            modal.copyBtn.innerText = "Copied ✓";
+            setTimeout(() => { modal.copyBtn.innerText = prev; modal.copyBtn.disabled = false; }, 1500);
+            return;
+          } catch (err) {
+            console.warn("clipboard.write image failed:", err);
+            // fall through to other fallback attempts below
+          }
+        }
+
+        // If image clipboard write isn't supported, attempt to write the data URL as text (NOT preferred),
+        // but per your request we will NOT expose any text-sharing flows in the UI. Instead show instructions.
+        alert("Copying images isn't supported in this browser. Long-press the image on mobile to save or share it.");
+      } finally {
+        try { modal.copyBtn.disabled = false; } catch {}
+      }
+    };
+
+    // Attach system share handler (files-only) if visible
+    modal.systemShareBtn.onclick = async () => {
+      modal.systemShareBtn.disabled = true;
+      const old = modal.systemShareBtn.innerText;
+      modal.systemShareBtn.innerText = "Sharing…";
+      try {
+        if (navigator.share) {
+          await navigator.share({
+            title: `Globals Receipt (${tx.id})`,
+            files: [file],
+          });
+          // If share succeeded, close modal
+          try { modal.close(); } catch (e) {}
+          return;
+        } else {
+          // Shouldn't happen because button is hidden when file-sharing unsupported
+          alert("System sharing isn't available.");
+        }
+      } catch (err) {
+        console.warn("navigator.share(files) from modal failed/cancelled:", err);
+        alert("Sharing failed or was cancelled.");
+      } finally {
+        modal.systemShareBtn.disabled = false;
+        modal.systemShareBtn.innerText = old;
+      }
+    };
+
+    // done
+    return;
+  }
+
+  /* =========================================
+     Transaction details (wired to sharePortrait)
+     ========================================= */
+  window.openTransactionDetails = function openTransactionDetails(id) {
+    try {
+      if (!id) return console.warn("openTransactionDetails called without id");
+      const tx = (window.transactionsCache || []).find(t => t.id === id);
+      if (!tx) {
+        console.warn("Transaction not found for id:", id);
+        if (txDetailsContainer) txDetailsContainer.innerHTML = `<p class="text-center text-red-500 p-6">Transaction not found.</p>`;
+        if (typeof activateTab === "function") activateTab("transaction-details-screen");
+        return;
+      }
+
+      const ts = parseTimestamp(tx.timestamp || tx.createdAt || tx.time);
+      const amountClass = tx.status === "successful" ? "text-green-600"
+                          : tx.status === "failed" ? "text-red-600"
+                          : "text-yellow-600";
+
+      let extraHTML = "";
+      if ((tx.type || "").toLowerCase() === "withdraw") {
+        extraHTML = `
+          <div class="mt-6 rounded-xl bg-gray-50 p-4 space-y-3">
+            <div class="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7v2h20V7L12 2zm8 9H4v9h16v-9z"/></svg>
+              Bank Details
+            </div>
+            <div class="flex justify-between text-sm text-gray-600"><span>Bank</span><span class="font-medium text-gray-800">${tx.bankName || "—"}</span></div>
+            <div class="flex justify-between text-sm text-gray-600"><span>Account Name</span><span class="font-medium text-gray-800">${tx.account_name || "—"}</span></div>
+            <div class="flex justify-between text-sm text-gray-600"><span>Account Number</span><span class="font-mono tracking-wide text-gray-800">${tx.accNum || "—"}</span></div>
+          </div>
+        `;
+      }
+
+      if (!txDetailsContainer) return;
+
+      txDetailsContainer.innerHTML = `
+        <div class="bg-white relative rounded-2xl p-6 shadow-sm border border-gray-100 space-y-5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16l4-4h9a2 2 0 0 0 2-2V7l-6-5z"/></svg>
+              <h2 class="text-sm font-semibold text-gray-800">Transaction Details</h2>
+            </div>
+            <span class="text-xs text-gray-400">${formatDatePretty(ts)}</span>
+          </div>
+
+          <div class="space-y-4 divide-y divide-gray-100">
+            <div class="pt-4 flex justify-between text-sm"><span class="text-gray-500">Type</span><span class="font-medium text-gray-800">${tx.type}</span></div>
+            <div class="pt-4 flex justify-between text-sm"><span class="text-gray-500">Amount</span><span class="font-semibold ${amountClass}">${formatAmount(tx.amount)}</span></div>
+            <div class="pt-4 flex justify-between text-sm"><span class="text-gray-500">Status</span><span class="font-medium text-gray-800">${tx.status}</span></div>
+            <div class="pt-4 flex justify-between text-sm"><span class="text-gray-500">Transaction ID</span><span class="font-mono text-xs text-gray-700">${tx.id}</span></div>
+          </div>
+
+          ${extraHTML}
+
+          <div class="flex gap-3 mt-4">
+            <button id="share-btn" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Share Receipt</button>
+          </div>
+        </div>
+      `;
+
+      // reveal details screen
+      if (typeof activateTab === "function") {
+        activateTab("transaction-details-screen");
+      } else {
+        const screen = document.getElementById("transaction-details-screen");
+        if (screen) screen.classList.remove("hidden");
+      }
+
+      // attach share handler (portrait)
+      const btn = document.getElementById("share-btn");
+      if (btn) {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.addEventListener("click", async () => {
+          newBtn.disabled = true;
+          const prev = newBtn.innerText;
+          newBtn.innerText = "Preparing...";
+          try {
+            await shareReceiptPortrait(tx);
+          } finally {
+            newBtn.disabled = false;
+            newBtn.innerText = prev;
+          }
+        });
+      }
+
+    } catch (err) {
+      console.error("openTransactionDetails error:", err);
+    }
+  };
+
+  /* =========================================
+     Fetching once, filters, init
+     ========================================= */
+  async function fetchTransactionsOnce(uid) {
+    if (!uid) {
+      console.warn("fetchTransactionsOnce called without uid");
+      return;
+    }
+
+    const candidates = ["Transaction", "transaction", "transactions", "Transactions"];
+    for (const coll of candidates) {
+      try {
+        if (!window.firebase || !firebase.firestore) {
+          console.warn("Firebase not available. Ensure firebase is loaded before calling fetchTransactionsOnce.");
+          break;
+        }
+
+        const snap = await firebase.firestore()
+          .collection(coll)
+          .where("userId", "==", uid)
+          .orderBy("timestamp", "desc")
+          .get();
+
+        if (!snap.empty) {
+          window.activeCollectionName = coll;
+          window.transactionsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          renderTransactions(window.transactionsCache);
+          return;
+        }
+      } catch (e) {
+        console.error("Failed fetching from collection", coll, e);
+      }
+    }
+
+    if (txListEl) txListEl.innerHTML = `<p class="text-center p-6 text-red-500">No transactions found.</p>`;
+  }
+
+  function applyFiltersClient(category, status) {
+    let filtered = (window.transactionsCache || []).slice();
+    if (category && category !== "All") {
+      filtered = filtered.filter(tx => (tx.type || "").toLowerCase() === category.toLowerCase());
+    }
+    if (status && status !== "All") {
+      filtered = filtered.filter(tx => (tx.status || "").toLowerCase() === status.toLowerCase());
+    }
+    renderTransactions(filtered);
+  }
+
+  function initTransactionSection() {
+    try {
+      const user = firebase?.auth?.().currentUser;
+      if (!user) {
+        if (firebase && firebase.auth) {
+          firebase.auth().onAuthStateChanged(u => { if (u) fetchTransactionsOnce(u.uid); });
+        } else {
+          console.warn("Firebase auth not available. Call fetchTransactionsOnce(uid) manually when you have the uid.");
+        }
+      } else {
+        fetchTransactionsOnce(user.uid);
+      }
+    } catch (err) {
+      console.warn("initTransactionSection firebase check failed:", err);
+    }
+
+    if (categoryEl) categoryEl.onchange = () => applyFiltersClient(categoryEl.value, statusEl?.value || "All");
+    if (statusEl) statusEl.onchange = () => applyFiltersClient(categoryEl?.value || "All", statusEl.value);
+  }
+
+  if (window.registerPage && typeof window.registerPage === "function") {
+    window.registerPage("transactions-screen", initTransactionSection);
+  } else {
+    initTransactionSection();
+  }
+
+  // render if cache present
+  if (Array.isArray(window.transactionsCache) && window.transactionsCache.length) {
+    renderTransactions(window.transactionsCache);
+  }
+
+  // debug helpers
+  window.__tx_helpers = {
+    renderTransactions,
+    openTransactionDetails,
+    fetchTransactionsOnce,
+    applyFiltersClient,
+    initTransactionSection,
+  };
+
+  console.log("transactions-complete.js loaded: image-only sharing mode.");
+})(); 
 
 
 
