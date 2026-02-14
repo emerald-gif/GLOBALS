@@ -3753,14 +3753,14 @@ function closeGlobalsModal() {
 	
 
 
+<!-- 📘 Daily Check-In FAQ — Google/Gemini Style -->
+<div id="checkin-faq" class="tab-section hidden mt-12 max-w-3xl mx-auto space-y-2">
 
-<!-- 📘 Daily Check-In FAQ — Modern Fintech UI -->
-<div id="checkin-rules" class="mt-16 max-w-3xl mx-auto space-y-4">
-
-  <!-- Rule Template -->
-  <div class="faq-item bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-xl">
-    <button class="faq-toggle w-full flex justify-between items-center p-4 text-left font-semibold text-gray-800 hover:text-indigo-600 transition-colors">
-      <span class="flex items-center gap-2">
+  <!-- FAQ Item Template -->
+  <div class="faq-item border-b border-gray-200 last:border-b-0">
+    <button class="faq-toggle w-full flex justify-between items-center py-4 text-left text-gray-900 font-medium hover:text-indigo-600 transition-colors">
+      <span class="flex items-center gap-3">
+        <!-- Line SVG Icon -->
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
@@ -3770,15 +3770,15 @@ function closeGlobalsModal() {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
       </svg>
     </button>
-    <div class="faq-content max-h-0 overflow-hidden transition-all duration-300 text-sm text-gray-600 px-4 pb-4">
-      Each cycle lasts <strong>7 consecutive days</strong>. You must check in once every day without missing to qualify for the rewards.
+    <div class="faq-content max-h-0 overflow-hidden text-gray-700 text-sm transition-all duration-300">
+      <p class="py-2">Each cycle lasts <strong>7 consecutive days</strong>. You must check in once every day without missing to qualify for rewards.</p>
     </div>
   </div>
 
   <!-- Rule 2 -->
-  <div class="faq-item bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-xl">
-    <button class="faq-toggle w-full flex justify-between items-center p-4 text-left font-semibold text-gray-800 hover:text-red-500 transition-colors">
-      <span class="flex items-center gap-2">
+  <div class="faq-item border-b border-gray-200 last:border-b-0">
+    <button class="faq-toggle w-full flex justify-between items-center py-4 text-left text-gray-900 font-medium hover:text-red-500 transition-colors">
+      <span class="flex items-center gap-3">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 6L6 18M6 6l12 12"/>
         </svg>
@@ -3788,15 +3788,15 @@ function closeGlobalsModal() {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
       </svg>
     </button>
-    <div class="faq-content max-h-0 overflow-hidden transition-all duration-300 text-sm text-gray-600 px-4 pb-4">
-      If you miss any day, the current cycle is marked <strong class="text-red-500">Failed</strong> and a new cycle starts from Day 1 automatically.
+    <div class="faq-content max-h-0 overflow-hidden text-gray-700 text-sm transition-all duration-300">
+      <p class="py-2">If you miss any day, the current cycle is marked <strong class="text-red-500">Failed</strong> and a new cycle starts from Day 1 automatically.</p>
     </div>
   </div>
 
   <!-- Rule 3 -->
-  <div class="faq-item bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-xl">
-    <button class="faq-toggle w-full flex justify-between items-center p-4 text-left font-semibold text-gray-800 hover:text-indigo-600 transition-colors">
-      <span class="flex items-center gap-2">
+  <div class="faq-item border-b border-gray-200 last:border-b-0">
+    <button class="faq-toggle w-full flex justify-between items-center py-4 text-left text-gray-900 font-medium hover:text-indigo-600 transition-colors">
+      <span class="flex items-center gap-3">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m4-4H8"/>
         </svg>
@@ -3806,8 +3806,8 @@ function closeGlobalsModal() {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
       </svg>
     </button>
-    <div class="faq-content max-h-0 overflow-hidden transition-all duration-300 text-sm text-gray-600 px-4 pb-4">
-      <ul class="pl-5 list-disc space-y-1">
+    <div class="faq-content max-h-0 overflow-hidden text-gray-700 text-sm transition-all duration-300">
+      <ul class="pl-5 py-2 list-disc space-y-1">
         <li>Day 1 → ₦0</li>
         <li>Day 2 → ₦0</li>
         <li>Day 3 → ₦10</li>
@@ -3816,14 +3816,14 @@ function closeGlobalsModal() {
         <li>Day 6 → ₦10</li>
         <li>Day 7 (Complete) → ₦50</li>
       </ul>
-      <p class="mt-2 text-gray-700 font-medium">Total credited after 7 days: <span class="text-indigo-600 font-bold">₦50</span></p>
+      <p class="py-1 font-medium">Total after 7 days: <span class="text-indigo-600 font-semibold">₦50</span></p>
     </div>
   </div>
 
   <!-- Rule 4 -->
-  <div class="faq-item bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-xl">
-    <button class="faq-toggle w-full flex justify-between items-center p-4 text-left font-semibold text-gray-800 hover:text-green-500 transition-colors">
-      <span class="flex items-center gap-2">
+  <div class="faq-item border-b border-gray-200 last:border-b-0">
+    <button class="faq-toggle w-full flex justify-between items-center py-4 text-left text-gray-900 font-medium hover:text-green-500 transition-colors">
+      <span class="flex items-center gap-3">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
         </svg>
@@ -3833,15 +3833,15 @@ function closeGlobalsModal() {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
       </svg>
     </button>
-    <div class="faq-content max-h-0 overflow-hidden transition-all duration-300 text-sm text-gray-600 px-4 pb-4">
-      Yes. Only <strong>Premium</strong> members can participate in Daily Check-In rewards.
+    <div class="faq-content max-h-0 overflow-hidden text-gray-700 text-sm transition-all duration-300">
+      <p class="py-2">Yes. Only <strong>Premium</strong> members can participate in Daily Check-In rewards.</p>
     </div>
   </div>
 
   <!-- Rule 5 -->
-  <div class="faq-item bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-xl">
-    <button class="faq-toggle w-full flex justify-between items-center p-4 text-left font-semibold text-gray-800 hover:text-indigo-600 transition-colors">
-      <span class="flex items-center gap-2">
+  <div class="faq-item border-b border-gray-200 last:border-b-0">
+    <button class="faq-toggle w-full flex justify-between items-center py-4 text-left text-gray-900 font-medium hover:text-indigo-600 transition-colors">
+      <span class="flex items-center gap-3">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m4-4H8"/>
         </svg>
@@ -3851,38 +3851,40 @@ function closeGlobalsModal() {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
       </svg>
     </button>
-    <div class="faq-content max-h-0 overflow-hidden transition-all duration-300 text-sm text-gray-600 px-4 pb-4">
-      Mini rewards (₦10/day) are shown in the calendar, but the final ₦50 reward is credited to your balance after completing Day 7 successfully.
+    <div class="faq-content max-h-0 overflow-hidden text-gray-700 text-sm transition-all duration-300">
+      <p class="py-2">Mini rewards (₦10/day) are tracked in the calendar. The final ₦50 reward is credited after completing Day 7 successfully.</p>
     </div>
   </div>
 
 </div>
 
-<!-- ===== FAQ JS Toggle Logic ===== -->
 <script>
-function initCheckinFAQ() {
-  const toggles = document.querySelectorAll('.faq-toggle');
-  toggles.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const content = btn.nextElementSibling;
-      const icon = btn.querySelector('.faq-icon');
+  // ✅ Toggle logic scoped to Check-In FAQ only
+  function initCheckinFAQ() {
+    const container = document.getElementById('checkin-faq');
+    if (!container) return;
 
-      const isOpen = content.style.maxHeight && content.style.maxHeight !== '0px';
+    const toggles = container.querySelectorAll('.faq-toggle');
+    toggles.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const content = btn.nextElementSibling;
+        const icon = btn.querySelector('.faq-icon');
 
-      // Close all first
-      document.querySelectorAll('.faq-content').forEach(c => c.style.maxHeight = '0px');
-      document.querySelectorAll('.faq-icon').forEach(i => i.style.transform = 'rotate(0deg)');
+        const isOpen = content.style.maxHeight && content.style.maxHeight !== '0px';
 
-      if (!isOpen) {
-        content.style.maxHeight = content.scrollHeight + 'px';
-        icon.style.transform = 'rotate(180deg)';
-      }
+        // Close all in this container only
+        container.querySelectorAll('.faq-content').forEach(c => c.style.maxHeight = '0px');
+        container.querySelectorAll('.faq-icon').forEach(i => i.style.transform = 'rotate(0deg)');
+
+        if (!isOpen) {
+          content.style.maxHeight = content.scrollHeight + 'px';
+          icon.style.transform = 'rotate(180deg)';
+        }
+      });
     });
-  });
-}
+  }
 
-// Init after DOM loaded
-document.addEventListener('DOMContentLoaded', initCheckinFAQ);
+  document.addEventListener('DOMContentLoaded', initCheckinFAQ);
 </script>
 
 
