@@ -7179,5 +7179,40 @@ initCheckinSection();
 
 
 
+/* ====== FAQ TOGGLE LOGIC ====== */
+function initCheckinFAQ() {
+  const toggles = document.querySelectorAll('.faq-toggle');
+  toggles.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const content = btn.parentElement.querySelector('.faq-content');
+      const icon = btn.querySelector('span');
+
+      const isOpen = !content.classList.contains('hidden');
+
+      // Close all first
+      document.querySelectorAll('.faq-content').forEach(c => c.classList.add('hidden'));
+      document.querySelectorAll('.faq-toggle span').forEach(s => s.textContent = '+');
+
+      if (!isOpen) {
+        content.classList.remove('hidden');
+        icon.textContent = '−';
+      }
+    });
+  });
+}
+
+
+renderCheckinRules();
+initCheckinFAQ();
+
+
+
+
+
+
+
+
+
+
 
 
