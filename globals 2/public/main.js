@@ -7054,60 +7054,8 @@ function initCheckinSection() {
     }
   }
 
-  /* ====== CHECK-IN RULES / FAQ UI ====== */
-  function renderCheckinRules() {
-    const container = document.getElementById('checkin-rules');
-    if (!container) return;
-
-    container.innerHTML = ''; // reset
-
-    const box = document.createElement('div');
-    box.className = 'p-3 rounded-xl bg-white/5 border border-slate-200/10';
-    box.style.maxWidth = '560px';
-
-    const header = document.createElement('div');
-    header.style.display = 'flex';
-    header.style.justifyContent = 'space-between';
-    header.style.alignItems = 'center';
-    header.innerHTML = `<strong>Daily Check-in Rules</strong>`;
-
-    const toggle = document.createElement('button');
-    toggle.textContent = 'Show';
-    toggle.className = 'px-2 py-1 rounded-md text-sm';
-    let open = false;
-
-    const body = document.createElement('div');
-    body.style.marginTop = '8px';
-    body.style.display = 'none';
-    body.style.fontSize = '13px';
-    body.innerHTML = `
-      <ul style="line-height:1.6;margin:0;padding-left:18px;">
-        <li><strong>Start:</strong> Each cycle is 7 days long.</li>
-        <li><strong>Payouts:</strong> Day1-2 = ₦0, Day3-6 = ₦10, Day7 (complete) = ₦50.</li>
-        <li><strong>Miss a Day:</strong> If you miss any day, the cycle is marked <em>failed</em> and a new cycle starts for today — so you begin again from Day 1.</li>
-        <li><strong>Premium:</strong> Premium is required to participate in daily check-ins (as enforced in the check-in handler).</li>
-        <li><strong>Completion:</strong> When all 7 days are checked, the final reward is added to your balance.</li>
-      </ul>
-    `;
-
-    toggle.onclick = () => {
-      open = !open;
-      body.style.display = open ? 'block' : 'none';
-      toggle.textContent = open ? 'Hide' : 'Show';
-    };
-
-    // layout
-    const headerRow = document.createElement('div');
-    headerRow.style.display = 'flex';
-    headerRow.style.justifyContent = 'space-between';
-    headerRow.style.alignItems = 'center';
-    headerRow.appendChild(header);
-    headerRow.appendChild(toggle);
-
-    box.appendChild(headerRow);
-    box.appendChild(body);
-    container.appendChild(box);
-  }
+  
+  
 
   /* ====== START ALL LISTENERS ====== */
   function startCheckinListener() {
@@ -7129,7 +7077,7 @@ function initCheckinSection() {
       try { await ensureCycleExists(uid); } catch (err) { console.error('ensureCycleExists error', err); }
 
       // render rules UI (once)
-      renderCheckinRules();
+      
 
       // latest-cycle listener for UI + button
       cyclesRef(uid).orderBy('cycleStartDate','desc').limit(1)
