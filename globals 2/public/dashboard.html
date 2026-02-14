@@ -3667,77 +3667,6 @@ function closeGlobalsModal() {
       <!-- Rewards injected by JS -->
     </div>
   </div>
-</div>
-
-<!-- 💅 Styling -->
-<style>
-  /* 🗓️ Calendar Day Card */
-  #checkin-cards .day-card {
-    width: 52px;
-    height: 64px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background: white;
-    border-radius: 16px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #475569;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-    transition: all 0.3s ease;
-    cursor: pointer;
-    position: relative;
-  }
-
-  #checkin-cards .day-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 6px 20px rgba(99,102,241,0.2);
-  }
-
-  /* ✅ Checked Day */
-  #checkin-cards .day-card.checked {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    color: white;
-    font-weight: 700;
-    box-shadow: 0 6px 22px rgba(99,102,241,0.25);
-  }
-  #checkin-cards .day-card.checked::after {
-    content: "✓";
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    font-size: 12px;
-    font-weight: bold;
-    color: white;
-  }
-
-  /* 🔵 Today Indicator */
-  #checkin-cards .day-card.today {
-    border: 2px solid #3b82f6;
-    font-weight: 700;
-    color: #1e3a8a;
-  }
-
-  /* ✨ Fade Animation */
-  @keyframes fadeSlideUp {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-  }
-  #checkin-screen {
-    animation: fadeSlideUp 0.6s ease-out;
-  }
-
-  /* 🎇 Subtle Glow */
-  #checkin-btn:hover::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at center, rgba(255,255,255,0.2), transparent 70%);
-    z-index: 0;
-    transition: opacity 0.4s ease;
-  }
-</style>
 
 
 	
@@ -3878,6 +3807,77 @@ function closeGlobalsModal() {
 </script>
 
 
+</div>
+
+<!-- 💅 Styling -->
+<style>
+  /* 🗓️ Calendar Day Card */
+  #checkin-cards .day-card {
+    width: 52px;
+    height: 64px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: white;
+    border-radius: 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+  }
+
+  #checkin-cards .day-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 6px 20px rgba(99,102,241,0.2);
+  }
+
+  /* ✅ Checked Day */
+  #checkin-cards .day-card.checked {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    font-weight: 700;
+    box-shadow: 0 6px 22px rgba(99,102,241,0.25);
+  }
+  #checkin-cards .day-card.checked::after {
+    content: "✓";
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+  }
+
+  /* 🔵 Today Indicator */
+  #checkin-cards .day-card.today {
+    border: 2px solid #3b82f6;
+    font-weight: 700;
+    color: #1e3a8a;
+  }
+
+  /* ✨ Fade Animation */
+  @keyframes fadeSlideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  #checkin-screen {
+    animation: fadeSlideUp 0.6s ease-out;
+  }
+
+  /* 🎇 Subtle Glow */
+  #checkin-btn:hover::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(255,255,255,0.2), transparent 70%);
+    z-index: 0;
+    transition: opacity 0.4s ease;
+  }
+</style>
 
 
 
