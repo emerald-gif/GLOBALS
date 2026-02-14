@@ -7178,59 +7178,6 @@ initCheckinSection();
 
 
 
-/* ====== RENDER CHECK-IN RULES (with toggle init) ====== */
-function renderCheckinRules() {
-  const container = document.getElementById('checkin-rules');
-  if (!container) return;
-
-  container.innerHTML = ''; // reset
-
-  const box = document.createElement('div');
-  box.className = 'p-3 rounded-xl bg-white/5 border border-slate-200/10';
-  box.style.maxWidth = '560px';
-
-  const header = document.createElement('div');
-  header.style.display = 'flex';
-  header.style.justifyContent = 'space-between';
-  header.style.alignItems = 'center';
-  header.innerHTML = `<strong>Daily Check-in Rules</strong>`;
-
-  const toggle = document.createElement('button');
-  toggle.textContent = 'Show';
-  toggle.className = 'px-2 py-1 rounded-md text-sm';
-
-  const body = document.createElement('div');
-  body.style.marginTop = '8px';
-  body.style.display = 'none';
-  body.style.fontSize = '13px';
-  body.innerHTML = `
-    <ul style="line-height:1.6;margin:0;padding-left:18px;">
-      <li><strong>Start:</strong> Each cycle is 7 days long.</li>
-      <li><strong>Payouts:</strong> Day1-2 = ₦0, Day3-6 = ₦10, Day7 = ₦50.</li>
-      <li><strong>Miss a Day:</strong> If you miss any day, the cycle is marked <em>failed</em> and a new cycle starts.</li>
-      <li><strong>Premium:</strong> Premium is required to participate in daily check-ins.</li>
-      <li><strong>Completion:</strong> Final reward is added after Day 7.</li>
-    </ul>
-  `;
-
-  toggle.onclick = () => {
-    const isOpen = body.style.display !== 'none';
-    body.style.display = isOpen ? 'none' : 'block';
-    toggle.textContent = isOpen ? 'Show' : 'Hide';
-  };
-
-  const headerRow = document.createElement('div');
-  headerRow.style.display = 'flex';
-  headerRow.style.justifyContent = 'space-between';
-  headerRow.style.alignItems = 'center';
-  headerRow.appendChild(header);
-  headerRow.appendChild(toggle);
-
-  box.appendChild(headerRow);
-  box.appendChild(body);
-  container.appendChild(box);
-}
-
 
 
 
