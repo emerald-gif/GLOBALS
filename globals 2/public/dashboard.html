@@ -26,6 +26,36 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+
+
+
+
+
+<script src="settings.js"></script>
+<script>
+    // 1. CHECK MAINTENANCE STATUS
+    if (maintenanceMode === true) {
+        
+        // 2. CHECK IF IT IS THE CEO (YOU)
+        const urlParams = new URLSearchParams(window.location.search);
+        const isCEO = urlParams.get('admin'); // Checks for ?admin=true
+        const ceoSession = sessionStorage.getItem('ceo_access');
+
+        if (isCEO === 'true') {
+            sessionStorage.setItem('ceo_access', 'granted'); // Remember you
+        }
+
+        // 3. IF NOT CEO, KICK THEM OUT
+        if (isCEO !== 'true' && ceoSession !== 'granted') {
+            window.location.href = "maintenance.html";
+        }
+    }
+</script>
+
+
+
+
 	
   <!-- 🎨 Optional: Dashboard floating shapes -->
   <style>
@@ -35,6 +65,8 @@
     @keyframes floaty { 0%{transform:translateY(0)}50%{transform:translateY(12px)}100%{transform:translateY(0)} }
     @media (min-width:900px){ #sidebar{transform:translateX(0) !important; position:relative;} #overlay{display:none!important;} }
   </style>
+
+	
 </head>
 	
 	
