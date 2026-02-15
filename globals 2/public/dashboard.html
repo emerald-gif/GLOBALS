@@ -32,26 +32,33 @@
 
 
 
-<script src="settings.js"></script>
-<script>
-    // 1. CHECK MAINTENANCE STATUS
-    if (maintenanceMode === true) {
-        
-        // 2. CHECK IF IT IS THE CEO (YOU)
-        const urlParams = new URLSearchParams(window.location.search);
-        const isCEO = urlParams.get('admin'); // Checks for ?admin=true
-        const ceoSession = sessionStorage.getItem('ceo_access');
+<script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-database.js"></script>
 
-        if (isCEO === 'true') {
-            sessionStorage.setItem('ceo_access', 'granted'); // Remember you
+<script src="firebase-config.js"></script>
+
+<script>
+    const maintenanceRef = firebase.database().ref('systemSettings/maintenanceMode');
+
+    maintenanceRef.on('value', (snapshot) => {
+        const isMaintenance = snapshot.val();
+        
+        // CEO Bypass check
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('admin') === 'true') {
+            sessionStorage.setItem('ceo_access', 'granted');
         }
 
-        // 3. IF NOT CEO, KICK THEM OUT
-        if (isCEO !== 'true' && ceoSession !== 'granted') {
+        const hasAccess = sessionStorage.getItem('ceo_access') === 'granted';
+        const isMaintenancePage = window.location.pathname.includes("maintenance.html");
+
+        // The logic: If maintenance is ON and you aren't the CEO, go to maintenance page
+        if (isMaintenance === true && !hasAccess && !isMaintenancePage) {
             window.location.href = "maintenance.html";
         }
-    }
+    });
 </script>
+
 
 
 
