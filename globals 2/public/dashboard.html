@@ -34,33 +34,38 @@
 
 
 <script>
-    // 1. Use 'rtdb' to match your firebase-config.js
-    const maintenanceRef = rtdb.ref('systemSettings/maintenanceMode');
+    // This function checks the status using the direct Firebase path
+    function runSecurityGuard() {
+        // We use firebase.database() directly to avoid the "rtdb not defined" error
+        const maintenanceRef = firebase.database().ref('systemSettings/maintenanceMode');
 
-    maintenanceRef.on('value', (snapshot) => {
-        const isMaintenance = snapshot.val();
-        
-        // 2. CEO Bypass check
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('admin') === 'true') {
-            sessionStorage.setItem('ceo_access', 'granted');
-        }
-
-        const hasAccess = sessionStorage.getItem('ceo_access') === 'granted';
-        const isMaintenancePage = window.location.pathname.includes("maintenance.html");
-
-        // 3. THE LOCK: If maintenance is ON and user isn't CEO, kick them out
-        if (isMaintenance === true) {
-            if (!hasAccess && !isMaintenancePage) {
-                window.location.href = "maintenance.html";
+        maintenanceRef.on('value', (snapshot) => {
+            const isMaintenance = snapshot.val();
+            
+            // CEO Bypass check
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('admin') === 'true') {
+                sessionStorage.setItem('ceo_access', 'granted');
             }
-        } 
-        // 4. THE KEY: If maintenance is OFF, auto-redirect users BACK from maintenance page
-        else if (isMaintenance === false && isMaintenancePage) {
-            window.location.href = "index.html"; 
-        }
-    });
+
+            const hasAccess = sessionStorage.getItem('ceo_access') === 'granted';
+            const isMaintenancePage = window.location.pathname.includes("maintenance.html");
+
+            // LOGIC: If ON and not CEO, kick to maintenance page
+            if (isMaintenance === true && !hasAccess && !isMaintenancePage) {
+                window.location.href = "maintenance.html";
+            } 
+            // LOGIC: If OFF and on maintenance page, auto-open the site
+            else if (isMaintenance === false && isMaintenancePage) {
+                window.location.href = "dashboard.html"; 
+            }
+        });
+    }
+
+    // Wait a split second for Firebase to load, then run
+    setTimeout(runSecurityGuard, 500);
 </script>
+
 
 
 
