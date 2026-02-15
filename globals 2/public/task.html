@@ -18,6 +18,35 @@
 
   <!-- Firebase Init -->
   <script src="firebase.js"></script>
+
+
+
+
+ <script src="settings.js"></script>
+<script>
+    // 1. CHECK MAINTENANCE STATUS
+    if (maintenanceMode === true) {
+        
+        // 2. CHECK IF IT IS THE CEO (YOU)
+        const urlParams = new URLSearchParams(window.location.search);
+        const isCEO = urlParams.get('admin'); // Checks for ?admin=true
+        const ceoSession = sessionStorage.getItem('ceo_access');
+
+        if (isCEO === 'true') {
+            sessionStorage.setItem('ceo_access', 'granted'); // Remember you
+        }
+
+        // 3. IF NOT CEO, KICK THEM OUT
+        if (isCEO !== 'true' && ceoSession !== 'granted') {
+            window.location.href = "maintenance.html";
+        }
+    }
+</script>
+
+
+	
+	
+	
 </head>
 <body class="bg-gray-50 min-h-screen">
 
