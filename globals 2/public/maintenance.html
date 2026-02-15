@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Globals | System Upgrade</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Google/Gemini Blue & OPay Green influences */
+            --primary: #0b57d0; 
+            --surface: #ffffff;
+            --background: #f0f4f8;
+            --text-main: #1f1f1f;
+            --text-sub: #444746;
+            --border: #e0e3e7;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: var(--text-main);
+        }
+
+        .main-card {
+            background: var(--surface);
+            width: 100%;
+            max-width: 480px;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            margin: 20px;
+        }
+
+        /* The Globals Logo Area */
+        .brand-header {
+            margin-bottom: 30px;
+            display: inline-block;
+        }
+        
+        .brand-text {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* Premium Icon Animation */
+        .icon-container {
+            width: 120px;
+            height: 120px;
+            background: #e8f0fe; /* Light blue bg */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px;
+            position: relative;
+        }
+        
+        .pulse-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+            opacity: 0;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.5; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 0 12px 0;
+            color: var(--text-main);
+        }
+
+        p {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-sub);
+            margin: 0 0 30px 0;
+        }
+
+        /* Trust Badge (Like Banks/OPay) */
+        .security-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #e6f4ea; /* Success Green light */
+            color: #137333; /* Success Green dark */
+            padding: 6px 12px;
+            border-radius: 100px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        /* The Loading Bar */
+        .loader-track {
+            width: 100%;
+            height: 4px;
+            background: #f2f2f2;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .loader-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 40%;
+            background: var(--primary);
+            border-radius: 10px;
+            animation: slide 1.5s infinite ease-in-out;
+        }
+
+        @keyframes slide {
+            0% { left: -40%; }
+            100% { left: 100%; }
+        }
+
+        .footer-info {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #8e918f;
+        }
+
+        /* SVG Styling */
+        svg {
+            width: 50px;
+            height: 50px;
+            fill: var(--primary);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-card">
+        <div class="brand-header">
+            <div class="brand-text">
+                <svg style="width:24px;height:24px;" viewBox="0 0 24 24">
+                    <path d="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M16.59,12L10,5.41L8.59,6.83L13.76,12L8.59,17.17L10,18.59L16.59,12Z" fill="currentColor"/>
+                </svg>
+                GLOBALS
+            </div>
+        </div>
+
+        <div class="icon-container">
+            <div class="pulse-ring"></div>
+            <svg viewBox="0 0 24 24">
+                <path d="M19.35,10.04C18.67,6.59 15.64,4 12,4C9.11,4 6.6,5.64 5.35,8.04C2.34,8.36 0,10.91 0,14C0,17.31 2.69,20 6,20H19C21.76,20 24,17.76 24,15C24,12.36 21.95,10.22 19.35,10.04M19,18H6C3.79,18 2,16.21 2,14C2,11.95 3.53,10.24 5.56,10.03L6.63,9.92L7.13,8.97C8.08,7.14 9.94,6 12,6C14.62,6 16.88,7.86 17.39,10.43L17.69,11.93L19.22,12.04C20.78,12.14 22,13.45 22,15C22,16.65 20.65,18 19,18M8,13H10.55V10H13.45V13H16L12,17L8,13Z" />
+            </svg>
+        </div>
+
+        <div class="security-badge">
+            <svg style="width:14px; height:14px; fill:currentColor;" viewBox="0 0 24 24"><path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,11.99H7V10.99H17V11.99H12Z"/></svg>
+            Funds & Data Secured
+        </div>
+
+        <h1>We're making Globals better</h1>
+        <p>We are currently updating our servers to bring you faster withdrawals and new tasks. The app will be back shortly.</p>
+
+        <div class="loader-track">
+            <div class="loader-fill"></div>
+        </div>
+
+        <div class="footer-info">
+            Globals Platform Inc. &copy; 2026<br>
+            Need urgent help? <a href="mailto:support@globals.com" style="color:var(--primary); text-decoration:none;">Contact Support</a>
+        </div>
+    </div>
+
+</body>
+</html>
