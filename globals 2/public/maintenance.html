@@ -1,6 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-database.js"></script>
+
+<script>
+
+    
+    // Firebase config & inits
+const firebaseConfig = {
+  apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
+  authDomain: "globals-17bf7.firebaseapp.com",
+  projectId: "globals-17bf7",
+  storageBucket: "globals-17bf7.appspot.com",
+  messagingSenderId: "603274362994",
+  appId: "1:603274362994:web:c312c10cf0a42938e882eb"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore(); 
+
+    
+    const maintenanceRef = firebase.database().ref('systemSettings/maintenanceMode');
+
+    // This "on" function stays open. It listens for changes LIVE.
+    maintenanceRef.on('value', (snapshot) => {
+        const isMaintenance = snapshot.val();
+
+        // If the CEO turns maintenance OFF (false), 
+        // everyone on this page gets sent back to the dashboard instantly.
+        if (isMaintenance === false) {
+            window.location.href = "index.html"; 
+        }
+    });
+</script>
+
+
+
+
+
+
+
+
+
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Globals | System Upgrade</title>
@@ -195,3 +240,4 @@
 
 </body>
 </html>
+
