@@ -34,12 +34,13 @@
 
 
 <script>
-    const maintenanceRef = firebase.database().ref('systemSettings/maintenanceMode');
+    // 1. Use 'rtdb' to match your firebase-config.js
+    const maintenanceRef = rtdb.ref('systemSettings/maintenanceMode');
 
     maintenanceRef.on('value', (snapshot) => {
         const isMaintenance = snapshot.val();
         
-        // CEO Bypass check
+        // 2. CEO Bypass check
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('admin') === 'true') {
             sessionStorage.setItem('ceo_access', 'granted');
@@ -48,12 +49,19 @@
         const hasAccess = sessionStorage.getItem('ceo_access') === 'granted';
         const isMaintenancePage = window.location.pathname.includes("maintenance.html");
 
-        // The logic: If maintenance is ON and you aren't the CEO, go to maintenance page
-        if (isMaintenance === true && !hasAccess && !isMaintenancePage) {
-            window.location.href = "maintenance.html";
+        // 3. THE LOCK: If maintenance is ON and user isn't CEO, kick them out
+        if (isMaintenance === true) {
+            if (!hasAccess && !isMaintenancePage) {
+                window.location.href = "maintenance.html";
+            }
+        } 
+        // 4. THE KEY: If maintenance is OFF, auto-redirect users BACK from maintenance page
+        else if (isMaintenance === false && isMaintenancePage) {
+            window.location.href = "index.html"; 
         }
     });
 </script>
+
 
 
 
