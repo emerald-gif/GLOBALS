@@ -32,39 +32,27 @@
 
 
 
-
+<script src="settings.js"></script>
 <script>
-    // This function checks the status using the direct Firebase path
-    function runSecurityGuard() {
-        // We use firebase.database() directly to avoid the "rtdb not defined" error
-        const maintenanceRef = firebase.database().ref('systemSettings/maintenanceMode');
+    // 1. CHECK MAINTENANCE STATUS
+    if (maintenanceMode === true) {
+        
+        // 2. CHECK IF IT IS THE CEO (YOU)
+        const urlParams = new URLSearchParams(window.location.search);
+        const isCEO = urlParams.get('admin'); // Checks for ?admin=true
+        const ceoSession = sessionStorage.getItem('ceo_access');
 
-        maintenanceRef.on('value', (snapshot) => {
-            const isMaintenance = snapshot.val();
-            
-            // CEO Bypass check
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('admin') === 'true') {
-                sessionStorage.setItem('ceo_access', 'granted');
-            }
+        if (isCEO === 'true') {
+            sessionStorage.setItem('ceo_access', 'granted'); // Remember you
+        }
 
-            const hasAccess = sessionStorage.getItem('ceo_access') === 'granted';
-            const isMaintenancePage = window.location.pathname.includes("maintenance.html");
-
-            // LOGIC: If ON and not CEO, kick to maintenance page
-            if (isMaintenance === true && !hasAccess && !isMaintenancePage) {
-                window.location.href = "maintenance.html";
-            } 
-            // LOGIC: If OFF and on maintenance page, auto-open the site
-            else if (isMaintenance === false && isMaintenancePage) {
-                window.location.href = "dashboard.html"; 
-            }
-        });
+        // 3. IF NOT CEO, KICK THEM OUT
+        if (isCEO !== 'true' && ceoSession !== 'granted') {
+            window.location.href = "maintenance.html";
+        }
     }
-
-    // Wait a split second for Firebase to load, then run
-    setTimeout(runSecurityGuard, 500);
 </script>
+
 
 
 
