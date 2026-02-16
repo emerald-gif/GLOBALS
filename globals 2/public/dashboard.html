@@ -31,21 +31,25 @@
 
 
 
-<script src="settings.js"></script>
+
 <script>
-    if (maintenanceMode === true) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const isCEO = urlParams.get('admin');
-        const ceoSession = sessionStorage.getItem('ceo_access');
+  // 🔹 Real-time maintenance control
+  db.collection("system").doc("config").onSnapshot(doc => {
+      if (!doc.exists) return;
+      const maintenanceMode = doc.data().maintenanceMode;
 
-        if (isCEO === 'true') {
-            sessionStorage.setItem('ceo_access', 'granted');
-        }
+      // Check if CEO/admin is visiting
+      const urlParams = new URLSearchParams(window.location.search);
+      const isCEO = urlParams.get('admin');
+      const ceoSession = sessionStorage.getItem('ceo_access');
+      if (isCEO === 'true') sessionStorage.setItem('ceo_access','granted');
+      const isAdmin = (isCEO === 'true' || ceoSession === 'granted');
 
-        if (isCEO !== 'true' && ceoSession !== 'granted') {
-            window.location.replace("maintenance.html");
-        }
-    }
+      // Redirect users to maintenance page if site is locked
+      if (maintenanceMode === true && !isAdmin) {
+          window.location.replace("maintenance.html");
+      }
+  });
 </script>
 
 
