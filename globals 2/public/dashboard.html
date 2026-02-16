@@ -4283,6 +4283,27 @@ function activateTab(tabName) {
 
 
 
+
+
+
+
+
+
+<div id="app-preloader" style="display:none; position:fixed; inset:0; z-index:99999; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); align-items: center; justify-content: center; flex-direction: column; transition: opacity 0.3s ease;">
+  <div style="position: relative; display: flex; align-items: center; justify-content: center;">
+    <div style="width: 100px; height: 100px; border: 3px solid #f3f4f6; border-top: 3px solid #000; border-radius: 50%; animation: loader-spin 0.8s linear infinite;"></div>
+    <img src="GLOBALS.jpg" style="position: absolute; width: 65px; height: 65px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); object-fit: cover;">
+  </div>
+  <p style="margin-top: 20px; font-family: sans-serif; font-weight: 500; color: #111827; letter-spacing: -0.5px;">Processing...</p>
+</div>
+
+<style>
+  @keyframes loader-spin { to { transform: rotate(360deg); } }
+  #app-preloader.fade-out { opacity: 0; pointer-events: none; }
+</style>
+
+
+		
 		
 </body>
 
