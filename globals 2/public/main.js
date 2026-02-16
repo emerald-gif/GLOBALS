@@ -7130,6 +7130,50 @@ initCheckinSection();
 
 
 
+/* THE SMART MANEUVER SCRIPT 
+   No manual wrapping required. Works on any button, tab, or form.
+*/
+(function() {
+    const preloader = document.getElementById('app-preloader');
+    if (!preloader) return;
+
+    // Listen for every click on the document
+    document.addEventListener('click', function(e) {
+        // Targets: Tabs, Buttons, Submit inputs, or anything with "btn" in the class
+        const target = e.target.closest('.tab-btn, button, .btn, input[type="submit"]');
+
+        if (target) {
+            // Show Loader
+            preloader.style.display = 'flex';
+            preloader.classList.remove('fade-out');
+
+            // Standard Fintech "feel" delay (1.2 seconds)
+            setTimeout(() => {
+                preloader.classList.add('fade-out');
+                setTimeout(() => {
+                    preloader.style.display = 'none';
+                }, 300); // Wait for fade animation
+            }, 1200);
+        }
+    }, true);
+
+    // Specifically catch form submissions (like "Enter New School")
+    document.addEventListener('submit', function() {
+        preloader.style.display = 'flex';
+        preloader.classList.remove('fade-out');
+        // Let the page navigation or Firebase naturally handle the exit
+        setTimeout(() => {
+            preloader.classList.add('fade-out');
+            setTimeout(() => { preloader.style.display = 'none'; }, 300);
+        }, 1500);
+    });
+})();
+
+
+
+
+
+
 
 
 
