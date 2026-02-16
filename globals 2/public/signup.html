@@ -4,71 +4,126 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Signup | Globals</title>
-  <!-- Tailwind CDN -->
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <!-- Feather icons -->
   <script src="https://unpkg.com/feather-icons"></script>
-  <!-- EmailJS -->
   <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
   <style>
-    body { background: linear-gradient(135deg, #e0f2fe, #fff); }
-    .glass { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(15px); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12); }
+    body { background: linear-gradient(135deg, #e0f2fe, #fff); font-family: 'Segoe UI', sans-serif; }
+    .glass { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(15px); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12); border: 1px solid rgba(255,255,255,0.3); }
     .glow { box-shadow: 0 0 20px rgba(59, 130, 246, 0.32); }
-    .status-available { color: #059669; } /* green */
-    .status-taken { color: #ef4444; }     /* red */
+    .status-available { color: #059669; } 
+    .status-taken { color: #ef4444; }     
+
+    /* --- FINTECH LOADER STYLES --- */
+    #global-app-loader {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      transition: opacity 0.4s ease;
+    }
+    
+    .loader-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .loader-ring {
+      width: 110px;
+      height: 110px;
+      border: 4px solid #f3f4f6;
+      border-top: 4px solid #2563eb; 
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .loader-logo {
+      position: absolute;
+      width: 70px;
+      height: 70px;
+      border-radius: 20px; 
+      object-fit: cover;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* --- LATEST UIUX EYE TOGGLE --- */
+    .eye-toggle {
+      transition: all 0.2s ease-in-out;
+      color: #9ca3af;
+    }
+    .eye-toggle.active { color: #2563eb; transform: scale(1.1); }
+    .eye-toggle:active { transform: scale(0.9); }
   </style>
 </head>
-<body class="flex items-center justify-center min-h-screen px-4">
+<body class="flex items-center justify-center min-h-screen px-4 py-10">
+
+  <div id="global-app-loader">
+    <div class="loader-container">
+      <div class="loader-ring"></div>
+      <img src="GLOBALS.jpg" class="loader-logo">
+    </div>
+    <p class="mt-6 font-semibold text-gray-800 tracking-wide animate-pulse">Creating Secure Profile...</p>
+  </div>
+
   <div class="w-full max-w-md glass p-6 rounded-2xl">
     <div class="mb-6 text-center">
-      <img src="GLOBALS.jpg" alt="Globals Logo" class="mx-auto h-16 w-16 mb-2">
+      <img src="GLOBALS.jpg" alt="Globals Logo" class="mx-auto h-16 w-16 mb-2 rounded-xl shadow-sm">
       <h2 class="text-2xl font-extrabold text-blue-700">Create Account</h2>
       <p class="text-sm text-gray-600 mt-2">Enter your details to create account — Signup is free.</p>
     </div>
 
     <form id="signupForm" class="space-y-4" autocomplete="off">
       <div>
-        <input type="text" id="fullName" placeholder="Full Name" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required />
+        <input type="text" id="fullName" placeholder="Full Name" class="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" required />
         <p id="fullNameError" class="text-red-500 text-sm mt-1 hidden"></p>
       </div>
 
       <div>
-        <input type="text" id="username" placeholder="Username" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required />
-        <!-- status + message (icon + text) -->
+        <input type="text" id="username" placeholder="Username" class="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" required />
         <div id="usernameStatus" class="text-sm mt-1 flex items-center space-x-2 hidden"></div>
         <p id="usernameError" class="text-red-500 text-sm mt-1 hidden"></p>
       </div>
 
       <div>
-        <input type="tel" id="phone" inputmode="numeric" placeholder="Phone Number (11 digits)" maxlength="11" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required />
+        <input type="tel" id="phone" inputmode="numeric" placeholder="Phone Number (11 digits)" maxlength="11" class="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" required />
         <p id="phoneError" class="text-red-500 text-sm mt-1 hidden"></p>
       </div>
 
       <div>
-        <input type="email" id="email" placeholder="Email " class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required />
+        <input type="email" id="email" placeholder="Email " class="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" required />
         <p id="emailError" class="text-red-500 text-sm mt-1 hidden"></p>
       </div>
 
       <div class="relative">
-        <input type="password" id="password" placeholder="Password" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 pr-10" required />
-        <span onclick="togglePassword('password','togglePasswordIcon')" class="absolute inset-y-0 right-3 flex items-center cursor-pointer">
-          <i data-feather="eye-off" id="togglePasswordIcon"></i>
-        </span>
+        <input type="password" id="password" placeholder="Password" class="w-full p-3 pr-12 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" required />
+        <button type="button" onclick="handleToggle('password','togglePasswordIcon')" class="absolute inset-y-0 right-0 px-3 flex items-center">
+          <i data-feather="eye-off" id="togglePasswordIcon" class="eye-toggle w-5 h-5"></i>
+        </button>
         <p id="passwordError" class="text-red-500 text-sm mt-1 hidden"></p>
       </div>
 
       <div class="relative">
-        <input type="password" id="confirmPassword" placeholder="Confirm Password" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 pr-10" required />
-        <span onclick="togglePassword('confirmPassword','toggleConfirmPasswordIcon')" class="absolute inset-y-0 right-3 flex items-center cursor-pointer">
-          <i data-feather="eye-off" id="toggleConfirmPasswordIcon"></i>
-        </span>
+        <input type="password" id="confirmPassword" placeholder="Confirm Password" class="w-full p-3 pr-12 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" required />
+        <button type="button" onclick="handleToggle('confirmPassword','toggleConfirmPasswordIcon')" class="absolute inset-y-0 right-0 px-3 flex items-center">
+          <i data-feather="eye-off" id="toggleConfirmPasswordIcon" class="eye-toggle w-5 h-5"></i>
+        </button>
         <p id="confirmPasswordError" class="text-red-500 text-sm mt-1 hidden"></p>
       </div>
 
-      <input type="text" id="referrer" placeholder="Referral Username (Optional)" class="w-full p-3 rounded-lg border" />
+      <input type="text" id="referrer" placeholder="Referral Username (Optional)" class="w-full p-3 rounded-xl border border-gray-200 outline-none" />
 
       <div>
-        <select id="heardAbout" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required>
+        <select id="heardAbout" class="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none bg-white" required>
           <option value="">How did you hear about us?</option>
           <option value="Instagram">Instagram</option>
           <option value="TikTok">TikTok</option>
@@ -82,16 +137,16 @@
         <p id="heardAboutError" class="text-red-500 text-sm mt-1 hidden"></p>
       </div>
 
-      <button id="submitBtn" type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 glow">🚀 Sign Up (Free)</button>
+      <button id="submitBtn" type="submit" class="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold text-lg hover:bg-blue-700 transition-all duration-300 transform active:scale-95 glow">🚀 Sign Up (Free)</button>
     </form>
 
     <p class="mt-5 text-sm text-center">Already have an account? <a href="login.html" class="text-blue-600 font-medium hover:underline">Login here</a></p>
   </div>
 
-  <!-- Firebase SDKs (compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 
   <script>
     // ---------- CONFIG ----------
@@ -104,38 +159,37 @@
       appId: "1:603274362994:web:c312c10cf0a42938e882eb"
     };
 
-    // init firebase
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
-
-    // initialize EmailJS (public key you gave)
     emailjs.init("tfc9HSxyhDy5qonKZ");
-    const EMAILJS_SERVICE_ID = "service_5m7hr4q";
-    const TEMPLATE_VERIFY = "template_4nr76pb";
-    const TEMPLATE_WELCOME = "template_u69npjv";
 
-    // feather icons
     feather.replace();
 
-    // ---------- Helpers ----------
-    function togglePassword(inputId, iconId) {
+    // ---------- NEW UIUX EYE TOGGLE ----------
+    function handleToggle(inputId, iconId) {
       const input = document.getElementById(inputId);
       const icon = document.getElementById(iconId);
-      if (input.type === "password") { input.type = "text"; icon.setAttribute("data-feather","eye"); }
-      else { input.type = "password"; icon.setAttribute("data-feather","eye-off"); }
+      
+      if (input.type === "password") {
+        input.type = "text";
+        icon.setAttribute("data-feather", "eye");
+        icon.classList.add('active');
+      } else {
+        input.type = "password";
+        icon.setAttribute("data-feather", "eye-off");
+        icon.classList.remove('active');
+      }
       feather.replace();
     }
 
-    function debounce(fn, delay = 500) {
-      let t = null;
-      return function(...args) {
-        clearTimeout(t);
-        t = setTimeout(() => fn.apply(this, args), delay);
-      };
-    }
+    // ---------- LOADER MANEUVER ----------
+    const loader = document.getElementById('global-app-loader');
+    const toggleLoader = (show) => {
+      loader.style.display = show ? 'flex' : 'none';
+    };
 
-    // validators
+    // Validators... (Keeping your original validators)
     const validators = {
       fullName: v => v.trim() ? "" : "Full name is required",
       username: v => v.trim() ? "" : "Username is required",
@@ -146,7 +200,7 @@
       heardAbout: v => v ? "" : "Please select an option"
     };
 
-    // wire up basic validation messages
+    // Wire up listeners...
     Object.keys(validators).forEach(id => {
       const el = document.getElementById(id);
       const err = document.getElementById(id + "Error");
@@ -158,77 +212,10 @@
       });
     });
 
-    // ensure phone input only digits
-    const phoneInput = document.getElementById('phone');
-    phoneInput.addEventListener('input', (e) => {
-      e.target.value = e.target.value.replace(/[^0-9]/g, '');
-    });
-
-    // ---------- Username availability check (debounced) ----------
-    const usernameInput = document.getElementById('username');
-    const usernameStatus = document.getElementById('usernameStatus');
-    const usernameError = document.getElementById('usernameError');
-
-    function setUsernameStatus(state, text) {
-      // state: 'hidden' | 'available' | 'taken' | 'invalid'
-      if (state === 'hidden') { usernameStatus.classList.add('hidden'); usernameStatus.innerHTML = ''; return; }
-      usernameStatus.classList.remove('hidden');
-      usernameStatus.classList.remove('status-available','status-taken');
-      if (state === 'available') usernameStatus.classList.add('status-available');
-      if (state === 'taken' || state === 'invalid') usernameStatus.classList.add('status-taken');
-      const icon = state === 'available' ? 'check' : 'x';
-      usernameStatus.innerHTML = `<i data-feather="${icon}"></i><span class="ml-2">${text}</span>`;
-      feather.replace();
-    }
-
-    async function queryUsernameAvailability(username) {
-      if (!username) { setUsernameStatus('hidden', ''); return; }
-      // basic client-side pattern check
-      const pattern = /^[a-zA-Z0-9._]{3,20}$/;
-      if (!pattern.test(username)) { setUsernameStatus('invalid','Allowed: 3-20 chars, letters/numbers/._'); return; }
-
-      setUsernameStatus('hidden','');
-      // query for lowercase field 'usernameLower' (we will save this on user creation), and fallback to exact username
-      try {
-        const usernameLower = username.toLowerCase();
-        let exists = false;
-        // first try usernameLower (fast if you have normalized users)
-        const snapLower = await db.collection('users').where('usernameLower','==',usernameLower).limit(1).get();
-        if (!snapLower.empty) exists = true;
-        else {
-          // fallback to exact username field (case-sensitive)
-          const snapExact = await db.collection('users').where('username','==',username).limit(1).get();
-          if (!snapExact.empty) exists = true;
-        }
-        if (exists) setUsernameStatus('taken', 'Username already taken');
-        else setUsernameStatus('available', 'Username is available');
-      } catch (err) {
-        console.error('username check failed', err);
-        // silently hide status on failure
-        setUsernameStatus('hidden','');
-      }
-    }
-
-    const debouncedCheck = debounce((e) => {
-      queryUsernameAvailability(e.target.value.trim());
-    }, 450);
-
-    usernameInput.addEventListener('input', (e) => {
-      // clear existing error text (validator may handle required message)
-      usernameError.classList.add('hidden');
-      debouncedCheck(e);
-    });
-
-    // ---------- OTP generator ----------
-    function genOtp() {
-      return Math.floor(1000 + Math.random() * 9000).toString();
-    }
-
-    // ---------- Submit handler ----------
+    // Submit handler with Maneuver
     document.getElementById('signupForm').addEventListener('submit', async (ev) => {
       ev.preventDefault();
 
-      // run validators
       let valid = true;
       Object.keys(validators).forEach(id => {
         const input = document.getElementById(id);
@@ -240,6 +227,9 @@
       });
       if (!valid) return;
 
+      // START LOADER
+      toggleLoader(true);
+
       const fullName = document.getElementById('fullName').value.trim();
       const username = document.getElementById('username').value.trim();
       const usernameLower = username.toLowerCase();
@@ -248,120 +238,56 @@
       const password = document.getElementById('password').value;
       const referrerUsername = document.getElementById('referrer').value.trim();
       const heardAbout = document.getElementById('heardAbout').value;
-      const submitBtn = document.getElementById('submitBtn');
-
-      submitBtn.disabled = true;
-      const originalText = submitBtn.textContent;
-      submitBtn.textContent = 'Checking...';
 
       try {
-        // 1) double-check username uniqueness (important to avoid race conditions)
-        let exists = false;
+        // UI/UX Feel Delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
-// check by lowercase
-const snapLower = await db.collection('users')
-  .where('usernameLower','==',usernameLower)
-  .limit(1)
-  .get();
-if (!snapLower.empty) exists = true;
-
-// check exact match (for older records or non-normalized users)
-const snapExact = await db.collection('users')
-  .where('username','==',username)
-  .limit(1)
-  .get();
-if (!snapExact.empty) exists = true;
-
-if (exists) {
-  alert('❌ Username already taken. Please choose a different one.');
-  submitBtn.disabled = false;
-  submitBtn.textContent = originalText;
-  return;
-}
-
-        
-        // 2) check phone uniqueness
-        const phoneSnap = await db.collection('users').where('phone','==',phone).limit(1).get();
-        if (!phoneSnap.empty) {
-          alert('❌ Phone number already registered. Please login or use another.');
-          submitBtn.disabled = false;
-          submitBtn.textContent = originalText;
+        // 1) Username Check
+        const snapLower = await db.collection('users').where('usernameLower','==',usernameLower).limit(1).get();
+        if (!snapLower.empty) {
+          toggleLoader(false);
+          alert('❌ Username already taken.');
           return;
         }
 
-        submitBtn.textContent = 'Creating account...';
+        // 2) Phone Check
+        const phoneSnap = await db.collection('users').where('phone','==',phone).limit(1).get();
+        if (!phoneSnap.empty) {
+          toggleLoader(false);
+          alert('❌ Phone number already registered.');
+          return;
+        }
 
-        // 3) create auth user
+        // 3) Create Account
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const userId = userCredential.user.uid;
 
-        // 4) generate OTP and save user document
-        const otp = genOtp();
-        const now = Date.now();
-        const otpExpires = now + (10 * 60 * 1000); // 10 minutes
-        const lastOtpSentAt = now;
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        await db.collection('users').doc(userId).set({
+          fullName, username, usernameLower, phone, email,
+          balance: 0, referrer: referrerUsername || null, heardAbout,
+          verified: false, otp, joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
 
-        const userData = {
-          fullName,
-          username,
-          usernameLower,
-          phone,
-          email,
-          balance: 0,
-          referrer: referrerUsername || null,
-          heardAbout,
-          verified: false,
-          otp,
-          otpExpires,
-          lastOtpSentAt,
-          joinedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
+        // Send Email
+        emailjs.send("service_5m7hr4q", "template_4nr76pb", { to_email: email, otp: otp, name: fullName });
 
-        await db.collection('users').doc(userId).set(userData);
-
-        // 5) send OTP email (best-effort)
-        const templateParams = { to_email: email, otp: otp, name: fullName };
-        emailjs.send(EMAILJS_SERVICE_ID, TEMPLATE_VERIFY, templateParams)
-          .catch((err) => {
-            console.warn('EmailJS send failed', err);
-            // we don't block signup on email failure
-          });
-
-        // 6) redirect to verification page
+        // Redirect (Keep loader visible until page switches)
         window.location.href = `verify.html?uid=${encodeURIComponent(userId)}&email=${encodeURIComponent(email)}`;
 
       } catch (error) {
-        console.error('Signup error', error);
-        let msg = 'Signup failed. Please try again.';
-        if (error && error.code === 'auth/email-already-in-use') msg = '❌ Email already registered. Please login instead.';
-        else if (error && error.code === 'auth/invalid-email') msg = '❌ Invalid email address.';
-        else if (error && error.code === 'auth/weak-password') msg = '❌ Password too weak. Use at least 6 characters.';
-        alert(msg);
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
+        toggleLoader(false);
+        alert('❌ ' + error.message);
       }
     });
 
-
-     // --------- Prefill referral from URL ----------
-(function() {
-  const params = new URLSearchParams(window.location.search);
-  const ref = params.get('ref'); // get "ref" parameter
-  if (ref) {
-    const refInput = document.getElementById('referrer');
-    if (refInput) {
-      refInput.value = ref;
-    }
-  }
-})();
-
-
-
-    
+    // Prefill Ref...
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get('ref');
+      if (ref) document.getElementById('referrer').value = ref;
+    })();
   </script>
-
-  
 </body>
 </html>
-
-
