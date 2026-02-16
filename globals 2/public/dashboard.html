@@ -32,25 +32,6 @@
 
 
 
-<script>
-
-
-  db.collection("system").doc("config").onSnapshot(doc=>{
-      if(!doc.exists) return;
-      const maintenanceMode = doc.data().maintenanceMode;
-
-      // CEO/admin bypass
-      const urlParams = new URLSearchParams(window.location.search);
-      const isCEO = urlParams.get('admin');
-      const ceoSession = sessionStorage.getItem('ceo_access');
-      if(isCEO === 'true') sessionStorage.setItem('ceo_access','granted');
-      const isAdmin = (isCEO === 'true' || ceoSession==='granted');
-
-      if(maintenanceMode && !isAdmin){
-          window.location.replace("maintenance.html");
-      }
-  });
-</script>
 
 
 
@@ -4274,6 +4255,25 @@ function activateTab(tabName) {
 <script src="firebase-config.js"></script>
 <script src="main.js"></script>
 
+<script>
+
+
+  db.collection("system").doc("config").onSnapshot(doc=>{
+      if(!doc.exists) return;
+      const maintenanceMode = doc.data().maintenanceMode;
+
+      // CEO/admin bypass
+      const urlParams = new URLSearchParams(window.location.search);
+      const isCEO = urlParams.get('admin');
+      const ceoSession = sessionStorage.getItem('ceo_access');
+      if(isCEO === 'true') sessionStorage.setItem('ceo_access','granted');
+      const isAdmin = (isCEO === 'true' || ceoSession==='granted');
+
+      if(maintenanceMode && !isAdmin){
+          window.location.replace("maintenance.html");
+      }
+  });
+</script>
 
 
 
