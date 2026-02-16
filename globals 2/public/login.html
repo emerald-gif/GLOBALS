@@ -11,13 +11,73 @@
     .fade-in { animation: fadeIn .9s ease-in-out; }    
     @keyframes fadeIn { from { opacity: 0; transform: translateY(18px);} to { opacity:1; transform: translateY(0);} }    
     .glass { background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); }    
-    .error-text { font-size:.85rem; color:#dc2626; margin-top:6px; }    
+    .error-text { font-size:.85rem; color:#dc2626; margin-top:6px; }
+
+    /* --- FINTECH LOADER STYLES --- */
+    #global-app-loader {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      transition: opacity 0.4s ease;
+    }
+    
+    .loader-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .loader-ring {
+      width: 110px;
+      height: 110px;
+      border: 4px solid #f3f4f6;
+      border-top: 4px solid #2563eb; 
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .loader-logo {
+      position: absolute;
+      width: 70px;
+      height: 70px;
+      border-radius: 20px; 
+      object-fit: cover;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* --- LATEST UIUX TOGGLE STYLE --- */
+    .eye-toggle-btn {
+      transition: all 0.2s ease-in-out;
+      padding: 8px;
+      margin-right: 4px;
+    }
+    .eye-toggle-btn:hover { color: #2563eb; transform: scale(1.1); }
+    .eye-toggle-btn:active { transform: scale(0.9); }
   </style>    
 </head>    
-<body class="bg-gradient-to-br from-blue-100 to-blue-300 min-h-screen flex items-center justify-center p-4">    
+<body class="bg-gradient-to-br from-blue-100 to-blue-300 min-h-screen flex items-center justify-center p-4">
+
+  <div id="global-app-loader">
+    <div class="loader-container">
+      <div class="loader-ring"></div>
+      <img src="GLOBALS.jpg" class="loader-logo">
+    </div>
+    <p class="mt-6 font-semibold text-gray-800 tracking-wide animate-pulse">Securing Connection...</p>
+  </div>
+
   <div class="w-full max-w-md mx-auto p-6 rounded-2xl shadow-xl glass fade-in">    
     <div class="flex justify-center mb-4">    
-      <img src="GLOBALS.jpg" alt="Globals Logo" class="h-14 w-auto">    
+      <img src="GLOBALS.jpg" alt="Globals Logo" class="h-14 w-auto rounded-lg shadow-sm">    
     </div>  
     <h2 class="text-2xl font-bold text-center text-blue-800 mb-6">Welcome Back 👋</h2>    
     <form id="loginForm" class="space-y-4">    
@@ -25,23 +85,22 @@
         <input id="loginEmail" type="email" placeholder="Email" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500" required>    
         <p id="loginEmailError" class="error-text hidden">Please enter a valid email</p>    
       </div>      
-      <div class="relative">    
-        <input id="loginPassword" type="password" placeholder="Password" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500" required>    
-        <button type="button" id="loginTogglePassword" class="absolute inset-y-0 right-3 flex items-center text-gray-500" aria-label="toggle password">    
+      
+      <div class="relative group">    
+        <input id="loginPassword" type="password" placeholder="Password" class="w-full px-4 pr-12 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 transition-all duration-200" required>    
+        <button type="button" id="loginTogglePassword" class="eye-toggle-btn absolute inset-y-0 right-0 flex items-center text-gray-400" aria-label="toggle password">    
           <i data-lucide="eye-off" class="w-5 h-5"></i>    
         </button>    
         <p id="loginPasswordError" class="error-text hidden">Password cannot be empty</p>    
       </div>      
+      
       <div class="text-right">    
         <a href="forgot-password.html" class="text-sm text-blue-600 hover:underline">Forgot password?</a>    
       </div>    
      
-      <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold text-lg flex items-center justify-center space-x-2">
-  <span id="loginBtnText">Login</span>
-  <span id="loginBtnSpinner" class="hidden animate-spin">
-    <i data-lucide="loader" class="w-5 h-5"></i>
-  </span>
-</button>
+      <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold text-lg flex items-center justify-center transition-all duration-300 transform active:scale-95">
+        <span id="loginBtnText">Login</span>
+      </button>
       
     </form>    
     <p class="mt-4 text-center text-sm text-gray-600">    
@@ -49,7 +108,6 @@
     </p>    
   </div>    
 
-  <!-- Firebase SDKs -->    
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>    
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>    
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>    
@@ -65,7 +123,7 @@
     };    
     firebase.initializeApp(firebaseConfig);    
     const auth = firebase.auth();    
-    const db = firebase.firestore(); // ✅ added Firestore    
+    const db = firebase.firestore();   
   </script>    
 
   <script>    
@@ -73,90 +131,67 @@ document.addEventListener('DOMContentLoaded', () => {
   if (window.lucide) lucide.createIcons();    
 
   const loginForm = document.getElementById('loginForm');    
-  const loginEmail = document.getElementById('loginEmail');    
-  const loginPassword = document.getElementById('loginPassword');    
-  const loginEmailError = document.getElementById('loginEmailError');    
-  const loginPasswordError = document.getElementById('loginPasswordError');    
-  const loginTogglePassword = document.getElementById('loginTogglePassword');    
-  const loginBtn = document.getElementById('loginBtn');    
-  const loginBtnText = document.getElementById('loginBtnText');    
-  const loginBtnSpinner = document.getElementById('loginBtnSpinner');    
+  const loader = document.getElementById('global-app-loader');
 
-  // input error toggle    
-  loginEmail.addEventListener('input', () => {    
-    loginEmailError.classList.toggle('hidden', loginEmail.validity.valid && loginEmail.value.trim() !== '');    
-  });    
-  loginPassword.addEventListener('input', () => {    
-    loginPasswordError.classList.toggle('hidden', loginPassword.value.trim() !== '');    
-  });    
+  const toggleLoader = (show) => {
+    loader.style.display = show ? 'flex' : 'none';
+  };
 
-  // eye toggle    
+  // Improved Eye Toggle Logic
+  const loginTogglePassword = document.getElementById('loginTogglePassword');
+  const loginPassword = document.getElementById('loginPassword');
+
   loginTogglePassword.addEventListener('click', () => {    
-    const showing = loginPassword.type === 'text';    
-    loginPassword.type = showing ? 'password' : 'text';    
-    loginTogglePassword.innerHTML = showing    
-      ? '<i data-lucide="eye-off" class="w-5 h-5"></i>'    
-      : '<i data-lucide="eye" class="w-5 h-5"></i>';    
-    if (window.lucide) lucide.createIcons();    
-  });    
+    const isShowing = loginPassword.type === 'text';    
+    
+    // Toggle type
+    loginPassword.type = isShowing ? 'password' : 'text';    
+    
+    // Update Icon and Color for that "active" feel
+    if (isShowing) {
+      loginTogglePassword.innerHTML = '<i data-lucide="eye-off" class="w-5 h-5"></i>';
+      loginTogglePassword.classList.replace('text-blue-600', 'text-gray-400');
+    } else {
+      loginTogglePassword.innerHTML = '<i data-lucide="eye" class="w-5 h-5"></i>';
+      loginTogglePassword.classList.replace('text-gray-400', 'text-blue-600');
+    }
+    
+    // Re-render the Lucide icon
+    lucide.createIcons();    
+  });
 
-  // submit    
+  // Login Form Submission
   loginForm.addEventListener('submit', async (e) => {    
     e.preventDefault();    
-    loginEmailError.classList.add('hidden');    
-    loginPasswordError.classList.add('hidden');    
-
-    const email = loginEmail.value.trim();    
+    const email = document.getElementById('loginEmail').value.trim();    
     const password = loginPassword.value;    
 
-    if (!loginEmail.validity.valid || !email) {    
-      loginEmailError.classList.remove('hidden');    
-      return;    
-    }    
-    if (!password) {    
-      loginPasswordError.classList.remove('hidden');    
-      return;    
-    }    
-
-    // ✅ Show spinner and disable button
-    loginBtn.disabled = true;    
-    loginBtnText.textContent = 'Logging in';    
-    loginBtnSpinner.classList.remove('hidden');    
+    toggleLoader(true);
 
     try {    
+      await new Promise(resolve => setTimeout(resolve, 1500));
       const userCred = await auth.signInWithEmailAndPassword(email, password);    
       const uid = userCred.user.uid;    
-
-      // check verification status from Firestore    
       const doc = await db.collection("users").doc(uid).get();    
+      
       if (!doc.exists) {    
-        alert("❌ User record not found. Please sign up again.");    
-        throw new Error('User record missing');    
+        toggleLoader(false);
+        alert("❌ User record not found.");    
+        return;
       }    
 
       const data = doc.data();    
       if (!data.verified) {    
-        alert("⚠️ Your account is not verified yet. Please enter the code sent to your email.");    
         window.location.href = `verify.html?uid=${uid}&email=${encodeURIComponent(data.email)}`;    
       } else {    
         window.location.href = 'dashboard.html';    
       }    
     } catch (err) {    
-      let msg = 'Login failed. Please try again.';    
-      if (err.code === 'auth/user-not-found') msg = 'No account found with this email.';    
-      else if (err.code === 'auth/wrong-password') msg = 'Incorrect password. Try again.';    
-      else if (err.code === 'auth/invalid-email') msg = 'Invalid email address.';    
-      alert('❌ ' + msg);    
-      console.error('Login failed:', err);    
-
-      // restore button state
-      loginBtn.disabled = false;    
-      loginBtnText.textContent = 'Login';    
-      loginBtnSpinner.classList.add('hidden');    
+      toggleLoader(false);
+      alert('❌ Login failed: ' + err.message);    
     }    
   });    
 });    
 </script>
 </body>
 </html>
-
