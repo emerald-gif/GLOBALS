@@ -5,48 +5,96 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Verify Account | Globals</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <script src="https://unpkg.com/feather-icons"></script>
+  <script src="https://unpkg.com/lucide@0.278.0/dist/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
   <style>
-    body { background: linear-gradient(135deg,#e0f2fe,#fff); }
-    .otp-input { width: 3.25rem; height: 3.75rem; text-align:center; font-size:1.6rem; border:2px solid #e5e7eb; border-radius:0.6rem; transition:box-shadow .12s, border-color .12s; }
-    .otp-input:focus { border-color:#2563eb; box-shadow:0 0 0 6px rgba(37,99,235,0.08); outline:none; }
+    body { background: linear-gradient(135deg,#e0f2fe,#fff); font-family: 'Segoe UI', sans-serif; }
+    
+    /* --- GLASS DESIGN --- */
+    .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.4); }
+
+    /* --- OTP INPUT STYLING --- */
+    .otp-input { 
+      width: 3.5rem; 
+      height: 4rem; 
+      text-align:center; 
+      font-size:1.8rem; 
+      font-weight: bold;
+      border:2px solid #e5e7eb; 
+      border-radius:0.8rem; 
+      transition: all 0.2s; 
+      background: white;
+    }
+    .otp-input:focus { 
+      border-color:#2563eb; 
+      box-shadow: 0 0 0 4px rgba(37,99,235,0.1); 
+      outline:none; 
+      transform: translateY(-2px);
+    }
     .otp-wrap { display:flex; gap:0.75rem; justify-content:center; align-items:center; }
+
+    /* --- MINIMALIST BUTTON LOADER --- */
+    .btn-loading {
+      position: relative;
+      color: transparent !important;
+      pointer-events: none;
+    }
+    .btn-loading::after {
+      content: "";
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      top: 50%;
+      left: 50%;
+      margin: -11px 0 0 -11px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: button-spin 0.6s linear infinite;
+    }
+    @keyframes button-spin { to { transform: rotate(360deg); } }
+
+    /* --- RESEND BUTTON PULSE --- */
+    #resendBtn:disabled { opacity: 0.6; cursor: not-allowed; }
   </style>
 </head>
 <body class="flex items-center justify-center min-h-screen px-4">
-  <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-6 text-center">
-    <img src="GLOBALS.jpg" class="mx-auto h-16 mb-4" alt="Globals Logo">
-    <h2 class="text-2xl font-extrabold text-blue-700">Verify Your Account</h2>
-    <p id="desc" class="text-sm text-gray-600 mt-2">Enter the 4-digit code sent to your email</p>
+  <div class="w-full max-w-md glass rounded-3xl shadow-xl p-8 text-center">
+    <img src="GLOBALS.jpg" class="mx-auto h-16 w-16 mb-4 rounded-2xl shadow-sm" alt="Logo">
+    <h2 class="text-2xl font-extrabold text-blue-800">Verify Account</h2>
+    <p id="desc" class="text-sm text-gray-600 mt-2">We sent a 4-digit code to your email.</p>
     
-    <p class="text-xs text-gray-500 mt-1">
-  📩 <span class="font-medium text-blue-600">Tip:</span> If you don’t see the email, please check your <strong>Spam</strong> folder.
-    </p>
-
-    
-    <div class="otp-wrap mt-6">
-      <input maxlength="1" class="otp-input" id="otp1" inputmode="numeric" pattern="[0-9]*">
-      <input maxlength="1" class="otp-input" id="otp2" inputmode="numeric" pattern="[0-9]*">
-      <input maxlength="1" class="otp-input" id="otp3" inputmode="numeric" pattern="[0-9]*">
-      <input maxlength="1" class="otp-input" id="otp4" inputmode="numeric" pattern="[0-9]*">
+    <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 mt-4 flex items-start space-x-2 text-left">
+      <span class="text-blue-600">📩</span>
+      <p class="text-xs text-blue-800">
+        <strong>Tip:</strong> Check your <strong>Spam</strong> folder if you don't see the email in your inbox.
+      </p>
     </div>
 
-    <button id="verifyBtn" class="w-full mt-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700">Verify</button>
+    <div class="otp-wrap mt-8">
+      <input maxlength="1" class="otp-input" id="otp1" inputmode="numeric" placeholder="·">
+      <input maxlength="1" class="otp-input" id="otp2" inputmode="numeric" placeholder="·">
+      <input maxlength="1" class="otp-input" id="otp3" inputmode="numeric" placeholder="·">
+      <input maxlength="1" class="otp-input" id="otp4" inputmode="numeric" placeholder="·">
+    </div>
 
-    <p class="text-sm text-gray-500 mt-4">
-      Didn’t receive code?
-      <button id="resendBtn" class="text-blue-600 font-semibold ml-2" disabled>Resend in <span id="timer">60</span>s</button>
-    </p>
+    <button id="verifyBtn" class="w-full mt-8 py-3.5 bg-blue-600 text-white rounded-xl font-bold text-lg shadow-lg hover:bg-blue-700 transition-all transform active:scale-95">
+      Verify Account
+    </button>
+
+    <div class="mt-6">
+        <p class="text-sm text-gray-500">Didn’t receive a code?</p>
+        <button id="resendBtn" class="text-blue-600 font-bold mt-1 hover:underline transition-opacity" disabled>
+            Resend in <span id="timer">60</span>s
+        </button>
+    </div>
   </div>
 
-  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
   <script>
-    // ---------- config ----------
     const firebaseConfig = {
       apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
       authDomain: "globals-17bf7.firebaseapp.com",
@@ -58,154 +106,113 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
-
-    // EmailJS init
     emailjs.init("tfc9HSxyhDy5qonKZ");
-    const EMAILJS_SERVICE_ID = "service_5m7hr4q"; // <-- replace
-    const TEMPLATE_VERIFY = "template_4nr76pb";
-    const TEMPLATE_WELCOME = "template_u69npjv";
 
-    // get uid & email from querystring
     const params = new URLSearchParams(window.location.search);
     const uid = params.get('uid');
     const email = params.get('email');
 
+    // --- AUTO-FOCUS LOGIC ---
     const inputs = Array.from(document.querySelectorAll('.otp-input'));
     inputs.forEach((input, i) => {
-      input.addEventListener('input', () => {
+      input.addEventListener('input', (e) => {
+        if (e.inputType === "deleteContentBackward") return;
         input.value = input.value.replace(/[^0-9]/g,'');
         if (input.value && i < inputs.length - 1) inputs[i+1].focus();
       });
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Backspace' && !input.value && i > 0) inputs[i-1].focus();
       });
-      input.addEventListener('focus', () => input.select());
     });
 
-    const verifyBtn = document.getElementById('verifyBtn');
+    // --- TIMER & RESEND LOGIC ---
     const resendBtn = document.getElementById('resendBtn');
     const timerEl = document.getElementById('timer');
-    let cooldown = 60; // recommended 60 seconds
+    let countdownInterval;
 
-    // get user's lastOtpSentAt from Firestore and set cooldown accordingly
     async function initCooldown() {
-      try {
-        if (!uid) return setCooldown(cooldown);
-        const doc = await db.collection('users').doc(uid).get();
-        if (!doc.exists) return setCooldown(cooldown);
-        const data = doc.data();
-        const last = data.lastOtpSentAt || 0;
-        const elapsed = Math.floor((Date.now() - last) / 1000);
-        const remaining = Math.max(0, 60 - elapsed);
-        setCooldown(remaining);
-      } catch (err) {
-        console.error(err);
-        setCooldown(cooldown);
-      }
+      if (!uid) return;
+      const doc = await db.collection('users').doc(uid).get();
+      const last = (doc.exists && doc.data().lastOtpSentAt) ? doc.data().lastOtpSentAt : 0;
+      const remaining = Math.max(0, 60 - Math.floor((Date.now() - last) / 1000));
+      startTimer(remaining);
     }
 
-    let countdownInterval;
-    function setCooldown(seconds) {
+    function startTimer(seconds) {
       if (countdownInterval) clearInterval(countdownInterval);
       if (seconds <= 0) {
-        timerEl.textContent = '';
         resendBtn.disabled = false;
-        resendBtn.textContent = 'Resend Code';
+        resendBtn.innerHTML = 'Resend New Code';
         return;
       }
       resendBtn.disabled = true;
-      timerEl.textContent = seconds;
-      resendBtn.textContent = `Resend in ${seconds}s`;
       let s = seconds;
       countdownInterval = setInterval(() => {
         s--;
+        resendBtn.innerHTML = `Resend in ${s}s`;
         if (s <= 0) {
           clearInterval(countdownInterval);
           resendBtn.disabled = false;
-          resendBtn.textContent = 'Resend Code';
-          timerEl.textContent = '';
-        } else {
-          timerEl.textContent = s;
-          resendBtn.textContent = `Resend in ${s}s`;
+          resendBtn.innerHTML = 'Resend New Code';
         }
       }, 1000);
     }
 
-    // resend function: generate new OTP, update user doc, send via EmailJS
-    async function resendOtp() {
-      try {
-        if (!uid) { alert('Missing user id'); return; }
+    resendBtn.addEventListener('click', async () => {
         resendBtn.disabled = true;
-        resendBtn.textContent = 'Sending...';
+        resendBtn.innerText = 'Sending...';
         const newOtp = Math.floor(1000 + Math.random()*9000).toString();
         const now = Date.now();
-        const otpExpires = now + (10 * 60 * 1000); // 10 min
-        await db.collection('users').doc(uid).update({
-          otp: newOtp,
-          otpExpires,
-          lastOtpSentAt: now
-        });
-        // send email via EmailJS
-        await emailjs.send(EMAILJS_SERVICE_ID, TEMPLATE_VERIFY, { to_email: email, otp: newOtp });
-        // start cooldown
-        setCooldown(60);
-        alert('OTP resent to ' + email);
-      } catch (err) {
-        console.error(err);
-        alert('Failed to resend code. Try again.');
-        resendBtn.disabled = false;
-        resendBtn.textContent = 'Resend Code';
-      }
-    }
+        
+        try {
+            await db.collection('users').doc(uid).update({
+                otp: newOtp,
+                otpExpires: now + (10 * 60 * 1000),
+                lastOtpSentAt: now
+            });
+            await emailjs.send("service_5m7hr4q", "template_4nr76pb", { to_email: email, otp: newOtp });
+            alert('OTP Sent!');
+            startTimer(60);
+        } catch (err) {
+            resendBtn.disabled = false;
+            alert('Failed to resend.');
+        }
+    });
 
-    // initialize
-    initCooldown();
-
-    // verify button click
+    // --- VERIFY LOGIC ---
+    const verifyBtn = document.getElementById('verifyBtn');
     verifyBtn.addEventListener('click', async () => {
       const code = inputs.map(i => i.value).join('');
-      if (code.length !== 4) { alert('Enter the 4-digit code'); return; }
-      verifyBtn.disabled = true;
-      verifyBtn.textContent = 'Verifying...';
+      if (code.length !== 4) return alert('Please enter all 4 digits');
+
+      verifyBtn.classList.add('btn-loading');
 
       try {
-        if (!uid) throw new Error('Missing uid');
         const docRef = db.collection('users').doc(uid);
         const doc = await docRef.get();
-        if (!doc.exists) throw new Error('User record not found');
-
         const data = doc.data();
-        if (!data.otp) throw new Error('No OTP found (request a new code)');
-        if (Date.now() > (data.otpExpires || 0)) throw new Error('Code expired — request a new one');
-        if (code !== data.otp) throw new Error('Invalid code');
 
-        // mark verified and clear otp fields
+        if (code !== data.otp) throw new Error('Invalid verification code');
+        if (Date.now() > data.otpExpires) throw new Error('Code expired. Resend a new one.');
+
         await docRef.update({
           verified: true,
           otp: firebase.firestore.FieldValue.delete(),
           otpExpires: firebase.firestore.FieldValue.delete()
         });
 
-        // send welcome email (template expects name & to_email)
-        await emailjs.send(EMAILJS_SERVICE_ID, TEMPLATE_WELCOME, {
-          to_email: data.email,
-          name: data.fullName || data.username || ''
-        });
+        // Welcome Email
+        emailjs.send("service_5m7hr4q", "template_u69npjv", { to_email: data.email, name: data.fullName });
 
-        alert('✅ Verified. Redirecting to dashboard...');
-        // redirect to dashboard (user likely still signed in)
+        alert('✅ Account Verified!');
         window.location.href = 'dashboard.html';
       } catch (err) {
-        console.error(err);
-        alert(err.message || 'Verification failed');
-        verifyBtn.disabled = false;
-        verifyBtn.textContent = 'Verify';
+        verifyBtn.classList.remove('btn-loading');
+        alert('❌ ' + err.message);
       }
     });
 
-    resendBtn.addEventListener('click', resendOtp);
+    initCooldown();
   </script>
 </body>
-
 </html>
-
