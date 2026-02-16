@@ -33,20 +33,20 @@
 
 
 <script>
-  // 🔹 Real-time maintenance control
-  db.collection("system").doc("config").onSnapshot(doc => {
-      if (!doc.exists) return;
+
+
+  db.collection("system").doc("config").onSnapshot(doc=>{
+      if(!doc.exists) return;
       const maintenanceMode = doc.data().maintenanceMode;
 
-      // Check if CEO/admin is visiting
+      // CEO/admin bypass
       const urlParams = new URLSearchParams(window.location.search);
       const isCEO = urlParams.get('admin');
       const ceoSession = sessionStorage.getItem('ceo_access');
-      if (isCEO === 'true') sessionStorage.setItem('ceo_access','granted');
-      const isAdmin = (isCEO === 'true' || ceoSession === 'granted');
+      if(isCEO === 'true') sessionStorage.setItem('ceo_access','granted');
+      const isAdmin = (isCEO === 'true' || ceoSession==='granted');
 
-      // Redirect users to maintenance page if site is locked
-      if (maintenanceMode === true && !isAdmin) {
+      if(maintenanceMode && !isAdmin){
           window.location.replace("maintenance.html");
       }
   });
