@@ -4,107 +4,452 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Signup | Globals</title>
+
+  <!-- Tailwind CDN -->
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@0.278.0/dist/lucide.min.js"></script>
+  <!-- Feather icons -->
+  <script src="https://unpkg.com/feather-icons"></script>
+  <!-- EmailJS -->
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+
   <style>
-    body { background: linear-gradient(135deg, #e0f2fe, #fff); font-family: 'Segoe UI', sans-serif; }
-    .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.4); }
+    body { background: linear-gradient(135deg, #e0f2fe, #fff); }
+    .glass { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(15px); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12); }
+    .glow { box-shadow: 0 0 20px rgba(59,130,246,0.32); }
+    .status-available { color: #059669; } /* green */
+    .status-taken { color: #ef4444; }     /* red */
 
-    /* --- MINIMALIST BUTTON LOADER --- */
-    .btn-loading {
-      position: relative;
-      color: transparent !important;
-      pointer-events: none;
+    /* ===== Premium Loader ===== */
+    #globalsLoader {
+      background: #ffffff;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity .36s ease, visibility .36s ease;
     }
-    .btn-loading::after {
-      content: "";
-      position: absolute;
-      width: 22px;
-      height: 22px;
-      top: 50%;
-      left: 50%;
-      margin: -11px 0 0 -11px;
-      border: 3px solid rgba(255, 255, 255, 0.3);
-      border-top-color: #fff;
+    #globalsLoader.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    .loader-circle {
+      width: 140px;
+      height: 140px;
       border-radius: 50%;
-      animation: button-spin 0.6s linear infinite;
+      background: rgba(37, 99, 235, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: breathe 1.8s ease-in-out infinite;
+      box-shadow: 0 8px 24px rgba(2,6,23,0.06);
     }
-    @keyframes button-spin { to { transform: rotate(360deg); } }
+    .loader-logo {
+      width: 75px;
+      height: 75px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    @keyframes breathe {
+      0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(37,99,235,0.4); }
+      50% { transform: scale(1.08); box-shadow: 0 0 0 28px rgba(37,99,235,0); }
+      100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(37,99,235,0); }
+    }
 
-    .eye-btn { transition: all 0.2s; color: #9ca3af; padding: 8px; }
-    .eye-btn.active { color: #2563eb; transform: scale(1.1); }
+    /* Small responsive adjustments */
+    @media (max-width:420px) {
+      .loader-circle { width:120px; height:120px; }
+      .loader-logo { width:62px; height:62px; }
+    }
   </style>
 </head>
-<body class="flex items-center justify-center min-h-screen px-4 py-8">
-  <div class="w-full max-w-md glass p-6 rounded-2xl shadow-xl">
-    <div class="text-center mb-6">
-      <img src="GLOBALS.jpg" class="mx-auto h-16 w-16 mb-2 rounded-xl">
-      <h2 class="text-2xl font-bold text-blue-700">Join Globals</h2>
+<body class="flex items-center justify-center min-h-screen px-4">
+
+  <div class="w-full max-w-md glass p-6 rounded-2xl">
+    <div class="mb-6 text-center">
+      <img src="GLOBALS.jpg" alt="Globals Logo" class="mx-auto h-16 w-16 mb-2">
+      <h2 class="text-2xl font-extrabold text-blue-700">Create Account</h2>
+      <p class="text-sm text-gray-600 mt-2">Enter your details to create account — Signup is free.</p>
     </div>
 
-    <form id="signupForm" class="space-y-4">
-      <input type="text" id="fullName" placeholder="Full Name" class="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" required />
-      <input type="text" id="username" placeholder="Username" class="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" required />
-      <input type="tel" id="phone" placeholder="Phone (11 digits)" maxlength="11" class="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" required />
-      <input type="email" id="email" placeholder="Email Address" class="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" required />
+    <form id="signupForm" class="space-y-4" autocomplete="off">
+      <div>
+        <input type="text" id="fullName" placeholder="Full Name" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required />
+        <p id="fullNameError" class="text-red-500 text-sm mt-1 hidden"></p>
+      </div>
 
-      <div class="relative">
-        <input type="password" id="password" placeholder="Password" class="w-full p-3 pr-12 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" required />
-        <button type="button" class="eye-btn absolute inset-y-0 right-1 flex items-center" onclick="handleEye(this, 'password')">
-          <i data-lucide="eye-off" class="w-5 h-5"></i>
-        </button>
+      <div>
+        <input type="text" id="username" placeholder="Username" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required />
+        <!-- status + message (icon + text) -->
+        <div id="usernameStatus" class="text-sm mt-1 flex items-center space-x-2 hidden"></div>
+        <p id="usernameError" class="text-red-500 text-sm mt-1 hidden"></p>
+      </div>
+
+      <div>
+        <input type="tel" id="phone" inputmode="numeric" placeholder="Phone Number (11 digits)" maxlength="11" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required />
+        <p id="phoneError" class="text-red-500 text-sm mt-1 hidden"></p>
+      </div>
+
+      <div>
+        <input type="email" id="email" placeholder="Email " class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required />
+        <p id="emailError" class="text-red-500 text-sm mt-1 hidden"></p>
       </div>
 
       <div class="relative">
-        <input type="password" id="confirmPassword" placeholder="Confirm Password" class="w-full p-3 pr-12 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" required />
-        <button type="button" class="eye-btn absolute inset-y-0 right-1 flex items-center" onclick="handleEye(this, 'confirmPassword')">
-          <i data-lucide="eye-off" class="w-5 h-5"></i>
-        </button>
+        <input type="password" id="password" placeholder="Password" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 pr-10" required />
+        <span id="togglePasswordWrap" class="absolute inset-y-0 right-3 flex items-center cursor-pointer">
+          <i data-feather="eye-off" id="togglePasswordIcon"></i>
+        </span>
+        <p id="passwordError" class="text-red-500 text-sm mt-1 hidden"></p>
       </div>
 
-      <button id="submitBtn" type="submit" class="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold text-lg hover:bg-blue-700 transition-all transform active:scale-95">
-        Sign Up
-      </button>
+      <div class="relative">
+        <input type="password" id="confirmPassword" placeholder="Confirm Password" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 pr-10" required />
+        <span id="toggleConfirmPasswordWrap" class="absolute inset-y-0 right-3 flex items-center cursor-pointer">
+          <i data-feather="eye-off" id="toggleConfirmPasswordIcon"></i>
+        </span>
+        <p id="confirmPasswordError" class="text-red-500 text-sm mt-1 hidden"></p>
+      </div>
+
+      <input type="text" id="referrer" placeholder="Referral Username (Optional)" class="w-full p-3 rounded-lg border" />
+
+      <div>
+        <select id="heardAbout" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500" required>
+          <option value="">How did you hear about us?</option>
+          <option value="Instagram">Instagram</option>
+          <option value="TikTok">TikTok</option>
+          <option value="Facebook">Facebook</option>
+          <option value="WhatsApp">WhatsApp</option>
+          <option value="X">X (Twitter)</option>
+          <option value="Telegram">Telegram</option>
+          <option value="Friend">Friend</option>
+          <option value="Others">Others</option>
+        </select>
+        <p id="heardAboutError" class="text-red-500 text-sm mt-1 hidden"></p>
+      </div>
+
+      <button id="submitBtn" type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 glow">🚀 Sign Up (Free)</button>
     </form>
-    <p class="mt-4 text-center text-sm">Already a member? <a href="login.html" class="text-blue-600 font-medium">Login</a></p>
+
+    <p class="mt-5 text-sm text-center">Already have an account? <a href="login.html" class="text-blue-600 font-medium hover:underline">Login here</a></p>
   </div>
 
+  <!-- Fullscreen Breathing Loader (hidden by default) -->
+  <div id="globalsLoader" class="fixed inset-0 flex items-center justify-center z-50" aria-hidden="true">
+    <div class="loader-circle">
+      <img src="GLOBALS.jpg" alt="Globals Logo" class="loader-logo">
+    </div>
+  </div>
+
+  <!-- Firebase SDKs (compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
   <script>
-    firebase.initializeApp({ apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c", authDomain: "globals-17bf7.firebaseapp.com", projectId: "globals-17bf7", storageBucket: "globals-17bf7.appspot.com", messagingSenderId: "603274362994", appId: "1:603274362994:web:c312c10cf0a42938e882eb" });
+    /*********************
+     * CONFIG & INIT
+     *********************/
+    const firebaseConfig = {
+      apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
+      authDomain: "globals-17bf7.firebaseapp.com",
+      projectId: "globals-17bf7",
+      storageBucket: "globals-17bf7.appspot.com",
+      messagingSenderId: "603274362994",
+      appId: "1:603274362994:web:c312c10cf0a42938e882eb"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
-    lucide.createIcons();
 
-    function handleEye(btn, inputId) {
+    // EmailJS config (your public key + templates)
+    emailjs.init("tfc9HSxyhDy5qonKZ");
+    const EMAILJS_SERVICE_ID = "service_5m7hr4q";
+    const TEMPLATE_VERIFY = "template_4nr76pb";
+    const TEMPLATE_WELCOME = "template_u69npjv";
+
+    // Render feather icons where needed
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.feather) feather.replace();
+    });
+
+    /*********************
+     * HELPERS
+     *********************/
+    function togglePassword(inputId, iconEl) {
       const input = document.getElementById(inputId);
-      const isShowing = input.type === 'text';
-      input.type = isShowing ? 'password' : 'text';
-      btn.classList.toggle('active', !isShowing);
-      btn.innerHTML = `<i data-lucide="${isShowing ? 'eye-off' : 'eye'}" class="w-5 h-5"></i>`;
-      lucide.createIcons();
+      const icon = iconEl;
+      if (!input || !icon) return;
+      if (input.type === "password") {
+        input.type = "text";
+        icon.setAttribute("data-feather","eye");
+      } else {
+        input.type = "password";
+        icon.setAttribute("data-feather","eye-off");
+      }
+      // re-render feather icons only for the modified icon to avoid flicker elsewhere
+      if (window.feather) feather.replace();
     }
 
-    document.getElementById('signupForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('submitBtn');
-      btn.classList.add('btn-loading');
+    function debounce(fn, delay = 500) {
+      let t = null;
+      return function(...args) {
+        clearTimeout(t);
+        t = setTimeout(() => fn.apply(this, args), delay);
+      };
+    }
+
+    function genOtp() {
+      return Math.floor(1000 + Math.random() * 9000).toString();
+    }
+
+    /*********************
+     * VALIDATORS
+     *********************/
+    const validators = {
+      fullName: v => v.trim() ? "" : "Full name is required",
+      username: v => v.trim() ? "" : "Username is required",
+      phone: v => /^[0-9]{11}$/.test(v) ? "" : "Phone must be 11 digits",
+      // NOTE: your original rule required @gmail.com addresses — preserved
+      email: v => /^[^\s]+@gmail\.com$/.test(v) ? "" : "Email must be a valid @gmail.com",
+      password: v => v.length >= 6 ? "" : "Password must be at least 6 characters",
+      confirmPassword: v => v === document.getElementById("password").value ? "" : "Passwords do not match",
+      heardAbout: v => v ? "" : "Please select an option"
+    };
+
+    /*********************
+     * ELEMENTS
+     *********************/
+    const usernameInput = document.getElementById('username');
+    const usernameStatus = document.getElementById('usernameStatus');
+    const usernameError = document.getElementById('usernameError');
+    const phoneInput = document.getElementById('phone');
+    const submitBtn = document.getElementById('submitBtn');
+    const loader = document.getElementById('globalsLoader');
+
+    /*********************
+     * UI UTILITIES
+     *********************/
+    function setUsernameStatus(state, text) {
+      // state: 'hidden' | 'available' | 'taken' | 'invalid' | 'loading'
+      if (state === 'hidden') {
+        usernameStatus.classList.add('hidden');
+        usernameStatus.innerHTML = '';
+        return;
+      }
+      usernameStatus.classList.remove('hidden');
+      usernameStatus.classList.remove('status-available','status-taken');
+      if (state === 'available') usernameStatus.classList.add('status-available');
+      if (state === 'taken' || state === 'invalid') usernameStatus.classList.add('status-taken');
+
+      const icon = (state === 'available') ? 'check' : (state === 'loading' ? 'loader' : 'x');
+      // feather doesn't have 'loader' icon; show nothing for loading or use small spinner via CSS if desired.
+      if (state === 'loading') {
+        usernameStatus.innerHTML = `<span class="text-xs">Checking…</span>`;
+      } else {
+        usernameStatus.innerHTML = `<i data-feather="${icon}"></i><span class="ml-2">${text}</span>`;
+        if (window.feather) feather.replace();
+      }
+    }
+
+    /*********************
+     * USERNAME AVAILABILITY
+     *********************/
+    async function queryUsernameAvailability(username) {
+      if (!username) { setUsernameStatus('hidden',''); return; }
+      const pattern = /^[a-zA-Z0-9._]{3,20}$/;
+      if (!pattern.test(username)) { setUsernameStatus('invalid','Allowed: 3-20 chars, letters/numbers/._'); return; }
+
+      setUsernameStatus('loading','Checking…');
 
       try {
-        await new Promise(r => setTimeout(r, 1000));
-        // ... (Your existing Signup logic goes here) ...
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const cred = await auth.createUserWithEmailAndPassword(email, password);
-        window.location.href = `verify.html?uid=${cred.user.uid}`;
+        const usernameLower = username.toLowerCase();
+        let exists = false;
+
+        // try normalized field first
+        const snapLower = await db.collection('users').where('usernameLower','==',usernameLower).limit(1).get();
+        if (!snapLower.empty) exists = true;
+        else {
+          // fallback to exact username
+          const snapExact = await db.collection('users').where('username','==',username).limit(1).get();
+          if (!snapExact.empty) exists = true;
+        }
+
+        if (exists) setUsernameStatus('taken', 'Username already taken');
+        else setUsernameStatus('available', 'Username is available');
       } catch (err) {
-        btn.classList.remove('btn-loading');
-        alert("❌ " + err.message);
+        console.error('username check failed', err);
+        setUsernameStatus('hidden','');
+      }
+    }
+
+    const debouncedCheck = debounce((e) => queryUsernameAvailability(e.target.value.trim()), 450);
+
+    if (usernameInput) {
+      usernameInput.addEventListener('input', (e) => {
+        // clear any explicit username error text shown by validators
+        if (usernameError) usernameError.classList.add('hidden');
+        debouncedCheck(e);
+      });
+    }
+
+    /*********************
+     * PHONE SANITIZER
+     *********************/
+    if (phoneInput) {
+      phoneInput.addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/[^0-9]/g, '');
+      });
+    }
+
+    /*********************
+     * EYE ICON TOGGLING (passwords)
+     *********************/
+    const togglePasswordIcon = document.getElementById('togglePasswordIcon');
+    const toggleConfirmPasswordIcon = document.getElementById('toggleConfirmPasswordIcon');
+    const togglePasswordWrap = document.getElementById('togglePasswordWrap');
+    const toggleConfirmPasswordWrap = document.getElementById('toggleConfirmPasswordWrap');
+
+    if (togglePasswordWrap) {
+      togglePasswordWrap.addEventListener('click', () => {
+        togglePassword('password', togglePasswordIcon);
+      });
+    }
+    if (toggleConfirmPasswordWrap) {
+      toggleConfirmPasswordWrap.addEventListener('click', () => {
+        togglePassword('confirmPassword', toggleConfirmPasswordIcon);
+      });
+    }
+
+    /*********************
+     * PREFILL REFERRER (from ?ref=)
+     *********************/
+    (function prefillReferrer() {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get('ref');
+      if (ref) {
+        const refInput = document.getElementById('referrer');
+        if (refInput) refInput.value = ref;
+      }
+    })();
+
+    /*********************
+     * FORM SUBMIT
+     *********************/
+    document.getElementById('signupForm').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+
+      // run validators
+      let valid = true;
+      Object.keys(validators).forEach(id => {
+        const input = document.getElementById(id);
+        const errorEl = document.getElementById(id + 'Error');
+        if (!input) return;
+        const msg = validators[id](input.value);
+        if (msg) { if (errorEl) { errorEl.textContent = msg; errorEl.classList.remove('hidden'); } valid = false; }
+        else { if (errorEl) errorEl.classList.add('hidden'); }
+      });
+      if (!valid) return;
+
+      const fullName = document.getElementById('fullName').value.trim();
+      const username = document.getElementById('username').value.trim();
+      const usernameLower = username.toLowerCase();
+      const phone = document.getElementById('phone').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const referrerUsername = document.getElementById('referrer').value.trim();
+      const heardAbout = document.getElementById('heardAbout').value;
+
+      // UI: disable and show loader
+      submitBtn.disabled = true;
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Checking...';
+      loader.classList.add('active');
+
+      try {
+        // 1) username uniqueness
+        let exists = false;
+        const snapLower = await db.collection('users').where('usernameLower','==',usernameLower).limit(1).get();
+        if (!snapLower.empty) exists = true;
+        const snapExact = await db.collection('users').where('username','==',username).limit(1).get();
+        if (!snapExact.empty) exists = true;
+
+        if (exists) {
+          alert('❌ Username already taken. Please choose a different one.');
+          loader.classList.remove('active');
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+          return;
+        }
+
+        // 2) phone uniqueness
+        const phoneSnap = await db.collection('users').where('phone','==',phone).limit(1).get();
+        if (!phoneSnap.empty) {
+          alert('❌ Phone number already registered. Please login or use another.');
+          loader.classList.remove('active');
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+          return;
+        }
+
+        submitBtn.textContent = 'Creating account...';
+
+        // 3) create auth user
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const userId = userCredential.user.uid;
+
+        // 4) generate OTP & save user doc
+        const otp = genOtp();
+        const now = Date.now();
+        const userData = {
+          fullName,
+          username,
+          usernameLower,
+          phone,
+          email,
+          balance: 0,
+          referrer: referrerUsername || null,
+          heardAbout,
+          verified: false,
+          otp,
+          otpExpires: now + (10 * 60 * 1000), // 10 minutes
+          lastOtpSentAt: now,
+          joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        await db.collection('users').doc(userId).set(userData);
+
+        // 5) send OTP via EmailJS (best-effort)
+        emailjs.send(EMAILJS_SERVICE_ID, TEMPLATE_VERIFY, {
+          to_email: email,
+          otp: otp,
+          name: fullName
+        }).catch((err) => {
+          console.warn('EmailJS send failed', err);
+        });
+
+        // 6) redirect to verification page
+        window.location.href = `verify.html?uid=${encodeURIComponent(userId)}&email=${encodeURIComponent(email)}`;
+
+      } catch (error) {
+        console.error('Signup error', error);
+        let msg = 'Signup failed. Please try again.';
+        if (error && error.code === 'auth/email-already-in-use') msg = '❌ Email already registered. Please login instead.';
+        else if (error && error.code === 'auth/invalid-email') msg = '❌ Invalid email address.';
+        else if (error && error.code === 'auth/weak-password') msg = '❌ Password too weak. Use at least 6 characters.';
+
+        alert(msg);
+        loader.classList.remove('active');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
       }
     });
+
+    /*********************
+     * INITIALIZE UI ICONS (ensure feather icons show)
+     *********************/
+    // already called on DOMContentLoaded above; call again after a small delay to ensure dynamic icons replaced
+    setTimeout(() => { if (window.feather) feather.replace(); }, 120);
+
   </script>
+
 </body>
 </html>
