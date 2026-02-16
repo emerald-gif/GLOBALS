@@ -11,100 +11,58 @@
     .fade-in { animation: fadeIn .9s ease-in-out; }    
     @keyframes fadeIn { from { opacity: 0; transform: translateY(18px);} to { opacity:1; transform: translateY(0);} }    
     .glass { background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); }    
-    .error-text { font-size:.85rem; color:#dc2626; margin-top:6px; }
 
-    /* --- FINTECH LOADER STYLES --- */
-    #global-app-loader {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      background: rgba(255, 255, 255, 0.8);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      transition: opacity 0.4s ease;
-    }
-    
-    .loader-container {
+    /* --- MINIMALIST BUTTON LOADER --- */
+    .btn-loading {
       position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      color: transparent !important;
+      pointer-events: none;
     }
-
-    .loader-ring {
-      width: 110px;
-      height: 110px;
-      border: 4px solid #f3f4f6;
-      border-top: 4px solid #2563eb; 
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    .loader-logo {
+    .btn-loading::after {
+      content: "";
       position: absolute;
-      width: 70px;
-      height: 70px;
-      border-radius: 20px; 
-      object-fit: cover;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      width: 22px;
+      height: 22px;
+      top: 50%;
+      left: 50%;
+      margin: -11px 0 0 -11px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: button-spin 0.6s linear infinite;
     }
+    @keyframes button-spin { to { transform: rotate(360deg); } }
 
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* --- LATEST UIUX TOGGLE STYLE --- */
-    .eye-toggle-btn {
-      transition: all 0.2s ease-in-out;
-      padding: 8px;
-      margin-right: 4px;
-    }
-    .eye-toggle-btn:hover { color: #2563eb; transform: scale(1.1); }
-    .eye-toggle-btn:active { transform: scale(0.9); }
+    /* --- MODERN EYE TOGGLE --- */
+    .eye-btn { transition: all 0.2s; color: #9ca3af; padding: 8px; }
+    .eye-btn.active { color: #2563eb; transform: scale(1.1); }
   </style>    
 </head>    
 <body class="bg-gradient-to-br from-blue-100 to-blue-300 min-h-screen flex items-center justify-center p-4">
 
-  <div id="global-app-loader">
-    <div class="loader-container">
-      <div class="loader-ring"></div>
-      <img src="GLOBALS.jpg" class="loader-logo">
-    </div>
-    <p class="mt-6 font-semibold text-gray-800 tracking-wide animate-pulse">Securing Connection...</p>
-  </div>
-
   <div class="w-full max-w-md mx-auto p-6 rounded-2xl shadow-xl glass fade-in">    
     <div class="flex justify-center mb-4">    
-      <img src="GLOBALS.jpg" alt="Globals Logo" class="h-14 w-auto rounded-lg shadow-sm">    
+      <img src="GLOBALS.jpg" alt="Logo" class="h-14 w-auto rounded-lg">    
     </div>  
-    <h2 class="text-2xl font-bold text-center text-blue-800 mb-6">Welcome Back 👋</h2>    
+    <h2 class="text-2xl font-bold text-center text-blue-800 mb-6">Welcome Back</h2>    
+    
     <form id="loginForm" class="space-y-4">    
-      <div>    
-        <input id="loginEmail" type="email" placeholder="Email" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500" required>    
-        <p id="loginEmailError" class="error-text hidden">Please enter a valid email</p>    
-      </div>      
+      <input id="loginEmail" type="email" placeholder="Email" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" required>    
       
-      <div class="relative group">    
-        <input id="loginPassword" type="password" placeholder="Password" class="w-full px-4 pr-12 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 transition-all duration-200" required>    
-        <button type="button" id="loginTogglePassword" class="eye-toggle-btn absolute inset-y-0 right-0 flex items-center text-gray-400" aria-label="toggle password">    
+      <div class="relative">    
+        <input id="loginPassword" type="password" placeholder="Password" class="w-full px-4 pr-12 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" required>    
+        <button type="button" id="loginTogglePassword" class="eye-btn absolute inset-y-0 right-1 flex items-center">    
           <i data-lucide="eye-off" class="w-5 h-5"></i>    
         </button>    
-        <p id="loginPasswordError" class="error-text hidden">Password cannot be empty</p>    
       </div>      
-      
-      <div class="text-right">    
-        <a href="forgot-password.html" class="text-sm text-blue-600 hover:underline">Forgot password?</a>    
-      </div>    
      
-      <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold text-lg flex items-center justify-center transition-all duration-300 transform active:scale-95">
-        <span id="loginBtnText">Login</span>
+      <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold text-lg transition-all transform active:scale-95">
+        Login
       </button>
-      
     </form>    
-    <p class="mt-4 text-center text-sm text-gray-600">    
-      Don’t have an account? <a href="signup.html" class="text-blue-600 hover:underline font-medium">Register here</a>    
+
+    <p class="mt-6 text-center text-sm text-gray-600">    
+      New here? <a href="signup.html" class="text-blue-600 hover:underline font-medium">Create Account</a>    
     </p>    
   </div>    
 
@@ -113,85 +71,43 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>    
 
   <script>    
-    const firebaseConfig = {    
-      apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",    
-      authDomain: "globals-17bf7.firebaseapp.com",    
-      projectId: "globals-17bf7",    
-      storageBucket: "globals-17bf7.appspot.com",    
-      messagingSenderId: "603274362994",    
-      appId: "1:603274362994:web:c312c10cf0a42938e882eb"    
-    };    
-    firebase.initializeApp(firebaseConfig);    
-    const auth = firebase.auth();    
-    const db = firebase.firestore();   
-  </script>    
+    const firebaseConfig = { apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c", authDomain: "globals-17bf7.firebaseapp.com", projectId: "globals-17bf7", storageBucket: "globals-17bf7.appspot.com", messagingSenderId: "603274362994", appId: "1:603274362994:web:c312c10cf0a42938e882eb" };    
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
-  <script>    
-document.addEventListener('DOMContentLoaded', () => {    
-  if (window.lucide) lucide.createIcons();    
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
 
-  const loginForm = document.getElementById('loginForm');    
-  const loader = document.getElementById('global-app-loader');
+      const loginBtn = document.getElementById('loginBtn');
+      const loginPassword = document.getElementById('loginPassword');
+      const toggleBtn = document.getElementById('loginTogglePassword');
 
-  const toggleLoader = (show) => {
-    loader.style.display = show ? 'flex' : 'none';
-  };
+      // 1. Interactive Eye Toggle
+      toggleBtn.addEventListener('click', () => {
+        const isShowing = loginPassword.type === 'text';
+        loginPassword.type = isShowing ? 'password' : 'text';
+        toggleBtn.classList.toggle('active', !isShowing);
+        toggleBtn.innerHTML = `<i data-lucide="${isShowing ? 'eye-off' : 'eye'}" class="w-5 h-5"></i>`;
+        lucide.createIcons();
+      });
 
-  // Improved Eye Toggle Logic
-  const loginTogglePassword = document.getElementById('loginTogglePassword');
-  const loginPassword = document.getElementById('loginPassword');
+      // 2. Submit with Inline Maneuver
+      document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        loginBtn.classList.add('btn-loading');
 
-  loginTogglePassword.addEventListener('click', () => {    
-    const isShowing = loginPassword.type === 'text';    
-    
-    // Toggle type
-    loginPassword.type = isShowing ? 'password' : 'text';    
-    
-    // Update Icon and Color for that "active" feel
-    if (isShowing) {
-      loginTogglePassword.innerHTML = '<i data-lucide="eye-off" class="w-5 h-5"></i>';
-      loginTogglePassword.classList.replace('text-blue-600', 'text-gray-400');
-    } else {
-      loginTogglePassword.innerHTML = '<i data-lucide="eye" class="w-5 h-5"></i>';
-      loginTogglePassword.classList.replace('text-gray-400', 'text-blue-600');
-    }
-    
-    // Re-render the Lucide icon
-    lucide.createIcons();    
-  });
-
-  // Login Form Submission
-  loginForm.addEventListener('submit', async (e) => {    
-    e.preventDefault();    
-    const email = document.getElementById('loginEmail').value.trim();    
-    const password = loginPassword.value;    
-
-    toggleLoader(true);
-
-    try {    
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const userCred = await auth.signInWithEmailAndPassword(email, password);    
-      const uid = userCred.user.uid;    
-      const doc = await db.collection("users").doc(uid).get();    
-      
-      if (!doc.exists) {    
-        toggleLoader(false);
-        alert("❌ User record not found.");    
-        return;
-      }    
-
-      const data = doc.data();    
-      if (!data.verified) {    
-        window.location.href = `verify.html?uid=${uid}&email=${encodeURIComponent(data.email)}`;    
-      } else {    
-        window.location.href = 'dashboard.html';    
-      }    
-    } catch (err) {    
-      toggleLoader(false);
-      alert('❌ Login failed: ' + err.message);    
-    }    
-  });    
-});    
-</script>
+        try {
+          const email = document.getElementById('loginEmail').value.trim();
+          await new Promise(r => setTimeout(r, 800)); // Minimal feel
+          await auth.signInWithEmailAndPassword(email, loginPassword.value);
+          window.location.href = 'dashboard.html';
+        } catch (err) {
+          loginBtn.classList.remove('btn-loading');
+          alert("❌ " + err.message);
+        }
+      });
+    });
+  </script>
 </body>
 </html>
