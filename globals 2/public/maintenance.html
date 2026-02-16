@@ -140,14 +140,19 @@ svg { width: 50px; height: 50px; fill: var(--primary); }
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 <script>
-  // 🔹 Use your Firebase config
-  const firebaseConfig = {
-      apiKey: "YOUR_KEY",
-      authDomain: "YOUR_DOMAIN",
-      projectId: "YOUR_PROJECT_ID"
-  };
-  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+// Firebase config & inits
+const firebaseConfig = {
+  apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
+  authDomain: "globals-17bf7.firebaseapp.com",
+  projectId: "globals-17bf7",
+  storageBucket: "globals-17bf7.appspot.com",
+  messagingSenderId: "603274362994",
+  appId: "1:603274362994:web:c312c10cf0a42938e882eb"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore(); 
 
   // 🔹 Real-time maintenance control
   db.collection("system").doc("config").onSnapshot(doc => {
@@ -170,3 +175,4 @@ svg { width: 50px; height: 50px; fill: var(--primary); }
 
 </body>
 </html>
+
