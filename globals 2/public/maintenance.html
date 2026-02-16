@@ -17,96 +17,70 @@
 * { box-sizing: border-box; }
 
 body {
-    margin: 0;
-    padding: 0;
-    font-family: 'Inter', sans-serif;
-    background-color: var(--background);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    color: var(--text-main);
+    margin:0;
+    padding:0;
+    font-family:'Inter',sans-serif;
+    background: var(--background);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    color:var(--text-main);
 }
 
 .main-card {
     background: var(--surface);
-    width: 100%;
-    max-width: 480px;
-    padding: 40px;
-    border-radius: 24px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-    margin: 20px;
+    width:100%;
+    max-width:480px;
+    padding:40px;
+    border-radius:24px;
+    box-shadow:0 4px 20px rgba(0,0,0,0.05);
+    text-align:center;
+    position:relative;
+    overflow:hidden;
+    margin:20px;
 }
 
-.brand-header { margin-bottom: 30px; display: inline-block; }
+.brand-header { margin-bottom:30px; display:inline-block; }
 .brand-text {
-    font-size: 22px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    color: var(--primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+    font-size:22px; font-weight:800; letter-spacing:-0.5px; color:var(--primary);
+    display:flex; align-items:center; justify-content:center; gap:8px;
 }
 
 .icon-container {
-    width: 120px;
-    height: 120px;
-    background: #e8f0fe;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 25px;
-    position: relative;
+    width:120px; height:120px; background:#e8f0fe; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; margin:0 auto 25px; position:relative;
 }
 .pulse-ring {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    border: 2px solid var(--primary);
-    opacity: 0;
-    animation: pulse 2s infinite;
+    position:absolute; width:100%; height:100%; border-radius:50%; border:2px solid var(--primary);
+    opacity:0; animation:pulse 2s infinite;
 }
-@keyframes pulse {
-    0% { transform: scale(1); opacity: 0.5; }
-    100% { transform: scale(1.4); opacity: 0; }
-}
+@keyframes pulse { 0%{transform:scale(1);opacity:0.5;} 100%{transform:scale(1.4);opacity:0;} }
 
-h1 { font-size: 24px; font-weight: 700; margin: 0 0 12px 0; color: var(--text-main);}
-p { font-size: 15px; line-height: 1.6; color: var(--text-sub); margin: 0 0 30px 0;}
+h1 { font-size:24px;font-weight:700;margin:0 0 12px 0;color:var(--text-main); }
+p { font-size:15px; line-height:1.6; color:var(--text-sub); margin:0 0 30px 0; }
 
 .security-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: #e6f4ea; color: #137333;
-    padding: 6px 12px; border-radius: 100px;
-    font-size: 12px; font-weight: 600; margin-bottom: 20px;
+    display:inline-flex; align-items:center; gap:6px;
+    background:#e6f4ea; color:#137333; padding:6px 12px; border-radius:100px;
+    font-size:12px; font-weight:600; margin-bottom:20px;
 }
 
-.loader-track { width: 100%; height: 4px; background: #f2f2f2; border-radius: 10px; overflow: hidden; position: relative;}
-.loader-fill { position: absolute; left: 0; top: 0; height: 100%; width: 40%; background: var(--primary); border-radius: 10px; animation: slide 1.5s infinite ease-in-out;}
-@keyframes slide { 0% { left: -40%; } 100% { left: 100%; } }
+.loader-track { width:100%; height:4px; background:#f2f2f2; border-radius:10px; overflow:hidden; position:relative; }
+.loader-fill { position:absolute; left:0; top:0; height:100%; width:40%; background:var(--primary);
+    border-radius:10px; animation:slide 1.5s infinite ease-in-out;
+}
+@keyframes slide { 0%{left:-40%;} 100%{left:100%;} }
 
-.footer-info { margin-top: 30px; font-size: 12px; color: #8e918f; }
-
-svg { width: 50px; height: 50px; fill: var(--primary); }
+.footer-info { margin-top:30px; font-size:12px; color:#8e918f; }
+svg { width:50px; height:50px; fill:var(--primary); }
 </style>
 </head>
 <body>
 
 <div class="main-card">
     <div class="brand-header">
-        <div class="brand-text">
-            <svg style="width:24px;height:24px;" viewBox="0 0 24 24">
-                <path d="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M16.59,12L10,5.41L8.59,6.83L13.76,12L8.59,17.17L10,18.59L16.59,12Z"/>
-            </svg>
-            GLOBALS
-        </div>
+        <div class="brand-text">GLOBALS</div>
     </div>
 
     <div class="icon-container">
@@ -116,58 +90,45 @@ svg { width: 50px; height: 50px; fill: var(--primary); }
         </svg>
     </div>
 
-    <div class="security-badge">
-        <svg style="width:14px;height:14px;" viewBox="0 0 24 24">
-            <path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,11.99H7V10.99H17V11.99H12Z"/>
-        </svg>
-        Funds & Data Secured
-    </div>
+    <div class="security-badge">Funds & Data Secured</div>
 
     <h1>We're making Globals better</h1>
     <p>We are currently updating our servers to bring you faster withdrawals and new tasks. The app will be back shortly.</p>
 
-    <div class="loader-track">
-        <div class="loader-fill"></div>
-    </div>
+    <div class="loader-track"><div class="loader-fill"></div></div>
 
     <div class="footer-info">
         Globals Platform Inc. &copy; 2026<br>
-        Need urgent help? <a href="mailto:support@globals.com" style="color:var(--primary); text-decoration:none;">Contact Support</a>
+        Need urgent help? <a href="mailto: globalsplatform@gmail.com" style="color:var(--primary); text-decoration:none;">Contact Support</a>
     </div>
 </div>
 
-<!-- Firebase Scripts -->
+<!-- Firebase + Maintenance Check -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 <script>
-// Firebase config & inits
-const firebaseConfig = {
-  apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
-  authDomain: "globals-17bf7.firebaseapp.com",
-  projectId: "globals-17bf7",
-  storageBucket: "globals-17bf7.appspot.com",
-  messagingSenderId: "603274362994",
-  appId: "1:603274362994:web:c312c10cf0a42938e882eb"
-};
+  // Firebase Config
+  const firebaseConfig = {
+    apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
+    authDomain: "globals-17bf7.firebaseapp.com",
+    projectId: "globals-17bf7",
+    storageBucket: "globals-17bf7.appspot.com",
+    messagingSenderId: "603274362994",
+    appId: "1:603274362994:web:c312c10cf0a42938e882eb"
+  };
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore(); 
+  // Initialize Firebase only if not already initialized
+  if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+  }
 
-  // 🔹 Real-time maintenance control
-  db.collection("system").doc("config").onSnapshot(doc => {
-      if (!doc.exists) return;
-      const maintenanceMode = doc.data().maintenanceMode;
+  const auth = firebase.auth();
+  const db = firebase.firestore();
 
-      const urlParams = new URLSearchParams(window.location.search);
-      const isCEO = urlParams.get('admin');
-      const ceoSession = sessionStorage.getItem('ceo_access');
-
-      if (isCEO === 'true') sessionStorage.setItem('ceo_access','granted');
-      const isAdmin = (isCEO==='true'||ceoSession==='granted');
-
-      // Leave maintenance page if mode is OFF
-      if (maintenanceMode===false && !isAdmin) {
+  // Redirect to index.html if maintenanceMode is OFF
+  db.collection("system").doc("config").get().then(doc => {
+      if (doc.exists && doc.data().maintenanceMode === false) {
           window.location.replace("index.html");
       }
   });
@@ -175,4 +136,3 @@ const db = firebase.firestore();
 
 </body>
 </html>
-
