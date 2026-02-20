@@ -19,45 +19,65 @@
     .status-available { color: #059669; } /* green */
     .status-taken { color: #ef4444; }     /* red */
 
-    /* ===== Premium Loader ===== */
-    #globalsLoader {
-      background: #ffffff;
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity .36s ease, visibility .36s ease;
-    }
-    #globalsLoader.active {
-      opacity: 1;
-      visibility: visible;
-    }
-    .loader-circle {
-      width: 140px;
-      height: 140px;
-      border-radius: 50%;
-      background: rgba(37, 99, 235, 0.08);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      animation: breathe 1.8s ease-in-out infinite;
-      box-shadow: 0 8px 24px rgba(2,6,23,0.06);
-    }
-    .loader-logo {
-      width: 75px;
-      height: 75px;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-    @keyframes breathe {
-      0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(37,99,235,0.4); }
-      50% { transform: scale(1.08); box-shadow: 0 0 0 28px rgba(37,99,235,0); }
-      100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(37,99,235,0); }
-    }
+/* ===== Focused Glass Overlay Loader (Modern Standard) ===== */
+#globalsLoader {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-    /* Small responsive adjustments */
-    @media (max-width:420px) {
-      .loader-circle { width:120px; height:120px; }
-      .loader-logo { width:62px; height:62px; }
-    }
+  background: rgba(15, 23, 42, 0.35); /* subtle dark overlay */
+  backdrop-filter: blur(6px);
+
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .3s ease, visibility .3s ease;
+
+  z-index: 50;
+}
+
+#globalsLoader.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Smaller breathing circle */
+.loader-circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #ffffff;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+  animation: breathe 1.6s ease-in-out infinite;
+}
+
+.loader-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+@keyframes breathe {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(37,99,235,0.35);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 14px rgba(37,99,235,0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(37,99,235,0);
+  }
+}
   </style>
 </head>
 <body class="flex items-center justify-center min-h-screen px-4">
@@ -453,3 +473,4 @@
 
 </body>
 </html>
+
