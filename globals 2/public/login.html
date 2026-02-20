@@ -37,12 +37,21 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
   100% { transform: rotate(0deg); }
 }
 
-/* ===== Premium Loader ===== */
+/* ===== Focused Overlay Loader (Modern UI Standard) ===== */
 #globalsLoader {
-  background: #ffffff;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(15, 23, 42, 0.35); /* dark glass overlay */
+  backdrop-filter: blur(6px);
+
   opacity: 0;
   visibility: hidden;
-  transition: opacity .4s ease, visibility .4s ease;
+  transition: opacity .3s ease, visibility .3s ease;
+  z-index: 50;
 }
 
 #globalsLoader.active {
@@ -50,35 +59,38 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
   visibility: visible;
 }
 
+/* Small breathing circle */
 .loader-circle {
-  width: 140px;
-  height: 140px;
+  width: 70px;   /* MUCH smaller */
+  height: 70px;
   border-radius: 50%;
-  background: rgba(37, 99, 235, 0.08);
+  background: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: breathe 1.8s ease-in-out infinite;
+
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  animation: breathe 1.6s ease-in-out infinite;
 }
 
 .loader-logo {
-  width: 75px;
-  height: 75px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   object-fit: cover;
 }
 
 @keyframes breathe {
   0% {
-    transform: scale(0.9);
+    transform: scale(0.95);
     box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
   }
   50% {
     transform: scale(1.08);
-    box-shadow: 0 0 0 28px rgba(37, 99, 235, 0);
+    box-shadow: 0 0 0 12px rgba(37, 99, 235, 0);
   }
   100% {
-    transform: scale(0.9);
+    transform: scale(0.95);
     box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
   }
 }
@@ -275,3 +287,4 @@ loginForm.addEventListener('submit', async (e) => {
 
 </body>
 </html>
+
