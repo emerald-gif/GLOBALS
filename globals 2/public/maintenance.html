@@ -174,12 +174,145 @@ h1{ font-size:22px; font-weight:700; margin:6px 0 10px 0; color:var(--text-main)
   </div>
 </div>
 
-<!-- Firebase + Maintenance Check (unchanged) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Globals | System Upgrade</title>
+<link rel="shortcut icon" href="GLOBALS.jpg" type="image/jpg">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --primary:#0b57d0;
+  --surface:#ffffff;
+  --background:#f0f4f8;
+  --text-main:#1f1f1f;
+  --text-sub:#444746;
+  --muted:#8e918f;
+  --card-glow: rgba(11,87,208,0.08);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; padding:0;
+  font-family:'Inter',sans-serif;
+  background: linear-gradient(180deg, #f7fbff 0%, var(--background) 100%);
+  display:flex; align-items:center; justify-content:center;
+  min-height:100vh; color:var(--text-main);
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+}
+
+/* Card */
+.main-card{
+  background:var(--surface);
+  width:100%; max-width:520px;
+  padding:36px; border-radius:20px;
+  box-shadow: 0 12px 30px rgba(20,30,48,0.06);
+  text-align:center; position:relative; overflow:hidden;
+  margin:20px;
+  border:1px solid rgba(15,23,42,0.03);
+}
+
+/* Top brand */
+.brand-header{ margin-bottom:18px; display:inline-block; }
+.brand-text{
+  font-size:20px; font-weight:800; letter-spacing:-0.4px; color:var(--primary);
+  display:flex; align-items:center; justify-content:center;
+}
+
+/* Hero image */
+.hero-row{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  margin:10px 0 24px 0;
+}
+
+/* Text */
+h1{ font-size:22px; font-weight:700; margin:6px 0 10px 0; color:var(--text-main); }
+.lead{ font-size:15px; line-height:1.6; color:var(--text-sub); margin:0 0 20px 0; }
+
+/* Security badge and loader */
+.security-badge{
+  display:inline-flex; align-items:center; gap:8px; background:#e6f4ea; color:#137333;
+  padding:6px 12px; border-radius:999px; font-size:12px; font-weight:700; margin-bottom:16px;
+}
+.loader-track{ width:100%; height:6px; background:#f2f2f2; border-radius:999px; overflow:hidden; position:relative; margin-top:18px; }
+.loader-fill{ position:absolute; left:0; top:0; height:100%; width:36%; background:var(--primary); border-radius:999px; animation:slide 1.6s infinite ease-in-out; }
+@keyframes slide{0%{left:-40%}100%{left:100%}}
+
+/* Actions */
+.action-links{ margin-top:18px; display:flex; gap:12px; align-items:center; justify-content:center; flex-wrap:wrap; }
+.cta-button{
+  display:inline-flex; align-items:center; gap:10px; background:var(--primary); color:white;
+  padding:10px 16px; border-radius:12px; font-weight:700; text-decoration:none; box-shadow: 0 8px 20px rgba(11,87,208,0.12);
+  transition: transform .14s ease, box-shadow .14s ease;
+}
+.cta-button:hover{ transform:translateY(-3px); box-shadow: 0 14px 30px rgba(11,87,208,0.16); }
+.cta-ghost{
+  display:inline-flex; align-items:center; gap:8px; color:var(--primary); background:transparent; border-radius:12px; padding:10px 12px; font-weight:600; text-decoration:none;
+}
+
+/* Footer */
+.footer-info{ margin-top:22px; font-size:13px; color:var(--muted); line-height:1.4; }
+
+/* Responsive tweaks */
+@media (max-width:420px){
+  .hero-row img{ max-width:100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="main-card" role="main" aria-labelledby="title">
+  <div class="brand-header">
+    <div class="brand-text">GLOBALS</div>
+  </div>
+
+  <!-- Maintenance Illustration -->
+  <div class="hero-row">
+    <img 
+      src="maintenance-illustration.png" 
+      alt="System under maintenance"
+      style="
+        width:100%;
+        max-width:340px;
+        height:auto;
+        border-radius:18px;
+        box-shadow:0 12px 30px rgba(20,30,48,0.08);
+      "
+    />
+  </div>
+
+  <div class="security-badge" role="status">🔒 Funds &amp; Data Secured</div>
+
+  <h1 id="title">We're making Globals better</h1>
+  <p class="lead">We are updating our servers to bring you faster withdrawals and improved tasks. The dashboard is temporarily under maintenance — thanks for your patience.</p>
+
+  <div class="action-links" role="navigation" aria-label="actions while waiting">
+    <a class="cta-button" href="index.html" aria-label="Go to Home Page">
+      Go to Home Page
+    </a>
+
+    <a class="cta-ghost" href="mailto:globalsplatform@gmail.com" aria-label="Contact Support">
+      Contact Support
+    </a>
+  </div>
+
+  <div class="loader-track"><div class="loader-fill"></div></div>
+
+  <div class="footer-info">
+    Globals Platform Inc. &copy; 2026<br>
+    Need urgent help? <a href="mailto:globalsplatform@gmail.com" style="color:var(--primary); text-decoration:none;">globalsplatform@gmail.com</a>
+  </div>
+</div>
+
+<!-- Firebase + Maintenance Check (UNCHANGED) -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 <script>
-  // Firebase Config (same as before)
   const firebaseConfig = {
     apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
     authDomain: "globals-17bf7.firebaseapp.com",
@@ -189,7 +322,6 @@ h1{ font-size:22px; font-weight:700; margin:6px 0 10px 0; color:var(--text-main)
     appId: "1:603274362994:web:c312c10cf0a42938e882eb"
   };
 
-  // Initialize Firebase only if not already initialized
   if (!firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
   }
@@ -197,12 +329,13 @@ h1{ font-size:22px; font-weight:700; margin:6px 0 10px 0; color:var(--text-main)
   const auth = firebase.auth();
   const db = firebase.firestore();
 
-  // Redirect to index.html if maintenanceMode is OFF
   db.collection("system").doc("config").get().then(doc => {
       if (doc.exists && doc.data().maintenanceMode === false) {
           window.location.replace("index.html");
       }
   });
 </script>
+
 </body>
 </html>
+
