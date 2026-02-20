@@ -19,7 +19,7 @@
     .status-available { color: #059669; } /* green */
     .status-taken { color: #ef4444; }     /* red */
 
-/* ===== Focused Glass Overlay Loader (Modern Standard) ===== */
+/* ===== Unified Minimal Focus Loader ===== */
 #globalsLoader {
   position: fixed;
   inset: 0;
@@ -27,14 +27,13 @@
   align-items: center;
   justify-content: center;
 
-  background: rgba(15, 23, 42, 0.35); /* subtle dark overlay */
-  backdrop-filter: blur(6px);
-
+  background: rgba(255,255,255,0.12); /* very subtle */
+  
   opacity: 0;
   visibility: hidden;
-  transition: opacity .3s ease, visibility .3s ease;
+  transition: opacity .25s ease, visibility .25s ease;
 
-  z-index: 50;
+  z-index: 999;
 }
 
 #globalsLoader.active {
@@ -42,10 +41,10 @@
   visibility: visible;
 }
 
-/* Smaller breathing circle */
+/* Small premium breathing circle */
 .loader-circle {
-  width: 72px;
-  height: 72px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: #ffffff;
 
@@ -53,28 +52,28 @@
   align-items: center;
   justify-content: center;
 
-  box-shadow: 0 12px 30px rgba(0,0,0,0.15);
-  animation: breathe 1.6s ease-in-out infinite;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+  animation: breathe 1.5s ease-in-out infinite;
 }
 
 .loader-logo {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   object-fit: cover;
 }
 
 @keyframes breathe {
   0% {
-    transform: scale(0.95);
+    transform: scale(0.96);
     box-shadow: 0 0 0 0 rgba(37,99,235,0.35);
   }
   50% {
     transform: scale(1.08);
-    box-shadow: 0 0 0 14px rgba(37,99,235,0);
+    box-shadow: 0 0 0 10px rgba(37,99,235,0);
   }
   100% {
-    transform: scale(0.95);
+    transform: scale(0.96);
     box-shadow: 0 0 0 0 rgba(37,99,235,0);
   }
 }
@@ -473,4 +472,5 @@
 
 </body>
 </html>
+
 
