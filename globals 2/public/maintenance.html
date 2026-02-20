@@ -1,116 +1,185 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Globals | System Upgrade</title>
 <link rel="shortcut icon" href="GLOBALS.jpg" type="image/jpg">
-    
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root {
-    --primary: #0b57d0; 
-    --surface: #ffffff;
-    --background: #f0f4f8;
-    --text-main: #1f1f1f;
-    --text-sub: #444746;
-    --border: #e0e3e7;
+:root{
+  --primary:#0b57d0;
+  --surface:#ffffff;
+  --background:#f0f4f8;
+  --text-main:#1f1f1f;
+  --text-sub:#444746;
+  --muted:#8e918f;
+  --card-glow: rgba(11,87,208,0.08);
 }
-* { box-sizing: border-box; }
-
-body {
-    margin:0;
-    padding:0;
-    font-family:'Inter',sans-serif;
-    background: var(--background);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    min-height:100vh;
-    color:var(--text-main);
+*{box-sizing:border-box}
+body{
+  margin:0; padding:0;
+  font-family:'Inter',sans-serif;
+  background: linear-gradient(180deg, #f7fbff 0%, var(--background) 100%);
+  display:flex; align-items:center; justify-content:center;
+  min-height:100vh; color:var(--text-main);
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
 }
 
-.main-card {
-    background: var(--surface);
-    width:100%;
-    max-width:480px;
-    padding:40px;
-    border-radius:24px;
-    box-shadow:0 4px 20px rgba(0,0,0,0.05);
-    text-align:center;
-    position:relative;
-    overflow:hidden;
-    margin:20px;
+/* Card */
+.main-card{
+  background:var(--surface);
+  width:100%; max-width:520px;
+  padding:36px; border-radius:20px;
+  box-shadow: 0 12px 30px rgba(20,30,48,0.06);
+  text-align:center; position:relative; overflow:hidden;
+  margin:20px;
+  border:1px solid rgba(15,23,42,0.03);
 }
 
-.brand-header { margin-bottom:30px; display:inline-block; }
-.brand-text {
-    font-size:22px; font-weight:800; letter-spacing:-0.5px; color:var(--primary);
-    display:flex; align-items:center; justify-content:center; gap:8px;
+/* Top brand */
+.brand-header{ margin-bottom:18px; display:inline-block; }
+.brand-text{
+  font-size:20px; font-weight:800; letter-spacing:-0.4px; color:var(--primary);
+  display:flex; align-items:center; justify-content:center; gap:10px;
 }
 
-.icon-container {
-    width:120px; height:120px; background:#e8f0fe; border-radius:50%;
-    display:flex; align-items:center; justify-content:center; margin:0 auto 25px; position:relative;
+/* Icon + human illustration row */
+.hero-row{
+  display:flex; gap:18px; align-items:center; justify-content:center;
+  margin:6px 0 22px 0;
 }
-.pulse-ring {
-    position:absolute; width:100%; height:100%; border-radius:50%; border:2px solid var(--primary);
-    opacity:0; animation:pulse 2s infinite;
+.icon-container{
+  width:112px; height:112px; background:#e8f0fe; border-radius:22px;
+  display:flex; align-items:center; justify-content:center; position:relative;
+  box-shadow: 0 6px 18px var(--card-glow);
 }
-@keyframes pulse { 0%{transform:scale(1);opacity:0.5;} 100%{transform:scale(1.4);opacity:0;} }
+.pulse-ring{
+  position:absolute; width:120%; height:120%; border-radius:26px; border:2px solid var(--primary);
+  opacity:0; animation:pulse 2s infinite;
+}
+@keyframes pulse{0%{transform:scale(.98);opacity:.5}100%{transform:scale(1.35);opacity:0}}
 
-h1 { font-size:24px;font-weight:700;margin:0 0 12px 0;color:var(--text-main); }
-p { font-size:15px; line-height:1.6; color:var(--text-sub); margin:0 0 30px 0; }
-
-.security-badge {
-    display:inline-flex; align-items:center; gap:6px;
-    background:#e6f4ea; color:#137333; padding:6px 12px; border-radius:100px;
-    font-size:12px; font-weight:600; margin-bottom:20px;
+/* Human illustration */
+.human-illustration{
+  width:96px; height:112px; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(180deg,#fff,#fbfdff); border-radius:16px; padding:6px;
+  box-shadow: 0 8px 18px rgba(11,87,208,0.06); border:1px solid rgba(11,87,208,0.04);
 }
 
-.loader-track { width:100%; height:4px; background:#f2f2f2; border-radius:10px; overflow:hidden; position:relative; }
-.loader-fill { position:absolute; left:0; top:0; height:100%; width:40%; background:var(--primary);
-    border-radius:10px; animation:slide 1.5s infinite ease-in-out;
-}
-@keyframes slide { 0%{left:-40%;} 100%{left:100%;} }
+/* Text */
+h1{ font-size:22px; font-weight:700; margin:6px 0 10px 0; color:var(--text-main); }
+.lead{ font-size:15px; line-height:1.6; color:var(--text-sub); margin:0 0 20px 0; }
 
-.footer-info { margin-top:30px; font-size:12px; color:#8e918f; }
-svg { width:50px; height:50px; fill:var(--primary); }
+/* Security badge and loader */
+.security-badge{
+  display:inline-flex; align-items:center; gap:8px; background:#e6f4ea; color:#137333;
+  padding:6px 12px; border-radius:999px; font-size:12px; font-weight:700; margin-bottom:16px;
+}
+.loader-track{ width:100%; height:6px; background:#f2f2f2; border-radius:999px; overflow:hidden; position:relative; margin-top:18px; }
+.loader-fill{ position:absolute; left:0; top:0; height:100%; width:36%; background:var(--primary); border-radius:999px; animation:slide 1.6s infinite ease-in-out; }
+@keyframes slide{0%{left:-40%}100%{left:100%}}
+
+/* Actions */
+.action-links{ margin-top:18px; display:flex; gap:12px; align-items:center; justify-content:center; flex-wrap:wrap; }
+.cta-button{
+  display:inline-flex; align-items:center; gap:10px; background:var(--primary); color:white;
+  padding:10px 16px; border-radius:12px; font-weight:700; text-decoration:none; box-shadow: 0 8px 20px rgba(11,87,208,0.12);
+  transition: transform .14s ease, box-shadow .14s ease;
+}
+.cta-button:hover{ transform:translateY(-3px); box-shadow: 0 14px 30px rgba(11,87,208,0.16); }
+.cta-ghost{
+  display:inline-flex; align-items:center; gap:8px; color:var(--primary); background:transparent; border-radius:12px; padding:10px 12px; font-weight:600; text-decoration:none;
+}
+
+/* Footer */
+.footer-info{ margin-top:22px; font-size:13px; color:var(--muted); line-height:1.4; }
+
+/* Responsive tweaks */
+@media (max-width:420px){
+  .hero-row{ flex-direction:column; gap:12px; }
+  .human-illustration{ width:86px; height:98px; }
+  .icon-container{ width:96px; height:96px; border-radius:18px; }
+}
 </style>
 </head>
 <body>
 
-<div class="main-card">
-    <div class="brand-header">
-        <div class="brand-text">GLOBALS</div>
+<div class="main-card" role="main" aria-labelledby="title">
+  <div class="brand-header">
+    <div class="brand-text">GLOBALS</div>
+  </div>
+
+  <div class="hero-row" aria-hidden="false">
+    <div class="icon-container" aria-hidden="true">
+      <div class="pulse-ring" aria-hidden="true"></div>
+      <!-- cloud icon kept as requested earlier -->
+      <svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
+        <path fill="currentColor" d="M19.35 10.04C18.67 6.59 15.64 4 12 4c-2.89 0-5.4 1.64-6.65 4.04C2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
+      </svg>
     </div>
 
-    <div class="icon-container">
-        <div class="pulse-ring"></div>
-        <svg viewBox="0 0 24 24">
-            <path d="M19.35,10.04C18.67,6.59 15.64,4 12,4C9.11,4 6.6,5.64 5.35,8.04C2.34,8.36 0,10.91 0,14C0,17.31 2.69,20 6,20H19C21.76,20 24,17.76 24,15C24,12.36 21.95,10.22 19.35,10.04M19,18H6C3.79,18 2,16.21 2,14C2,11.95 3.53,10.24 5.56,10.03L6.63,9.92L7.13,8.97C8.08,7.14 9.94,6 12,6C14.62,6 16.88,7.86 17.39,10.43L17.69,11.93L19.22,12.04C20.78,12.14 22,13.45 22,15C22,16.65 20.65,18 19,18M8,13H10.55V10H13.45V13H16L12,17L8,13Z"/>
-        </svg>
+    <!-- Friendly human SVG illustration -->
+    <div class="human-illustration" aria-hidden="true">
+      <!-- Simple, friendly "person" SVG -->
+      <svg viewBox="0 0 160 200" width="88" height="104" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Human illustration">
+        <defs>
+          <linearGradient id="g1" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="#f8fbff"/>
+            <stop offset="100%" stop-color="#eef6ff"/>
+          </linearGradient>
+        </defs>
+        <!-- head -->
+        <circle cx="80" cy="44" r="26" fill="#ffd6b3"/>
+        <!-- hair -->
+        <path d="M58 36c6-14 38-18 46 2v6c0 0-36-2-46-8z" fill="#2f2f2f" opacity="0.95"/>
+        <!-- body -->
+        <rect x="40" y="80" rx="18" ry="18" width="80" height="84" fill="url(#g1)"/>
+        <!-- shirt -->
+        <path d="M40 100c12 18 36 22 40 22s28-4 40-22v64H40z" fill="#e8f3ff"/>
+        <!-- collar -->
+        <path d="M64 92c6 6 24 6 30 0" stroke="#d0e7ff" stroke-width="6" stroke-linecap="round" fill="none"/>
+        <!-- subtle shadow -->
+        <ellipse cx="80" cy="176" rx="44" ry="8" fill="rgba(11,87,208,0.06)"/>
+      </svg>
     </div>
+  </div>
 
-    <div class="security-badge">Funds & Data Secured</div>
+  <div class="security-badge" role="status">🔒 Funds &amp; Data Secured</div>
 
-    <h1>We're making Globals better</h1>
-    <p>We are currently updating our servers to bring you faster withdrawals and new tasks. The app will be back shortly.</p>
+  <h1 id="title">We're making Globals better</h1>
+  <p class="lead">We are updating our servers to bring you a faster user dashboard and improved tasks. The dashboard is temporarily under maintenance — thanks for your patience.</p>
 
-    <div class="loader-track"><div class="loader-fill"></div></div>
+  <!-- Improved action area: single clear CTA (home) + lighter contact option -->
+  <div class="action-links" role="navigation" aria-label="actions while waiting">
+    <a class="cta-button" href="index.html" aria-label="Go to Home Page">
+      <!-- small house icon -->
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 11.5L12 4l9 7.5" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M7 21V12h10v9" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Go to Home Page
+    </a>
 
-    <div class="footer-info">
-        Globals Platform Inc. &copy; 2026<br>
-        Need urgent help? <a href="mailto: globalsplatform@gmail.com" style="color:var(--primary); text-decoration:none;">Contact Support</a>
-    </div>
+    <a class="cta-ghost" href="mailto:globalsplatform@gmail.com" aria-label="Contact Support">
+      Contact Support
+    </a>
+  </div>
+
+  <div class="loader-track" aria-hidden="true"><div class="loader-fill"></div></div>
+
+  <div class="footer-info" aria-live="polite">
+    Globals Platform Inc. &copy; 2026<br>
+    Need urgent help? <a href="mailto:globalsplatform@gmail.com" style="color:var(--primary); text-decoration:none;">globalsplatform@gmail.com</a>
+  </div>
 </div>
 
-<!-- Firebase + Maintenance Check -->
+<!-- Firebase + Maintenance Check (unchanged) -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 <script>
-  // Firebase Config
+  // Firebase Config (same as before)
   const firebaseConfig = {
     apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
     authDomain: "globals-17bf7.firebaseapp.com",
@@ -135,7 +204,5 @@ svg { width:50px; height:50px; fill:var(--primary); }
       }
   });
 </script>
-
 </body>
 </html>
-
