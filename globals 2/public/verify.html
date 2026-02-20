@@ -4,232 +4,232 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Verify Account | Globals</title>
-
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <script src="https://unpkg.com/lucide@0.278.0/dist/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
-
   <style>
-    body {
-      background: linear-gradient(135deg,#e0f2fe,#fff);
-      font-family: 'Segoe UI', sans-serif;
+    body { 
+      background: linear-gradient(135deg,#e0f2fe,#fff); 
+      font-family: 'Segoe UI', sans-serif; 
     }
 
-    .glass {
-      background: rgba(255, 255, 255, 0.7);
-      backdrop-filter: blur(15px);
-      border: 1px solid rgba(255,255,255,0.4);
+    /* --- GLASS DESIGN --- */
+    .glass { 
+      background: rgba(255, 255, 255, 0.7); 
+      backdrop-filter: blur(15px); 
+      border: 1px solid rgba(255,255,255,0.4); 
     }
 
-    /* OTP INPUT */
+    /* --- OTP INPUT STYLING --- */
     .otp-input {
       width: 3.5rem;
       height: 4rem;
       text-align:center;
       font-size:1.8rem;
-      font-weight:bold;
+      font-weight: bold;
       border:2px solid #e5e7eb;
       border-radius:0.8rem;
-      transition:all .2s;
-      background:white;
+      transition: all 0.2s;
+      background: white;
     }
-
     .otp-input:focus {
       border-color:#2563eb;
-      box-shadow:0 0 0 4px rgba(37,99,235,0.1);
+      box-shadow: 0 0 0 4px rgba(37,99,235,0.1);
       outline:none;
-      transform:translateY(-2px);
+      transform: translateY(-2px);
+    }
+    .otp-wrap { 
+      display:flex; 
+      gap:0.75rem; 
+      justify-content:center; 
+      align-items:center; 
     }
 
-    .otp-wrap {
-      display:flex;
-      gap:0.75rem;
-      justify-content:center;
-    }
-
-    /* BUTTON SPINNER */
+    /* --- MINIMALIST BUTTON LOADER --- */
     .btn-loading {
-      position:relative;
-      color:transparent !important;
-      pointer-events:none;
+      position: relative;
+      color: transparent !important;
+      pointer-events: none;
     }
-
     .btn-loading::after {
-      content:"";
-      position:absolute;
-      width:22px;
-      height:22px;
-      top:50%;
-      left:50%;
-      margin:-11px 0 0 -11px;
-      border:3px solid rgba(255,255,255,0.3);
-      border-top-color:#fff;
-      border-radius:50%;
-      animation:button-spin .6s linear infinite;
+      content: "";
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      top: 50%;
+      left: 50%;
+      margin: -11px 0 0 -11px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: button-spin 0.6s linear infinite;
+    }
+    @keyframes button-spin { 
+      to { transform: rotate(360deg); } 
     }
 
-    @keyframes button-spin {
-      to { transform:rotate(360deg); }
-    }
-
-    /* ===== GLOBALS OVERLAY LOADER ===== */
-    #globalsLoader {
-      position:fixed;
-      inset:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:rgba(255,255,255,0.12);
-      opacity:0;
-      visibility:hidden;
-      transition:opacity .25s ease, visibility .25s ease;
-      z-index:999;
-    }
-
-    #globalsLoader.active {
-      opacity:1;
-      visibility:visible;
-    }
-
-    .loader-circle {
-      width:60px;
-      height:60px;
-      border-radius:50%;
-      background:#ffffff;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      box-shadow:0 12px 30px rgba(0,0,0,0.12);
-      animation:breathe 1.5s ease-in-out infinite;
-    }
-
-    .loader-logo {
-      width:28px;
-      height:28px;
-      border-radius:50%;
-      object-fit:cover;
-    }
-
-    @keyframes breathe {
-      0% {
-        transform:scale(0.96);
-        box-shadow:0 0 0 0 rgba(37,99,235,0.35);
-      }
-      50% {
-        transform:scale(1.08);
-        box-shadow:0 0 0 10px rgba(37,99,235,0);
-      }
-      100% {
-        transform:scale(0.96);
-        box-shadow:0 0 0 0 rgba(37,99,235,0);
-      }
-    }
-
-    #resendBtn:disabled {
-      opacity:.6;
-      cursor:not-allowed;
+    /* --- RESEND BUTTON PULSE --- */
+    #resendBtn:disabled { 
+      opacity: 0.6; 
+      cursor: not-allowed; 
     }
   </style>
 </head>
-
 <body class="flex items-center justify-center min-h-screen px-4">
-
   <div class="w-full max-w-md glass rounded-3xl shadow-xl p-8 text-center">
     <img src="GLOBALS.jpg" class="mx-auto h-16 w-16 mb-4 rounded-2xl shadow-sm" alt="Logo">
-
     <h2 class="text-2xl font-extrabold text-blue-800">Verify Account</h2>
-    <p class="text-sm text-gray-600 mt-2">
-      We sent a 4-digit code to your email.
-    </p>
+    <p id="desc" class="text-sm text-gray-600 mt-2">We sent a 4-digit code to your email.</p>
 
-    <div class="otp-wrap mt-8">
-      <input maxlength="1" class="otp-input" inputmode="numeric">
-      <input maxlength="1" class="otp-input" inputmode="numeric">
-      <input maxlength="1" class="otp-input" inputmode="numeric">
-      <input maxlength="1" class="otp-input" inputmode="numeric">
+    <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 mt-4 flex items-start space-x-2 text-left">
+      <span class="text-blue-600">📩</span>
+      <p class="text-xs text-blue-800">
+        <strong>Tip:</strong> Check your <strong>Spam</strong> folder if you don't see the email in your inbox.
+      </p>
     </div>
 
-    <button id="verifyBtn"
-      class="w-full mt-8 py-3.5 bg-blue-600 text-white rounded-xl font-bold text-lg shadow-lg hover:bg-blue-700 transition active:scale-95">
+    <div class="otp-wrap mt-8">
+      <input maxlength="1" class="otp-input" id="otp1" inputmode="numeric" placeholder="·">
+      <input maxlength="1" class="otp-input" id="otp2" inputmode="numeric" placeholder="·">
+      <input maxlength="1" class="otp-input" id="otp3" inputmode="numeric" placeholder="·">
+      <input maxlength="1" class="otp-input" id="otp4" inputmode="numeric" placeholder="·">
+    </div>
+
+    <button id="verifyBtn" class="w-full mt-8 py-3.5 bg-blue-600 text-white rounded-xl font-bold text-lg shadow-lg hover:bg-blue-700 transition-all transform active:scale-95">
       Verify Account
     </button>
 
     <div class="mt-6">
       <p class="text-sm text-gray-500">Didn’t receive a code?</p>
-      <button id="resendBtn" class="text-blue-600 font-bold mt-1 hover:underline" disabled>
+      <button id="resendBtn" class="text-blue-600 font-bold mt-1 hover:underline transition-opacity" disabled>
         Resend in <span id="timer">60</span>s
       </button>
     </div>
   </div>
 
-  <!-- GLOBALS OVERLAY LOADER -->
-  <div id="globalsLoader">
-    <div class="loader-circle">
-      <img src="GLOBALS.jpg" class="loader-logo" alt="Globals Logo">
-    </div>
-  </div>
-
-  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
   <script>
     const firebaseConfig = {
-      apiKey: "YOUR_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      projectId: "YOUR_PROJECT_ID",
+      apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
+      authDomain: "globals-17bf7.firebaseapp.com",
+      projectId: "globals-17bf7",
+      storageBucket: "globals-17bf7.appspot.com",
+      messagingSenderId: "603274362994",
+      appId: "1:603274362994:web:c312c10cf0a42938e882eb"
     };
-
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const db = firebase.firestore();
+    emailjs.init("tfc9HSxyhDy5qonKZ");
 
     const params = new URLSearchParams(window.location.search);
     const uid = params.get('uid');
+    const email = params.get('email');
 
+    // --- AUTO-FOCUS LOGIC ---
     const inputs = Array.from(document.querySelectorAll('.otp-input'));
-    const verifyBtn = document.getElementById('verifyBtn');
-    const loader = document.getElementById('globalsLoader');
-
-    inputs.forEach((input,i)=>{
-      input.addEventListener('input',()=>{
+    inputs.forEach((input, i) => {
+      input.addEventListener('input', (e) => {
+        if (e.inputType === "deleteContentBackward") return;
         input.value = input.value.replace(/[^0-9]/g,'');
-        if(input.value && i < inputs.length-1) inputs[i+1].focus();
+        if (input.value && i < inputs.length - 1) inputs[i+1].focus();
       });
-      input.addEventListener('keydown',(e)=>{
-        if(e.key==="Backspace" && !input.value && i>0) inputs[i-1].focus();
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !input.value && i > 0) inputs[i-1].focus();
       });
     });
 
-    verifyBtn.addEventListener('click', async ()=>{
-      const code = inputs.map(i=>i.value).join('');
-      if(code.length!==4) return alert("Enter full 4-digit code");
+    // --- TIMER & RESEND LOGIC ---
+    const resendBtn = document.getElementById('resendBtn');
+    const timerEl = document.getElementById('timer');
+    let countdownInterval;
 
-      verifyBtn.classList.add('btn-loading');
-      loader.classList.add('active');
+    async function initCooldown() {
+      if (!uid) return;
+      const doc = await db.collection('users').doc(uid).get();
+      const last = (doc.exists && doc.data().lastOtpSentAt) ? doc.data().lastOtpSentAt : 0;
+      const remaining = Math.max(0, 60 - Math.floor((Date.now() - last) / 1000));
+      startTimer(remaining);
+    }
 
-      try{
-        const ref = db.collection("users").doc(uid);
-        const snap = await ref.get();
-        const data = snap.data();
+    function startTimer(seconds) {
+      if (countdownInterval) clearInterval(countdownInterval);
+      if (seconds <= 0) {
+        resendBtn.disabled = false;
+        resendBtn.innerHTML = 'Resend New Code';
+        return;
+      }
+      resendBtn.disabled = true;
+      let s = seconds;
+      countdownInterval = setInterval(() => {
+        s--;
+        resendBtn.innerHTML = `Resend in ${s}s`;
+        if (s <= 0) {
+          clearInterval(countdownInterval);
+          resendBtn.disabled = false;
+          resendBtn.innerHTML = 'Resend New Code';
+        }
+      }, 1000);
+    }
 
-        if(code !== data.otp) throw new Error("Invalid code");
-        if(Date.now() > data.otpExpires) throw new Error("Code expired");
+    resendBtn.addEventListener('click', async () => {
+      resendBtn.disabled = true;
+      resendBtn.innerText = 'Sending...';
+      const newOtp = Math.floor(1000 + Math.random()*9000).toString();
+      const now = Date.now();
 
-        await ref.update({
-          verified:true,
-          otp:firebase.firestore.FieldValue.delete(),
-          otpExpires:firebase.firestore.FieldValue.delete()
+      try {
+        await db.collection('users').doc(uid).update({
+          otp: newOtp,
+          otpExpires: now + (10 * 60 * 1000),
+          lastOtpSentAt: now
         });
-
-        window.location.href="dashboard.html";
-
-      }catch(err){
-        verifyBtn.classList.remove('btn-loading');
-        loader.classList.remove('active');
-        alert("❌ " + err.message);
+        await emailjs.send("service_5m7hr4q", "template_4nr76pb", { to_email: email, otp: newOtp });
+        alert('OTP Sent!');
+        startTimer(60);
+      } catch (err) {
+        resendBtn.disabled = false;
+        alert('Failed to resend.');
       }
     });
+
+    // --- VERIFY LOGIC ---
+    const verifyBtn = document.getElementById('verifyBtn');
+    verifyBtn.addEventListener('click', async () => {
+      const code = inputs.map(i => i.value).join('');
+      if (code.length !== 4) return alert('Please enter all 4 digits');
+
+      verifyBtn.classList.add('btn-loading');
+
+      try {
+        const docRef = db.collection('users').doc(uid);
+        const doc = await docRef.get();
+        const data = doc.data();
+
+        if (code !== data.otp) throw new Error('Invalid verification code');
+        if (Date.now() > data.otpExpires) throw new Error('Code expired. Resend a new one.');
+
+        await docRef.update({
+          verified: true,
+          otp: firebase.firestore.FieldValue.delete(),
+          otpExpires: firebase.firestore.FieldValue.delete()
+        });
+
+        // Welcome Email
+        emailjs.send("service_5m7hr4q", "template_u69npjv", { to_email: data.email, name: data.fullName });
+
+        alert('✅ Account Verified!');
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        verifyBtn.classList.remove('btn-loading');
+        alert('❌ ' + err.message);
+      }
+    });
+
+    initCooldown();
   </script>
 </body>
 </html>
