@@ -31,32 +31,7 @@
 
 
 
-<script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-database.js"></script>
 
-<script src="firebase-config.js"></script>
-
-<script>
-    const maintenanceRef = firebase.database().ref('systemSettings/maintenanceMode');
-
-    maintenanceRef.on('value', (snapshot) => {
-        const isMaintenance = snapshot.val();
-        
-        // CEO Bypass check
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('admin') === 'true') {
-            sessionStorage.setItem('ceo_access', 'granted');
-        }
-
-        const hasAccess = sessionStorage.getItem('ceo_access') === 'granted';
-        const isMaintenancePage = window.location.pathname.includes("maintenance.html");
-
-        // The logic: If maintenance is ON and you aren't the CEO, go to maintenance page
-        if (isMaintenance === true && !hasAccess && !isMaintenancePage) {
-            window.location.href = "maintenance.html";
-        }
-    });
-</script>
 
 
 
@@ -192,5 +167,30 @@
 
   <!-- Affiliate JS -->
   <script src="affiliate.js"></script>
+
+
+
+<script>
+
+
+  db.collection("system").doc("config").onSnapshot(doc=>{
+      if(!doc.exists) return;
+      const maintenanceMode = doc.data().maintenanceMode;
+
+      // CEO/admin bypass
+      const urlParams = new URLSearchParams(window.location.search);
+      const isCEO = urlParams.get('admin');
+      const ceoSession = sessionStorage.getItem('ceo_access');
+      if(isCEO === 'true') sessionStorage.setItem('ceo_access','granted');
+      const isAdmin = (isCEO === 'true' || ceoSession==='granted');
+
+      if(maintenanceMode && !isAdmin){
+          window.location.replace("maintenance.html");
+      }
+  });
+</script>
+
+
+	
 </body>
 </html>
