@@ -37,7 +37,7 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
   100% { transform: rotate(0deg); }
 }
 
-/* ===== Focused Overlay Loader (Modern UI Standard) ===== */
+/* ===== Unified Minimal Focus Loader ===== */
 #globalsLoader {
   position: fixed;
   inset: 0;
@@ -45,13 +45,13 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
   align-items: center;
   justify-content: center;
 
-  background: rgba(15, 23, 42, 0.35); /* dark glass overlay */
-  backdrop-filter: blur(6px);
-
+  background: rgba(255,255,255,0.12); /* very subtle */
+  
   opacity: 0;
   visibility: hidden;
-  transition: opacity .3s ease, visibility .3s ease;
-  z-index: 50;
+  transition: opacity .25s ease, visibility .25s ease;
+
+  z-index: 999;
 }
 
 #globalsLoader.active {
@@ -59,39 +59,40 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
   visibility: visible;
 }
 
-/* Small breathing circle */
+/* Small premium breathing circle */
 .loader-circle {
-  width: 70px;   /* MUCH smaller */
-  height: 70px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
-  background: white;
+  background: #ffffff;
+
   display: flex;
   align-items: center;
   justify-content: center;
 
-  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-  animation: breathe 1.6s ease-in-out infinite;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+  animation: breathe 1.5s ease-in-out infinite;
 }
 
 .loader-logo {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   object-fit: cover;
 }
 
 @keyframes breathe {
   0% {
-    transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
+    transform: scale(0.96);
+    box-shadow: 0 0 0 0 rgba(37,99,235,0.35);
   }
   50% {
     transform: scale(1.08);
-    box-shadow: 0 0 0 12px rgba(37, 99, 235, 0);
+    box-shadow: 0 0 0 10px rgba(37,99,235,0);
   }
   100% {
-    transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+    transform: scale(0.96);
+    box-shadow: 0 0 0 0 rgba(37,99,235,0);
   }
 }
 </style>
@@ -287,4 +288,5 @@ loginForm.addEventListener('submit', async (e) => {
 
 </body>
 </html>
+
 
