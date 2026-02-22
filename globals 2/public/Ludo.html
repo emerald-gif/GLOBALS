@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Globals Ludo</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<style>
+:root {
+  --bg: #0a0e1a;
+  --bg2: #111827;
+  --bg3: #1a2235;
+  --card: rgba(255,255,255,0.05);
+  --border: rgba(255,255,255,0.08);
+  --text: #f0f4ff;
+  --muted: #8892a4;
+  --gold: #FFD700;
+  --gold2: #FFA000;
+  --red: #EF4444;
+  --green: #22C55E;
+  --blue: #3B82F6;
+  --yellow: #EAB308;
+  --purple: #8B5CF6;
+  --glow-gold: 0 0 20px rgba(255,215,0,0.3);
+  --glow-red: 0 0 20px rgba(239,68,68,0.4);
+  --glow-green: 0 0 20px rgba(34,197,94,0.4);
+  --glow-blue: 0 0 20px rgba(59,130,246,0.4);
+  --radius: 16px;
+  --font-head: 'Rajdhani', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font-body); }
+
+/* ── SCREENS ── */
+.screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; overflow-y: auto; }
+.screen.active { display: flex; }
+
+/* ── LOADING ── */
+#loading {
+  background: var(--bg);
+  gap: 32px;
+  animation: fadeIn .3s ease;
+}
+.loading-logo {
+  font-family: var(--font-head);
+  font-size: 2.8rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--gold), #FF6B00, var(--gold));
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2s infinite;
+  letter-spacing: 2px;
+}
+.loading-sub { font-size: .9rem; color: var(--muted); letter-spacing: 4px; text-transform: uppercase; }
+.ludo-animated-icon { width: 90px; height: 90px; position: relative; }
+.ludo-animated-icon canvas { border-radius: 16px; box-shadow: var(--glow-gold); }
+.progress-bar { width: 240px; height: 4px; background: var(--bg3); border-radius: 99px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold), #FF6B00); border-radius: 99px; transition: width .1s linear; }
+.progress-pct { font-family: var(--font-head); font-size: 1.1rem; color: var(--gold); font-weight: 600; }
+
+/* ── MAIN SCREEN ── */
+#main {
+  background: var(--bg);
+  padding: 0;
+  overflow-y: auto;
+  justify-content: flex-start;
+}
+.main-inner { width: 100%; max-width: 480px; margin: 0 auto; padding: 0 0 80px; }
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  position: sticky;
+  top: 0;
+  background: rgba(10,14,26,0.95);
+  backdrop-filter: blur(12px);
+  z-index: 10;
+  border-bottom: 1px solid var(--border);
+}
+.top-brand { font-family: var(--font-head); font-size: 1.4rem; font-weight: 700; background: linear-gradient(135deg,var(--gold),#FF6B00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.top-user { display: flex; align-items: center; gap: 10px; }
+.user-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg,var(--purple),var(--blue)); display: flex; align-items: center; justify-content: center; font-family: var(--font-head); font-weight: 700; font-size: .9rem; color: #fff; }
+.username-text { font-size: .85rem; font-weight: 600; color: var(--text); }
+.top-icons { display: flex; gap: 8px; }
+.icon-btn { width: 36px; height: 36px; border-radius: 10px; background: var(--bg3); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; color: var(--muted); font-size: 1rem; }
+.icon-btn:hover { background: var(--card); color: var(--text); }
+
+.balance-card {
+  margin: 20px 20px 0;
+  background: linear-gradient(135deg, #1a2445, #0f1829);
+  border: 1px solid rgba(255,215,0,0.15);
+  border-radius: var(--radius);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.balance-card::before { content: ''; position: absolute; top: -30%; right: -10%; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,215,0,0.08), transparent 70%); border-radius: 50%; }
+.balance-label { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; }
+.balance-amount { font-family: var(--font-head); font-size: 2.2rem; font-weight: 700; color: var(--gold); line-height: 1; }
+.balance-amount span { font-size: 1rem; color: var(--muted); font-family: var(--font-body); font-weight: 400; margin-right: 4px; }
+.balance-note { font-size: .72rem; color: var(--muted); margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+.balance-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse-dot 2s infinite; }
+
+.section-title { font-family: var(--font-head); font-size: 1rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 3px; padding: 20px 20px 10px; }
+
+.mode-cards { padding: 0 20px; display: flex; flex-direction: column; gap: 14px; }
+.mode-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  cursor: pointer;
+  transition: all .25s;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.mode-card:active { transform: scale(0.98); }
+.mode-card.red-card { border-color: rgba(239,68,68,0.25); }
+.mode-card.blue-card { border-color: rgba(59,130,246,0.25); }
+.mode-card.gold-card { border-color: rgba(255,215,0,0.25); }
+.mode-card::before { content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity .25s; }
+.mode-card.red-card::before { background: linear-gradient(135deg, rgba(239,68,68,0.06), transparent); }
+.mode-card.blue-card::before { background: linear-gradient(135deg, rgba(59,130,246,0.06), transparent); }
+.mode-card.gold-card::before { background: linear-gradient(135deg, rgba(255,215,0,0.06), transparent); }
+.mode-card:hover::before { opacity: 1; }
+.mode-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; flex-shrink: 0; }
+.mode-icon.red-icon { background: linear-gradient(135deg, rgba(239,68,68,0.2), rgba(239,68,68,0.1)); }
+.mode-icon.blue-icon { background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(59,130,246,0.1)); }
+.mode-icon.gold-icon { background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.1)); }
+.mode-info { flex: 1; }
+.mode-name { font-family: var(--font-head); font-size: 1.2rem; font-weight: 700; margin-bottom: 4px; }
+.mode-desc { font-size: .82rem; color: var(--muted); line-height: 1.4; }
+.mode-badge { font-size: .7rem; font-weight: 700; padding: 3px 10px; border-radius: 99px; text-transform: uppercase; letter-spacing: 1px; }
+.badge-red { background: rgba(239,68,68,0.15); color: var(--red); }
+.badge-blue { background: rgba(59,130,246,0.15); color: var(--blue); }
+.badge-gold { background: rgba(255,215,0,0.15); color: var(--gold); }
+
+.quick-links { display: flex; gap: 10px; padding: 10px 20px; flex-wrap: wrap; }
+.quick-link { flex: 1; min-width: 120px; background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; cursor: pointer; font-size: .82rem; color: var(--muted); transition: all .2s; display: flex; align-items: center; gap: 8px; }
+.quick-link:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+
+/* ── MODAL BASE ── */
+.modal { position: fixed; inset: 0; display: none; align-items: flex-end; justify-content: center; z-index: 100; background: rgba(0,0,0,0); transition: background .25s; }
+.modal.open { display: flex; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
+.modal-sheet {
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg2);
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  padding: 0 0 40px;
+  max-height: 92vh;
+  overflow-y: auto;
+  animation: slideUp .3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 99px; margin: 12px auto 0; }
+.modal-title { font-family: var(--font-head); font-size: 1.5rem; font-weight: 700; padding: 20px 24px 6px; }
+.modal-subtitle { font-size: .85rem; color: var(--muted); padding: 0 24px 20px; }
+.modal-body { padding: 0 24px; }
+.modal-close { position: absolute; top: 16px; right: 20px; width: 32px; height: 32px; border-radius: 50%; background: var(--bg3); border: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: .9rem; }
+
+/* ── FORM ELEMENTS ── */
+.form-group { margin-bottom: 16px; }
+.form-label { font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; display: block; }
+.form-input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  transition: border-color .2s;
+  outline: none;
+  letter-spacing: 2px;
+}
+.form-input:focus { border-color: var(--gold); }
+.form-input::placeholder { color: var(--muted); letter-spacing: 0; }
+
+/* ── BUTTONS ── */
+.btn { width: 100%; padding: 15px; border-radius: 14px; border: none; font-family: var(--font-head); font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all .2s; letter-spacing: 1px; text-transform: uppercase; }
+.btn-gold { background: linear-gradient(135deg, var(--gold), var(--gold2)); color: #1a0f00; box-shadow: 0 4px 20px rgba(255,215,0,0.3); }
+.btn-gold:hover { box-shadow: 0 6px 30px rgba(255,215,0,0.5); transform: translateY(-1px); }
+.btn-gold:active { transform: translateY(0); }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+.btn-outline:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
+.btn-red { background: linear-gradient(135deg, var(--red), #B91C1C); color: #fff; box-shadow: 0 4px 20px rgba(239,68,68,0.3); }
+.btn-green { background: linear-gradient(135deg, var(--green), #15803D); color: #fff; box-shadow: 0 4px 20px rgba(34,197,94,0.3); }
+.btn-blue { background: linear-gradient(135deg, var(--blue), #1D4ED8); color: #fff; box-shadow: 0 4px 20px rgba(59,130,246,0.3); }
+.btn + .btn { margin-top: 10px; }
+.btn-sm { padding: 10px 20px; font-size: .85rem; width: auto; }
+
+/* ── DIFFICULTY / OPTION GRID ── */
+.option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.option-item {
+  background: var(--bg3);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all .2s;
+  text-align: center;
+}
+.option-item.selected { border-color: var(--gold); background: rgba(255,215,0,0.08); }
+.option-item-icon { font-size: 1.5rem; margin-bottom: 6px; }
+.option-item-label { font-family: var(--font-head); font-size: .95rem; font-weight: 600; }
+.option-item-desc { font-size: .72rem; color: var(--muted); margin-top: 2px; }
+
+/* ── BET CARDS ── */
+.bet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.bet-card {
+  background: var(--bg3);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+  overflow: hidden;
+}
+.bet-card.selected { border-color: var(--gold); }
+.bet-card::before { content:''; position:absolute; inset:0; background: linear-gradient(135deg,rgba(255,215,0,0.05),transparent); opacity:0; transition:.2s; }
+.bet-card.selected::before { opacity:1; }
+.bet-stake { font-family: var(--font-head); font-size: 1.3rem; font-weight: 700; color: var(--text); }
+.bet-stake span { font-size: .75rem; color: var(--muted); font-family: var(--font-body); font-weight: 400; }
+.bet-win { font-size: .8rem; color: var(--green); margin-top: 4px; font-weight: 500; }
+.bet-arrow { position: absolute; top: 12px; right: 12px; font-size: .7rem; color: var(--muted); }
+
+/* ── GAME SCREEN ── */
+#game {
+  background: var(--bg);
+  padding: 0;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+.game-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(10,14,26,0.95);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  z-index: 5;
+  flex-shrink: 0;
+}
+.game-header-left { display: flex; align-items: center; gap: 10px; }
+.game-back { font-size: 1.2rem; color: var(--muted); cursor: pointer; padding: 4px; }
+.game-title { font-family: var(--font-head); font-size: 1.1rem; font-weight: 700; }
+.game-mode-badge { font-size: .7rem; padding: 3px 10px; border-radius: 99px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+.player-panels {
+  display: flex;
+  padding: 10px 12px;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.player-panel {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  position: relative;
+  transition: all .3s;
+}
+.player-panel.active-turn { border-color: var(--gold); box-shadow: var(--glow-gold); }
+.player-panel.p-red { border-left: 3px solid var(--red); }
+.player-panel.p-green { border-left: 3px solid var(--green); }
+.pp-name { font-size: .75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.pp-score { font-family: var(--font-head); font-size: 1.1rem; font-weight: 700; margin-top: 2px; }
+.pp-timer { font-family: var(--font-head); font-size: 1.4rem; font-weight: 700; color: var(--gold); position: absolute; right: 12px; top: 50%; transform: translateY(-50%); }
+.pp-timer.urgent { color: var(--red); animation: blink .5s infinite; }
+
+.board-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  overflow: hidden;
+}
+#gameCanvas {
+  border-radius: 12px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+  cursor: pointer;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.game-controls {
+  padding: 10px 16px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.dice-area {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+#diceCanvas { border-radius: 10px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4); transition: transform .1s; }
+#diceCanvas:hover { transform: scale(1.05); }
+.dice-label { font-size: .72rem; color: var(--muted); text-align: center; margin-top: 2px; }
+.game-actions { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.action-btn { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; cursor: pointer; color: var(--text); font-family: var(--font-body); font-size: .82rem; transition: all .2s; font-weight: 500; text-align: left; display: flex; align-items: center; gap: 8px; }
+.action-btn:hover { border-color: rgba(255,255,255,0.2); }
+#rollBtn { background: linear-gradient(135deg, var(--gold), var(--gold2)); color: #1a0f00; border: none; font-family: var(--font-head); font-size: 1rem; font-weight: 700; letter-spacing: 1px; }
+#rollBtn:disabled { background: var(--bg3); color: var(--muted); border: 1px solid var(--border); cursor: not-allowed; box-shadow: none; }
+.turn-msg { font-size: .8rem; color: var(--muted); text-align: center; padding: 2px 0; }
+
+/* ── WIN SCREEN ── */
+#winScreen {
+  background: radial-gradient(ellipse at center, #1a2a0a, var(--bg));
+  z-index: 200;
+}
+.win-content { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 20px; }
+.win-svg-wrap { animation: popIn .6s cubic-bezier(0.34,1.56,0.64,1); }
+.win-title { font-family: var(--font-head); font-size: 2.5rem; font-weight: 700; background: linear-gradient(135deg, var(--gold), #FF6B00, var(--gold)); background-size: 200% 200%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: shimmer 2s infinite; letter-spacing: 3px; }
+.win-subtitle { color: var(--muted); font-size: 1rem; }
+.win-amount { font-family: var(--font-head); font-size: 2rem; font-weight: 700; color: var(--green); }
+.win-amount span { font-size: 1rem; color: var(--muted); font-family: var(--font-body); font-weight: 400; }
+.confetti-container { position: fixed; inset: 0; pointer-events: none; z-index: 199; overflow: hidden; }
+
+/* ── MATCHMAKING ── */
+#matchmakingModal { align-items: center; }
+.match-box { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px 28px; text-align: center; max-width: 340px; width: 90%; animation: fadeIn .3s ease; }
+.match-spinner { width: 60px; height: 60px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--gold); animation: spin 1s linear infinite; margin: 0 auto 20px; }
+.match-title { font-family: var(--font-head); font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; }
+.match-desc { font-size: .85rem; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+.match-stake { font-family: var(--font-head); font-size: 1.2rem; color: var(--gold); }
+
+/* ── SETTINGS ── */
+.settings-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.settings-row:last-child { border-bottom: none; }
+.settings-row-label { font-size: .95rem; font-weight: 500; }
+.settings-row-desc { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+.toggle { width: 48px; height: 26px; background: var(--bg3); border-radius: 99px; position: relative; cursor: pointer; transition: background .2s; border: 1px solid var(--border); }
+.toggle.on { background: var(--gold); border-color: var(--gold); }
+.toggle-knob { width: 20px; height: 20px; border-radius: 50%; background: #fff; position: absolute; top: 2px; left: 3px; transition: transform .2s; }
+.toggle.on .toggle-knob { transform: translateX(22px); }
+
+/* ── CHAT SUPPORT ── */
+#chatModal .modal-sheet { height: 85vh; display: flex; flex-direction: column; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 10px 20px; display: flex; flex-direction: column; gap: 10px; }
+.chat-msg { max-width: 80%; }
+.chat-msg.ai { align-self: flex-start; }
+.chat-msg.user { align-self: flex-end; }
+.chat-bubble { padding: 10px 14px; border-radius: 14px; font-size: .88rem; line-height: 1.5; }
+.chat-msg.ai .chat-bubble { background: var(--bg3); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.chat-msg.user .chat-bubble { background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,160,0,0.2)); border: 1px solid rgba(255,215,0,0.3); border-bottom-right-radius: 4px; }
+.chat-input-row { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
+.chat-input { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; color: var(--text); font-family: var(--font-body); font-size: .9rem; outline: none; }
+.chat-input:focus { border-color: var(--gold); }
+.chat-send { background: var(--gold); color: #1a0f00; border: none; border-radius: 10px; padding: 10px 14px; cursor: pointer; font-family: var(--font-head); font-weight: 700; font-size: .85rem; }
+
+/* ── TUTORIAL ── */
+.tutorial-step { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; display: flex; gap: 14px; align-items: flex-start; }
+.tutorial-num { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--gold), var(--gold2)); color: #1a0f00; font-family: var(--font-head); font-weight: 700; font-size: .95rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.tutorial-text h4 { font-family: var(--font-head); font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+.tutorial-text p { font-size: .82rem; color: var(--muted); line-height: 1.5; }
+
+/* ── TERMS / PRIVACY ── */
+.legal-section { margin-bottom: 20px; }
+.legal-section h3 { font-family: var(--font-head); font-size: 1rem; font-weight: 700; color: var(--gold); margin-bottom: 8px; }
+.legal-section p { font-size: .82rem; color: var(--muted); line-height: 1.6; }
+.legal-warn { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 10px; padding: 14px; margin: 16px 0; font-size: .82rem; color: var(--red); line-height: 1.5; }
+
+/* ── NO INTERNET MODAL ── */
+#noInternetModal { align-items: center; }
+.no-internet-box { background: var(--bg2); border: 1px solid rgba(239,68,68,0.3); border-radius: var(--radius); padding: 28px; text-align: center; max-width: 300px; width: 90%; }
+.no-internet-icon { font-size: 3rem; margin-bottom: 12px; }
+.no-internet-title { font-family: var(--font-head); font-size: 1.4rem; margin-bottom: 8px; color: var(--red); }
+.no-internet-desc { font-size: .85rem; color: var(--muted); line-height: 1.5; }
+
+/* ── FRIEND ROOM ── */
+.room-code-display {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  margin: 16px 0;
+}
+.room-code { font-family: var(--font-head); font-size: 2.5rem; font-weight: 700; letter-spacing: 12px; color: var(--gold); }
+.room-code-label { font-size: .78rem; color: var(--muted); margin-top: 6px; text-transform: uppercase; letter-spacing: 2px; }
+.room-players { display: flex; gap: 10px; margin: 12px 0; }
+.room-player-slot { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; font-size: .82rem; color: var(--muted); }
+.room-player-slot.filled { border-color: var(--green); color: var(--green); }
+.room-player-slot.filled .slot-icon { color: var(--green); }
+
+/* ── DIVIDER ── */
+.divider { height: 1px; background: var(--border); margin: 16px 0; position: relative; }
+.divider-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg2); padding: 0 12px; font-size: .75rem; color: var(--muted); }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+@keyframes slideUp { from { transform: translateY(100%) } to { transform: translateY(0) } }
+@keyframes popIn { from { transform: scale(0); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+@keyframes shimmer { 0%,100% { background-position: 0% 50% } 50% { background-position: 100% 50% } }
+@keyframes spin { to { transform: rotate(360deg) } }
+@keyframes blink { 0%,100% { opacity: 1 } 50% { opacity: 0.3 } }
+@keyframes pulse-dot { 0%,100% { opacity: 1 } 50% { opacity: 0.4 } }
+@keyframes tokenJump { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
+@keyframes confettiDrop { from { transform: translateY(-20px) rotate(0deg); opacity: 1 } to { transform: translateY(100vh) rotate(720deg); opacity: 0 } }
+@keyframes diceRoll { 0% { transform: rotate(0deg) scale(1) } 25% { transform: rotate(15deg) scale(1.1) } 50% { transform: rotate(-15deg) scale(0.9) } 75% { transform: rotate(10deg) scale(1.05) } 100% { transform: rotate(0deg) scale(1) } }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+/* ── NOTIFICATIONS ── */
+.toast {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-size: .88rem;
+  font-weight: 500;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  z-index: 300;
+  opacity: 0;
+  transition: all .3s;
+  text-align: center;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { border-color: rgba(34,197,94,0.4); }
+.toast.error { border-color: rgba(239,68,68,0.4); }
+.toast.warning { border-color: rgba(255,215,0,0.4); }
+
+/* ── INLINE GAME STATUS ── */
+.game-status-bar { padding: 4px 16px; text-align: center; }
+.status-text { font-size: .8rem; color: var(--muted); }
+.status-text.highlight { color: var(--gold); font-weight: 600; }
+
+/* ── RESPONSIVE ── */
+@media (max-height: 700px) {
+  .player-panels { padding: 6px 12px; }
+  .game-controls { padding: 6px 16px; }
+  .pp-name { font-size: .68rem; }
+  .pp-score { font-size: .95rem; }
+}
+@media (min-width: 480px) {
+  .main-inner { padding: 0 0 100px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════ LOADING ═══════════════════════════════════════ -->
+<div class="screen active" id="loading">
+  <canvas class="ludo-animated-icon" id="ludominiCanvas" width="90" height="90"></canvas>
+  <div class="loading-logo">GLOBALS LUDO</div>
+  <div class="loading-sub">Your Premier Gaming Arena</div>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  <div class="progress-pct" id="progressPct">0%</div>
+</div>
+
+<!-- ═══════════════════════════════════════ MAIN SCREEN ═══════════════════════════════════════ -->
+<div class="screen" id="main">
+  <div class="main-inner">
+    <div class="top-bar">
+      <div class="top-brand">⬡ GLOBALS</div>
+      <div class="top-user">
+        <div class="user-avatar" id="userAvatarMain">G</div>
+        <div class="username-text" id="usernameDisplay">Player</div>
+      </div>
+      <div class="top-icons">
+        <div class="icon-btn" id="settingsBtn" title="Settings">⚙</div>
+        <div class="icon-btn" id="mainChatBtn" title="Support">💬</div>
+      </div>
+    </div>
+
+    <div class="balance-card">
+      <div class="balance-label">Total Balance</div>
+      <div class="balance-amount"><span>₦</span><span id="mainBalance">0.00</span></div>
+      <div class="balance-note">
+        <span class="balance-dot"></span>
+        <span>Live · Deposit via Globals main app</span>
+      </div>
+    </div>
+
+    <div class="section-title">Choose Your Mode</div>
+
+    <div class="mode-cards">
+      <div class="mode-card red-card" id="vsComputerBtn">
+        <div class="mode-icon red-icon">🤖</div>
+        <div class="mode-info">
+          <div class="mode-name">vs Computer</div>
+          <div class="mode-desc">Challenge our smart AI. Pick difficulty and board style.</div>
+          <div style="margin-top:8px"><span class="mode-badge badge-red">Free Play</span></div>
+        </div>
+      </div>
+
+      <div class="mode-card blue-card" id="vsFriendBtn">
+        <div class="mode-icon blue-icon">👥</div>
+        <div class="mode-info">
+          <div class="mode-name">vs Friend</div>
+          <div class="mode-desc">Host or join a room with a 4-digit code. 2 players.</div>
+          <div style="margin-top:8px"><span class="mode-badge badge-blue">Multiplayer</span></div>
+        </div>
+      </div>
+
+      <div class="mode-card gold-card" id="betModeBtn">
+        <div class="mode-icon gold-icon">💰</div>
+        <div class="mode-info">
+          <div class="mode-name">Bet &amp; Win</div>
+          <div class="mode-desc">Stake real money. Win up to 1.8× your stake. Matched fairly.</div>
+          <div style="margin-top:8px"><span class="mode-badge badge-gold">Real Money</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:4px">More</div>
+    <div class="quick-links">
+      <div class="quick-link" id="tutorialBtn">📖 How to Play</div>
+      <div class="quick-link" id="termsBtn">📜 Terms</div>
+      <div class="quick-link" id="privacyBtn">🔒 Privacy</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ GAME SCREEN ═══════════════════════════════════════ -->
+<div class="screen" id="game">
+  <div class="game-header">
+    <div class="game-header-left">
+      <div class="game-back" id="quitBtn">‹</div>
+      <div class="game-title" id="gameTitleHeader">Globals Ludo</div>
+    </div>
+    <span class="game-mode-badge badge-red" id="gameModeLabel">vs AI</span>
+  </div>
+
+  <div class="player-panels">
+    <div class="player-panel p-red" id="panel1">
+      <div class="pp-name" id="pp1name">You</div>
+      <div class="pp-score" id="pp1score">0 / 4</div>
+      <div class="pp-timer" id="pp1timer" style="display:none">30</div>
+    </div>
+    <div class="player-panel p-green" id="panel2">
+      <div class="pp-name" id="pp2name">Computer</div>
+      <div class="pp-score" id="pp2score">0 / 4</div>
+      <div class="pp-timer" id="pp2timer" style="display:none">30</div>
+    </div>
+  </div>
+
+  <div class="board-wrap">
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <div class="game-status-bar">
+    <div class="status-text" id="statusText">Roll the dice to start!</div>
+  </div>
+
+  <div class="game-controls">
+    <div style="display:flex;flex-direction:column;align-items:center;">
+      <canvas id="diceCanvas" width="60" height="60"></canvas>
+      <div class="dice-label" id="diceLabel">Tap to roll</div>
+    </div>
+    <div class="game-actions">
+      <button class="action-btn btn-gold" id="rollBtn">🎲 ROLL DICE</button>
+      <div style="display:flex;gap:6px">
+        <button class="action-btn" id="gameChatBtn" style="flex:1">💬 Chat</button>
+        <button class="action-btn" id="gameSettingsBtn" style="flex:1">⚙ Sound</button>
+        <button class="action-btn btn-red" id="quitGameBtn" style="flex:1;font-size:.72rem;">🚪 Quit</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ WIN SCREEN ═══════════════════════════════════════ -->
+<div class="screen" id="winScreen">
+  <div class="confetti-container" id="confettiContainer"></div>
+  <div class="win-content">
+    <div class="win-svg-wrap">
+      <svg width="200" height="120" viewBox="0 0 200 120">
+        <defs>
+          <linearGradient id="wg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#FFD700"/>
+            <stop offset="50%" style="stop-color:#FF6B00"/>
+            <stop offset="100%" style="stop-color:#FFD700"/>
+          </linearGradient>
+          <filter id="glow2">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <text x="100" y="85" text-anchor="middle" font-family="Rajdhani,sans-serif" font-weight="700" font-size="72" fill="url(#wg)" filter="url(#glow2)">WON!</text>
+        <circle cx="20" cy="20" r="6" fill="#FFD700" opacity="0.6"><animate attributeName="r" values="4;8;4" dur="1.5s" repeatCount="indefinite"/></circle>
+        <circle cx="180" cy="30" r="5" fill="#FF6B00" opacity="0.7"><animate attributeName="r" values="3;7;3" dur="2s" repeatCount="indefinite"/></circle>
+        <circle cx="40" cy="100" r="4" fill="#22C55E" opacity="0.6"><animate attributeName="r" values="2;6;2" dur="1.8s" repeatCount="indefinite"/></circle>
+        <circle cx="160" cy="100" r="5" fill="#3B82F6" opacity="0.5"><animate attributeName="r" values="3;7;3" dur="1.3s" repeatCount="indefinite"/></circle>
+      </svg>
+    </div>
+    <div class="win-title" id="winTitle">YOU WIN!</div>
+    <div class="win-subtitle" id="winSubtitle">Outstanding play!</div>
+    <div class="win-amount" id="winAmount" style="display:none"><span>+₦</span><span id="winAmountNum">0</span></div>
+    <div style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:280px;margin-top:10px">
+      <button class="btn btn-gold" id="winPlayAgain">Play Again</button>
+      <button class="btn btn-outline" id="winMainMenu">Main Menu</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ MODALS ═══════════════════════════════════════ -->
+
+<!-- vs Computer Modal -->
+<div class="modal" id="computerModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">vs Computer</div>
+    <div class="modal-subtitle">Select your difficulty and board style</div>
+    <div class="modal-body">
+      <div class="form-label">Difficulty</div>
+      <div class="option-grid" id="difficultyGrid">
+        <div class="option-item selected" data-diff="easy"><div class="option-item-icon">😊</div><div class="option-item-label">Easy</div><div class="option-item-desc">Great for beginners</div></div>
+        <div class="option-item" data-diff="medium"><div class="option-item-icon">🤔</div><div class="option-item-label">Medium</div><div class="option-item-desc">Balanced challenge</div></div>
+        <div class="option-item" data-diff="hard"><div class="option-item-icon">🔥</div><div class="option-item-label">Hard</div><div class="option-item-desc">Pro AI strategy</div></div>
+        <div class="option-item" data-diff="expert"><div class="option-item-icon">👹</div><div class="option-item-label">Expert</div><div class="option-item-desc">Nearly unbeatable</div></div>
+      </div>
+      <div class="form-label" style="margin-top:8px">Board Style</div>
+      <div class="option-grid" id="boardStyleGrid">
+        <div class="option-item selected" data-style="classic"><div class="option-item-icon">🎯</div><div class="option-item-label">Classic</div><div class="option-item-desc">1 color each</div></div>
+        <div class="option-item" data-style="double"><div class="option-item-icon">♟</div><div class="option-item-label">Double</div><div class="option-item-desc">2 colors each (8 tokens)</div></div>
+      </div>
+      <button class="btn btn-red" id="startComputerGame" style="margin-top:8px">Start Game 🎮</button>
+    </div>
+  </div>
+</div>
+
+<!-- vs Friend Modal -->
+<div class="modal" id="friendModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">vs Friend</div>
+    <div class="modal-subtitle">Host or join a private room</div>
+    <div class="modal-body">
+      <div class="option-grid" id="friendModeGrid">
+        <div class="option-item selected" data-fmode="host"><div class="option-item-icon">🏠</div><div class="option-item-label">Host</div><div class="option-item-desc">Create a room</div></div>
+        <div class="option-item" data-fmode="join"><div class="option-item-icon">🔍</div><div class="option-item-label">Join</div><div class="option-item-desc">Enter a code</div></div>
+      </div>
+      <div id="hostSection">
+        <div class="form-label">Board Style</div>
+        <div class="option-grid" style="grid-template-columns:1fr 1fr;" id="friendBoardStyleGrid">
+          <div class="option-item selected" data-style="classic"><div class="option-item-icon">🎯</div><div class="option-item-label">Classic</div><div class="option-item-desc">1 board each</div></div>
+          <div class="option-item" data-style="double"><div class="option-item-icon">♟</div><div class="option-item-label">Double</div><div class="option-item-desc">2 boards each</div></div>
+        </div>
+        <button class="btn btn-blue" id="hostGameBtn">Create Room 🏠</button>
+      </div>
+      <div id="joinSection" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Enter 4-Digit Room Code</label>
+          <input type="text" class="form-input" id="joinCodeInput" placeholder="e.g. 4821" maxlength="4" inputmode="numeric" style="font-size:1.8rem;text-align:center;letter-spacing:10px">
+        </div>
+        <button class="btn btn-blue" id="joinGameBtn">Join Room 🔍</button>
+      </div>
+      <div id="roomWaiting" style="display:none">
+        <div class="room-code-display">
+          <div class="room-code" id="displayRoomCode">----</div>
+          <div class="room-code-label">Share this code with your friend</div>
+        </div>
+        <div class="room-players">
+          <div class="room-player-slot filled"><div class="slot-icon">✓</div><div id="hostSlotName">Host (You)</div></div>
+          <div class="room-player-slot" id="guestSlot"><div class="slot-icon">⏳</div>Waiting...</div>
+        </div>
+        <div class="match-spinner" style="width:30px;height:30px;margin:10px auto"></div>
+        <button class="btn btn-outline" id="cancelRoomBtn" style="margin-top:8px">Cancel Room</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bet Mode Modal -->
+<div class="modal" id="betModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Bet &amp; Win 💰</div>
+    <div class="modal-subtitle">Choose your stake. You'll be matched with another player.</div>
+    <div class="modal-body">
+      <div class="legal-warn">⚠ Gambling responsibly is important. Only stake what you can afford to lose. 18+ only. All bets are final once matched.</div>
+      <div class="form-label">Select Stake Amount</div>
+      <div class="bet-grid" id="betGrid">
+        <div class="bet-card" data-stake="50" data-win="80"><span class="bet-arrow">→</span><div class="bet-stake">₦50 <span>stake</span></div><div class="bet-win">Win ₦80</div></div>
+        <div class="bet-card" data-stake="100" data-win="150"><span class="bet-arrow">→</span><div class="bet-stake">₦100 <span>stake</span></div><div class="bet-win">Win ₦150</div></div>
+        <div class="bet-card" data-stake="200" data-win="350"><span class="bet-arrow">→</span><div class="bet-stake">₦200 <span>stake</span></div><div class="bet-win">Win ₦350</div></div>
+        <div class="bet-card" data-stake="500" data-win="900"><span class="bet-arrow">→</span><div class="bet-stake">₦500 <span>stake</span></div><div class="bet-win">Win ₦900</div></div>
+        <div class="bet-card" data-stake="1000" data-win="1800"><span class="bet-arrow">→</span><div class="bet-stake">₦1000 <span>stake</span></div><div class="bet-win">Win ₦1800</div></div>
+        <div class="bet-card" data-stake="2000" data-win="3600"><span class="bet-arrow">→</span><div class="bet-stake">₦2000 <span>stake</span></div><div class="bet-win">Win ₦3600</div></div>
+      </div>
+      <div id="selectedBetInfo" style="text-align:center;font-size:.85rem;color:var(--muted);margin-bottom:12px">Select a stake amount above</div>
+      <button class="btn btn-gold" id="startSearchBtn" disabled>Search for Opponent 🔍</button>
+      <div style="text-align:center;font-size:.72rem;color:var(--muted);margin-top:10px">Your stake is deducted when search starts. Refunded if no match is found within 60 seconds.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Matchmaking Modal -->
+<div class="modal" id="matchmakingModal">
+  <div class="match-box">
+    <div class="match-spinner"></div>
+    <div class="match-title">Finding Opponent</div>
+    <div class="match-desc" id="matchDesc">Searching for a player with the same stake...</div>
+    <div class="match-stake" id="matchStakeDisplay">₦0 Stake</div>
+    <div style="margin-top:6px;font-size:.75rem;color:var(--muted)" id="matchTimer">0s</div>
+    <button class="btn btn-outline" id="cancelMatchBtn" style="margin-top:16px;padding:10px">Cancel Search</button>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal" id="settingsModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Settings</div>
+    <div class="modal-body">
+      <div class="settings-row">
+        <div><div class="settings-row-label">🔊 Sound Effects</div><div class="settings-row-desc">Dice rolls, token moves, captures</div></div>
+        <div class="toggle on" id="soundToggle"><div class="toggle-knob"></div></div>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">🎵 Background Music</div><div class="settings-row-desc">Ambient game music</div></div>
+        <div class="toggle" id="musicToggle"><div class="toggle-knob"></div></div>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">⚡ Animations</div><div class="settings-row-desc">Board and token animations</div></div>
+        <div class="toggle on" id="animToggle"><div class="toggle-knob"></div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="settings-row" id="termsSettingsBtn" style="cursor:pointer">
+        <div><div class="settings-row-label">📜 Terms &amp; Conditions</div></div>
+        <div style="color:var(--muted)">›</div>
+      </div>
+      <div class="settings-row" id="privacySettingsBtn" style="cursor:pointer">
+        <div><div class="settings-row-label">🔒 Privacy Policy</div></div>
+        <div style="color:var(--muted)">›</div>
+      </div>
+      <div style="margin-top:16px">
+        <button class="btn btn-outline" id="settingsClose">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tutorial Modal -->
+<div class="modal" id="tutorialModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">How to Play 📖</div>
+    <div class="modal-subtitle">Master Globals Ludo – Naija Style</div>
+    <div class="modal-body">
+      <div class="tutorial-step"><div class="tutorial-num">1</div><div class="tutorial-text"><h4>Roll the Dice</h4><p>Tap "Roll Dice" on your turn. You must roll a 6 to move a token from your home base onto the board.</p></div></div>
+      <div class="tutorial-step"><div class="tutorial-num">2</div><div class="tutorial-text"><h4>Move Your Tokens</h4><p>After rolling, tap any eligible token to move it. Tokens travel clockwise around the board. First to bring all tokens home wins!</p></div></div>
+      <div class="tutorial-step"><div class="tutorial-num">3</div><div class="tutorial-text"><h4>Capture Opponents</h4><p>Land on an opponent's token to send it back home! Safe squares (⭐) protect tokens — no captures there.</p></div></div>
+      <div class="tutorial-step"><div class="tutorial-num">4</div><div class="tutorial-text"><h4>Roll 6 = Extra Turn</h4><p>Rolling a 6 gives you another roll! Use this strategically to enter more tokens or chase opponents.</p></div></div>
+      <div class="tutorial-step"><div class="tutorial-num">5</div><div class="tutorial-text"><h4>Time Limit</h4><p>You have 30 seconds per turn. If time runs out, your turn passes automatically. Stay focused!</p></div></div>
+      <div class="tutorial-step"><div class="tutorial-num">6</div><div class="tutorial-text"><h4>Bet Mode</h4><p>Select a stake, get matched with a player of the same bet. Winner takes the prize. Stake is deducted when search starts.</p></div></div>
+      <div style="margin-top:8px"><button class="btn btn-gold" id="tutorialClose">Got it! 🎮</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Chat Support Modal -->
+<div class="modal" id="chatModal">
+  <div class="modal-sheet" style="height:85vh;display:flex;flex-direction:column;padding-bottom:0">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Game Support 💬</div>
+    <div class="modal-subtitle" style="padding-bottom:10px">Ask anything about Globals Ludo</div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-msg ai"><div class="chat-bubble">👋 Hi! I'm your Globals Ludo support assistant. Ask me anything about the game rules, bet mode, or how to play!</div></div>
+    </div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="chatInput" placeholder="Type your question..." />
+      <button class="chat-send" id="chatSendBtn">Send</button>
+    </div>
+    <div style="padding:8px 20px 12px;text-align:center">
+      <button class="btn btn-outline btn-sm" id="chatClose" style="font-size:.78rem;padding:8px 24px">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Terms & Conditions -->
+<div class="modal" id="termsModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Terms &amp; Conditions</div>
+    <div class="modal-body">
+      <div class="legal-warn">⚠️ IMPORTANT: Globals Ludo includes real-money betting. Please read carefully before playing.</div>
+      <div class="legal-section"><h3>1. Eligibility</h3><p>You must be 18 years or older to participate in any real-money games on Globals Ludo. By playing, you confirm you meet this age requirement and it is legal in your jurisdiction.</p></div>
+      <div class="legal-section"><h3>2. Fair Play</h3><p>All games are governed by randomness and skill. Any attempt to manipulate game outcomes, exploit bugs, or use unauthorized tools will result in immediate account termination and forfeiture of balance.</p></div>
+      <div class="legal-section"><h3>3. Bet Rules</h3><p>Stakes are deducted before matchmaking begins. Winnings are credited instantly upon game completion. Globals takes a 10% platform fee from winnings. All transactions are final.</p></div>
+      <div class="legal-section"><h3>4. Responsible Gambling</h3><p>We encourage responsible gambling. Set limits on yourself. If you feel gambling is becoming a problem, please seek help from NGO gambling support services. Globals is not liable for losses resulting from irresponsible gambling.</p></div>
+      <div class="legal-section"><h3>5. Deposits &amp; Withdrawals</h3><p>Deposits are made exclusively through the main Globals platform. Globals Ludo displays your balance in real-time but does not process deposits directly.</p></div>
+      <div class="legal-section"><h3>6. Disconnection Policy</h3><p>If a player intentionally disconnects during a bet game, the opponent wins by default. Accidental disconnection within 10 seconds allows reconnection without penalty.</p></div>
+      <div class="legal-section"><h3>7. Changes to Terms</h3><p>Globals reserves the right to modify these terms at any time. Continued use of the platform implies acceptance of updated terms.</p></div>
+      <button class="btn btn-outline" id="termsClose" style="margin-top:8px">I Understand</button>
+    </div>
+  </div>
+</div>
+
+<!-- Privacy Policy -->
+<div class="modal" id="privacyModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Privacy Policy</div>
+    <div class="modal-body">
+      <div class="legal-section"><h3>Data We Collect</h3><p>We collect your username, Firebase UID, game history, transaction records, and device information to provide our services and prevent fraud.</p></div>
+      <div class="legal-section"><h3>How We Use Your Data</h3><p>Your data is used to: manage your account, facilitate fair matchmaking, process transactions, prevent cheating, and improve our platform. We do not sell your personal data to third parties.</p></div>
+      <div class="legal-section"><h3>Data Storage</h3><p>All data is securely stored in Google Firebase (Firestore), protected by industry-standard encryption. Game records and transaction histories are retained for 2 years.</p></div>
+      <div class="legal-section"><h3>Third Parties</h3><p>We use Google Firebase for authentication and data storage, and may use analytics services to improve user experience. These services have their own privacy policies.</p></div>
+      <div class="legal-section"><h3>Your Rights</h3><p>You may request deletion of your account data at any time by contacting Globals support. Note that transaction records may be retained for legal compliance purposes.</p></div>
+      <div class="legal-section"><h3>Cookies &amp; Local Storage</h3><p>We use local storage to remember your game preferences (sound, music settings). No tracking cookies are used.</p></div>
+      <button class="btn btn-outline" id="privacyClose" style="margin-top:8px">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- No Internet Modal -->
+<div class="modal" id="noInternetModal" style="background:rgba(0,0,0,0.85)">
+  <div class="no-internet-box">
+    <div class="no-internet-icon">📡</div>
+    <div class="no-internet-title">No Connection</div>
+    <div class="no-internet-desc">You're offline. Please check your internet connection. Multiplayer and bet games require a stable connection.</div>
+    <button class="btn btn-outline" id="retryConnectionBtn" style="margin-top:16px;padding:10px">Retry</button>
+  </div>
+</div>
+
+<!-- Quit Confirm -->
+<div class="modal" id="quitConfirmModal">
+  <div class="match-box">
+    <div style="font-size:2rem;margin-bottom:12px">🚪</div>
+    <div class="match-title">Quit Game?</div>
+    <div class="match-desc" id="quitDesc">Are you sure you want to quit? <span id="quitNote"></span></div>
+    <button class="btn btn-red" id="confirmQuitBtn" style="width:100%">Yes, Quit</button>
+    <button class="btn btn-outline" id="cancelQuitBtn" style="width:100%;margin-top:8px">Continue Playing</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── FIREBASE CONFIG ──
+const firebaseConfig = {
+  apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
+  authDomain: "globals-17bf7.firebaseapp.com",
+  projectId: "globals-17bf7",
+  storageBucket: "globals-17bf7.appspot.com",
+  messagingSenderId: "603274362994",
+  appId: "1:603274362994:web:c312c10cf0a42938e882eb"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+</script>
+<script src="Ludo.js"></script>
+</body>
+</html>
