@@ -350,6 +350,371 @@ app.post('/webhook/paystack', async (req, res) => {
 
 
 
+
+
+/**
+ * ══════════════════════════════════════════════════════════════
+ *  GLOBALS LUDO — SERVER.JS ADDITIONS
+ *  Add this to your existing server.js (Express + Firebase Admin)
+ * ══════════════════════════════════════════════════════════════
+ *
+ *  STEP 1: Install Firebase Admin SDK if not done:
+ *    npm install firebase-admin
+ *
+ *  STEP 2: Initialize Firebase Admin at the TOP of server.js
+ *    (if not already done):
+ *
+ *    const admin = require('firebase-admin');
+ *    const serviceAccount = require('./serviceAccountKey.json');
+ *    if (!admin.apps.length) {
+ *      admin.initializeApp({
+ *        credential: admin.credential.cert(serviceAccount),
+ *        databaseURL: "https://globals-17bf7.firebaseio.com"
+ *      });
+ *    }
+ *    const adminDb = admin.firestore();
+ *
+ *  STEP 3: Paste the routes below into your server.js
+ *
+ *  STEP 4: Add Firestore Security Rules (shown at bottom of this file)
+ *
+ *  STEP 5: Serve Ludo.html:
+ *    app.use('/ludo', express.static(path.join(__dirname, 'public/ludo')));
+ *    — OR —
+ *    app.get('/ludo', (req, res) => res.sendFile(path.join(__dirname, 'Ludo.html')));
+ */
+
+// ──────────────────────────────────────────────────────────────
+//  MIDDLEWARE: Verify Firebase Auth Token
+// ──────────────────────────────────────────────────────────────
+
+async function verifyToken(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized: No token provided' });
+  }
+  const idToken = authHeader.split('Bearer ')[1];
+  try {
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    req.uid = decoded.uid;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+//  SERVE LUDO PAGES
+// ──────────────────────────────────────────────────────────────
+
+// Add this near your other static/route declarations:
+// app.get('/ludo', (req, res) => res.sendFile(path.join(__dirname, 'Ludo.html')));
+// app.get('/ludo.js', (req, res) => res.sendFile(path.join(__dirname, 'Ludo.js')));
+
+// ──────────────────────────────────────────────────────────────
+//  ROUTE: Verify & Credit Bet Winner (server-side secure)
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/ludo/claim-win
+ * Body: { roomId, idToken }
+ * Verifies the winner from Firestore and credits winnings securely.
+ * The client should call this AFTER the game room is updated with a winner.
+ */
+app.post('/api/ludo/claim-win', verifyToken, async (req, res) => {
+  const { roomId } = req.body;
+  const uid = req.uid;
+
+  if (!roomId) return res.status(400).json({ error: 'Missing roomId' });
+
+  try {
+    const roomRef = adminDb.collection('ludo_bet_rooms').doc(roomId);
+    const claimRef = adminDb.collection('ludo_claims').doc(roomId);
+
+    await adminDb.runTransaction(async tx => {
+      const roomSnap = await tx.get(roomRef);
+      const claimSnap = await tx.get(claimRef);
+
+      if (!roomSnap.exists) throw new Error('Room not found');
+      if (claimSnap.exists) throw new Error('Winnings already claimed');
+
+      const room = roomSnap.data();
+      if (room.status !== 'completed' && room.status !== 'forfeit') {
+        throw new Error('Game not yet complete');
+      }
+      if (room.winnerUid !== uid) {
+        throw new Error('You are not the winner of this game');
+      }
+
+      const winAmount = room.winAmount;
+      if (!winAmount || winAmount <= 0) throw new Error('Invalid win amount');
+
+      // Credit winner balance
+      const balRef = adminDb.collection('balance').doc(uid);
+      tx.update(balRef, {
+        amount: admin.firestore.FieldValue.increment(winAmount)
+      });
+
+      // Record transaction
+      const txRef = adminDb.collection('ludo_transactions').doc();
+      tx.set(txRef, {
+        uid,
+        roomId,
+        type: 'ludo_win',
+        amount: winAmount,
+        stake: room.stake,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        processed: true
+      });
+
+      // Mark as claimed
+      tx.set(claimRef, {
+        uid,
+        roomId,
+        claimedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    });
+
+    return res.json({ success: true, message: 'Winnings credited successfully' });
+  } catch (err) {
+    console.error('[LUDO] Claim win error:', err.message);
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+//  ROUTE: Start Matchmaking (server-side deduction + queue)
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/ludo/start-match
+ * Body: { stake }
+ * Deducts stake from user balance and adds to matchmaking queue.
+ * Returns: { queued: true } or { matched: true, roomId, role }
+ */
+app.post('/api/ludo/start-match', verifyToken, async (req, res) => {
+  const { stake } = req.body;
+  const uid = req.uid;
+  const validStakes = [50, 100, 200, 500, 1000, 2000];
+  const winMap = { 50:80, 100:150, 200:350, 500:900, 1000:1800, 2000:3600 };
+
+  if (!validStakes.includes(Number(stake))) {
+    return res.status(400).json({ error: 'Invalid stake amount' });
+  }
+
+  const stakeNum = Number(stake);
+  const winAmount = winMap[stakeNum];
+
+  try {
+    // Deduct balance
+    await adminDb.runTransaction(async tx => {
+      const balRef = adminDb.collection('balance').doc(uid);
+      const balSnap = await tx.get(balRef);
+      const bal = balSnap.data()?.amount || 0;
+      if (bal < stakeNum) throw new Error('Insufficient balance');
+      tx.update(balRef, {
+        amount: admin.firestore.FieldValue.increment(-stakeNum)
+      });
+    });
+
+    // Try to find an opponent in queue
+    const cutoff = new Date(Date.now() - 60000);
+    const queueSnap = await adminDb.collection('ludo_matchmaking')
+      .where('stake', '==', stakeNum)
+      .where('status', '==', 'searching')
+      .orderBy('createdAt', 'asc')
+      .get();
+
+    const candidates = queueSnap.docs.filter(d =>
+      d.id !== uid && d.data().createdAt?.toDate() > cutoff
+    );
+
+    if (candidates.length > 0) {
+      // Match found!
+      const opponent = candidates[0];
+      const oppData = opponent.data();
+      const roomId = 'bet_' + Date.now() + '_' + uid.slice(0,4);
+
+      // Get username
+      const myProfile = await adminDb.collection('users').doc(uid).get();
+      const myUsername = myProfile.data()?.username || 'Player';
+
+      await adminDb.runTransaction(async tx => {
+        const oppRef = adminDb.collection('ludo_matchmaking').doc(opponent.id);
+        const oppSnap = await tx.get(oppRef);
+        if (!oppSnap.exists || oppSnap.data().status !== 'searching') {
+          throw new Error('Opponent no longer available');
+        }
+
+        const roomRef = adminDb.collection('ludo_bet_rooms').doc(roomId);
+        tx.set(roomRef, {
+          p1: opponent.id, p1Name: oppData.username,
+          p2: uid, p2Name: myUsername,
+          stake: stakeNum, winAmount,
+          status: 'playing',
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          winner: null, gameState: null
+        });
+
+        tx.update(oppRef, { status: 'matched', roomId, role: 'p1', winAmount });
+        tx.set(adminDb.collection('ludo_matchmaking').doc(uid), {
+          uid, username: myUsername, stake: stakeNum,
+          status: 'matched', roomId, role: 'p2', winAmount,
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+      });
+
+      return res.json({ matched: true, roomId, role: 'p2', winAmount });
+    } else {
+      // Queue this user
+      const myProfile = await adminDb.collection('users').doc(uid).get();
+      const myUsername = myProfile.data()?.username || 'Player';
+
+      await adminDb.collection('ludo_matchmaking').doc(uid).set({
+        uid, username: myUsername, stake: stakeNum,
+        status: 'searching',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        roomId: null
+      });
+
+      return res.json({ queued: true, message: 'Added to matchmaking queue' });
+    }
+  } catch (err) {
+    // Refund on error
+    try {
+      await adminDb.collection('balance').doc(uid).update({
+        amount: admin.firestore.FieldValue.increment(stakeNum)
+      });
+    } catch(e) {}
+    console.error('[LUDO] Match error:', err.message);
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+//  ROUTE: Cancel Matchmaking & Refund
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/ludo/cancel-match
+ * Cancels matchmaking and refunds stake if still searching.
+ */
+app.post('/api/ludo/cancel-match', verifyToken, async (req, res) => {
+  const uid = req.uid;
+  try {
+    const queueRef = adminDb.collection('ludo_matchmaking').doc(uid);
+    const queueSnap = await queueRef.get();
+
+    if (!queueSnap.exists) return res.json({ success: true, refunded: false });
+    const data = queueSnap.data();
+
+    if (data.status !== 'searching') {
+      return res.json({ success: true, refunded: false, message: 'Already matched' });
+    }
+
+    const stake = data.stake;
+    await adminDb.runTransaction(async tx => {
+      tx.delete(queueRef);
+      tx.update(adminDb.collection('balance').doc(uid), {
+        amount: admin.firestore.FieldValue.increment(stake)
+      });
+    });
+
+    return res.json({ success: true, refunded: true, amount: stake });
+  } catch (err) {
+    console.error('[LUDO] Cancel match error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+//  ROUTE: Get Ludo Leaderboard
+// ──────────────────────────────────────────────────────────────
+
+app.get('/api/ludo/leaderboard', async (req, res) => {
+  try {
+    const snap = await adminDb.collection('ludo_transactions')
+      .where('type', '==', 'ludo_win')
+      .orderBy('amount', 'desc')
+      .limit(20)
+      .get();
+
+    const board = snap.docs.map(d => ({
+      username: d.data().username || 'Anonymous',
+      amount: d.data().amount,
+      stake: d.data().stake,
+      timestamp: d.data().timestamp?.toDate()?.toISOString()
+    }));
+
+    res.json({ leaderboard: board });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+//  ROUTE: Forfeit Game (opponent disconnected cleanup)
+// ──────────────────────────────────────────────────────────────
+
+app.post('/api/ludo/forfeit', verifyToken, async (req, res) => {
+  const { roomId } = req.body;
+  const uid = req.uid;
+  if (!roomId) return res.status(400).json({ error: 'Missing roomId' });
+
+  try {
+    const roomRef = adminDb.collection('ludo_bet_rooms').doc(roomId);
+    const roomSnap = await roomRef.get();
+    if (!roomSnap.exists) return res.status(404).json({ error: 'Room not found' });
+    const room = roomSnap.data();
+    if (room.status === 'completed') return res.json({ success: true, message: 'Already completed' });
+
+    const quitterRole = room.p1 === uid ? 'p1' : 'p2';
+    const winnerRole = quitterRole === 'p1' ? 'p2' : 'p1';
+    const winnerUid = winnerRole === 'p1' ? room.p1 : room.p2;
+
+    await adminDb.runTransaction(async tx => {
+      tx.update(roomRef, {
+        status: 'forfeit', winner: winnerRole, winnerUid,
+        quitter: uid, endedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      // Credit winner
+      tx.update(adminDb.collection('balance').doc(winnerUid), {
+        amount: admin.firestore.FieldValue.increment(room.winAmount)
+      });
+      // Log transaction
+      const txRef = adminDb.collection('ludo_transactions').doc();
+      tx.set(txRef, {
+        uid: winnerUid,
+        roomId,
+        type: 'ludo_win_forfeit',
+        amount: room.winAmount,
+        stake: room.stake,
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      });
+    });
+
+    return res.json({ success: true, winnerUid });
+  } catch (err) {
+    console.error('[LUDO] Forfeit error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+
+
+module.exports = {}; // Placeholder — paste route code into server.js directly
+
+
+
+
+
+
+
+
+
+
 // ✅ Keep this last (do not move)
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "dashboard.html"));
@@ -358,6 +723,7 @@ app.get("*", (req, res) => {
 /* Start server */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
 
 
 
