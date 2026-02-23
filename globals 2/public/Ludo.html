@@ -9,1542 +9,732 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 <style>
-:root {
-  /* Core palette - inspired by GlobalTasks dashboard */
-  --navy:    #0d1b2e;
-  --navy2:   #122038;
-  --navy3:   #1a2d4a;
-  --card-bg: #162032;
-  --border:  rgba(255,255,255,0.07);
-  --text:    #e8f0fe;
-  --muted:   #7b92b2;
-  --dim:     rgba(255,255,255,0.04);
+:root{
+  --navy:#0b1629;--navy2:#101e35;--navy3:#162440;--card:#0f1c32;
+  --border:rgba(255,255,255,0.07);--text:#eaf0ff;--muted:#6b84a8;
+  --orange:#f97316;--orange2:#ea580c;--gold:#f59e0b;--gold2:#d97706;
+  --green:#22c55e;--red:#ef4444;--blue:#3b82f6;--cyan:#06b6d4;
+  --font-h:'Nunito',sans-serif;--font-b:'Space Grotesk',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;background:var(--navy);color:var(--text);font-family:var(--font-b);}
+.screen{position:fixed;inset:0;display:none;flex-direction:column;overflow-y:auto;}
+.screen.active{display:flex;}
 
-  /* Accents */
-  --orange:  #f97316;
-  --orange2: #ea580c;
-  --gold:    #f59e0b;
-  --gold2:   #d97706;
-  --green:   #22c55e;
-  --red:     #ef4444;
-  --blue:    #3b82f6;
-  --cyan:    #06b6d4;
+/* ═══ LOADING ═══ */
+#loading{background:var(--navy);align-items:center;justify-content:center;overflow:hidden;position:relative;}
+.load-glow{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 35%,rgba(249,115,22,0.08) 0%,transparent 65%),radial-gradient(ellipse at 20% 80%,rgba(59,130,246,0.05) 0%,transparent 55%);}
+.load-inner{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:18px;padding:40px 20px;width:100%;}
+.load-logo-img{width:76px;height:76px;border-radius:18px;object-fit:cover;box-shadow:0 8px 28px rgba(249,115,22,0.28);border:2px solid rgba(249,115,22,0.25);}
+.load-logo-fb{width:76px;height:76px;border-radius:18px;background:linear-gradient(135deg,#f97316,#ea580c);display:flex;align-items:center;justify-content:center;font-size:2rem;box-shadow:0 8px 28px rgba(249,115,22,0.28);}
+.load-dice{font-size:2.8rem;filter:drop-shadow(0 4px 10px rgba(249,115,22,0.35));animation:die-bounce 1.1s ease-in-out infinite;}
+@keyframes die-bounce{0%,100%{transform:translateY(0) rotate(0deg);}50%{transform:translateY(-9px) rotate(12deg);}}
+.load-brand{font-family:var(--font-h);font-size:1.7rem;font-weight:900;letter-spacing:3px;text-transform:uppercase;color:var(--text);line-height:1;}
+.load-brand span{color:var(--orange);}
+.load-sub{font-size:.68rem;color:var(--muted);letter-spacing:4px;text-transform:uppercase;margin-top:-10px;}
+.load-mini-canvas{border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.35),0 0 0 1px rgba(255,255,255,0.04);}
+.load-dots{display:flex;gap:9px;}
+.ld{width:13px;height:13px;border-radius:50%;animation:ldot 1s ease-in-out infinite;}
+.ld:nth-child(1){background:#e53935;animation-delay:0s;}
+.ld:nth-child(2){background:#43a047;animation-delay:.14s;}
+.ld:nth-child(3){background:#fdd835;animation-delay:.28s;}
+.ld:nth-child(4){background:#1e88e5;animation-delay:.42s;}
+@keyframes ldot{0%,100%{transform:scale(1);opacity:.65;}50%{transform:scale(1.35);opacity:1;}}
+.load-prog-wrap{width:200px;display:flex;flex-direction:column;align-items:center;gap:7px;}
+.load-prog-bg{width:100%;height:4px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden;}
+.load-prog-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--orange),#fbbf24);border-radius:99px;transition:width .08s linear;}
+.load-pct{font-family:var(--font-h);font-size:.82rem;font-weight:800;color:var(--muted);}
+.load-tip{font-size:.67rem;color:var(--muted);text-align:center;max-width:180px;line-height:1.5;}
 
-  /* Ludo board colors */
-  --ludo-red:    #e53935;
-  --ludo-green:  #43a047;
-  --ludo-blue:   #1e88e5;
-  --ludo-yellow: #fdd835;
-  --ludo-red-l:  #ffcdd2;
-  --ludo-green-l:#c8e6c9;
-  --ludo-blue-l: #bbdefb;
-  --ludo-yellow-l:#fff9c4;
+/* ═══ MAIN ═══ */
+#main{background:var(--navy);justify-content:flex-start;}
+.main-scroll{width:100%;max-width:480px;margin:0 auto;overflow-y:auto;padding-bottom:80px;}
 
-  --radius: 16px;
-  --font-head: 'Nunito', sans-serif;
-  --font-body: 'Space Grotesk', sans-serif;
-}
+/* TopBar */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:rgba(11,22,41,0.97);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;}
+.tb-brand{display:flex;align-items:center;gap:9px;}
+.tb-logo-img{width:30px;height:30px;border-radius:8px;object-fit:cover;border:1px solid rgba(249,115,22,0.25);}
+.tb-logo-fb{width:30px;height:30px;border-radius:8px;background:var(--orange);display:flex;align-items:center;justify-content:center;font-size:.9rem;}
+.tb-name{font-family:var(--font-h);font-size:.98rem;font-weight:900;letter-spacing:.5px;}
+.tb-name span{color:var(--orange);}
+.tb-right{display:flex;align-items:center;gap:7px;}
+.user-chip{display:flex;align-items:center;gap:6px;background:var(--navy3);border:1px solid var(--border);border-radius:99px;padding:4px 11px 4px 4px;}
+.u-ava{width:23px;height:23px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--cyan));display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-weight:800;font-size:.68rem;color:#fff;}
+.u-nm{font-size:.75rem;font-weight:600;max-width:75px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.icon-pill{width:33px;height:33px;border-radius:9px;background:var(--navy3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:.88rem;transition:all .2s;}
+.icon-pill:active{background:var(--navy2);color:var(--text);}
 
-* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
-html, body { height:100%; overflow:hidden; background:var(--navy); color:var(--text); font-family:var(--font-body); }
+/* Gamified Balance */
+.bal-section{margin:14px 14px 0;background:linear-gradient(140deg,#0c1e3c 0%,#122040 55%,#0e1a38 100%);border-radius:20px;border:1px solid rgba(59,130,246,0.16);overflow:hidden;position:relative;}
+.bal-section::before{content:'';position:absolute;top:-60px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(249,115,22,0.1),transparent 65%);border-radius:50%;}
+.bal-section::after{content:'';position:absolute;bottom:-50px;left:-30px;width:140px;height:140px;background:radial-gradient(circle,rgba(59,130,246,0.08),transparent 65%);border-radius:50%;}
+.bal-top{display:flex;align-items:center;justify-content:space-between;padding:15px 16px 0;position:relative;z-index:1;}
+.bal-live{display:flex;align-items:center;gap:6px;font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:ldot 2s infinite;}
+.bal-coin{font-size:1.3rem;animation:coin-spin 3s linear infinite;}
+@keyframes coin-spin{0%,100%{transform:rotateY(0deg);}50%{transform:rotateY(180deg);}}
+.bal-main{padding:6px 16px 13px;position:relative;z-index:1;}
+.bal-lbl{font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:3px;}
+.bal-num{font-family:var(--font-h);font-size:2.7rem;font-weight:900;color:#fff;line-height:1;letter-spacing:-1px;}
+.bal-sym{font-size:1.5rem;color:rgba(255,255,255,0.5);vertical-align:super;margin-right:2px;}
+.bal-note{font-size:.66rem;color:rgba(255,255,255,0.28);margin-top:3px;}
+.bal-stats{display:flex;gap:1px;border-top:1px solid rgba(255,255,255,0.04);position:relative;z-index:1;}
+.bst{flex:1;padding:11px 8px;background:rgba(255,255,255,0.02);text-align:center;border-right:1px solid rgba(255,255,255,0.03);}
+.bst:last-child{border-right:none;}
+.bst-v{font-family:var(--font-h);font-size:.95rem;font-weight:900;color:var(--text);}
+.bst-l{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-top:1px;}
+.xp-row{padding:9px 16px 13px;border-top:1px solid rgba(255,255,255,0.04);position:relative;z-index:1;}
+.xp-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+.xp-lbl{font-size:.63rem;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;}
+.xp-val{font-size:.63rem;color:var(--orange);font-weight:700;}
+.xp-bg{height:4px;background:rgba(255,255,255,0.05);border-radius:99px;overflow:hidden;}
+.xp-fill{height:100%;background:linear-gradient(90deg,var(--orange),#fbbf24);border-radius:99px;width:20%;transition:width 1.2s ease;}
 
-/* ═══ SCREENS ═══ */
-.screen { position:fixed; inset:0; display:none; flex-direction:column; overflow-y:auto; }
-.screen.active { display:flex; }
+/* Section head */
+.sec-head{padding:16px 14px 9px;display:flex;align-items:center;justify-content:space-between;}
+.sec-title{font-family:var(--font-h);font-size:.66rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:3px;}
 
-/* ═══════════════════════════════════════════════
-   LOADING SCREEN
-═══════════════════════════════════════════════ */
-#loading {
-  background: var(--navy);
-  align-items:center;
-  justify-content:center;
-  gap:28px;
-}
-.load-board-wrap {
-  position:relative;
-  width:100px; height:100px;
-}
-.load-board-wrap canvas {
-  border-radius:18px;
-  border: 2px solid rgba(255,255,255,0.08);
-}
-.load-logo {
-  font-family: var(--font-head);
-  font-size: 2rem;
-  font-weight: 900;
-  color: var(--text);
-  letter-spacing: 3px;
-  text-transform:uppercase;
-}
-.load-sub {
-  font-size:.78rem;
-  color:var(--muted);
-  text-transform:uppercase;
-  letter-spacing:4px;
-}
-.load-bar-wrap {
-  width: 220px;
-  height: 3px;
-  background: var(--navy3);
-  border-radius:99px;
-  overflow:hidden;
-}
-.load-bar {
-  height:100%;
-  width:0%;
-  background:var(--orange);
-  border-radius:99px;
-  transition:width .08s linear;
-}
-.load-pct {
-  font-family: var(--font-head);
-  font-size:.9rem;
-  font-weight:700;
-  color:var(--muted);
-}
+/* Mode Cards */
+.modes-wrap{padding:0 14px;display:flex;flex-direction:column;gap:10px;}
+.mc{border-radius:17px;padding:16px 14px;cursor:pointer;transition:transform .15s;display:flex;align-items:center;gap:13px;position:relative;overflow:hidden;border:1px solid var(--border);}
+.mc:active{transform:scale(0.976);}
+.mc.mc-ai  {background:linear-gradient(130deg,#1c0808,#2a0e0e);border-color:rgba(239,68,68,0.18);}
+.mc.mc-fr  {background:linear-gradient(130deg,#080f18,#0e1b2a);border-color:rgba(59,130,246,0.18);}
+.mc.mc-bet {background:linear-gradient(130deg,#1a1000,#281800);border-color:rgba(245,158,11,0.18);}
+.mc-ico{width:50px;height:50px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:1.35rem;flex-shrink:0;}
+.mc-ai .mc-ico  {background:rgba(239,68,68,0.1);}
+.mc-fr .mc-ico  {background:rgba(59,130,246,0.1);}
+.mc-bet .mc-ico {background:rgba(245,158,11,0.1);}
+.mc-body{flex:1;}
+.mc-name{font-family:var(--font-h);font-size:1rem;font-weight:800;margin-bottom:2px;}
+.mc-desc{font-size:.73rem;color:var(--muted);line-height:1.4;}
+.mc-tag{display:inline-block;margin-top:6px;font-size:.6rem;font-weight:700;padding:2px 9px;border-radius:99px;text-transform:uppercase;letter-spacing:.4px;}
+.mc-ai  .mc-tag{background:rgba(239,68,68,0.1);color:#ef4444;}
+.mc-fr  .mc-tag{background:rgba(59,130,246,0.1);color:#60a5fa;}
+.mc-bet .mc-tag{background:rgba(245,158,11,0.1);color:#f59e0b;}
+.mc-arr{color:var(--muted);font-size:1rem;flex-shrink:0;}
 
-/* ═══════════════════════════════════════════════
-   MAIN / HOME SCREEN
-═══════════════════════════════════════════════ */
-#main {
-  background: var(--navy);
-  justify-content: flex-start;
-  padding-bottom: 0;
-}
-.main-scroll { width:100%; max-width:480px; margin:0 auto; overflow-y:auto; padding-bottom:90px; }
+/* Quick links */
+.quick-row{display:flex;gap:7px;padding:2px 14px;}
+.q-lnk{flex:1;background:var(--navy3);border:1px solid var(--border);border-radius:11px;padding:10px 7px;cursor:pointer;font-size:.72rem;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .2s;}
+.q-lnk:active{color:var(--text);}
+.q-ico{font-size:1rem;}
 
-/* ── Top Bar ── */
-.topbar {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:16px 20px;
-  background:rgba(13,27,46,0.97);
-  backdrop-filter:blur(16px);
-  border-bottom:1px solid var(--border);
-  position:sticky; top:0; z-index:10;
-}
-.topbar-brand {
-  display:flex; align-items:center; gap:10px;
-}
-.brand-icon {
-  width:34px; height:34px; border-radius:10px;
-  background:var(--orange);
-  display:flex; align-items:center; justify-content:center;
-  font-size:1.1rem;
-}
-.brand-name {
-  font-family:var(--font-head);
-  font-size:1.1rem; font-weight:900;
-  color:var(--text);
-  letter-spacing:1px;
-}
-.brand-name span { color:var(--orange); }
-.topbar-right { display:flex; align-items:center; gap:8px; }
-.user-chip {
-  display:flex; align-items:center; gap:8px;
-  background:var(--navy3);
-  border:1px solid var(--border);
-  border-radius:99px;
-  padding:5px 12px 5px 6px;
-}
-.user-ava {
-  width:26px; height:26px; border-radius:50%;
-  background:linear-gradient(135deg,var(--blue),var(--cyan));
-  display:flex; align-items:center; justify-content:center;
-  font-family:var(--font-head); font-weight:800; font-size:.75rem;
-  color:#fff;
-}
-.user-name-sm { font-size:.8rem; font-weight:600; color:var(--text); }
-.icon-pill {
-  width:36px; height:36px; border-radius:10px;
-  background:var(--navy3); border:1px solid var(--border);
-  display:flex; align-items:center; justify-content:center;
-  cursor:pointer; transition:all .2s; color:var(--muted); font-size:1rem;
-}
-.icon-pill:active { background:var(--navy2); }
+/* Leaderboard */
+.ldr-box{margin:0 14px;background:var(--card);border:1px solid var(--border);border-radius:15px;overflow:hidden;}
+.ldr-hd{padding:11px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;}
+.ldr-hd-t{font-family:var(--font-h);font-size:.8rem;font-weight:800;flex:1;}
+.lrow{display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:1px solid var(--border);}
+.lrow:last-child{border-bottom:none;}
+.lrnk{font-family:var(--font-h);font-size:.76rem;font-weight:800;color:var(--muted);width:20px;text-align:center;}
+.lava{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:.66rem;font-weight:700;color:#fff;}
+.lnm{flex:1;font-size:.78rem;font-weight:600;}
+.lamt{font-family:var(--font-h);font-size:.78rem;font-weight:800;color:var(--gold);}
 
-/* ── Balance Card ── */
-.balance-card {
-  margin:20px 16px 0;
-  background:linear-gradient(135deg, #0a1628, #122038, #1a2d4a);
-  border: 1px solid rgba(59,130,246,0.2);
-  border-radius:20px;
-  padding:22px 22px 18px;
-  position:relative;
-  overflow:hidden;
-}
-.balance-card::after {
-  content:'';
-  position:absolute;
-  top:-40%; right:-15%;
-  width:200px; height:200px;
-  background:radial-gradient(circle, rgba(59,130,246,0.12), transparent 70%);
-  border-radius:50%;
-}
-.balance-card::before {
-  content:'';
-  position:absolute;
-  bottom:-30%; left:-10%;
-  width:150px; height:150px;
-  background:radial-gradient(circle, rgba(249,115,22,0.08), transparent 70%);
-  border-radius:50%;
-}
-.bal-top {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  margin-bottom:4px;
-}
-.bal-label {
-  display:flex; align-items:center; gap:8px;
-  font-size:.72rem; text-transform:uppercase;
-  letter-spacing:2px; color:var(--muted);
-}
-.live-dot {
-  width:6px; height:6px; border-radius:50%;
-  background:var(--green);
-  animation:pulse-dot 2s infinite;
-}
-.bal-add-btn {
-  background:var(--orange);
-  color:#fff;
-  border:none;
-  border-radius:99px;
-  padding:6px 16px;
-  font-family:var(--font-head);
-  font-size:.75rem;
-  font-weight:800;
-  cursor:pointer;
-  letter-spacing:.5px;
-  transition:all .2s;
-  display:flex; align-items:center; gap:4px;
-}
-.bal-add-btn:active { background:var(--orange2); transform:scale(0.97); }
-.bal-amount {
-  font-family:var(--font-head);
-  font-size:2.6rem;
-  font-weight:900;
-  color:#fff;
-  line-height:1;
-  letter-spacing:-1px;
-  margin-bottom:2px;
-  position:relative; z-index:1;
-}
-.bal-amount .currency {
-  font-size:1.4rem;
-  color:rgba(255,255,255,0.6);
-  vertical-align:super;
-  font-weight:700;
-  margin-right:2px;
-}
-.bal-note {
-  font-size:.72rem;
-  color:rgba(255,255,255,0.35);
-  position:relative; z-index:1;
-}
-.bal-stats {
-  display:flex; gap:12px;
-  margin-top:16px;
-  padding-top:16px;
-  border-top:1px solid rgba(255,255,255,0.06);
-  position:relative; z-index:1;
-}
-.bal-stat {
-  flex:1;
-  background:rgba(255,255,255,0.04);
-  border-radius:10px;
-  padding:8px 10px;
-  text-align:center;
-}
-.bal-stat-num {
-  font-family:var(--font-head);
-  font-size:.95rem; font-weight:800;
-  color:var(--text);
-}
-.bal-stat-lbl {
-  font-size:.62rem;
-  color:var(--muted);
-  text-transform:uppercase;
-  letter-spacing:1px;
-  margin-top:2px;
-}
+/* ═══ GAME SCREEN ═══ */
+#game{background:var(--navy);overflow:hidden;justify-content:flex-start;}
+.game-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(11,22,41,0.98);border-bottom:1px solid var(--border);flex-shrink:0;z-index:5;}
+.gh-l{display:flex;align-items:center;gap:8px;}
+.back-btn{width:31px;height:31px;border-radius:9px;background:var(--navy3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.95rem;color:var(--muted);}
+.game-title-hd{font-family:var(--font-h);font-size:.9rem;font-weight:800;}
+.gh-badge{font-size:.62rem;font-weight:700;padding:3px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.4px;}
+.badge-ai    {background:rgba(239,68,68,0.13);color:#ef4444;}
+.badge-friend{background:rgba(59,130,246,0.13);color:#60a5fa;}
+.badge-bet   {background:rgba(245,158,11,0.13);color:#f59e0b;}
+.gh-r{display:flex;gap:5px;}
+.gh-btn{width:29px;height:29px;border-radius:8px;background:var(--navy3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:.78rem;}
 
-/* ── Section Header ── */
-.sec-head {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:20px 16px 10px;
-}
-.sec-title {
-  font-family:var(--font-head);
-  font-size:.7rem; font-weight:800;
-  color:var(--muted);
-  text-transform:uppercase;
-  letter-spacing:3px;
-}
+/* Player panels */
+.pp-row{display:flex;gap:7px;padding:7px 10px;flex-shrink:0;}
+.pp{flex:1;background:var(--card);border:1.5px solid var(--border);border-radius:13px;padding:8px 9px;position:relative;overflow:hidden;transition:border-color .35s;}
+.pp.act{border-color:var(--orange);}
+.pp-stripe{position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;}
+.pp.p1 .pp-stripe{background:#e53935;}
+.pp.p2 .pp-stripe{background:#43a047;}
+.pp-inner{padding-left:6px;}
+.pp-name{font-size:.66rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;}
+.pp-score{font-family:var(--font-h);font-size:.9rem;font-weight:800;margin-top:1px;}
+/* ── timer bar at bottom of panel ── */
+.pp-bar-wrap{position:absolute;bottom:0;left:0;right:0;height:4px;background:rgba(255,255,255,0.04);display:none;}
+.pp-bar{height:100%;background:var(--orange);border-radius:0 0 13px 13px;transition:width .95s linear,background .3s;}
+.pp-bar.urgent{background:var(--red);}
 
-/* ── Game Mode Cards ── */
-.modes-wrap { padding:0 16px; display:flex; flex-direction:column; gap:12px; }
-.mode-card {
-  border-radius:18px;
-  padding:18px;
-  cursor:pointer;
-  transition:transform .15s, box-shadow .2s;
-  display:flex; align-items:center; gap:14px;
-  position:relative;
-  overflow:hidden;
-  border:1px solid var(--border);
-}
-.mode-card:active { transform:scale(0.98); }
-.mode-card.mc-ai   { background:linear-gradient(135deg,#1a0a0a,#2a0f0f); border-color:rgba(239,68,68,0.2); }
-.mode-card.mc-friend { background:linear-gradient(135deg,#0a0f1a,#0f1a2a); border-color:rgba(59,130,246,0.2); }
-.mode-card.mc-bet  { background:linear-gradient(135deg,#1a1000,#2a1800); border-color:rgba(245,158,11,0.2); }
-.mc-icon {
-  width:54px; height:54px; border-radius:15px;
-  display:flex; align-items:center; justify-content:center;
-  font-size:1.5rem; flex-shrink:0;
-}
-.mc-ai .mc-icon   { background:rgba(239,68,68,0.15); }
-.mc-friend .mc-icon { background:rgba(59,130,246,0.15); }
-.mc-bet .mc-icon  { background:rgba(245,158,11,0.15); }
-.mc-info { flex:1; }
-.mc-name {
-  font-family:var(--font-head);
-  font-size:1.1rem; font-weight:800;
-  margin-bottom:3px;
-}
-.mc-desc { font-size:.78rem; color:var(--muted); line-height:1.4; }
-.mc-pill {
-  font-size:.65rem; font-weight:700;
-  padding:3px 10px; border-radius:99px;
-  text-transform:uppercase; letter-spacing:.5px;
-  margin-top:8px; display:inline-block;
-}
-.mc-ai .mc-pill   { background:rgba(239,68,68,0.12); color:#ef4444; }
-.mc-friend .mc-pill { background:rgba(59,130,246,0.12); color:#60a5fa; }
-.mc-bet .mc-pill  { background:rgba(245,158,11,0.12); color:#f59e0b; }
-.mc-arrow {
-  color:var(--muted);
-  font-size:1.2rem;
-  flex-shrink:0;
-}
+/* Board — FULL SIZE */
+.board-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:4px 6px;min-height:0;overflow:hidden;}
+#gameCanvas{border-radius:10px;box-shadow:0 6px 28px rgba(0,0,0,0.5);max-width:100%;max-height:100%;cursor:pointer;display:block;}
 
-/* ── Quick Links ── */
-.quick-row { display:flex; gap:8px; padding:4px 16px; }
-.q-link {
-  flex:1;
-  background:var(--navy3);
-  border:1px solid var(--border);
-  border-radius:12px;
-  padding:12px 10px;
-  cursor:pointer;
-  font-size:.78rem;
-  color:var(--muted);
-  display:flex; flex-direction:column; align-items:center; gap:5px;
-  transition:all .2s;
-}
-.q-link:active { background:var(--navy2); color:var(--text); }
-.q-link-icon { font-size:1.2rem; }
+/* Status */
+.game-status{padding:4px 11px;flex-shrink:0;}
+.status-pill{background:var(--card);border:1px solid var(--border);border-radius:99px;padding:6px 13px;font-size:.74rem;font-weight:600;text-align:center;color:var(--muted);transition:all .5s;}
+.status-pill.myturn{color:var(--orange);border-color:rgba(249,115,22,0.22);}
+.status-pill.cap   {color:var(--red);   border-color:rgba(239,68,68,0.22);}
+.status-pill.safe  {color:var(--green); border-color:rgba(34,197,94,0.22);}
 
-/* ── Leaderboard Strip ── */
-.leader-strip {
-  margin:0 16px;
-  background:var(--card-bg);
-  border:1px solid var(--border);
-  border-radius:16px;
-  overflow:hidden;
-}
-.leader-header {
-  padding:12px 16px;
-  display:flex; align-items:center; gap:8px;
-  border-bottom:1px solid var(--border);
-}
-.leader-title {
-  font-family:var(--font-head);
-  font-size:.85rem; font-weight:800;
-  color:var(--text);
-  flex:1;
-}
-.leader-rows { max-height:140px; overflow:hidden; }
-.leader-row {
-  display:flex; align-items:center; gap:10px;
-  padding:10px 16px;
-  border-bottom:1px solid var(--border);
-}
-.leader-row:last-child { border-bottom:none; }
-.leader-rank {
-  font-family:var(--font-head); font-size:.8rem; font-weight:800;
-  color:var(--muted); width:20px; text-align:center;
-}
-.leader-ava {
-  width:28px; height:28px; border-radius:50%;
-  background:linear-gradient(135deg,var(--blue),var(--cyan));
-  display:flex; align-items:center; justify-content:center;
-  font-size:.7rem; font-weight:700; color:#fff;
-}
-.leader-uname { flex:1; font-size:.82rem; font-weight:600; }
-.leader-amt { font-family:var(--font-head); font-size:.82rem; font-weight:800; color:var(--gold); }
+/* Controls */
+.gc{padding:6px 10px 14px;display:flex;gap:8px;align-items:center;flex-shrink:0;}
+.dice-zone{display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;}
+#diceCanvas{border-radius:11px;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,0.4);transition:transform .1s;}
+#diceCanvas:active{transform:scale(0.94);}
+.dice-hint{font-size:.6rem;color:var(--muted);text-align:center;max-width:64px;line-height:1.3;}
+.acts{flex:1;display:flex;flex-direction:column;gap:6px;}
+.roll-btn{width:100%;padding:12px;border-radius:12px;border:none;font-family:var(--font-h);font-size:.95rem;font-weight:800;letter-spacing:.5px;cursor:pointer;transition:all .2s;background:var(--orange);color:#fff;box-shadow:0 4px 16px rgba(249,115,22,0.28);}
+.roll-btn:disabled{background:var(--navy3);color:var(--muted);box-shadow:none;cursor:not-allowed;}
+.roll-btn:not(:disabled):active{transform:scale(0.97);}
+.ctrl-row{display:flex;gap:6px;}
+.ctrl-btn{flex:1;padding:8px 5px;background:var(--navy3);border:1px solid var(--border);border-radius:10px;font-family:var(--font-b);font-size:.7rem;font-weight:600;color:var(--muted);cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:4px;}
+.ctrl-btn:active{background:var(--navy2);color:var(--text);}
+.ctrl-btn.quit-btn{border-color:rgba(239,68,68,0.14);color:rgba(239,68,68,0.5);}
+.ctrl-btn.quit-btn:active{background:rgba(239,68,68,0.06);color:var(--red);}
 
-/* ═══════════════════════════════════════════════
-   GAME SCREEN
-═══════════════════════════════════════════════ */
-#game {
-  background:var(--navy);
-  overflow:hidden;
-  justify-content:flex-start;
-}
-.game-header {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:12px 16px;
-  background:rgba(13,27,46,0.98);
-  border-bottom:1px solid var(--border);
-  flex-shrink:0; position:relative; z-index:5;
-}
-.gh-left { display:flex; align-items:center; gap:10px; }
-.back-btn {
-  width:34px; height:34px; border-radius:10px;
-  background:var(--navy3); border:1px solid var(--border);
-  display:flex; align-items:center; justify-content:center;
-  cursor:pointer; font-size:1.1rem; color:var(--muted);
-}
-.game-title-header {
-  font-family:var(--font-head);
-  font-size:1rem; font-weight:800;
-}
-.gh-badge {
-  font-size:.68rem; font-weight:700;
-  padding:3px 10px; border-radius:99px;
-  text-transform:uppercase; letter-spacing:1px;
-}
-.badge-ai     { background:rgba(239,68,68,0.15); color:#ef4444; }
-.badge-friend { background:rgba(59,130,246,0.15); color:#60a5fa; }
-.badge-bet    { background:rgba(245,158,11,0.15); color:#f59e0b; }
-.gh-actions { display:flex; gap:6px; }
-.gh-btn {
-  width:32px; height:32px; border-radius:9px;
-  background:var(--navy3); border:1px solid var(--border);
-  display:flex; align-items:center; justify-content:center;
-  cursor:pointer; color:var(--muted); font-size:.85rem;
-}
+/* ═══ WIN ═══ */
+#winScreen{background:var(--navy);align-items:center;justify-content:center;z-index:200;}
+.win-content{display:flex;flex-direction:column;align-items:center;gap:15px;padding:22px;}
+.win-trophy{animation:pop-in .48s cubic-bezier(.34,1.56,.64,1);}
+.win-title{font-family:var(--font-h);font-size:2.1rem;font-weight:900;text-align:center;letter-spacing:2px;}
+.win-sub{font-size:.88rem;color:var(--muted);text-align:center;}
+.win-prize{display:none;font-family:var(--font-h);font-size:1.7rem;font-weight:900;color:var(--green);text-align:center;}
+.confetti-c{position:fixed;inset:0;pointer-events:none;z-index:199;overflow:hidden;}
+.win-btns{display:flex;flex-direction:column;gap:8px;width:100%;max-width:250px;margin-top:6px;}
 
-/* ── Player Panels ── */
-.player-panels {
-  display:flex; gap:10px;
-  padding:10px 12px;
-  flex-shrink:0;
-}
-.pp {
-  flex:1;
-  background:var(--card-bg);
-  border:1.5px solid var(--border);
-  border-radius:14px;
-  padding:10px 12px;
-  position:relative;
-  transition:all .3s;
-  overflow:hidden;
-}
-.pp.active-turn { border-color:var(--gold); }
-.pp.active-turn::before {
-  content:'';
-  position:absolute; inset:0;
-  background:rgba(245,158,11,0.04);
-  border-radius:14px;
-}
-.pp-color-bar {
-  position:absolute; left:0; top:0; bottom:0;
-  width:3px; border-radius:3px 0 0 3px;
-}
-.pp.p1 .pp-color-bar { background:var(--ludo-red); }
-.pp.p2 .pp-color-bar { background:var(--ludo-green); }
-.pp-content { padding-left:6px; }
-.pp-name {
-  font-size:.72rem; font-weight:600;
-  color:var(--muted); text-transform:uppercase;
-  letter-spacing:1px;
-}
-.pp-score {
-  font-family:var(--font-head);
-  font-size:1rem; font-weight:800;
-  margin-top:1px;
-}
-.pp-timer-wrap {
-  position:absolute; right:10px; top:50%;
-  transform:translateY(-50%);
-  display:none;
-}
-.pp-timer-ring {
-  position:relative;
-  width:38px; height:38px;
-}
-.pp-timer-ring svg {
-  transform:rotate(-90deg);
-  width:38px; height:38px;
-}
-.timer-bg { fill:none; stroke:rgba(255,255,255,0.06); stroke-width:3; }
-.timer-arc { fill:none; stroke:var(--gold); stroke-width:3; stroke-linecap:round;
-  stroke-dasharray:100; stroke-dashoffset:0; transition:stroke-dashoffset .9s linear; }
-.timer-arc.urgent { stroke:var(--red); animation:blink .5s infinite; }
-.pp-timer-num {
-  position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  font-family:var(--font-head); font-size:.75rem; font-weight:900;
-  color:var(--gold);
-}
-.pp-timer-num.urgent { color:var(--red); }
+/* ═══ MODALS ═══ */
+.modal{position:fixed;inset:0;display:none;align-items:flex-end;justify-content:center;z-index:100;}
+.modal.open{display:flex;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);}
+.modal-bd{position:absolute;inset:0;}
+.modal-sheet{position:relative;width:100%;max-width:480px;background:var(--navy2);border-top-left-radius:24px;border-top-right-radius:24px;border:1px solid var(--border);border-bottom:none;padding:0 0 env(safe-area-inset-bottom,18px);max-height:92vh;overflow-y:auto;animation:slide-up .27s cubic-bezier(.34,1.56,.64,1);}
+.sheet-handle{width:32px;height:3px;background:rgba(255,255,255,0.1);border-radius:99px;margin:10px auto;cursor:pointer;}
+.sheet-close{position:absolute;top:12px;right:14px;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:.72rem;font-weight:700;z-index:2;}
+.sheet-close:active{background:rgba(255,255,255,0.1);}
+.sheet-title{font-family:var(--font-h);font-size:1.25rem;font-weight:900;padding:7px 18px 2px;}
+.sheet-sub{font-size:.77rem;color:var(--muted);padding:0 18px 13px;}
+.sheet-body{padding:0 18px;}
+.f-lbl{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px;display:block;}
+.f-inp{width:100%;background:var(--navy3);border:1.5px solid var(--border);border-radius:11px;padding:12px 13px;color:var(--text);font-family:var(--font-b);font-size:.95rem;outline:none;transition:border-color .2s;}
+.f-inp:focus{border-color:var(--orange);}
+.f-inp::placeholder{color:var(--muted);}
+/* Code boxes */
+.code-boxes{display:flex;gap:8px;justify-content:center;margin:13px 0;}
+.c-box{width:54px;height:58px;background:var(--navy3);border:2px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-size:1.6rem;font-weight:900;color:var(--muted);transition:all .2s;}
+.c-box.filled{border-color:var(--orange);color:var(--orange);}
+#joinCodeHidden{position:absolute;opacity:0;width:0;height:0;left:0;top:0;}
+/* Buttons */
+.btn{width:100%;padding:12px;border-radius:12px;border:none;font-family:var(--font-h);font-size:.92rem;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.4px;text-transform:uppercase;}
+.btn+.btn{margin-top:8px;}
+.btn-or{background:var(--orange);color:#fff;box-shadow:0 4px 14px rgba(249,115,22,0.28);}
+.btn-or:active{background:var(--orange2);transform:scale(0.98);}
+.btn-gd{background:var(--gold);color:#1a0800;box-shadow:0 4px 14px rgba(245,158,11,0.28);}
+.btn-gd:active{background:var(--gold2);transform:scale(0.98);}
+.btn-bl{background:var(--blue);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,0.28);}
+.btn-bl:active{opacity:.9;transform:scale(0.98);}
+.btn-rd{background:var(--red);color:#fff;box-shadow:0 4px 14px rgba(239,68,68,0.28);}
+.btn-rd:active{opacity:.9;transform:scale(0.98);}
+.btn-ol{background:transparent;border:1.5px solid var(--border);color:var(--muted);}
+.btn-ol:active{background:rgba(255,255,255,0.04);color:var(--text);}
+.btn:disabled{background:var(--navy3);color:var(--muted);box-shadow:none;cursor:not-allowed;}
+/* Opt grid */
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:13px;}
+.opt-item{background:var(--navy3);border:2px solid var(--border);border-radius:12px;padding:12px 10px;cursor:pointer;transition:all .2s;text-align:center;}
+.opt-item.sel{border-color:var(--orange);background:rgba(249,115,22,0.05);}
+.opt-ico{font-size:1.25rem;margin-bottom:4px;}
+.opt-lbl{font-family:var(--font-h);font-size:.83rem;font-weight:700;}
+.opt-dsc{font-size:.66rem;color:var(--muted);margin-top:1px;}
+/* Challenge cards */
+.ch-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:13px;}
+.ch-card{background:var(--navy3);border:2px solid var(--border);border-radius:12px;padding:12px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.ch-card.sel{border-color:var(--gold);}
+.ch-card.sel::before{content:'';position:absolute;inset:0;background:rgba(245,158,11,0.04);}
+.ch-tag{position:absolute;top:6px;right:6px;font-size:.56rem;font-weight:700;padding:2px 6px;border-radius:99px;text-transform:uppercase;background:rgba(245,158,11,0.1);color:var(--gold);}
+.ch-stake{font-family:var(--font-h);font-size:1.05rem;font-weight:800;}
+.ch-lbl{font-size:.65rem;color:var(--muted);font-weight:400;margin-left:1px;}
+.ch-prize{font-size:.72rem;color:var(--green);margin-top:3px;font-weight:600;}
+/* Matchmaking */
+#matchmakingModal{align-items:center;}
+.mm-box{background:var(--navy2);border:1px solid var(--border);border-radius:20px;padding:26px 20px;text-align:center;max-width:290px;width:90%;animation:fade-in .3s ease;}
+.spin-ring{width:54px;height:54px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--orange);animation:spin 1s linear infinite;margin:0 auto 16px;}
+.mm-title{font-family:var(--font-h);font-size:1.15rem;font-weight:800;margin-bottom:5px;}
+.mm-desc{font-size:.78rem;color:var(--muted);line-height:1.5;margin-bottom:13px;}
+.mm-stake{font-family:var(--font-h);font-size:.95rem;color:var(--gold);margin-bottom:3px;}
+.mm-timer{font-size:.7rem;color:var(--muted);}
+/* Room */
+.room-code-box{background:var(--navy3);border:1px solid var(--border);border-radius:15px;padding:16px;text-align:center;margin:9px 0;}
+.room-digits{font-family:var(--font-h);font-size:2.5rem;font-weight:900;letter-spacing:11px;color:var(--orange);margin-bottom:2px;}
+.room-hint{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:2px;}
+.room-copy{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:5px 13px;border-radius:99px;background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.16);font-size:.72rem;font-weight:600;color:var(--orange);cursor:pointer;}
+.rp-row{display:flex;gap:8px;margin:7px 0;}
+.rp-slot{flex:1;background:var(--navy3);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;font-size:.76rem;color:var(--muted);}
+.rp-slot.rp-on{border-color:var(--green);color:var(--green);}
+.rp-ico{font-size:1rem;margin-bottom:2px;}
+/* Settings */
+.s-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);}
+.s-row:last-of-type{border-bottom:none;}
+.s-lbl{font-size:.86rem;font-weight:600;}
+.s-dsc{font-size:.68rem;color:var(--muted);margin-top:1px;}
+.toggle{width:43px;height:23px;border-radius:99px;background:var(--navy3);border:1px solid var(--border);position:relative;cursor:pointer;transition:background .2s;}
+.toggle.on{background:var(--orange);border-color:var(--orange);}
+.toggle-knob{width:17px;height:17px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:transform .2s;}
+.toggle.on .toggle-knob{transform:translateX(20px);}
+/* Chat */
+.chat-msgs{flex:1;overflow-y:auto;padding:9px 15px;display:flex;flex-direction:column;gap:8px;}
+.chat-msg{max-width:85%;}
+.chat-msg.ai {align-self:flex-start;}
+.chat-msg.usr{align-self:flex-end;}
+.chat-bub{padding:8px 12px;border-radius:12px;font-size:.81rem;line-height:1.5;}
+.chat-msg.ai .chat-bub{background:var(--navy3);border:1px solid var(--border);border-bottom-left-radius:3px;}
+.chat-msg.usr .chat-bub{background:rgba(249,115,22,0.13);border:1px solid rgba(249,115,22,0.22);border-bottom-right-radius:3px;}
+.chat-in-row{padding:8px 15px;border-top:1px solid var(--border);display:flex;gap:8px;}
+.chat-in{flex:1;background:var(--navy3);border:1.5px solid var(--border);border-radius:9px;padding:8px 12px;color:var(--text);font-family:var(--font-b);font-size:.84rem;outline:none;}
+.chat-in:focus{border-color:var(--orange);}
+.chat-send{background:var(--orange);color:#fff;border:none;border-radius:9px;padding:8px 12px;font-family:var(--font-h);font-weight:700;font-size:.8rem;cursor:pointer;}
+/* Tutorial */
+.tut-step{background:var(--navy3);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start;}
+.tut-n{width:27px;height:27px;border-radius:50%;background:var(--orange);color:#fff;font-family:var(--font-h);font-weight:800;font-size:.82rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tut-t h4{font-family:var(--font-h);font-size:.88rem;font-weight:700;margin-bottom:2px;}
+.tut-t p{font-size:.73rem;color:var(--muted);line-height:1.5;}
+/* Legal */
+.l-sec{margin-bottom:14px;}
+.l-sec h3{font-family:var(--font-h);font-size:.88rem;font-weight:700;color:var(--orange);margin-bottom:4px;}
+.l-sec p{font-size:.74rem;color:var(--muted);line-height:1.6;}
+.l-warn{background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.13);border-radius:9px;padding:10px;margin:9px 0;font-size:.73rem;color:rgba(239,68,68,0.72);line-height:1.5;}
+/* Dialog */
+#quitConfirmModal{align-items:center;}
+.dlg-box{background:var(--navy2);border:1px solid var(--border);border-radius:20px;padding:24px 18px;text-align:center;max-width:290px;width:90%;animation:fade-in .3s ease;}
+.dlg-ico{font-size:2.2rem;margin-bottom:9px;}
+.dlg-title{font-family:var(--font-h);font-size:1.15rem;font-weight:800;margin-bottom:5px;}
+.dlg-desc{font-size:.78rem;color:var(--muted);line-height:1.5;margin-bottom:16px;}
+/* Offline */
+#noInternetModal{align-items:center;}
+.offline-box{background:var(--navy2);border:1px solid rgba(239,68,68,0.16);border-radius:20px;padding:24px 18px;text-align:center;max-width:260px;width:90%;}
+/* Divider */
+.div{height:1px;background:var(--border);margin:11px 0;}
+/* Toast */
+.toast{position:fixed;bottom:68px;left:50%;transform:translateX(-50%);background:var(--navy2);border:1px solid var(--border);border-radius:10px;padding:8px 15px;font-size:.77rem;font-weight:600;white-space:nowrap;z-index:999;opacity:0;pointer-events:none;transition:opacity .22s,bottom .22s;max-width:86%;text-align:center;}
+.toast.show{opacity:1;bottom:78px;}
+.toast.success{border-color:rgba(34,197,94,0.26);color:var(--green);}
+.toast.error  {border-color:rgba(239,68,68,0.26);color:var(--red);}
+.toast.warning{border-color:rgba(245,158,11,0.26);color:var(--gold);}
 
-/* ── Board wrap ── */
-.board-wrap {
-  flex:1;
-  display:flex; align-items:center; justify-content:center;
-  padding:4px 8px;
-  overflow:hidden;
-}
-#gameCanvas {
-  border-radius:14px;
-  box-shadow:0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
-  max-width:100%; max-height:100%;
-  cursor:pointer;
-  display:block;
-}
-
-/* ── Status bar ── */
-.game-status {
-  padding:6px 14px;
-  flex-shrink:0;
-}
-.status-msg {
-  background:var(--card-bg);
-  border:1px solid var(--border);
-  border-radius:99px;
-  padding:7px 16px;
-  font-size:.78rem; font-weight:600;
-  text-align:center;
-  color:var(--muted);
-  transition:color .3s;
-}
-.status-msg.my-turn { color:var(--gold); border-color:rgba(245,158,11,0.2); }
-.status-msg.capture { color:var(--red); border-color:rgba(239,68,68,0.2); }
-
-/* ── Game Controls ── */
-.game-controls {
-  padding:8px 12px 16px;
-  display:flex; gap:10px; align-items:center;
-  flex-shrink:0;
-}
-.dice-zone {
-  display:flex; flex-direction:column; align-items:center; gap:4px;
-  flex-shrink:0;
-}
-#diceCanvas {
-  border-radius:12px;
-  cursor:pointer;
-  box-shadow:0 4px 16px rgba(0,0,0,0.4);
-  transition:transform .1s;
-}
-#diceCanvas:active { transform:scale(0.95); }
-.dice-hint {
-  font-size:.65rem; color:var(--muted);
-  text-align:center; max-width:65px;
-  line-height:1.3;
-}
-.actions-col { flex:1; display:flex; flex-direction:column; gap:7px; }
-.roll-btn {
-  width:100%; padding:14px;
-  border-radius:13px; border:none;
-  font-family:var(--font-head);
-  font-size:1.05rem; font-weight:800;
-  letter-spacing:1px; cursor:pointer;
-  transition:all .2s;
-  background:var(--orange);
-  color:#fff;
-  box-shadow:0 4px 20px rgba(249,115,22,0.3);
-}
-.roll-btn:disabled {
-  background:var(--navy3);
-  color:var(--muted);
-  box-shadow:none;
-  cursor:not-allowed;
-}
-.roll-btn:not(:disabled):active { transform:scale(0.98); }
-.control-row { display:flex; gap:7px; }
-.ctrl-btn {
-  flex:1; padding:9px 6px;
-  background:var(--navy3);
-  border:1px solid var(--border);
-  border-radius:11px;
-  font-family:var(--font-body);
-  font-size:.75rem; font-weight:600;
-  color:var(--muted); cursor:pointer;
-  transition:all .2s;
-  display:flex; align-items:center; justify-content:center; gap:4px;
-}
-.ctrl-btn:active { background:var(--navy2); color:var(--text); }
-.ctrl-btn.danger { border-color:rgba(239,68,68,0.2); color:rgba(239,68,68,0.6); }
-.ctrl-btn.danger:active { background:rgba(239,68,68,0.08); color:var(--red); }
-
-/* ═══════════════════════════════════════════════
-   WIN SCREEN
-═══════════════════════════════════════════════ */
-#winScreen {
-  background: var(--navy);
-  align-items:center; justify-content:center;
-  z-index:200;
-}
-.win-content { display:flex; flex-direction:column; align-items:center; gap:18px; padding:24px; }
-.win-trophy-wrap { animation:pop-in .5s cubic-bezier(.34,1.56,.64,1); }
-.win-title {
-  font-family:var(--font-head);
-  font-size:2.4rem; font-weight:900;
-  color:var(--text);
-  letter-spacing:2px;
-  text-align:center;
-}
-.win-subtitle { font-size:.95rem; color:var(--muted); text-align:center; }
-.win-prize {
-  display:none;
-  font-family:var(--font-head);
-  font-size:1.8rem; font-weight:900;
-  color:var(--green);
-  text-align:center;
-}
-.confetti-c { position:fixed; inset:0; pointer-events:none; z-index:199; overflow:hidden; }
-.win-btns { display:flex; flex-direction:column; gap:10px; width:100%; max-width:280px; margin-top:8px; }
-
-/* ═══════════════════════════════════════════════
-   MODALS
-═══════════════════════════════════════════════ */
-.modal {
-  position:fixed; inset:0;
-  display:none; align-items:flex-end; justify-content:center;
-  z-index:100;
-}
-.modal.open {
-  display:flex;
-  background:rgba(0,0,0,0.75);
-  backdrop-filter:blur(6px);
-}
-.modal-sheet {
-  width:100%; max-width:480px;
-  background:var(--navy2);
-  border-top-left-radius:24px;
-  border-top-right-radius:24px;
-  border:1px solid var(--border); border-bottom:none;
-  padding:0 0 env(safe-area-inset-bottom, 24px);
-  max-height:92vh; overflow-y:auto;
-  animation:slide-up .3s cubic-bezier(.34,1.56,.64,1);
-}
-.sheet-handle { width:36px; height:3px; background:var(--border); border-radius:99px; margin:12px auto; }
-.sheet-title {
-  font-family:var(--font-head);
-  font-size:1.4rem; font-weight:900;
-  padding:10px 22px 4px;
-}
-.sheet-sub { font-size:.82rem; color:var(--muted); padding:0 22px 16px; }
-.sheet-body { padding:0 22px; }
-
-/* ── Form ── */
-.form-lbl { font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:8px; display:block; }
-.form-inp {
-  width:100%;
-  background:var(--navy3);
-  border:1.5px solid var(--border);
-  border-radius:12px;
-  padding:14px 16px;
-  color:var(--text);
-  font-family:var(--font-body);
-  font-size:1rem;
-  outline:none;
-  transition:border-color .2s;
-}
-.form-inp:focus { border-color:var(--orange); }
-.form-inp::placeholder { color:var(--muted); }
-
-/* ── Room Code Input (4 separate boxes) ── */
-.code-inputs {
-  display:flex; gap:10px; justify-content:center;
-  margin:16px 0;
-}
-.code-box {
-  width:58px; height:62px;
-  background:var(--navy3);
-  border:2px solid var(--border);
-  border-radius:14px;
-  display:flex; align-items:center; justify-content:center;
-  font-family:var(--font-head);
-  font-size:1.8rem; font-weight:900;
-  color:var(--text);
-  cursor:pointer;
-  transition:all .2s;
-}
-.code-box.filled { border-color:var(--orange); color:var(--orange); }
-/* Hidden actual input */
-#joinCodeInputHidden { position:absolute; opacity:0; width:0; height:0; }
-
-/* ── Buttons ── */
-.btn {
-  width:100%; padding:14px;
-  border-radius:13px; border:none;
-  font-family:var(--font-head);
-  font-size:1rem; font-weight:800;
-  cursor:pointer; transition:all .2s;
-  letter-spacing:.5px; text-transform:uppercase;
-}
-.btn + .btn { margin-top:10px; }
-.btn-orange { background:var(--orange); color:#fff; box-shadow:0 4px 16px rgba(249,115,22,0.3); }
-.btn-orange:active { background:var(--orange2); transform:scale(0.98); }
-.btn-gold { background:var(--gold); color:#1a0800; box-shadow:0 4px 16px rgba(245,158,11,0.3); }
-.btn-gold:active { background:var(--gold2); transform:scale(0.98); }
-.btn-blue { background:var(--blue); color:#fff; box-shadow:0 4px 16px rgba(59,130,246,0.3); }
-.btn-blue:active { opacity:.9; transform:scale(0.98); }
-.btn-red { background:var(--red); color:#fff; box-shadow:0 4px 16px rgba(239,68,68,0.3); }
-.btn-red:active { opacity:.9; transform:scale(0.98); }
-.btn-outline { background:transparent; border:1.5px solid var(--border); color:var(--muted); }
-.btn-outline:active { background:var(--dim); color:var(--text); }
-.btn:disabled { background:var(--navy3); color:var(--muted); box-shadow:none; cursor:not-allowed; }
-
-/* ── Option Grid ── */
-.opt-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
-.opt-item {
-  background:var(--navy3);
-  border:2px solid var(--border);
-  border-radius:14px;
-  padding:14px 12px;
-  cursor:pointer; transition:all .2s;
-  text-align:center;
-}
-.opt-item.sel { border-color:var(--orange); background:rgba(249,115,22,0.06); }
-.opt-icon { font-size:1.4rem; margin-bottom:6px; }
-.opt-label { font-family:var(--font-head); font-size:.9rem; font-weight:700; }
-.opt-desc { font-size:.7rem; color:var(--muted); margin-top:2px; }
-
-/* ── Bet Cards ── */
-.bet-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
-.bet-card {
-  background:var(--navy3);
-  border:2px solid var(--border);
-  border-radius:14px;
-  padding:14px;
-  cursor:pointer; transition:all .2s;
-  position:relative; overflow:hidden;
-}
-.bet-card.sel { border-color:var(--gold); }
-.bet-card.sel::before { content:''; position:absolute; inset:0; background:rgba(245,158,11,0.05); }
-.bet-stake { font-family:var(--font-head); font-size:1.2rem; font-weight:800; }
-.bet-stake-lbl { font-size:.7rem; color:var(--muted); font-weight:400; margin-left:2px; }
-.bet-win { font-size:.78rem; color:var(--green); margin-top:4px; font-weight:600; }
-.bet-badge {
-  position:absolute; top:8px; right:8px;
-  font-size:.6rem; font-weight:700;
-  padding:2px 7px; border-radius:99px;
-  text-transform:uppercase; letter-spacing:.5px;
-  background:rgba(245,158,11,0.1); color:var(--gold);
-}
-
-/* ── Matchmaking Box ── */
-#matchmakingModal { align-items:center; }
-.match-box {
-  background:var(--navy2);
-  border:1px solid var(--border);
-  border-radius:20px;
-  padding:30px 24px;
-  text-align:center;
-  max-width:320px; width:90%;
-  animation:fade-in .3s ease;
-}
-.spin-ring {
-  width:60px; height:60px; border-radius:50%;
-  border:3px solid var(--border);
-  border-top-color:var(--orange);
-  animation:spin 1s linear infinite;
-  margin:0 auto 20px;
-}
-.match-title { font-family:var(--font-head); font-size:1.3rem; font-weight:800; margin-bottom:8px; }
-.match-desc { font-size:.82rem; color:var(--muted); line-height:1.5; margin-bottom:16px; }
-.match-stake { font-family:var(--font-head); font-size:1.1rem; color:var(--gold); margin-bottom:6px; }
-.match-timer { font-size:.75rem; color:var(--muted); }
-
-/* ── Room Waiting ── */
-.room-code-box {
-  background:var(--navy3);
-  border:1px solid var(--border);
-  border-radius:16px;
-  padding:20px; text-align:center;
-  margin:12px 0;
-}
-.room-code-digits {
-  font-family:var(--font-head);
-  font-size:2.8rem; font-weight:900;
-  letter-spacing:14px;
-  color:var(--orange);
-  margin-bottom:4px;
-}
-.room-code-hint {
-  font-size:.72rem; color:var(--muted);
-  text-transform:uppercase; letter-spacing:2px;
-}
-.room-share-btn {
-  margin-top:10px;
-  background:rgba(249,115,22,0.1);
-  border:1px solid rgba(249,115,22,0.2);
-  border-radius:99px;
-  padding:6px 16px;
-  font-size:.78rem; font-weight:600;
-  color:var(--orange); cursor:pointer;
-  display:inline-flex; align-items:center; gap:6px;
-}
-.room-players { display:flex; gap:10px; margin:10px 0; }
-.rp-slot {
-  flex:1; background:var(--navy3); border:1px solid var(--border);
-  border-radius:12px; padding:12px; text-align:center;
-  font-size:.8rem; color:var(--muted);
-}
-.rp-slot.rp-filled { border-color:var(--green); color:var(--green); }
-.rp-icon { font-size:1.2rem; margin-bottom:4px; }
-
-/* ── Settings ── */
-.settings-row {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:14px 0; border-bottom:1px solid var(--border);
-}
-.settings-row:last-of-type { border-bottom:none; }
-.sr-label { font-size:.9rem; font-weight:600; }
-.sr-desc { font-size:.73rem; color:var(--muted); margin-top:2px; }
-.toggle {
-  width:46px; height:25px; border-radius:99px;
-  background:var(--navy3); border:1px solid var(--border);
-  position:relative; cursor:pointer; transition:background .2s;
-}
-.toggle.on { background:var(--orange); border-color:var(--orange); }
-.toggle-knob {
-  width:19px; height:19px; border-radius:50%; background:#fff;
-  position:absolute; top:2px; left:2px; transition:transform .2s;
-}
-.toggle.on .toggle-knob { transform:translateX(21px); }
-
-/* ── Chat ── */
-.chat-msgs {
-  flex:1; overflow-y:auto; padding:12px 18px;
-  display:flex; flex-direction:column; gap:10px;
-}
-.chat-msg { max-width:82%; }
-.chat-msg.ai { align-self:flex-start; }
-.chat-msg.user { align-self:flex-end; }
-.chat-bubble {
-  padding:10px 14px; border-radius:14px;
-  font-size:.85rem; line-height:1.5;
-}
-.chat-msg.ai .chat-bubble {
-  background:var(--navy3); border:1px solid var(--border);
-  border-bottom-left-radius:4px;
-}
-.chat-msg.user .chat-bubble {
-  background:rgba(249,115,22,0.15);
-  border:1px solid rgba(249,115,22,0.25);
-  border-bottom-right-radius:4px;
-}
-.chat-in-row {
-  padding:10px 18px; border-top:1px solid var(--border);
-  display:flex; gap:10px;
-}
-.chat-in {
-  flex:1; background:var(--navy3);
-  border:1.5px solid var(--border);
-  border-radius:10px; padding:9px 14px;
-  color:var(--text); font-family:var(--font-body); font-size:.88rem;
-  outline:none;
-}
-.chat-in:focus { border-color:var(--orange); }
-.chat-send-btn {
-  background:var(--orange); color:#fff; border:none;
-  border-radius:10px; padding:9px 14px;
-  font-family:var(--font-head); font-weight:700; font-size:.85rem;
-  cursor:pointer;
-}
-
-/* ── Tutorial Steps ── */
-.tut-step {
-  background:var(--navy3); border:1px solid var(--border);
-  border-radius:14px; padding:14px; margin-bottom:10px;
-  display:flex; gap:12px; align-items:flex-start;
-}
-.tut-num {
-  width:30px; height:30px; border-radius:50%;
-  background:var(--orange); color:#fff;
-  font-family:var(--font-head); font-weight:800; font-size:.88rem;
-  display:flex; align-items:center; justify-content:center; flex-shrink:0;
-}
-.tut-text h4 { font-family:var(--font-head); font-size:.95rem; font-weight:700; margin-bottom:4px; }
-.tut-text p { font-size:.78rem; color:var(--muted); line-height:1.5; }
-
-/* ── Legal ── */
-.legal-sec { margin-bottom:18px; }
-.legal-sec h3 { font-family:var(--font-head); font-size:.95rem; font-weight:700; color:var(--orange); margin-bottom:6px; }
-.legal-sec p { font-size:.78rem; color:var(--muted); line-height:1.6; }
-.legal-warn {
-  background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.15);
-  border-radius:12px; padding:12px; margin:12px 0;
-  font-size:.78rem; color:rgba(239,68,68,0.8); line-height:1.5;
-}
-
-/* ── Quit confirm ── */
-#quitConfirmModal { align-items:center; }
-.dialog-box {
-  background:var(--navy2); border:1px solid var(--border);
-  border-radius:20px; padding:28px 22px; text-align:center;
-  max-width:320px; width:90%;
-  animation:fade-in .3s ease;
-}
-.dialog-icon { font-size:2.5rem; margin-bottom:12px; }
-.dialog-title { font-family:var(--font-head); font-size:1.3rem; font-weight:800; margin-bottom:8px; }
-.dialog-desc { font-size:.82rem; color:var(--muted); line-height:1.5; margin-bottom:20px; }
-
-/* ── No internet ── */
-#noInternetModal { align-items:center; }
-.offline-box {
-  background:var(--navy2); border:1px solid rgba(239,68,68,0.2);
-  border-radius:20px; padding:28px 22px; text-align:center;
-  max-width:280px; width:90%;
-}
-
-/* ── Divider ── */
-.divider { height:1px; background:var(--border); margin:14px 0; }
-
-/* ── Toast ── */
-.toast {
-  position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
-  background:var(--navy2); border:1px solid var(--border);
-  border-radius:12px; padding:10px 18px;
-  font-size:.82rem; font-weight:600;
-  white-space:nowrap; z-index:999;
-  opacity:0; pointer-events:none;
-  transition:opacity .25s, bottom .25s;
-  max-width:90%;
-}
-.toast.show { opacity:1; bottom:90px; }
-.toast.success { border-color:rgba(34,197,94,0.3); color:var(--green); }
-.toast.error   { border-color:rgba(239,68,68,0.3); color:var(--red); }
-.toast.warning { border-color:rgba(245,158,11,0.3); color:var(--gold); }
-
-/* ═══════════════════════════════════════════════
-   ANIMATIONS
-═══════════════════════════════════════════════ */
-@keyframes fade-in { from { opacity:0 } to { opacity:1 } }
-@keyframes slide-up { from { transform:translateY(100%) } to { transform:translateY(0) } }
-@keyframes pop-in { from { transform:scale(0);opacity:0 } to { transform:scale(1);opacity:1 } }
-@keyframes spin { to { transform:rotate(360deg) } }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
-@keyframes confetti-fall {
-  from { transform:translateY(-20px) rotate(0deg); opacity:1 }
-  to   { transform:translateY(100vh) rotate(720deg); opacity:0 }
-}
-
-/* ── Responsive ── */
-@media (max-height: 680px) {
-  .game-header { padding:8px 14px; }
-  .player-panels { padding:6px 10px; gap:8px; }
-  .game-controls { padding:6px 10px 10px; }
-}
+/* Animations */
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
+@keyframes slide-up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes pop-in{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes confetti-fall{from{transform:translateY(-20px) rotate(0deg);opacity:1}to{transform:translateY(100vh) rotate(720deg);opacity:0}}
+@media(max-height:660px){.game-hd{padding:7px 11px;}.pp-row{padding:5px 9px;gap:6px;}.gc{padding:4px 9px 10px;}.game-status{padding:3px 9px;}}
 </style>
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════
-     LOADING SCREEN
-═══════════════════════════════════════════════ -->
+<!-- LOADING -->
 <div class="screen active" id="loading">
-  <div class="load-board-wrap">
-    <canvas id="ludominiCanvas" width="100" height="100"></canvas>
+  <div class="load-glow"></div>
+  <div class="load-inner">
+    <img src="GLOBALS.jpg" class="load-logo-img" alt="Globals"
+         onerror="this.style.display='none';document.getElementById('lFb').style.display='flex'">
+    <div class="load-logo-fb" id="lFb" style="display:none">🌐</div>
+    <div class="load-dice">🎲</div>
+    <div class="load-brand">Globals <span>Ludo</span></div>
+    <div class="load-sub">Your Gaming Arena</div>
+    <canvas class="load-mini-canvas" id="ludominiCanvas" width="110" height="110"></canvas>
+    <div class="load-dots"><div class="ld"></div><div class="ld"></div><div class="ld"></div><div class="ld"></div></div>
+    <div class="load-prog-wrap">
+      <div class="load-prog-bg"><div class="load-prog-fill" id="progressFill"></div></div>
+      <div class="load-pct" id="progressPct">0%</div>
+    </div>
+    <div class="load-tip" id="loadTip">Land on an opponent to send them back home! ⭐</div>
   </div>
-  <div class="load-logo">GLOBALS <span style="color:var(--orange)">LUDO</span></div>
-  <div class="load-sub">Your Gaming Arena</div>
-  <div class="load-bar-wrap"><div class="load-bar" id="progressFill"></div></div>
-  <div class="load-pct" id="progressPct">0%</div>
 </div>
 
-<!-- ═══════════════════════════════════════════════
-     MAIN SCREEN
-═══════════════════════════════════════════════ -->
+<!-- MAIN -->
 <div class="screen" id="main">
   <div class="main-scroll">
-
-    <!-- Top Bar -->
+    <!-- TopBar -->
     <div class="topbar">
-      <div class="topbar-brand">
-        <div class="brand-icon">🎲</div>
-        <div class="brand-name">Globals <span>Ludo</span></div>
+      <div class="tb-brand">
+        <img src="GLOBALS.jpg" class="tb-logo-img" alt="G"
+             onerror="this.style.display='none';document.getElementById('tbFb').style.display='flex'">
+        <div class="tb-logo-fb" id="tbFb" style="display:none">🎲</div>
+        <div class="tb-name">Globals <span>Ludo</span></div>
       </div>
-      <div class="topbar-right">
+      <div class="tb-right">
         <div class="user-chip">
-          <div class="user-ava" id="userAvatarMain">G</div>
-          <div class="user-name-sm" id="usernameDisplay">Player</div>
+          <div class="u-ava" id="userAvatarMain">G</div>
+          <div class="u-nm" id="usernameDisplay">Player</div>
         </div>
-        <div class="icon-pill" id="settingsBtn" title="Settings">⚙️</div>
-        <div class="icon-pill" id="mainChatBtn" title="Support">💬</div>
+        <div class="icon-pill" id="settingsBtn">⚙️</div>
+        <div class="icon-pill" id="mainChatBtn">💬</div>
       </div>
     </div>
 
-    <!-- Balance Card -->
-    <div class="balance-card">
+    <!-- Gamified Balance -->
+    <div class="bal-section">
       <div class="bal-top">
-        <div class="bal-label">
-          <div class="live-dot"></div>
-          Total Balance
-        </div>
-        <button class="bal-add-btn" onclick="showToast('Deposit via Globals main app','warning')">
-          + Add Money
-        </button>
+        <div class="bal-live"><div class="live-dot"></div>Live Balance</div>
+        <div class="bal-coin">🪙</div>
       </div>
-      <div class="bal-amount">
-        <span class="currency">₦</span><span id="mainBalance">0.00</span>
+      <div class="bal-main">
+        <div class="bal-lbl">Available Coins</div>
+        <div class="bal-num"><span class="bal-sym">₦</span><span id="mainBalance">—</span></div>
+        <div class="bal-note">Synced from Globals · Real-time</div>
       </div>
-      <div class="bal-note">Available for betting · Real-time</div>
       <div class="bal-stats">
-        <div class="bal-stat">
-          <div class="bal-stat-num" id="statWins">0</div>
-          <div class="bal-stat-lbl">Wins</div>
-        </div>
-        <div class="bal-stat">
-          <div class="bal-stat-num" id="statGames">0</div>
-          <div class="bal-stat-lbl">Games</div>
-        </div>
-        <div class="bal-stat">
-          <div class="bal-stat-num" id="statEarned">₦0</div>
-          <div class="bal-stat-lbl">Earned</div>
-        </div>
+        <div class="bst"><div class="bst-v" id="statWins">0</div><div class="bst-l">🏆 Wins</div></div>
+        <div class="bst"><div class="bst-v" id="statGames">0</div><div class="bst-l">🎮 Games</div></div>
+        <div class="bst"><div class="bst-v" id="statEarned">₦0</div><div class="bst-l">💰 Earned</div></div>
+      </div>
+      <div class="xp-row">
+        <div class="xp-top"><div class="xp-lbl">⚡ Player XP</div><div class="xp-val" id="xpVal">Level 1</div></div>
+        <div class="xp-bg"><div class="xp-fill" id="xpFill"></div></div>
       </div>
     </div>
 
-    <!-- Game Modes -->
-    <div class="sec-head">
-      <div class="sec-title">Choose Your Mode</div>
-    </div>
+    <!-- Modes -->
+    <div class="sec-head"><div class="sec-title">Choose Your Mode</div></div>
     <div class="modes-wrap">
-      <div class="mode-card mc-ai" id="vsComputerBtn">
-        <div class="mc-icon">🤖</div>
-        <div class="mc-info">
-          <div class="mc-name">vs Computer</div>
-          <div class="mc-desc">Challenge our smart AI in 4 difficulty levels</div>
-          <span class="mc-pill">Free Play</span>
-        </div>
-        <div class="mc-arrow">›</div>
+      <div class="mc mc-ai" id="vsComputerBtn">
+        <div class="mc-ico">🤖</div>
+        <div class="mc-body"><div class="mc-name">vs Computer</div><div class="mc-desc">Challenge the AI — 4 difficulty levels</div><span class="mc-tag">Free Play</span></div>
+        <div class="mc-arr">›</div>
       </div>
-      <div class="mode-card mc-friend" id="vsFriendBtn">
-        <div class="mc-icon">👥</div>
-        <div class="mc-info">
-          <div class="mc-name">vs Friend</div>
-          <div class="mc-desc">Create a room & share your 4-digit code</div>
-          <span class="mc-pill">Multiplayer</span>
-        </div>
-        <div class="mc-arrow">›</div>
+      <div class="mc mc-fr" id="vsFriendBtn">
+        <div class="mc-ico">👥</div>
+        <div class="mc-body"><div class="mc-name">vs Friend</div><div class="mc-desc">Create a room &amp; share your code</div><span class="mc-tag">Multiplayer</span></div>
+        <div class="mc-arr">›</div>
       </div>
-      <div class="mode-card mc-bet" id="betModeBtn">
-        <div class="mc-icon">💰</div>
-        <div class="mc-info">
-          <div class="mc-name">Bet &amp; Win</div>
-          <div class="mc-desc">Stake real ₦ against matched opponents</div>
-          <span class="mc-pill">Real Money</span>
-        </div>
-        <div class="mc-arrow">›</div>
+      <div class="mc mc-bet" id="betModeBtn">
+        <div class="mc-ico">⚔️</div>
+        <div class="mc-body"><div class="mc-name">Challenge &amp; Win</div><div class="mc-desc">Compete for real prizes — matched fairly</div><span class="mc-tag">Real Prizes</span></div>
+        <div class="mc-arr">›</div>
       </div>
     </div>
 
-    <!-- Quick Links -->
-    <div class="sec-head" style="margin-top:8px">
-      <div class="sec-title">More</div>
-    </div>
+    <!-- Quick links -->
+    <div class="sec-head" style="margin-top:5px"><div class="sec-title">More</div></div>
     <div class="quick-row">
-      <div class="q-link" id="tutorialBtn">
-        <div class="q-link-icon">📖</div>
-        How to Play
-      </div>
-      <div class="q-link" id="termsBtn">
-        <div class="q-link-icon">📜</div>
-        Terms
-      </div>
-      <div class="q-link" id="privacyBtn">
-        <div class="q-link-icon">🔒</div>
-        Privacy
-      </div>
+      <div class="q-lnk" id="tutorialBtn"><div class="q-ico">📖</div>How to Play</div>
+      <div class="q-lnk" id="termsBtn"><div class="q-ico">📜</div>Terms</div>
+      <div class="q-lnk" id="privacyBtn"><div class="q-ico">🔒</div>Privacy</div>
     </div>
 
-    <!-- Recent Wins / Leaderboard strip -->
-    <div style="padding:8px 0 4px">
-      <div class="sec-head">
-        <div class="sec-title">Recent Winners</div>
-      </div>
-      <div class="leader-strip">
-        <div id="leaderRows" class="leader-rows">
-          <div class="leader-row">
-            <div class="leader-rank">🥇</div>
-            <div class="leader-ava">A</div>
-            <div class="leader-uname">Loading…</div>
-            <div class="leader-amt">—</div>
-          </div>
-        </div>
-      </div>
+    <!-- Leaderboard -->
+    <div style="padding:3px 0 5px">
+      <div class="sec-head"><div class="sec-title">🏆 Top Winners</div></div>
+      <div class="ldr-box"><div id="leaderRows"><div class="lrow" style="justify-content:center;color:var(--muted);font-size:.73rem;">Loading...</div></div></div>
     </div>
-
-  </div><!-- /main-scroll -->
+  </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════
-     GAME SCREEN
-═══════════════════════════════════════════════ -->
+<!-- GAME -->
 <div class="screen" id="game">
-  <div class="game-header">
-    <div class="gh-left">
+  <div class="game-hd">
+    <div class="gh-l">
       <div class="back-btn" id="quitBtn">‹</div>
-      <div class="game-title-header">Globals Ludo</div>
+      <div class="game-title-hd" id="gameTitleHd">Globals Ludo</div>
       <span class="gh-badge badge-ai" id="gameModeLabel">vs AI</span>
     </div>
-    <div class="gh-actions">
-      <div class="gh-btn" id="gameChatBtn" title="Support">💬</div>
-      <div class="gh-btn" id="gameSettingsBtn" title="Settings">⚙️</div>
+    <div class="gh-r">
+      <div class="gh-btn" id="gameChatBtn">💬</div>
+      <div class="gh-btn" id="gameSettingsBtn">⚙️</div>
     </div>
   </div>
 
-  <div class="player-panels">
+  <div class="pp-row">
     <div class="pp p1" id="panel1">
-      <div class="pp-color-bar"></div>
-      <div class="pp-content">
+      <div class="pp-stripe"></div>
+      <div class="pp-inner">
         <div class="pp-name" id="pp1name">You</div>
         <div class="pp-score" id="pp1score">0 / 4</div>
       </div>
-      <div class="pp-timer-wrap" id="pp1timerWrap">
-        <div class="pp-timer-ring">
-          <svg viewBox="0 0 38 38">
-            <circle class="timer-bg" cx="19" cy="19" r="15"/>
-            <circle class="timer-arc" id="timerArc1" cx="19" cy="19" r="15"
-              style="stroke-dasharray:94.2; stroke-dashoffset:0;"/>
-          </svg>
-          <div class="pp-timer-num" id="pp1timerNum">10</div>
-        </div>
-      </div>
+      <div class="pp-bar-wrap" id="pp1barWrap"><div class="pp-bar" id="pp1bar" style="width:100%"></div></div>
     </div>
     <div class="pp p2" id="panel2">
-      <div class="pp-color-bar"></div>
-      <div class="pp-content">
+      <div class="pp-stripe"></div>
+      <div class="pp-inner">
         <div class="pp-name" id="pp2name">AI</div>
         <div class="pp-score" id="pp2score">0 / 4</div>
       </div>
-      <div class="pp-timer-wrap" id="pp2timerWrap">
-        <div class="pp-timer-ring">
-          <svg viewBox="0 0 38 38">
-            <circle class="timer-bg" cx="19" cy="19" r="15"/>
-            <circle class="timer-arc" id="timerArc2" cx="19" cy="19" r="15"
-              style="stroke-dasharray:94.2; stroke-dashoffset:0;"/>
-          </svg>
-          <div class="pp-timer-num" id="pp2timerNum">10</div>
-        </div>
-      </div>
+      <div class="pp-bar-wrap" id="pp2barWrap"><div class="pp-bar" id="pp2bar" style="width:100%"></div></div>
     </div>
   </div>
 
-  <div class="board-wrap">
-    <canvas id="gameCanvas"></canvas>
-  </div>
+  <div class="board-wrap"><canvas id="gameCanvas"></canvas></div>
 
-  <div class="game-status">
-    <div class="status-msg" id="statusText">Roll the dice!</div>
-  </div>
+  <div class="game-status"><div class="status-pill" id="statusText">Roll the dice!</div></div>
 
-  <div class="game-controls">
+  <div class="gc">
     <div class="dice-zone">
       <canvas id="diceCanvas" width="64" height="64"></canvas>
       <div class="dice-hint" id="diceLabel">Tap to roll</div>
     </div>
-    <div class="actions-col">
+    <div class="acts">
       <button class="roll-btn" id="rollBtn">🎲 ROLL DICE</button>
-      <div class="control-row">
-        <button class="ctrl-btn" id="quitGameBtn" style="flex:none;padding:9px 12px;" title="Quit">🚪</button>
-        <div id="gameStatusBar" style="flex:1;display:flex;align-items:center;justify-content:center;font-size:.72rem;color:var(--muted);">Game on!</div>
+      <div class="ctrl-row">
+        <button class="ctrl-btn" id="gameChatBtn2">💬 Chat</button>
+        <button class="ctrl-btn quit-btn" id="quitGameBtn">🚪 Quit</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════
-     WIN SCREEN
-═══════════════════════════════════════════════ -->
+<!-- WIN -->
 <div class="screen" id="winScreen">
   <div class="confetti-c" id="confettiContainer"></div>
   <div class="win-content">
-    <div class="win-trophy-wrap" style="font-size:5rem">🏆</div>
+    <div class="win-trophy" style="font-size:5rem">🏆</div>
     <div class="win-title" id="winTitle">YOU WIN!</div>
-    <div class="win-subtitle" id="winSubtitle">Outstanding strategy!</div>
+    <div class="win-sub" id="winSubtitle">Outstanding strategy!</div>
     <div class="win-prize" id="winAmount">+₦<span id="winAmountNum">0</span></div>
     <div class="win-btns">
-      <button class="btn btn-orange" id="winPlayAgain">▶ Play Again</button>
-      <button class="btn btn-outline" id="winMainMenu">← Main Menu</button>
+      <button class="btn btn-or" id="winPlayAgain">▶ Play Again</button>
+      <button class="btn btn-ol" id="winMainMenu">← Main Menu</button>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════
-     MODALS
-═══════════════════════════════════════════════ -->
-
+<!-- MODALS -->
 <!-- vs Computer -->
 <div class="modal" id="computerModal">
+  <div class="modal-bd" onclick="closeModal('computerModal')"></div>
   <div class="modal-sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">🤖 vs Computer</div>
-    <div class="sheet-sub">Select difficulty and board style</div>
+    <div class="sheet-handle" onclick="closeModal('computerModal')"></div>
+    <div class="sheet-close" onclick="closeModal('computerModal')">✕</div>
+    <div class="sheet-title">🤖 vs Computer</div><div class="sheet-sub">Pick difficulty and board style</div>
     <div class="sheet-body">
-      <div class="form-lbl">Difficulty</div>
+      <div class="f-lbl">Difficulty</div>
       <div class="opt-grid" id="difficultyGrid">
-        <div class="opt-item sel" data-diff="easy">
-          <div class="opt-icon">😊</div><div class="opt-label">Easy</div><div class="opt-desc">Beginner friendly</div>
-        </div>
-        <div class="opt-item" data-diff="medium">
-          <div class="opt-icon">🤔</div><div class="opt-label">Medium</div><div class="opt-desc">Fair challenge</div>
-        </div>
-        <div class="opt-item" data-diff="hard">
-          <div class="opt-icon">🔥</div><div class="opt-label">Hard</div><div class="opt-desc">Pro AI strategy</div>
-        </div>
-        <div class="opt-item" data-diff="expert">
-          <div class="opt-icon">👹</div><div class="opt-label">Expert</div><div class="opt-desc">Nearly unbeatable</div>
-        </div>
+        <div class="opt-item sel" data-diff="easy"><div class="opt-ico">😊</div><div class="opt-lbl">Easy</div><div class="opt-dsc">Beginner</div></div>
+        <div class="opt-item" data-diff="medium"><div class="opt-ico">🤔</div><div class="opt-lbl">Medium</div><div class="opt-dsc">Fair challenge</div></div>
+        <div class="opt-item" data-diff="hard"><div class="opt-ico">🔥</div><div class="opt-lbl">Hard</div><div class="opt-dsc">Pro strategy</div></div>
+        <div class="opt-item" data-diff="expert"><div class="opt-ico">👹</div><div class="opt-lbl">Expert</div><div class="opt-dsc">Near unbeatable</div></div>
       </div>
-      <div class="form-lbl" style="margin-top:4px">Board Style</div>
+      <div class="f-lbl" style="margin-top:2px">Board Style</div>
       <div class="opt-grid" id="boardStyleGrid">
-        <div class="opt-item sel" data-style="classic">
-          <div class="opt-icon">🎯</div><div class="opt-label">Classic</div><div class="opt-desc">4 tokens each</div>
-        </div>
-        <div class="opt-item" data-style="double">
-          <div class="opt-icon">♟</div><div class="opt-label">Double</div><div class="opt-desc">8 tokens each</div>
-        </div>
+        <div class="opt-item sel" data-style="classic"><div class="opt-ico">🎯</div><div class="opt-lbl">Classic</div><div class="opt-dsc">4 tokens each</div></div>
+        <div class="opt-item" data-style="double"><div class="opt-ico">♟</div><div class="opt-lbl">Double</div><div class="opt-dsc">8 tokens each</div></div>
       </div>
-      <button class="btn btn-orange" id="startComputerGame" style="margin-top:4px">Start Game 🎮</button>
-      <div style="height:16px"></div>
+      <button class="btn btn-or" id="startComputerGame">Start Game 🎮</button>
+      <div style="height:12px"></div>
     </div>
   </div>
 </div>
 
 <!-- vs Friend -->
 <div class="modal" id="friendModal">
+  <div class="modal-bd" onclick="closeModal('friendModal')"></div>
   <div class="modal-sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">👥 vs Friend</div>
-    <div class="sheet-sub">Host or join a private room</div>
+    <div class="sheet-handle" onclick="closeModal('friendModal')"></div>
+    <div class="sheet-close" onclick="closeModal('friendModal')">✕</div>
+    <div class="sheet-title">👥 vs Friend</div><div class="sheet-sub">Host a room or join with a code</div>
     <div class="sheet-body">
       <div class="opt-grid" id="friendModeGrid">
-        <div class="opt-item sel" data-fmode="host">
-          <div class="opt-icon">🏠</div><div class="opt-label">Host</div><div class="opt-desc">Create room</div>
-        </div>
-        <div class="opt-item" data-fmode="join">
-          <div class="opt-icon">🔍</div><div class="opt-label">Join</div><div class="opt-desc">Enter a code</div>
-        </div>
+        <div class="opt-item sel" data-fmode="host"><div class="opt-ico">🏠</div><div class="opt-lbl">Host</div><div class="opt-dsc">Create a room</div></div>
+        <div class="opt-item" data-fmode="join"><div class="opt-ico">🔍</div><div class="opt-lbl">Join</div><div class="opt-dsc">Enter a code</div></div>
       </div>
-
-      <!-- Host section -->
       <div id="hostSection">
-        <div class="form-lbl">Board Style</div>
+        <div class="f-lbl">Board Style</div>
         <div class="opt-grid" id="friendBoardStyleGrid">
-          <div class="opt-item sel" data-style="classic">
-            <div class="opt-icon">🎯</div><div class="opt-label">Classic</div><div class="opt-desc">4 tokens each</div>
-          </div>
-          <div class="opt-item" data-style="double">
-            <div class="opt-icon">♟</div><div class="opt-label">Double</div><div class="opt-desc">8 tokens each</div>
-          </div>
+          <div class="opt-item sel" data-style="classic"><div class="opt-ico">🎯</div><div class="opt-lbl">Classic</div><div class="opt-dsc">4 tokens each</div></div>
+          <div class="opt-item" data-style="double"><div class="opt-ico">♟</div><div class="opt-lbl">Double</div><div class="opt-dsc">8 tokens each</div></div>
         </div>
-        <button class="btn btn-blue" id="hostGameBtn">🏠 Create Room</button>
+        <button class="btn btn-bl" id="hostGameBtn">🏠 Create Room</button>
       </div>
-
-      <!-- Join section -->
       <div id="joinSection" style="display:none">
-        <div style="text-align:center;margin-bottom:8px;font-size:.82rem;color:var(--muted)">Enter the 4-digit room code</div>
-        <div class="code-inputs" id="codeInputs">
-          <div class="code-box" id="cb0">_</div>
-          <div class="code-box" id="cb1">_</div>
-          <div class="code-box" id="cb2">_</div>
-          <div class="code-box" id="cb3">_</div>
+        <div style="text-align:center;margin-bottom:5px;font-size:.77rem;color:var(--muted)">Enter the 4-digit room code</div>
+        <div class="code-boxes" id="codeBoxes">
+          <div class="c-box" id="cb0">_</div><div class="c-box" id="cb1">_</div>
+          <div class="c-box" id="cb2">_</div><div class="c-box" id="cb3">_</div>
         </div>
-        <input type="text" id="joinCodeInputHidden" inputmode="numeric" maxlength="4" autocomplete="off"
-          style="position:absolute;opacity:0;width:1px;height:1px;left:0;top:0;">
-        <button class="btn btn-blue" id="joinGameBtn">🔍 Join Room</button>
+        <input type="text" id="joinCodeHidden" inputmode="numeric" maxlength="4" autocomplete="off">
+        <button class="btn btn-bl" id="joinGameBtn">🔍 Join Room</button>
       </div>
-
-      <!-- Room Waiting -->
       <div id="roomWaiting" style="display:none">
         <div class="room-code-box">
-          <div class="room-code-digits" id="displayRoomCode">——</div>
-          <div class="room-code-hint">Share this code with your friend</div>
-          <div class="room-share-btn" id="shareCodeBtn">📋 Copy Code</div>
+          <div class="room-digits" id="displayRoomCode">——</div>
+          <div class="room-hint">Share this code with your friend</div>
+          <div class="room-copy" id="shareCodeBtn">📋 Copy Code</div>
         </div>
-        <div class="room-players">
-          <div class="rp-slot rp-filled">
-            <div class="rp-icon">✅</div>
-            <div id="hostSlotName">You (Host)</div>
-          </div>
-          <div class="rp-slot" id="guestSlot">
-            <div class="rp-icon">⏳</div>
-            Waiting...
-          </div>
+        <div class="rp-row">
+          <div class="rp-slot rp-on"><div class="rp-ico">✅</div><div id="hostSlotName">You (Host)</div></div>
+          <div class="rp-slot" id="guestSlot"><div class="rp-ico">⏳</div>Waiting...</div>
         </div>
-        <div class="spin-ring" style="width:28px;height:28px;border-width:2px;margin:8px auto;"></div>
-        <button class="btn btn-outline" id="cancelRoomBtn" style="margin-top:6px">Cancel Room</button>
+        <div class="spin-ring" style="width:24px;height:24px;border-width:2px;margin:5px auto"></div>
+        <button class="btn btn-ol" id="cancelRoomBtn" style="margin-top:4px">Cancel Room</button>
       </div>
-      <div style="height:16px"></div>
+      <div style="height:12px"></div>
     </div>
   </div>
 </div>
 
-<!-- Bet Mode -->
+<!-- Challenge & Win -->
 <div class="modal" id="betModal">
+  <div class="modal-bd" onclick="closeModal('betModal')"></div>
   <div class="modal-sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">💰 Bet &amp; Win</div>
-    <div class="sheet-sub">Choose your stake — matched fairly with another player</div>
+    <div class="sheet-handle" onclick="closeModal('betModal')"></div>
+    <div class="sheet-close" onclick="closeModal('betModal')">✕</div>
+    <div class="sheet-title">⚔️ Challenge &amp; Win</div><div class="sheet-sub">Pick your entry — matched with a real opponent</div>
     <div class="sheet-body">
-      <div class="legal-warn">⚠️ Only stake what you can afford. 18+ only. Stakes are non-refundable once matched.</div>
-      <div class="form-lbl">Select Stake</div>
-      <div class="bet-grid">
-        <div class="bet-card" data-stake="50"   data-win="80">
-          <div class="bet-badge">Popular</div>
-          <div class="bet-stake">₦50 <span class="bet-stake-lbl">stake</span></div>
-          <div class="bet-win">Win ₦80 🏆</div>
-        </div>
-        <div class="bet-card" data-stake="100"  data-win="150">
-          <div class="bet-stake">₦100 <span class="bet-stake-lbl">stake</span></div>
-          <div class="bet-win">Win ₦150 🏆</div>
-        </div>
-        <div class="bet-card" data-stake="200"  data-win="350">
-          <div class="bet-stake">₦200 <span class="bet-stake-lbl">stake</span></div>
-          <div class="bet-win">Win ₦350 🏆</div>
-        </div>
-        <div class="bet-card" data-stake="500"  data-win="900">
-          <div class="bet-badge" style="color:var(--cyan);background:rgba(6,182,212,0.1)">Hot</div>
-          <div class="bet-stake">₦500 <span class="bet-stake-lbl">stake</span></div>
-          <div class="bet-win">Win ₦900 🏆</div>
-        </div>
-        <div class="bet-card" data-stake="1000" data-win="1800">
-          <div class="bet-stake">₦1,000 <span class="bet-stake-lbl">stake</span></div>
-          <div class="bet-win">Win ₦1,800 🏆</div>
-        </div>
-        <div class="bet-card" data-stake="2000" data-win="3600">
-          <div class="bet-badge" style="color:#a855f7;background:rgba(168,85,247,0.1)">VIP</div>
-          <div class="bet-stake">₦2,000 <span class="bet-stake-lbl">stake</span></div>
-          <div class="bet-win">Win ₦3,600 🏆</div>
-        </div>
+      <div class="l-warn">⚠️ Only enter amounts you're comfortable with. 18+ only.</div>
+      <div class="f-lbl">Select Entry Amount</div>
+      <div class="ch-grid">
+        <div class="ch-card" data-stake="50"   data-win="80"><div class="ch-tag">Popular</div><div class="ch-stake">₦50<span class="ch-lbl">entry</span></div><div class="ch-prize">🏆 Win ₦80</div></div>
+        <div class="ch-card" data-stake="100"  data-win="150"><div class="ch-stake">₦100<span class="ch-lbl">entry</span></div><div class="ch-prize">🏆 Win ₦150</div></div>
+        <div class="ch-card" data-stake="200"  data-win="350"><div class="ch-stake">₦200<span class="ch-lbl">entry</span></div><div class="ch-prize">🏆 Win ₦350</div></div>
+        <div class="ch-card" data-stake="500"  data-win="900"><div class="ch-tag" style="color:var(--cyan);background:rgba(6,182,212,0.09)">Hot🔥</div><div class="ch-stake">₦500<span class="ch-lbl">entry</span></div><div class="ch-prize">🏆 Win ₦900</div></div>
+        <div class="ch-card" data-stake="1000" data-win="1800"><div class="ch-stake">₦1,000<span class="ch-lbl">entry</span></div><div class="ch-prize">🏆 Win ₦1,800</div></div>
+        <div class="ch-card" data-stake="2000" data-win="3600"><div class="ch-tag" style="color:#a855f7;background:rgba(168,85,247,0.09)">VIP</div><div class="ch-stake">₦2,000<span class="ch-lbl">entry</span></div><div class="ch-prize">🏆 Win ₦3,600</div></div>
       </div>
-      <div id="selectedBetInfo" style="text-align:center;font-size:.82rem;color:var(--muted);margin-bottom:12px">
-        Select a stake amount above
-      </div>
-      <button class="btn btn-gold" id="startSearchBtn" disabled>Search for Opponent 🔍</button>
-      <div style="text-align:center;font-size:.7rem;color:var(--muted);margin-top:8px;padding-bottom:8px">
-        Stake deducted at search. Refunded if no match in 60s.
-      </div>
+      <div id="selectedBetInfo" style="text-align:center;font-size:.78rem;color:var(--muted);margin-bottom:10px">Select an entry above</div>
+      <button class="btn btn-gd" id="startSearchBtn" disabled>Find Opponent 🔍</button>
+      <div style="text-align:center;font-size:.66rem;color:var(--muted);margin-top:6px;padding-bottom:5px">Entry fee held while searching. Returned if no opponent in 60s.</div>
     </div>
   </div>
 </div>
 
 <!-- Matchmaking -->
 <div class="modal" id="matchmakingModal">
-  <div class="match-box">
+  <div class="mm-box">
     <div class="spin-ring"></div>
-    <div class="match-title">Finding Opponent</div>
-    <div class="match-desc" id="matchDesc">Searching for a player...</div>
-    <div class="match-stake" id="matchStakeDisplay"></div>
-    <div class="match-timer" id="matchTimer">0s</div>
-    <button class="btn btn-outline" id="cancelMatchBtn" style="margin-top:16px;padding:10px">Cancel</button>
+    <div class="mm-title">Finding Opponent</div>
+    <div class="mm-desc" id="matchDesc">Searching for an opponent...</div>
+    <div class="mm-stake" id="matchStakeDisplay"></div>
+    <div class="mm-timer" id="matchTimer">0s</div>
+    <button class="btn btn-ol" id="cancelMatchBtn" style="margin-top:13px;padding:9px">Cancel</button>
   </div>
 </div>
 
 <!-- Settings -->
 <div class="modal" id="settingsModal">
+  <div class="modal-bd" onclick="closeModal('settingsModal')"></div>
   <div class="modal-sheet">
-    <div class="sheet-handle"></div>
+    <div class="sheet-handle" onclick="closeModal('settingsModal')"></div>
+    <div class="sheet-close" onclick="closeModal('settingsModal')">✕</div>
     <div class="sheet-title">⚙️ Settings</div>
     <div class="sheet-body">
-      <div class="settings-row">
-        <div>
-          <div class="sr-label">🔊 Sound Effects</div>
-          <div class="sr-desc">Dice, moves, captures</div>
-        </div>
-        <div class="toggle on" id="soundToggle"><div class="toggle-knob"></div></div>
-      </div>
-      <div class="settings-row">
-        <div>
-          <div class="sr-label">🎵 Background Music</div>
-          <div class="sr-desc">Advanced game rhythm</div>
-        </div>
-        <div class="toggle" id="musicToggle"><div class="toggle-knob"></div></div>
-      </div>
-      <div class="settings-row">
-        <div>
-          <div class="sr-label">✨ Animations</div>
-          <div class="sr-desc">Token and board effects</div>
-        </div>
-        <div class="toggle on" id="animToggle"><div class="toggle-knob"></div></div>
-      </div>
-      <div class="divider"></div>
-      <div class="settings-row" id="termsSettingsBtn" style="cursor:pointer">
-        <div><div class="sr-label">📜 Terms &amp; Conditions</div></div>
-        <div style="color:var(--muted)">›</div>
-      </div>
-      <div class="settings-row" id="privacySettingsBtn" style="cursor:pointer">
-        <div><div class="sr-label">🔒 Privacy Policy</div></div>
-        <div style="color:var(--muted)">›</div>
-      </div>
-      <div style="margin-top:14px;padding-bottom:4px">
-        <button class="btn btn-outline" id="settingsClose">Done</button>
-      </div>
+      <div class="s-row"><div><div class="s-lbl">🔊 Sound Effects</div><div class="s-dsc">Dice, moves, captures</div></div><div class="toggle on" id="soundToggle"><div class="toggle-knob"></div></div></div>
+      <div class="s-row"><div><div class="s-lbl">🎵 Background Music</div><div class="s-dsc">Rhythm game music</div></div><div class="toggle" id="musicToggle"><div class="toggle-knob"></div></div></div>
+      <div class="s-row"><div><div class="s-lbl">✨ Animations</div><div class="s-dsc">Token &amp; board effects</div></div><div class="toggle on" id="animToggle"><div class="toggle-knob"></div></div></div>
+      <div class="div"></div>
+      <div class="s-row" id="termsSettingsBtn" style="cursor:pointer"><div><div class="s-lbl">📜 Terms &amp; Conditions</div></div><div style="color:var(--muted)">›</div></div>
+      <div class="s-row" id="privacySettingsBtn" style="cursor:pointer"><div><div class="s-lbl">🔒 Privacy Policy</div></div><div style="color:var(--muted)">›</div></div>
+      <div style="margin-top:11px;padding-bottom:2px"><button class="btn btn-ol" id="settingsClose">Done</button></div>
     </div>
   </div>
 </div>
 
 <!-- Tutorial -->
 <div class="modal" id="tutorialModal">
+  <div class="modal-bd" onclick="closeModal('tutorialModal')"></div>
   <div class="modal-sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">📖 How to Play</div>
-    <div class="sheet-sub">Master Globals Ludo</div>
+    <div class="sheet-handle" onclick="closeModal('tutorialModal')"></div>
+    <div class="sheet-close" onclick="closeModal('tutorialModal')">✕</div>
+    <div class="sheet-title">📖 How to Play</div><div class="sheet-sub">Master Globals Ludo</div>
     <div class="sheet-body">
-      <div class="tut-step">
-        <div class="tut-num">1</div>
-        <div class="tut-text">
-          <h4>Roll the Dice</h4>
-          <p>Tap "Roll Dice" on your turn. Roll a 6 to bring a token out of your home base.</p>
-        </div>
-      </div>
-      <div class="tut-step">
-        <div class="tut-num">2</div>
-        <div class="tut-text">
-          <h4>Move Tokens</h4>
-          <p>Tap any eligible token to move it. Tokens travel clockwise. First to get all tokens home wins!</p>
-        </div>
-      </div>
-      <div class="tut-step">
-        <div class="tut-num">3</div>
-        <div class="tut-text">
-          <h4>Capture Opponents</h4>
-          <p>Land on an opponent to send them back! Safe squares (⭐) protect tokens from capture.</p>
-        </div>
-      </div>
-      <div class="tut-step">
-        <div class="tut-num">4</div>
-        <div class="tut-text">
-          <h4>Roll 6 = Extra Turn</h4>
-          <p>Rolling a 6 gives you another roll! Use this to enter more tokens or chase opponents.</p>
-        </div>
-      </div>
-      <div class="tut-step">
-        <div class="tut-num">5</div>
-        <div class="tut-text">
-          <h4>10-Second Timer</h4>
-          <p>You have 10 seconds per turn. Watch the circular countdown — if it hits zero, your turn is passed.</p>
-        </div>
-      </div>
-      <div class="tut-step">
-        <div class="tut-num">6</div>
-        <div class="tut-text">
-          <h4>Bet Mode</h4>
-          <p>Pick a stake and get matched with a player staking the same. Winner takes the prize!</p>
-        </div>
-      </div>
-      <button class="btn btn-orange" id="tutorialClose" style="margin-top:4px">Got it! 🎮</button>
-      <div style="height:12px"></div>
+      <div class="tut-step"><div class="tut-n">1</div><div class="tut-t"><h4>Roll the Dice</h4><p>Tap "Roll Dice" on your turn. Need a 6 to get tokens out of base.</p></div></div>
+      <div class="tut-step"><div class="tut-n">2</div><div class="tut-t"><h4>Move Tokens</h4><p>Tap any eligible token to move. Tokens go clockwise. Get all home to win!</p></div></div>
+      <div class="tut-step"><div class="tut-n">3</div><div class="tut-t"><h4>Capture Opponents</h4><p>Land on opponent to send them home! ⭐ Safe squares protect tokens.</p></div></div>
+      <div class="tut-step"><div class="tut-n">4</div><div class="tut-t"><h4>Roll 6 = Extra Turn</h4><p>Rolling 6 gives another roll! Enter tokens or chase opponents.</p></div></div>
+      <div class="tut-step"><div class="tut-n">5</div><div class="tut-t"><h4>10-Second Timer</h4><p>After rolling, a bar shrinks on your panel. Zero = turn passed.</p></div></div>
+      <div class="tut-step"><div class="tut-n">6</div><div class="tut-t"><h4>Challenge Mode</h4><p>Pay an entry fee to face a real opponent. Win the prize!</p></div></div>
+      <button class="btn btn-or" id="tutorialClose" style="margin-top:2px">Got it! 🎮</button>
+      <div style="height:8px"></div>
     </div>
   </div>
 </div>
 
-<!-- Chat Support -->
+<!-- Chat -->
 <div class="modal" id="chatModal">
-  <div class="modal-sheet" style="height:88vh;display:flex;flex-direction:column;padding-bottom:0;">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">💬 Game Support</div>
-    <div class="sheet-sub" style="padding-bottom:0;">Ask anything about Globals Ludo</div>
+  <div class="modal-bd" onclick="closeModal('chatModal')"></div>
+  <div class="modal-sheet" style="height:86vh;display:flex;flex-direction:column;padding-bottom:0;">
+    <div class="sheet-handle" onclick="closeModal('chatModal')"></div>
+    <div class="sheet-close" onclick="closeModal('chatModal')">✕</div>
+    <div class="sheet-title">💬 Support</div>
+    <div class="sheet-sub" style="padding-bottom:0">Ask anything about Globals Ludo</div>
     <div class="chat-msgs" id="chatMessages">
-      <div class="chat-msg ai">
-        <div class="chat-bubble">👋 Hi! I'm your Globals Ludo assistant. Ask me about rules, bet mode, room codes, or anything else!</div>
-      </div>
+      <div class="chat-msg ai"><div class="chat-bub">👋 Hey! I'm your Globals Ludo assistant. Ask me about rules, prizes, room codes, timers, or anything!</div></div>
     </div>
     <div class="chat-in-row">
-      <input class="chat-in" id="chatInput" placeholder="Ask a question..." />
-      <button class="chat-send-btn" id="chatSendBtn">Send</button>
+      <input class="chat-in" id="chatInput" placeholder="Ask a question...">
+      <button class="chat-send" id="chatSendBtn">Send</button>
     </div>
-    <div style="padding:8px 18px 12px;text-align:center">
-      <button class="btn btn-outline" id="chatClose" style="font-size:.75rem;padding:8px 20px;width:auto">Close</button>
+    <div style="padding:6px 15px 9px;text-align:center">
+      <button class="btn btn-ol" id="chatClose" style="font-size:.71rem;padding:7px 17px;width:auto">Close</button>
     </div>
   </div>
 </div>
 
 <!-- Terms -->
 <div class="modal" id="termsModal">
+  <div class="modal-bd" onclick="closeModal('termsModal')"></div>
   <div class="modal-sheet">
-    <div class="sheet-handle"></div>
+    <div class="sheet-handle" onclick="closeModal('termsModal')"></div>
+    <div class="sheet-close" onclick="closeModal('termsModal')">✕</div>
     <div class="sheet-title">📜 Terms &amp; Conditions</div>
     <div class="sheet-body">
-      <div class="legal-warn">⚠️ Globals Ludo includes real-money betting. Read carefully before playing.</div>
-      <div class="legal-sec"><h3>1. Eligibility</h3><p>You must be 18+ to play real-money games. By playing, you confirm you meet this requirement and that betting is legal in your jurisdiction.</p></div>
-      <div class="legal-sec"><h3>2. Fair Play</h3><p>All games are governed by randomness and skill. Manipulation, bug exploitation, or unauthorized tools result in immediate account termination.</p></div>
-      <div class="legal-sec"><h3>3. Bet Rules</h3><p>Stakes are deducted before matchmaking begins. Winnings are credited upon game completion. All transactions are final.</p></div>
-      <div class="legal-sec"><h3>4. Responsible Gambling</h3><p>We encourage responsible gambling. Set personal limits. If gambling becomes problematic, seek support from certified organizations. Globals is not liable for losses from irresponsible play.</p></div>
-      <div class="legal-sec"><h3>5. Deposits &amp; Withdrawals</h3><p>Deposits are handled exclusively through the main Globals platform. Globals Ludo shows your real-time balance but does not process deposits directly.</p></div>
-      <div class="legal-sec"><h3>6. Disconnection Policy</h3><p>If a player intentionally disconnects during a bet game, the opponent wins. Accidental disconnection within 10 seconds allows reconnection without penalty.</p></div>
-      <div class="legal-sec"><h3>7. Changes to Terms</h3><p>Globals may modify terms at any time. Continued use implies acceptance of updated terms.</p></div>
-      <button class="btn btn-outline" id="termsClose" style="margin-top:4px">I Understand</button>
-      <div style="height:12px"></div>
+      <div class="l-warn">⚠️ Globals Ludo includes real-money entry fees. Read before playing.</div>
+      <div class="l-sec"><h3>1. Eligibility</h3><p>Must be 18+ to play real-money modes. By playing you confirm this and that it's legal in your jurisdiction.</p></div>
+      <div class="l-sec"><h3>2. Fair Play</h3><p>All games use certified randomness. Manipulation or exploitation leads to immediate termination.</p></div>
+      <div class="l-sec"><h3>3. Entry Fees</h3><p>Entry fees are deducted before matching. Prizes are credited on completion. All transactions are final.</p></div>
+      <div class="l-sec"><h3>4. Responsible Play</h3><p>Only enter amounts you're comfortable with. Globals is not liable for losses from irresponsible play.</p></div>
+      <div class="l-sec"><h3>5. Deposits</h3><p>Deposits are handled through the main Globals platform. Ludo shows your real-time balance only.</p></div>
+      <div class="l-sec"><h3>6. Disconnection</h3><p>Intentional disconnects during a challenge forfeit the match. Accidental disconnect allows 10s reconnect.</p></div>
+      <button class="btn btn-ol" id="termsClose" style="margin-top:2px">I Understand</button>
+      <div style="height:8px"></div>
     </div>
   </div>
 </div>
 
 <!-- Privacy -->
 <div class="modal" id="privacyModal">
+  <div class="modal-bd" onclick="closeModal('privacyModal')"></div>
   <div class="modal-sheet">
-    <div class="sheet-handle"></div>
+    <div class="sheet-handle" onclick="closeModal('privacyModal')"></div>
+    <div class="sheet-close" onclick="closeModal('privacyModal')">✕</div>
     <div class="sheet-title">🔒 Privacy Policy</div>
     <div class="sheet-body">
-      <div class="legal-sec"><h3>Data We Collect</h3><p>Username, Firebase UID, game history, transaction records, and device information for service delivery and fraud prevention.</p></div>
-      <div class="legal-sec"><h3>How We Use It</h3><p>To manage accounts, enable fair matchmaking, process transactions, prevent cheating, and improve our platform. Your data is never sold to third parties.</p></div>
-      <div class="legal-sec"><h3>Storage</h3><p>Securely stored in Google Firebase with industry-standard encryption. Records retained for 2 years.</p></div>
-      <div class="legal-sec"><h3>Your Rights</h3><p>Request deletion of your data anytime by contacting Globals support. Transaction records may be retained for legal compliance.</p></div>
-      <button class="btn btn-outline" id="privacyClose" style="margin-top:4px">Close</button>
-      <div style="height:12px"></div>
+      <div class="l-sec"><h3>Data Collected</h3><p>Username, Firebase UID, game history, transaction records — for service delivery and fraud prevention.</p></div>
+      <div class="l-sec"><h3>How We Use It</h3><p>Account management, fair matching, payment processing, anti-cheat. Never sold to third parties.</p></div>
+      <div class="l-sec"><h3>Storage</h3><p>Encrypted in Google Firebase. Records retained 2 years.</p></div>
+      <div class="l-sec"><h3>Your Rights</h3><p>Request data deletion any time via Globals support.</p></div>
+      <button class="btn btn-ol" id="privacyClose" style="margin-top:2px">Close</button>
+      <div style="height:8px"></div>
     </div>
   </div>
 </div>
 
-<!-- Quit Confirm -->
+<!-- Quit confirm -->
 <div class="modal" id="quitConfirmModal">
-  <div class="dialog-box">
-    <div class="dialog-icon">🚪</div>
-    <div class="dialog-title">Quit Game?</div>
-    <div class="dialog-desc">Are you sure? <span id="quitNote"></span></div>
-    <button class="btn btn-red" id="confirmQuitBtn" style="width:100%">Yes, Quit</button>
-    <button class="btn btn-outline" id="cancelQuitBtn" style="width:100%;margin-top:8px">Keep Playing</button>
+  <div class="modal-bd" onclick="closeModal('quitConfirmModal')"></div>
+  <div class="dlg-box">
+    <div class="dlg-ico">🚪</div>
+    <div class="dlg-title">Quit Game?</div>
+    <div class="dlg-desc">Are you sure you want to leave? <span id="quitNote"></span></div>
+    <button class="btn btn-rd" id="confirmQuitBtn" style="width:100%">Yes, Quit</button>
+    <button class="btn btn-ol" id="cancelQuitBtn" style="width:100%;margin-top:7px">Keep Playing</button>
   </div>
 </div>
 
-<!-- No Internet -->
+<!-- Offline -->
 <div class="modal" id="noInternetModal">
   <div class="offline-box">
-    <div style="font-size:3rem;margin-bottom:12px">📡</div>
-    <div style="font-family:var(--font-head);font-size:1.2rem;font-weight:800;color:var(--red);margin-bottom:8px">No Connection</div>
-    <div style="font-size:.82rem;color:var(--muted);line-height:1.5;">You're offline. Check your internet. Multiplayer requires a stable connection.</div>
-    <button class="btn btn-outline" id="retryConnectionBtn" style="margin-top:14px;padding:10px">Retry</button>
+    <div style="font-size:2.6rem;margin-bottom:9px">📡</div>
+    <div style="font-family:var(--font-h);font-size:1.05rem;font-weight:800;color:var(--red);margin-bottom:6px">No Connection</div>
+    <div style="font-size:.77rem;color:var(--muted);line-height:1.5">Check your internet. Multiplayer requires a stable connection.</div>
+    <button class="btn btn-ol" id="retryConnectionBtn" style="margin-top:11px;padding:9px">Retry</button>
   </div>
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
-// ── FIREBASE CONFIG ──
-const firebaseConfig = {
-  apiKey: "AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
-  authDomain: "globals-17bf7.firebaseapp.com",
-  projectId: "globals-17bf7",
-  storageBucket: "globals-17bf7.appspot.com",
-  messagingSenderId: "603274362994",
-  appId: "1:603274362994:web:c312c10cf0a42938e882eb"
+const firebaseConfig={
+  apiKey:"AIzaSyCuI_Nw4HMbDWa6wR3FhHJMHOUgx53E40c",
+  authDomain:"globals-17bf7.firebaseapp.com",
+  projectId:"globals-17bf7",
+  storageBucket:"globals-17bf7.appspot.com",
+  messagingSenderId:"603274362994",
+  appId:"1:603274362994:web:c312c10cf0a42938e882eb"
 };
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.firestore();
 </script>
 <script src="Ludo.js"></script>
 </body>
