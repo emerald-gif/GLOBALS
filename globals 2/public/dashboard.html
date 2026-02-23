@@ -1287,6 +1287,177 @@
   <!-- ✨ Upgraded Earnings Carousel (2025 Fintech Design) -->
 
 
+
+
+<div id="ludo-overlay" class="ludo-overlay">
+    <div class="ludo-modal-wrapper">
+        
+        <a href="Ludo.html" class="ludo-banner-link">
+            <img src="ludo-banner.png" alt="Globals Ludo Challenge" class="ludo-banner-img">
+        </a>
+        
+        <div id="ludo-close-btn" class="ludo-close-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </div>
+
+    </div>
+</div>
+
+<a href="Ludo.html" id="ludo-bubble" class="ludo-bubble">
+    <img src="ludo-bubble.png" alt="Play Ludo" class="ludo-bubble-img">
+</a>
+
+
+<style>
+    /* Overlay Background */
+    .ludo-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.75); /* Darker overlay to make banner pop */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .ludo-overlay.show {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* Wrapper to stack banner and close button vertically */
+    .ludo-modal-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 24px; /* Space between banner and X button */
+        max-width: 85%;
+        animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    /* Banner Styling */
+    .ludo-banner-img {
+        width: 100%;
+        max-height: 60vh; /* Prevents it from being too tall on small screens */
+        object-fit: contain;
+        display: block;
+        border-radius: 24px; /* Smooth, modern rounded corners */
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+
+    /* OPay Style Close Button (Outline circle with X) */
+    .ludo-close-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background-color: transparent;
+        border: 1.5px solid rgba(255, 255, 255, 0.6); /* Semi-transparent white border */
+        color: #ffffff;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .ludo-close-btn:active {
+        background-color: rgba(255, 255, 255, 0.2);
+        transform: scale(0.95);
+    }
+
+    /* Floating Bubble Styling */
+    .ludo-bubble {
+        position: fixed;
+        bottom: 85px; /* Sits just above the bottom navigation bar */
+        right: 20px;
+        width: 65px;
+        height: 65px;
+        z-index: 9998;
+        cursor: pointer;
+        transform: scale(0);
+        opacity: 0;
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+    }
+
+    .ludo-bubble.show {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    .ludo-bubble-img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        border-radius: 50%;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        animation: float 3s ease-in-out infinite; 
+    }
+
+    /* Animations */
+    @keyframes popIn {
+        from { transform: scale(0.8) translateY(20px); opacity: 0; }
+        to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+    }
+</style>
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const overlay = document.getElementById('ludo-overlay');
+        const closeBtn = document.getElementById('ludo-close-btn');
+        const bubble = document.getElementById('ludo-bubble');
+
+        // Show the banner automatically on page load
+        setTimeout(() => {
+            overlay.classList.add('show');
+        }, 600); // Slight delay so the user sees the dashboard first
+
+        // Function to handle closing
+        function closeBanner() {
+            overlay.classList.remove('show');
+            // Show the floating bubble after the banner fades out
+            setTimeout(() => {
+                bubble.classList.add('show');
+            }, 300);
+        }
+
+        // Click on the "X" button
+        closeBtn.addEventListener('click', function(e) {
+            e.stopPropagation(); 
+            closeBanner();
+        });
+
+        // Click outside the banner (on the dark background) to close
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay || e.target.classList.contains('ludo-modal-wrapper')) {
+                closeBanner();
+            }
+        });
+    });
+</script>
+
+
+
+
+
+
+
+	
+
 <!-- 💰 Wallet Balance Card -->
 
 <!-- ===== Wallet Card (subtle verified, eye toggle next to balance, small gap) ===== -->
