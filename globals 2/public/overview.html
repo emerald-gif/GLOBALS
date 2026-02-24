@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Overview · Performance</title>
+  <link rel="shortcut icon" href="GLOBALS.jpg" type="image/jpg">
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Fonts — same as dashboard -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* ══════════════════════════════════════════════
+       GLOBALS DESIGN SYSTEM — Overview Page
+       Same tokens as dashboard.html
+    ══════════════════════════════════════════════ */
+    :root {
+      --g-navy:      #081428;
+      --g-blue:      #1a6fff;
+      --g-blue-dk:   #1050c8;
+      --g-blue-lt:   #e8f0fe;
+      --g-blue-glow: rgba(26,111,255,.18);
+      --g-gold:      #f5a623;
+      --g-success:   #00c853;
+      --g-danger:    #e53935;
+      --g-amber:     #f59e0b;
+      --g-purple:    #7c3aed;
+      --g-surface:   #f4f6fb;
+      --g-white:     #ffffff;
+      --g-border:    #e4e8f0;
+      --g-text:      #0d1b2e;
+      --g-text-2:    #4a5568;
+      --g-text-3:    #8a96a8;
+      --font-head:   'Sora', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-body:   'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --r-md:  14px; --r-lg: 18px; --r-xl: 22px; --r-pill: 999px;
+      --s-xs:  0 1px 3px rgba(8,20,40,.06), 0 1px 2px rgba(8,20,40,.04);
+      --s-sm:  0 2px 8px rgba(8,20,40,.08), 0 1px 4px rgba(8,20,40,.05);
+      --s-md:  0 4px 16px rgba(8,20,40,.10), 0 2px 6px rgba(8,20,40,.06);
+      --s-lg:  0 8px 32px rgba(8,20,40,.12), 0 3px 10px rgba(8,20,40,.06);
+      --t-std: 220ms cubic-bezier(.2,0,0,1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--g-surface);
+      color: var(--g-text);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background:
+        radial-gradient(ellipse at 15% 0%, rgba(26,111,255,.05) 0%, transparent 50%),
+        radial-gradient(ellipse at 85% 100%, rgba(124,58,237,.03) 0%, transparent 50%);
+    }
+
+    h1,h2,h3,h4,h5,h6 { font-family: var(--font-head); }
+
+    /* ── PAGE HEADER ─── */
+    .page-header {
+      background: var(--g-white);
+      border-bottom: 1px solid var(--g-border);
+      box-shadow: var(--s-xs);
+      padding: 14px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 30;
+    }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--font-head); font-weight: 600; font-size: 0.88rem;
+      color: var(--g-blue); padding: 8px 14px 8px 10px;
+      border-radius: var(--r-pill); transition: background var(--t-std);
+      text-decoration: none;
+    }
+    .back-btn:hover { background: var(--g-blue-lt); }
+
+    .page-title {
+      font-family: var(--font-head); font-size: 1.1rem; font-weight: 700;
+      color: var(--g-text); letter-spacing: -0.02em;
+    }
+
+    /* ── REFRESH BUTTON ─── */
+    .refresh-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: linear-gradient(135deg, var(--g-navy), var(--g-blue));
+      color: #fff; font-family: var(--font-head); font-weight: 600;
+      font-size: 0.82rem; padding: 9px 18px; border-radius: var(--r-pill);
+      border: none; cursor: pointer;
+      box-shadow: 0 4px 14px rgba(26,111,255,.3);
+      transition: all var(--t-std);
+    }
+    .refresh-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(26,111,255,.4); }
+    .refresh-btn:active { transform: scale(.97); }
+
+    /* ── KPI CARDS ─── */
+    .kpi-card {
+      background: var(--g-white);
+      border: 1px solid var(--g-border);
+      border-radius: var(--r-xl);
+      padding: 20px;
+      box-shadow: var(--s-sm);
+      transition: box-shadow var(--t-std), transform var(--t-std);
+      position: relative; overflow: hidden;
+    }
+    .kpi-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      border-radius: var(--r-xl) var(--r-xl) 0 0;
+    }
+    .kpi-card.blue::before  { background: linear-gradient(90deg, var(--g-blue), #4f80ff); }
+    .kpi-card.green::before { background: linear-gradient(90deg, #00c853, #69f0ae); }
+    .kpi-card.amber::before { background: linear-gradient(90deg, var(--g-amber), #fcd34d); }
+    .kpi-card.purple::before{ background: linear-gradient(90deg, var(--g-purple), #a78bfa); }
+    .kpi-card:hover { box-shadow: var(--s-md); transform: translateY(-2px); }
+
+    .kpi-label {
+      font-family: var(--font-head); font-size: 0.72rem; font-weight: 600;
+      color: var(--g-text-3); text-transform: uppercase; letter-spacing: 0.06em;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .kpi-label svg { width: 14px; height: 14px; }
+
+    .kpi-value {
+      font-family: var(--font-head); font-size: 2rem; font-weight: 800;
+      color: var(--g-text); letter-spacing: -0.04em; margin-top: 6px;
+      line-height: 1;
+    }
+
+    .kpi-sub-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      margin-top: 14px; padding-top: 14px;
+      border-top: 1px solid var(--g-border);
+      gap: 4px;
+    }
+    .kpi-sub-item { text-align: center; }
+    .kpi-sub-label {
+      font-size: 0.65rem; font-weight: 600; color: var(--g-text-3);
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .kpi-sub-val {
+      font-family: var(--font-head); font-size: 1.1rem; font-weight: 700;
+      margin-top: 2px;
+    }
+    .kpi-sub-val.green  { color: #00c853; }
+    .kpi-sub-val.red    { color: var(--g-danger); }
+    .kpi-sub-val.amber  { color: var(--g-amber); }
+
+    .kpi-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--g-border); }
+    .kpi-row-item { display: flex; justify-content: space-between; align-items: center; }
+    .kpi-row-label { font-size: 0.8rem; color: var(--g-text-2); }
+    .kpi-row-val   { font-family: var(--font-head); font-size: 0.85rem; font-weight: 700; }
+
+    /* ── SECTION CARD ─── */
+    .section-card {
+      background: var(--g-white);
+      border: 1px solid var(--g-border);
+      border-radius: var(--r-xl);
+      padding: 24px;
+      box-shadow: var(--s-sm);
+    }
+    .section-title {
+      font-family: var(--font-head); font-size: 0.95rem; font-weight: 700;
+      color: var(--g-text); letter-spacing: -0.01em;
+      display: flex; align-items: center; gap: 8px; margin-bottom: 20px;
+    }
+    .section-title::before {
+      content: ''; display: block; width: 3px; height: 18px;
+      background: linear-gradient(180deg, var(--g-blue), var(--g-purple));
+      border-radius: 2px; flex-shrink: 0;
+    }
+
+    /* ── SOCIAL TASK ROWS ─── */
+    .social-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px; border-radius: var(--r-md);
+      background: var(--g-surface); margin-bottom: 8px;
+      transition: background var(--t-std);
+    }
+    .social-row:last-of-type { margin-bottom: 0; }
+    .social-row:hover { background: var(--g-blue-lt); }
+    .social-row-left {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .social-icon {
+      width: 34px; height: 34px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .social-icon svg { width: 17px; height: 17px; }
+    .social-name { font-family: var(--font-head); font-size: 0.85rem; font-weight: 600; color: var(--g-text); }
+    .social-right { display: flex; align-items: center; gap: 10px; }
+    .social-badge {
+      font-family: var(--font-head); font-size: 0.75rem; font-weight: 700;
+      padding: 3px 10px; border-radius: var(--r-pill);
+      background: var(--g-blue-lt); color: var(--g-blue);
+    }
+    .social-amount {
+      font-family: var(--font-head); font-size: 0.85rem; font-weight: 700;
+      color: #00c853;
+    }
+    .social-total-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 14px 0; margin-top: 10px;
+      border-top: 1px solid var(--g-border);
+    }
+    .social-total-label { font-family: var(--font-head); font-weight: 700; font-size: 0.9rem; }
+    .social-total-val   { font-family: var(--font-head); font-weight: 800; font-size: 1rem; color: #00c853; }
+
+    /* ── SUCCESS RING CARD ─── */
+    .ring-card {
+      background: var(--g-white); border: 1px solid var(--g-border);
+      border-radius: var(--r-xl); box-shadow: var(--s-sm);
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 28px 20px; gap: 6px;
+      position: relative; overflow: hidden;
+    }
+    .ring-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 50% 40%, rgba(26,111,255,.04) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .ring-label {
+      font-family: var(--font-head); font-size: 0.72rem; font-weight: 600;
+      color: var(--g-text-3); text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .ring-value {
+      font-family: var(--font-head); font-size: 2.4rem; font-weight: 800;
+      color: var(--g-text); letter-spacing: -0.04em; line-height: 1;
+    }
+
+    /* ── SCROLLBAR ─── */
+    ::-webkit-scrollbar { width: 3px; height: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--g-border); border-radius: 3px; }
+
+    /* ── PAGE FADE-IN ─── */
+    @keyframes pageIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .page-content { animation: pageIn .3s cubic-bezier(.2,0,0,1); }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── STICKY HEADER ── -->
+  <header class="page-header">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button onclick="window.history.back()" class="back-btn" aria-label="Go back">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Back
+      </button>
+      <span class="page-title">Performance Overview</span>
+    </div>
+    <button id="overviewRefreshBtn" class="refresh-btn">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Refresh
+    </button>
+  </header>
+
+  <!-- ── PAGE CONTENT ── -->
+  <div class="page-content" style="max-width:900px; margin:0 auto; padding:24px 16px 48px;">
+
+    <!-- KPI GRID -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-bottom:20px;">
+
+      <!-- Balance -->
+      <div class="kpi-card blue">
+        <div class="kpi-label">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--g-blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          Wallet Balance
+        </div>
+        <div id="kpiBalance" class="kpi-value" style="color:var(--g-blue);">₦0</div>
+      </div>
+
+      <!-- Jobs Posted -->
+      <div class="kpi-card amber">
+        <div class="kpi-label">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--g-amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+          Jobs Posted
+        </div>
+        <div id="kpiJobsTotal" class="kpi-value">0</div>
+        <div class="kpi-sub-grid">
+          <div class="kpi-sub-item">
+            <div class="kpi-sub-label">Approved</div>
+            <div id="kpiJobsApproved" class="kpi-sub-val green">0</div>
+          </div>
+          <div class="kpi-sub-item">
+            <div class="kpi-sub-label">Rejected</div>
+            <div id="kpiJobsRejected" class="kpi-sub-val red">0</div>
+          </div>
+          <div class="kpi-sub-item">
+            <div class="kpi-sub-label">On Review</div>
+            <div id="kpiJobsOnreview" class="kpi-sub-val amber">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Task Submissions -->
+      <div class="kpi-card green">
+        <div class="kpi-label">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#00c853" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          Task Submissions
+        </div>
+        <div id="kpiTasksTotal" class="kpi-value">0</div>
+        <div class="kpi-sub-grid">
+          <div class="kpi-sub-item">
+            <div class="kpi-sub-label">Approved</div>
+            <div id="kpiTasksApproved" class="kpi-sub-val green">0</div>
+          </div>
+          <div class="kpi-sub-item">
+            <div class="kpi-sub-label">Rejected</div>
+            <div id="kpiTasksRejected" class="kpi-sub-val red">0</div>
+          </div>
+          <div class="kpi-sub-item">
+            <div class="kpi-sub-label">On Review</div>
+            <div id="kpiTasksOnreview" class="kpi-sub-val amber">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Referrals -->
+      <div class="kpi-card purple">
+        <div class="kpi-label">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--g-purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          Referrals
+        </div>
+        <div id="kpiReferralsTotal" class="kpi-value" style="color:var(--g-purple);">0</div>
+        <div class="kpi-2col">
+          <div class="kpi-row-item">
+            <span class="kpi-row-label">Total</span>
+            <span id="kpiReferralsTotalSmall" class="kpi-row-val">0</span>
+          </div>
+          <div class="kpi-row-item">
+            <span class="kpi-row-label">Premium</span>
+            <span id="kpiReferralsPremium" class="kpi-row-val" style="color:#00c853;">0</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- LOWER GRID: Social Tasks + Success Ring -->
+    <div style="display:grid; grid-template-columns:1fr; gap:14px;">
+
+      <!-- Social Tasks Review -->
+      <div class="section-card">
+        <div class="section-title">Social Tasks Review</div>
+
+        <!-- TikTok / Instagram -->
+        <div class="social-row">
+          <div class="social-row-left">
+            <div class="social-icon" style="background:linear-gradient(135deg,#fce4ec,#fce4ec);">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#e91e63" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="14" height="14" rx="3"/><path d="M17 10l4-2v8l-4-2v-4z"/></svg>
+            </div>
+            <span class="social-name">TikTok / Instagram</span>
+          </div>
+          <div class="social-right">
+            <span class="social-badge"><span id="socialTiktokCount">0</span> tasks</span>
+            <span class="social-amount" id="socialTiktokPaid">₦0</span>
+          </div>
+        </div>
+
+        <!-- WhatsApp -->
+        <div class="social-row">
+          <div class="social-row-left">
+            <div class="social-icon" style="background:linear-gradient(135deg,#e8f5e9,#e8f5e9);">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#43a047" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8.5 8.5 0 01-12.9 7.2L3 21l1.8-4.9A8.5 8.5 0 1121 12z"/></svg>
+            </div>
+            <span class="social-name">WhatsApp</span>
+          </div>
+          <div class="social-right">
+            <span class="social-badge"><span id="socialWhatsappCount">0</span> tasks</span>
+            <span class="social-amount" id="socialWhatsappPaid">₦0</span>
+          </div>
+        </div>
+
+        <!-- Telegram -->
+        <div class="social-row">
+          <div class="social-row-left">
+            <div class="social-icon" style="background:linear-gradient(135deg,#e3f2fd,#e3f2fd);">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#1e88e5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </div>
+            <span class="social-name">Telegram</span>
+          </div>
+          <div class="social-right">
+            <span class="social-badge"><span id="socialTelegramCount">0</span> tasks</span>
+            <span class="social-amount" id="socialTelegramPaid">₦0</span>
+          </div>
+        </div>
+
+        <!-- Total Paid -->
+        <div class="social-total-row">
+          <span class="social-total-label">Total Paid Out</span>
+          <span id="socialTotalPaid" class="social-total-val">₦0</span>
+        </div>
+      </div>
+
+      <!-- Success Rate Ring -->
+      <div class="ring-card">
+        <div class="ring-label">Overall Success Rate</div>
+        <svg viewBox="0 0 36 36" style="width:140px;height:140px;margin:10px 0;">
+          <circle cx="18" cy="18" r="15" stroke="var(--g-border)" stroke-width="3.5" fill="none"/>
+          <circle id="successRing" cx="18" cy="18" r="15"
+            stroke="url(#ringGrad)" stroke-width="3.5" fill="none"
+            stroke-dasharray="0 100" stroke-linecap="round"
+            transform="rotate(-90 18 18)"/>
+          <defs>
+            <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#1a6fff"/>
+              <stop offset="100%" stop-color="#00c853"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div id="successPercent" class="ring-value">0%</div>
+        <div class="ring-label" style="margin-top:2px;">Approval rate across all tasks</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Overview logic -->
+  <script src="overview.js"></script>
+
+  <script>
+    db.collection("system").doc("config").onSnapshot(doc => {
+      if (!doc.exists) return;
+      const maintenanceMode = doc.data().maintenanceMode;
+      const urlParams = new URLSearchParams(window.location.search);
+      const isCEO = urlParams.get('admin');
+      const ceoSession = sessionStorage.getItem('ceo_access');
+      if (isCEO === 'true') sessionStorage.setItem('ceo_access', 'granted');
+      const isAdmin = (isCEO === 'true' || ceoSession === 'granted');
+      if (maintenanceMode && !isAdmin) {
+        window.location.replace("maintenance.html");
+      }
+    });
+  </script>
+
+</body>
+</html>

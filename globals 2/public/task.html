@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task Jobs · Globals</title>
+  <link rel="shortcut icon" href="GLOBALS.jpg" type="image/jpg">
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Fonts — same as dashboard -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="firebase.js"></script>
+
+  <style>
+    /* ══════════════════════════════════════════════
+       GLOBALS DESIGN SYSTEM — Task Jobs Page
+       Identical tokens to dashboard.html
+    ══════════════════════════════════════════════ */
+    :root {
+      --g-navy:      #081428;
+      --g-blue:      #1a6fff;
+      --g-blue-dk:   #1050c8;
+      --g-blue-lt:   #e8f0fe;
+      --g-blue-glow: rgba(26,111,255,.18);
+      --g-gold:      #f5a623;
+      --g-success:   #00c853;
+      --g-danger:    #e53935;
+      --g-amber:     #f59e0b;
+      --g-purple:    #7c3aed;
+      --g-surface:   #f4f6fb;
+      --g-white:     #ffffff;
+      --g-border:    #e4e8f0;
+      --g-text:      #0d1b2e;
+      --g-text-2:    #4a5568;
+      --g-text-3:    #8a96a8;
+      --font-head:   'Sora', -apple-system, sans-serif;
+      --font-body:   'DM Sans', -apple-system, sans-serif;
+      --r-sm:  10px; --r-md: 14px; --r-lg: 18px;
+      --r-xl:  22px; --r-pill: 999px;
+      --s-xs:  0 1px 3px rgba(8,20,40,.06);
+      --s-sm:  0 2px 8px rgba(8,20,40,.08), 0 1px 4px rgba(8,20,40,.05);
+      --s-md:  0 4px 16px rgba(8,20,40,.10), 0 2px 6px rgba(8,20,40,.06);
+      --s-lg:  0 8px 32px rgba(8,20,40,.12);
+      --t-std: 220ms cubic-bezier(.2,0,0,1);
+      --t-fast:130ms cubic-bezier(.2,0,0,1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--g-surface);
+      color: var(--g-text);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background:
+        radial-gradient(ellipse at 15% 0%, rgba(26,111,255,.05) 0%, transparent 50%),
+        radial-gradient(ellipse at 85% 100%, rgba(124,58,237,.03) 0%, transparent 50%);
+    }
+
+    h1,h2,h3,h4,h5,h6 { font-family: var(--font-head); }
+
+    /* ── STICKY HEADER ── */
+    .page-header {
+      background: var(--g-white);
+      border-bottom: 1px solid var(--g-border);
+      box-shadow: 0 1px 0 var(--g-border), 0 2px 12px rgba(8,20,40,.04);
+      padding: 13px 16px;
+      position: sticky; top: 0; z-index: 40;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--font-head); font-weight: 600; font-size: 0.88rem;
+      color: var(--g-blue); padding: 8px 14px 8px 10px;
+      border-radius: var(--r-pill); border: none; background: transparent;
+      cursor: pointer; transition: background var(--t-fast);
+    }
+    .back-btn:hover { background: var(--g-blue-lt); }
+
+    .page-title {
+      font-family: var(--font-head); font-size: 1rem; font-weight: 700;
+      color: var(--g-text); letter-spacing: -0.02em;
+    }
+
+    /* ── SEARCH + FILTER BAR ── */
+    .filter-bar {
+      background: var(--g-white);
+      border-bottom: 1px solid var(--g-border);
+      box-shadow: var(--s-xs);
+      padding: 12px 16px;
+      position: sticky; top: 58px; z-index: 30;
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    }
+
+    .search-wrap {
+      position: relative; flex: 1; min-width: 180px;
+    }
+    .search-wrap svg {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+      width: 17px; height: 17px; color: var(--g-text-3); pointer-events: none;
+    }
+    .search-input {
+      width: 100%; padding: 11px 16px 11px 42px;
+      border: 1.5px solid var(--g-border); border-radius: var(--r-pill);
+      background: var(--g-surface); color: var(--g-text);
+      font-family: var(--font-body); font-size: 0.88rem;
+      outline: none; transition: border-color var(--t-fast), box-shadow var(--t-fast);
+    }
+    .search-input::placeholder { color: var(--g-text-3); }
+    .search-input:focus {
+      border-color: var(--g-blue);
+      box-shadow: 0 0 0 3px var(--g-blue-glow);
+      background: var(--g-white);
+    }
+
+    .filter-select {
+      padding: 10px 16px; border: 1.5px solid var(--g-border);
+      border-radius: var(--r-md); background: var(--g-surface);
+      color: var(--g-text); font-family: var(--font-body);
+      font-size: 0.85rem; font-weight: 500; outline: none;
+      transition: border-color var(--t-fast), box-shadow var(--t-fast);
+      cursor: pointer;
+    }
+    .filter-select:focus {
+      border-color: var(--g-blue); box-shadow: 0 0 0 3px var(--g-blue-glow);
+    }
+
+    .finished-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: linear-gradient(135deg, var(--g-navy), var(--g-blue));
+      color: #fff; font-family: var(--font-head); font-weight: 600;
+      font-size: 0.82rem; padding: 10px 18px; border-radius: var(--r-pill);
+      border: none; cursor: pointer;
+      box-shadow: 0 4px 14px rgba(26,111,255,.3);
+      transition: all var(--t-std); white-space: nowrap;
+    }
+    .finished-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(26,111,255,.4); }
+    .finished-btn:active { transform: scale(.97); }
+    .finished-btn svg { width: 15px; height: 15px; }
+
+    /* ── TASK LIST AREA ── */
+    #task-jobs {
+      padding: 20px 16px 80px;
+      max-width: 900px; margin: 0 auto;
+    }
+
+    /* ── FINISHED TASKS SCREEN ── */
+    #finishedTasksScreenUser {
+      padding: 20px 16px 80px;
+      max-width: 900px; margin: 0 auto;
+    }
+
+    .finished-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .finished-title {
+      font-family: var(--font-head); font-size: 1.2rem; font-weight: 700;
+      letter-spacing: -0.02em; color: var(--g-text);
+    }
+
+    /* ── STATS CARDS ── */
+    .stats-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      text-align: center; padding: 20px 12px;
+      border-radius: var(--r-xl); border: 1px solid;
+      box-shadow: var(--s-xs);
+      transition: box-shadow var(--t-std), transform var(--t-std);
+    }
+    .stat-card:hover { box-shadow: var(--s-md); transform: translateY(-2px); }
+    .stat-card.pending {
+      background: #fffbeb; border-color: #fde68a;
+    }
+    .stat-card.approved {
+      background: #f0faf5; border-color: #a7f3d0;
+    }
+    .stat-val {
+      font-family: var(--font-head); font-size: 2.4rem; font-weight: 800;
+      line-height: 1; margin-bottom: 6px;
+    }
+    .stat-card.pending .stat-val  { color: var(--g-amber); }
+    .stat-card.approved .stat-val { color: var(--g-success); }
+    .stat-label {
+      font-family: var(--font-body); font-size: 0.8rem; font-weight: 500;
+      color: var(--g-text-2);
+    }
+
+    /* ── MODAL ── */
+    #globalsModal {
+      position: fixed; inset: 0;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(8,20,40,.5); z-index: 9999;
+      backdrop-filter: blur(4px);
+    }
+    #globalsModal > div {
+      background: var(--g-white); border-radius: 24px;
+      width: 90%; max-width: 360px; text-align: center;
+      padding: 28px 24px; box-shadow: 0 24px 64px rgba(8,20,40,.3);
+      font-family: var(--font-body); animation: modalIn 0.25s ease-out;
+    }
+    #globalsModalTitle {
+      font-family: var(--font-head); font-size: 1.1rem; font-weight: 700;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, var(--g-gold), var(--g-blue));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    #globalsModalMessage {
+      color: var(--g-text-2); font-size: 0.92rem; line-height: 1.6; margin-bottom: 20px;
+    }
+    #globalsModalActions { display: flex; justify-content: center; gap: 12px; }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(16px) scale(.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ── PAGE FADE-IN ── */
+    @keyframes pageIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .page-anim { animation: pageIn .25s cubic-bezier(.2,0,0,1); }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-thumb { background: var(--g-border); border-radius: 3px; }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── GLOBALS MODAL ── -->
+  <div id="globalsModal">
+    <div>
+      <h3 id="globalsModalTitle">Notice</h3>
+      <p id="globalsModalMessage">This is your message</p>
+      <div id="globalsModalActions"></div>
+    </div>
+  </div>
+
+  <!-- ── STICKY PAGE HEADER ── -->
+  <header class="page-header">
+    <button onclick="window.location.href='dashboard.html'" class="back-btn">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Back
+    </button>
+    <span class="page-title">Task Jobs</span>
+    <div style="width:60px;"></div>
+  </header>
+
+  <!-- ── SEARCH + FILTER BAR ── -->
+  <div class="filter-bar">
+    <div class="search-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="taskSearch" class="search-input" placeholder="Search tasks by name or category…" />
+    </div>
+
+    <select id="taskCategoryFilter" class="filter-select">
+      <option value="">All Categories</option>
+      <option>WhatsApp</option>
+      <option>Telegram</option>
+      <option>Instagram</option>
+      <option>Tiktok</option>
+      <option>App</option>
+      <option>YouTube</option>
+      <option>Facebook</option>
+      <option>Twitter</option>
+      <option>Website</option>
+      <option>Vote</option>
+      <option>Music Player</option>
+    </select>
+
+    <button id="finishedTaskBtnUser" class="finished-btn">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      Finished Tasks
+    </button>
+  </div>
+
+  <!-- ── TASK JOBS SECTION ── -->
+  <div id="taskSection" class="page-anim">
+    <div id="task-jobs"></div>
+  </div>
+
+  <!-- ── FINISHED TASKS SCREEN ── -->
+  <div id="finishedTasksScreenUser" class="hidden page-anim">
+    <div class="finished-header">
+      <button id="backToMainBtnUser" class="back-btn" style="margin:0;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Back
+      </button>
+      <span class="finished-title">Finished Tasks</span>
+      <div style="width:60px;"></div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card pending">
+        <div id="pendingCountUser" class="stat-val">0</div>
+        <div class="stat-label">Pending Tasks</div>
+      </div>
+      <div class="stat-card approved">
+        <div id="approvedCountUser" class="stat-val">0</div>
+        <div class="stat-label">Approved Tasks</div>
+      </div>
+    </div>
+
+    <div id="finishedTasksListUser" style="display:grid;gap:12px;"></div>
+  </div>
+
+  <!-- Page Logic -->
+  <script src="task.js"></script>
+  <script>lucide.createIcons();</script>
+
+  <script>
+    db.collection("system").doc("config").onSnapshot(doc => {
+      if (!doc.exists) return;
+      const maintenanceMode = doc.data().maintenanceMode;
+      const urlParams = new URLSearchParams(window.location.search);
+      const isCEO = urlParams.get('admin');
+      const ceoSession = sessionStorage.getItem('ceo_access');
+      if (isCEO === 'true') sessionStorage.setItem('ceo_access', 'granted');
+      const isAdmin = (isCEO === 'true' || ceoSession === 'granted');
+      if (maintenanceMode && !isAdmin) {
+        window.location.replace("maintenance.html");
+      }
+    });
+  </script>
+
+</body>
+</html>
