@@ -1,0 +1,827 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="google-adsense-account" content="ca-pub-8318056362952970">
+<meta name="fo-verify" content="86000818-676a-417e-9550-739d38eef155"/>
+<title>Globals | Earn Money Online &amp; Promote Your Brand</title>
+<meta name="description" content="Globals is a powerful online earning and promotion platform. Post tasks, earn daily, instant withdrawals from &#8358;500."/>
+<meta name="robots" content="index,follow"/>
+<meta property="og:title" content="Globals - Earn &amp; Promote Online"/>
+<meta property="og:image" content="https://globalstasks.name.ng/GLOBALS.jpg"/>
+<meta property="og:url" content="https://globalstasks.name.ng/"/>
+<meta property="og:type" content="website"/>
+<link rel="shortcut icon" href="GLOBALS.jpg" type="image/jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;overflow-x:hidden;}
+body{font-family:'Inter',system-ui,sans-serif;background:#f8f8fd;color:#0d0f1a;overflow-x:hidden;-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.6;}
+h1,h2,h3,h4,h5{font-family:'Inter',system-ui,sans-serif;font-weight:800;line-height:1.1;letter-spacing:-.025em;}
+a{text-decoration:none;color:inherit;}
+img{max-width:100%;display:block;}
+
+/* TOKENS */
+:root{
+  --brand:#4338ca;--brand2:#6366f1;--accent:#06c7f0;
+  --ink:#0d0f1a;--soft:#3d4160;--muted:#8890b0;
+  --bg:#f8f8fd;--bg2:#f0eeff;--white:#fff;
+  --border:rgba(67,56,202,.1);
+  --radius:16px;--radius-lg:24px;
+}
+
+/* REVEAL */
+.rev{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease;}
+.rev.on{opacity:1;transform:none;}
+
+/* NAV */
+header{position:sticky;top:0;z-index:99;background:rgba(248,248,253,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;max-width:1200px;margin:0 auto;}
+.nav-logo{display:flex;align-items:center;gap:10px;}
+.nav-logo img{width:36px;height:36px;border-radius:9px;object-fit:cover;}
+.nav-logo span{font-size:1.05rem;font-weight:800;color:var(--ink);}
+.nav-links{display:flex;align-items:center;gap:28px;}
+.nav-links a{font-size:13.5px;font-weight:600;color:var(--soft);transition:color .2s;}
+.nav-links a:hover{color:var(--brand);}
+.nav-ctas{display:flex;gap:8px;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:12px;font-weight:700;font-size:13.5px;cursor:pointer;border:none;transition:all .2s;}
+.btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--soft);}
+.btn-outline:hover{border-color:var(--brand2);color:var(--brand);}
+.btn-fill{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;box-shadow:0 4px 14px rgba(67,56,202,.3);}
+.btn-fill:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(67,56,202,.38);}
+.ham{display:none;background:transparent;border:1.5px solid var(--border);padding:8px 10px;border-radius:10px;cursor:pointer;color:var(--soft);}
+.mob-menu{display:none;flex-direction:column;padding:12px 20px 18px;background:var(--white);border-top:1px solid var(--border);}
+.mob-menu.open{display:flex;}
+.mob-menu a{padding:11px 0;font-weight:600;font-size:15px;color:var(--soft);border-bottom:1px solid #f0f0f8;}
+.mob-ctas{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
+@media(max-width:768px){.nav-links,.nav-ctas{display:none;}.ham{display:block;}}
+
+/* HERO */
+.hero{position:relative;overflow:hidden;padding:60px 24px 72px;background:linear-gradient(155deg,#eeeeff 0%,#f8f8fd 50%,#e6f9ff 100%);}
+.hero::before,.hero::after{content:'';position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;}
+.hero::before{width:400px;height:400px;top:-120px;left:-80px;background:radial-gradient(circle,rgba(99,102,241,.2),transparent 70%);}
+.hero::after{width:350px;height:350px;top:-60px;right:-60px;background:radial-gradient(circle,rgba(6,199,240,.16),transparent 70%);}
+.hero-inner{position:relative;z-index:1;max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:40px;align-items:center;}
+@media(min-width:1024px){.hero-inner{grid-template-columns:1fr 400px;}}
+.eyebrow{display:inline-flex;align-items:center;gap:7px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);color:var(--brand);padding:6px 14px;border-radius:100px;font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:18px;}
+.hero-title{font-size:clamp(2rem,6vw,3.2rem);}
+.hero-title .static{color:var(--ink);}
+
+/* WORD SLOT */
+.slot{display:block;overflow:hidden;height:1.1em;position:relative;}
+.slot-inner{display:flex;flex-direction:column;transition:transform .55s cubic-bezier(.7,0,.3,1);}
+.slot-inner span{display:block;flex-shrink:0;height:1.1em;line-height:1.1;background:linear-gradient(100deg,var(--brand),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+
+.hero-sub{font-size:15px;color:var(--soft);line-height:1.7;margin-top:16px;max-width:500px;}
+.hero-btns{display:flex;flex-wrap:wrap;gap:11px;margin-top:22px;}
+.hero-stats{display:flex;flex-wrap:wrap;gap:16px;margin-top:28px;padding-top:22px;border-top:1px solid var(--border);}
+.stat-num{font-size:1.5rem;font-weight:800;color:var(--ink);display:block;}
+.stat-label{font-size:12px;color:var(--muted);}
+.stat-divider{width:1px;background:var(--border);align-self:stretch;}
+.hero-card{background:var(--white);border-radius:var(--radius-lg);padding:20px;box-shadow:0 4px 40px rgba(67,56,202,.13);border:1px solid var(--border);}
+.hero-card img{width:100%;height:220px;object-fit:cover;border-radius:var(--radius);}
+.hero-card-foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;}
+.hero-card-foot-price{font-size:1.2rem;font-weight:800;color:var(--brand);}
+.hero-card-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+.hero-card-btns a{padding:9px;border-radius:11px;text-align:center;font-weight:700;font-size:13px;}
+.btn-card-ghost{border:1.5px solid var(--border);color:var(--soft);}
+.btn-card-ghost:hover{border-color:var(--brand2);color:var(--brand);}
+.btn-card-solid{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;}
+
+/* MARQUEE */
+.mq{background:linear-gradient(135deg,#0d0f1a,#1a1040,#0a1628);position:relative;overflow:hidden;}
+.mq::before,.mq::after{content:'';position:absolute;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(99,102,241,.5),transparent);}
+.mq::before{top:0;}.mq::after{bottom:0;}
+.mq-head{max-width:1200px;margin:0 auto;padding:22px 24px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.mq-left{display:flex;align-items:center;gap:12px;}
+.mq-ico{width:38px;height:38px;border-radius:10px;background:rgba(99,102,241,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.mq-title{font-size:.95rem;font-weight:700;color:#fff;}
+.mq-sub{font-size:12px;color:rgba(255,255,255,.4);}
+.mq-badge{display:flex;align-items:center;gap:6px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);padding:5px 13px;border-radius:100px;font-size:11px;font-weight:700;color:#a5b4fc;letter-spacing:.05em;text-transform:uppercase;}
+.mq-dot{width:6px;height:6px;border-radius:50%;background:#818cf8;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1;transform:scale(1.3)}}
+.mq-runner{overflow:hidden;padding:16px 0 24px;position:relative;}
+.mq-runner::before,.mq-runner::after{content:'';position:absolute;top:0;bottom:0;width:100px;z-index:2;pointer-events:none;}
+.mq-runner::before{left:0;background:linear-gradient(to right,#0d0f1a,transparent);}
+.mq-runner::after{right:0;background:linear-gradient(to left,#0d0f1a,transparent);}
+.mq-track{display:flex;width:max-content;animation:scroll 30s linear infinite;}
+.mq-track:hover{animation-play-state:paused;}
+@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.pill{display:flex;align-items:center;gap:9px;padding:9px 20px;margin:0 5px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:100px;font-size:13px;font-weight:600;color:rgba(255,255,255,.7);white-space:nowrap;}
+.pill:hover{background:rgba(255,255,255,.1);}
+
+/* SECTIONS */
+.sec{padding:72px 24px;}
+.sec-inner{max-width:1200px;margin:0 auto;}
+.sec-head{margin-bottom:44px;}
+.sec-head.center{text-align:center;}
+.tag{display:inline-flex;align-items:center;gap:7px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.14);color:var(--brand);padding:5px 13px;border-radius:100px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px;}
+.sec-title{font-size:clamp(1.6rem,3.5vw,2.3rem);}
+.sec-sub{font-size:15px;color:var(--muted);line-height:1.65;margin-top:8px;max-width:500px;}
+.sec-head.center .sec-sub{margin:8px auto 0;}
+@media(max-width:640px){.sec{padding:52px 20px;}}
+
+/* FEATURES */
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;}
+.feat-card{background:var(--white);border-radius:var(--radius);padding:26px 22px;border:1px solid var(--border);position:relative;overflow:hidden;transition:transform .25s,box-shadow .25s;}
+.feat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--brand),var(--accent));opacity:0;transition:opacity .25s;}
+.feat-card:hover{transform:translateY(-4px);box-shadow:0 12px 36px rgba(67,56,202,.1);}
+.feat-card:hover::before{opacity:1;}
+.feat-ico{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+.feat-card h3{font-size:.95rem;margin-bottom:7px;}
+.feat-card p{font-size:13.5px;color:var(--soft);line-height:1.6;}
+
+/* BUILT FOR */
+.built{padding:72px 24px;background:var(--bg2);position:relative;overflow:hidden;}
+.built::before{content:'';position:absolute;inset:0;background-image:radial-gradient(rgba(67,56,202,.04) 1px,transparent 1px);background-size:36px 36px;pointer-events:none;}
+.built-grid{position:relative;z-index:1;max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:48px;align-items:center;}
+@media(min-width:1024px){.built-grid{grid-template-columns:400px 1fr;}}
+@media(max-width:640px){.built{padding:52px 20px;}}
+.built-label{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:12px;}
+.built-title{font-size:clamp(1.7rem,3.5vw,2.4rem);}
+.built-title em{font-style:normal;color:var(--brand2);}
+.built-body{font-size:15px;color:var(--soft);line-height:1.7;margin-top:14px;}
+.btabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px;}
+.btab{padding:8px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:transparent;color:var(--soft);transition:.2s;font-family:inherit;}
+.btab.on{background:var(--brand);color:#fff;border-color:var(--brand);box-shadow:0 3px 12px rgba(67,56,202,.28);}
+.bdots{display:flex;gap:6px;margin-top:16px;}
+.bdot{height:6px;border-radius:100px;background:rgba(67,56,202,.18);cursor:pointer;transition:all .3s;}
+.bdot.on{background:var(--brand);width:22px;}
+.bdot:not(.on){width:6px;}
+.bcards{position:relative;min-height:280px;}
+.bcard{position:absolute;inset:0;border-radius:var(--radius-lg);padding:28px 24px;opacity:0;transform:translateY(14px) scale(.98);transition:opacity .5s,transform .5s;pointer-events:none;}
+.bcard.on{opacity:1;transform:none;pointer-events:auto;}
+.bcard-1{background:linear-gradient(135deg,#f0edff,#e8f5ff);border:1px solid rgba(99,102,241,.15);}
+.bcard-2{background:linear-gradient(135deg,#ecfdf5,#f0fffe);border:1px solid rgba(16,185,129,.12);}
+.bcard-3{background:linear-gradient(135deg,#fff7ed,#fffbeb);border:1px solid rgba(245,158,11,.12);}
+.bcard-4{background:linear-gradient(135deg,#fdf4ff,#fce7f3);border:1px solid rgba(168,85,247,.12);}
+.bcard-ico{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+.bcard h3{font-size:1.15rem;margin-bottom:8px;}
+.bcard p{font-size:14px;color:var(--soft);line-height:1.6;}
+.btags{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px;}
+.btag{padding:4px 12px;border-radius:100px;font-size:12px;font-weight:700;}
+
+/* WHY */
+.why-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;}
+.why-card{padding:26px 22px;border-radius:var(--radius);background:var(--bg2);border:1px solid var(--border);transition:transform .25s;}
+.why-card:hover{transform:translateY(-4px);}
+.why-ico{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+.why-card h4{font-size:.95rem;margin-bottom:7px;}
+.why-card p{font-size:13.5px;color:var(--soft);line-height:1.6;}
+
+/* HOW */
+.how-bg{background:var(--white);}
+.how-grid{display:grid;grid-template-columns:repeat(3,1fr);border-radius:var(--radius-lg);border:1px solid var(--border);overflow:hidden;background:var(--bg2);}
+@media(max-width:860px){.how-grid{grid-template-columns:1fr;}}
+.how-step{padding:32px 26px;border-right:1px solid var(--border);}
+.how-step:last-child{border-right:none;}
+@media(max-width:860px){.how-step{border-right:none;border-bottom:1px solid var(--border);}.how-step:last-child{border-bottom:none;}}
+.how-num{width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:800;margin-bottom:20px;transition:transform .25s;}
+.how-step:hover .how-num{transform:scale(1.08);}
+.how-step h3{font-size:1rem;margin-bottom:7px;}
+.how-step p{font-size:13.5px;color:var(--soft);line-height:1.6;}
+
+/* TESTIMONIALS */
+.testi-bg{background:#0d0f1a;position:relative;overflow:hidden;padding:72px 24px 88px;}
+.testi-dots{position:absolute;inset:0;background-image:radial-gradient(rgba(99,102,241,.12) 1.5px,transparent 1.5px);background-size:30px 30px;pointer-events:none;}
+.testi-glow{position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:700px;height:350px;border-radius:50%;background:radial-gradient(ellipse,rgba(99,102,241,.13),transparent 70%);pointer-events:none;}
+.testi-in{position:relative;z-index:1;max-width:1200px;margin:0 auto;}
+.testi-eyebrow{display:inline-flex;align-items:center;gap:7px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#a5b4fc;padding:5px 14px;border-radius:100px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px;}
+.testi-title{font-size:clamp(1.7rem,3.5vw,2.3rem);color:#fff;}
+.testi-sub{font-size:15px;color:rgba(255,255,255,.45);margin-top:7px;}
+@media(max-width:640px){.testi-bg{padding:52px 20px 68px;}}
+.testi-swiper .swiper-slide{height:auto;}
+.testi-swiper .swiper-pagination{position:static;margin-top:32px;}
+.testi-swiper .swiper-pagination-bullet{background:rgba(99,102,241,.4)!important;width:8px;height:8px;opacity:1;}
+.testi-swiper .swiper-pagination-bullet-active{background:#818cf8!important;width:22px!important;border-radius:4px;}
+.swiper-button-next,.swiper-button-prev{color:#818cf8!important;}
+.swiper-button-next::after,.swiper-button-prev::after{font-size:17px!important;}
+.tc{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:var(--radius);padding:28px 24px;position:relative;overflow:hidden;height:100%;backdrop-filter:blur(8px);transition:background .25s,transform .25s;}
+.tc:hover{background:rgba(255,255,255,.07);transform:translateY(-4px);}
+.tc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--brand),var(--accent));opacity:0;transition:opacity .25s;}
+.tc:hover::before{opacity:1;}
+.tc-quote{position:absolute;top:8px;right:14px;font-size:5rem;color:rgba(99,102,241,.1);font-weight:800;line-height:1;pointer-events:none;}
+.tc-stars{display:flex;gap:3px;margin-bottom:13px;}
+.tc-text{font-size:13.5px;line-height:1.75;color:rgba(255,255,255,.75);margin-bottom:20px;}
+.tc-author{display:flex;align-items:center;gap:11px;}
+.tc-name{font-weight:700;font-size:14px;color:#fff;}
+.tc-loc{font-size:12px;color:rgba(255,255,255,.4);margin-top:2px;}
+.tc-badge{display:inline-flex;padding:4px 11px;border-radius:100px;font-size:11px;font-weight:700;margin-top:12px;}
+
+/* TASKS */
+.tasks-bg{background:var(--bg2);}
+.task-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;}
+.task-card{background:var(--white);border-radius:var(--radius);padding:20px;border:1px solid var(--border);transition:transform .22s,box-shadow .22s;}
+.task-card:hover{transform:translateY(-4px);box-shadow:0 10px 32px rgba(67,56,202,.1);}
+.task-row{display:flex;align-items:center;justify-content:space-between;}
+.task-icon{width:46px;height:46px;border-radius:12px;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.task-icon img{width:100%;height:100%;object-fit:cover;}
+.task-name{font-weight:700;font-size:14px;color:var(--ink);}
+.task-desc{font-size:12px;color:var(--muted);margin-top:3px;}
+.task-price{font-size:1rem;font-weight:800;color:var(--brand);text-align:right;}
+.task-inst{font-size:11px;color:#10b981;font-weight:600;}
+.task-foot{display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:13px;border-top:1px solid var(--border);}
+.task-id{font-size:11.5px;color:var(--muted);}
+.btn-sm{padding:7px 16px;border-radius:10px;font-size:12.5px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-weight:700;box-shadow:0 3px 10px rgba(67,56,202,.25);}
+
+/* CONTACT */
+.contact-bg{background:var(--white);}
+.contact-grid{display:grid;grid-template-columns:1fr;gap:20px;}
+@media(min-width:680px){.contact-grid{grid-template-columns:1fr 1fr;}}
+.contact-card{border-radius:var(--radius-lg);padding:36px 32px;}
+.contact-card h3{font-size:1.15rem;margin-bottom:8px;}
+.contact-row{display:flex;align-items:center;gap:13px;margin-bottom:13px;}
+.contact-ico{width:38px;height:38px;border-radius:10px;background:rgba(67,56,202,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.contact-detail-label{font-size:12px;font-weight:700;color:var(--ink);}
+.contact-detail-val{font-size:13px;color:var(--muted);}
+.pkg-box{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;margin:16px 0 14px;}
+.pkg-name{font-size:14px;font-weight:600;color:#fff;}
+.pkg-desc{font-size:12px;color:rgba(255,255,255,.6);margin-top:2px;}
+.pkg-price{font-size:1.25rem;font-weight:800;color:#fff;}
+
+/* FOOTER */
+.foot{background:linear-gradient(180deg,#0a0c18,#0d0f1a);position:relative;overflow:hidden;}
+.foot-g1{position:absolute;top:-140px;left:-60px;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(67,56,202,.12),transparent 70%);pointer-events:none;}
+.foot-g2{position:absolute;bottom:-80px;right:-40px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(6,199,240,.08),transparent 70%);pointer-events:none;}
+.foot-top{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:52px 24px 36px;}
+.foot-grid{display:grid;grid-template-columns:1fr;gap:36px;}
+@media(min-width:600px){.foot-grid{grid-template-columns:1fr 1fr;}}
+@media(min-width:1024px){.foot-grid{grid-template-columns:2fr 1fr 1fr 1fr;}}
+.foot-name{font-size:1.2rem;font-weight:800;color:#fff;}
+.foot-tag{font-size:12px;color:rgba(165,180,252,.5);margin-top:2px;}
+.foot-desc{font-size:13.5px;color:rgba(255,255,255,.35);line-height:1.7;margin-top:14px;}
+.foot-soc{display:flex;flex-wrap:wrap;gap:9px;margin-top:18px;}
+.fsoc{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.08);transition:transform .2s,border-color .2s;}
+.fsoc:hover{transform:translateY(-3px);border-color:rgba(165,180,252,.3);}
+.foot-col-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:16px;}
+.foot-link{display:block;font-size:13.5px;color:rgba(255,255,255,.4);padding:3px 0;transition:color .2s;}
+.foot-link:hover{color:#a5b4fc;}
+.foot-contact-row{display:flex;align-items:center;gap:9px;margin-bottom:11px;}
+.foot-contact-ico{width:30px;height:30px;border-radius:8px;background:rgba(99,102,241,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.foot-div{height:1px;background:rgba(255,255,255,.06);margin:0 24px;position:relative;z-index:1;}
+.foot-bottom{position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;max-width:1200px;margin:0 auto;padding:18px 24px;}
+.foot-copy{font-size:13px;color:rgba(255,255,255,.3);}
+.foot-legal{display:flex;gap:18px;}
+.foot-legal a{font-size:13px;color:rgba(255,255,255,.3);transition:color .2s;}
+.foot-legal a:hover{color:#a5b4fc;}
+
+#btt{position:fixed;right:20px;bottom:24px;z-index:200;width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--brand),var(--brand2));border:none;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(67,56,202,.4);}
+#btt.show{display:flex;}
+#btt:hover{transform:translateY(-2px);}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header>
+  <nav class="nav">
+    <a class="nav-logo" href="#">
+      <img src="GLOBALS.jpg" alt="Globals"/>
+      <span>Globals</span>
+    </a>
+    <div class="nav-links">
+      <a href="#about">Why Globals?</a>
+      <a href="#features">Features</a>
+      <a href="#how">How It Works</a>
+      <a href="#tasks">Tasks</a>
+      <a href="#contact">Contact</a>
+    </div>
+    <div class="nav-ctas">
+      <a href="login.html"  class="btn btn-outline">Login</a>
+      <a href="signup.html" class="btn btn-fill">Get Started &#8594;</a>
+    </div>
+    <button class="ham" id="hamBtn" aria-label="Menu">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+  </nav>
+  <div class="mob-menu" id="mobMenu">
+    <a href="#about">Why Globals?</a>
+    <a href="#features">Features</a>
+    <a href="#how">How It Works</a>
+    <a href="#tasks">Tasks</a>
+    <a href="#contact">Contact</a>
+    <div class="mob-ctas">
+      <a href="login.html"  class="btn btn-outline" style="justify-content:center;">Login</a>
+      <a href="signup.html" class="btn btn-fill"    style="justify-content:center;">Sign Up</a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="eyebrow">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2 5h5l-4 3 2 5-5-3-5 3 2-5-4-3h5z"/></svg>
+        Grow &amp; Earn &mdash; from &#8358;500
+      </div>
+      <h1 class="hero-title">
+        <span class="static">Promote your brand &mdash;</span><br>
+        <span class="slot" id="slot">
+          <span class="slot-inner" id="slotInner">
+            <span>real engagement.</span>
+            <span>real followers.</span>
+            <span>real earnings.</span>
+            <span>real results.</span>
+            <span>real growth.</span>
+            <span>real engagement.</span>
+          </span>
+        </span>
+      </h1>
+      <p class="hero-sub">Boost Social Media Growth. Get real Engagement &mdash; Likes, Follows, Comments. Low prices from &#8358;500. Simple Tasks, Instant Rewards. Secure &amp; reliable platform.</p>
+      <div class="hero-btns">
+        <a href="signup.html" class="btn btn-fill" style="padding:12px 26px;font-size:14px;">Create Free Account &#8594;</a>
+        <a href="#features"   class="btn btn-outline" style="padding:12px 22px;font-size:14px;">Explore Features</a>
+      </div>
+      <div class="hero-stats">
+        <div><span class="stat-num">12K+</span><span class="stat-label">Active Earners</span></div>
+        <div class="stat-divider"></div>
+        <div><span class="stat-num">&#8358;500</span><span class="stat-label">Minimum Promo</span></div>
+        <div class="stat-divider"></div>
+        <div><span class="stat-num">Instant</span><span class="stat-label">Withdrawals</span></div>
+      </div>
+    </div>
+    <div class="hero-card rev" data-delay="180">
+      <img src="flyer.jpg" alt="Globals promotion"/>
+      <div class="hero-card-foot">
+        <div>
+          <div style="font-weight:700;font-size:15px;">Guaranteed Results</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">Real people &mdash; real actions</div>
+        </div>
+        <div class="hero-card-foot-price">From &#8358;500</div>
+      </div>
+      <div class="hero-card-btns">
+        <a href="#tasks"      class="btn-card-ghost">Browse Tasks</a>
+        <a href="signup.html" class="btn-card-solid">Start Earning</a>
+      </div>
+      <p style="font-size:11.5px;color:var(--muted);text-align:center;margin-top:10px;">Min withdraw <strong>&#8358;500</strong> &nbsp;&middot;&nbsp; Instant payments</p>
+    </div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="mq">
+  <div class="mq-head">
+    <div class="mq-left">
+      <div class="mq-ico">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      </div>
+      <div>
+        <div class="mq-title">Promote your business on all social platforms</div>
+        <div class="mq-sub">One campaign. Every platform. Real results.</div>
+      </div>
+    </div>
+    <div class="mq-badge"><span class="mq-dot"></span>Live Campaigns</div>
+  </div>
+  <div class="mq-runner">
+    <div class="mq-track"><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#1877F2"><path d="M23 3h-3a5 5 0 00-5 5v3H12v4h3v8h4v-8h3l1-4h-4V8a1 1 0 011-1h3z"/></svg>Facebook</div><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#FF0000"><path d="M22.5 6.2s-.3-2-1.2-2.8c-1.1-1.2-2.4-1.2-3-1.3C15.6 2 12 2 12 2s-3.6 0-6.3.1c-.6.1-1.9.1-3 1.3-.9.8-1.2 2.8-1.2 2.8S1.5 8.7 1.5 11.2v2.3c0 2.5.2 5 .2 5s.3 2 1.2 2.8c1.1 1.2 2.6 1.1 3.3 1.2C8.4 22.8 12 23 12 23s3.6 0 6.3-.5c.6-.1 1.9-.1 3-1.2.9-.8 1.2-2.8 1.2-2.8s.2-2.5.2-5v-2.3c0-2.5-.2-5-.2-5zM9.7 15.5V8.4l6.5 3.6-6.5 3.5z"/></svg>YouTube</div><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#25D366"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg>WhatsApp</div><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#000000"><path d="M19.6 6.7a4.8 4.8 0 01-3.8-4.3V2h-3.4v13.7a2.9 2.9 0 01-2.9 2.5 2.9 2.9 0 01-2.9-2.9 2.9 2.9 0 012.9-2.9c.3 0 .5 0 .8.1V9a6.3 6.3 0 00-.8-.1 6.3 6.3 0 00-6.3 6.3 6.3 6.3 0 006.3 6.3 6.3 6.3 0 006.3-6.3V9a8.2 8.2 0 004.8 1.5V7.1a4.9 4.9 0 01-1-.4z"/></svg>TikTok</div><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#E1306C"><path d="M12 2.2c3.2 0 3.6 0 4.9.1 3.3.2 4.8 1.7 5 5 .1 1.3.1 1.6.1 4.9s0 3.6-.1 4.9c-.2 3.2-1.7 4.8-5 5-1.3.1-1.6.1-4.9.1s-3.6 0-4.9-.1c-3.3-.2-4.8-1.7-5-5C2 16.6 2 16.3 2 13s0-3.6.1-4.9c.2-3.3 1.7-4.8 5-5 1.3-.1 1.6-.1 4.9-.1zm0 2.2c-3.2 0-3.5 0-4.8.1-2.2.1-3.2 1.1-3.3 3.3C3.8 9 3.8 9.3 3.8 12s0 3 .1 4.2c.1 2.2 1.1 3.2 3.3 3.3 1.3.1 1.6.1 4.8.1s3.5 0 4.8-.1c2.2-.1 3.2-1.1 3.3-3.3.1-1.2.1-1.5.1-4.2s0-3-.1-4.2c-.1-2.2-1.1-3.2-3.3-3.3-1.3-.1-1.6-.1-4.8-.1zm0 3.7a3.9 3.9 0 110 7.8 3.9 3.9 0 010-7.8zm0 2.2a2.5 2.5 0 100 5 2.5 2.5 0 000-5zm4.9-3.9a.9.9 0 110 1.8.9.9 0 010-1.8z"/></svg>Instagram</div><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#000000"><path d="M18.3 5H21l-5.5 6.3L22 19h-5l-3.5-4.7L9.4 19H6.7l5.8-6.7L6 5h5.1l3.2 4.2L18.3 5zM17.1 17.4h1.5L9 6.7H7.4l9.7 10.7z"/></svg>Twitter/X</div><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#2AABEE"><path d="M21.7 4.3l-3.5 16.3c-.3 1.2-.9 1.5-1.9.9l-5-3.8-2.4 2.4c-.3.3-.5.5-1 .5l.4-5.2 9.5-8.7c.4-.4 0-.6-.6-.2L6.4 14.2l-4.9-1.6c-1.1-.3-1.1-1.1.2-1.6l20.6-8c.9-.3 1.7.2 1.4 1.3z"/></svg>Telegram</div><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#0A66C2"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z M4 6a2 2 0 100-4 2 2 0 000 4z"/></svg>LinkedIn</div><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#E60023"><path d="M12 2C6.5 2 2 6.5 2 12c0 4.2 2.5 7.8 6.1 9.5.1-.8.1-2 .3-2.9.3-1 1.9-8 1.9-8s-.5-1-.5-2.4c0-2.3 1.3-4 3.3-4 1.5 0 2.3 1.1 2.3 2.5 0 1.5-1 3.8-1.5 5.9-.4 1.8 1 3.2 2.8 3.2 3.3 0 5.8-3.5 5.8-8.5 0-4.5-3.2-7.6-7.8-7.6-5.3 0-8.4 4-8.4 8.1 0 1.6.6 3.3 1.4 4.2.2.2.2.4.1.6l-.5 2c-.1.3-.3.3-.5.2-2-1-3.2-4-3.2-6.5 0-5.3 3.8-10.1 11.1-10.1 5.8 0 10.3 4.1 10.3 9.7 0 5.8-3.6 10.4-8.7 10.4-1.7 0-3.3-.9-3.8-1.9l-1.1 4c-.4 1.5-1.4 3.3-2.1 4.4.6.2 1.3.3 2 .3 5.5 0 10-4.5 10-10S17.5 2 12 2z"/></svg>Pinterest</div><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#FFFC00"><path d="M12 3c-2.6 0-4.8 2.1-4.8 4.7v.4c-.9.2-1.8.3-2.7.1-.2 0-.4.1-.3.3.6.7 1.4.9 2.1 1-.3.6-.6 1.2-1.1 1.6-.4.3-.5.7-.3 1.1.5.6 1.7.5 2.9.7.4 1 1.2 1.5 2.4 1.5 1.2 0 2.4-.6 3.2-1.6 1.2-.1 2.4 0 2.8-.7.2-.4 0-.8-.3-1.1-.5-.4-.9-.8-1.1-1.5.7-.2 1.5-.4 2.1-1 .1-.1.2-.3.1-.4-.1-.2-.3-.3-.5-.3-.9-.2-1.8-.1-2.6-.1v-.4C16.8 5.1 14.6 3 12 3z"/></svg>Snapchat</div><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#1877F2"><path d="M23 3h-3a5 5 0 00-5 5v3H12v4h3v8h4v-8h3l1-4h-4V8a1 1 0 011-1h3z"/></svg>Facebook</div><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#FF0000"><path d="M22.5 6.2s-.3-2-1.2-2.8c-1.1-1.2-2.4-1.2-3-1.3C15.6 2 12 2 12 2s-3.6 0-6.3.1c-.6.1-1.9.1-3 1.3-.9.8-1.2 2.8-1.2 2.8S1.5 8.7 1.5 11.2v2.3c0 2.5.2 5 .2 5s.3 2 1.2 2.8c1.1 1.2 2.6 1.1 3.3 1.2C8.4 22.8 12 23 12 23s3.6 0 6.3-.5c.6-.1 1.9-.1 3-1.2.9-.8 1.2-2.8 1.2-2.8s.2-2.5.2-5v-2.3c0-2.5-.2-5-.2-5zM9.7 15.5V8.4l6.5 3.6-6.5 3.5z"/></svg>YouTube</div><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#25D366"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg>WhatsApp</div><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#000000"><path d="M19.6 6.7a4.8 4.8 0 01-3.8-4.3V2h-3.4v13.7a2.9 2.9 0 01-2.9 2.5 2.9 2.9 0 01-2.9-2.9 2.9 2.9 0 012.9-2.9c.3 0 .5 0 .8.1V9a6.3 6.3 0 00-.8-.1 6.3 6.3 0 00-6.3 6.3 6.3 6.3 0 006.3 6.3 6.3 6.3 0 006.3-6.3V9a8.2 8.2 0 004.8 1.5V7.1a4.9 4.9 0 01-1-.4z"/></svg>TikTok</div><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#E1306C"><path d="M12 2.2c3.2 0 3.6 0 4.9.1 3.3.2 4.8 1.7 5 5 .1 1.3.1 1.6.1 4.9s0 3.6-.1 4.9c-.2 3.2-1.7 4.8-5 5-1.3.1-1.6.1-4.9.1s-3.6 0-4.9-.1c-3.3-.2-4.8-1.7-5-5C2 16.6 2 16.3 2 13s0-3.6.1-4.9c.2-3.3 1.7-4.8 5-5 1.3-.1 1.6-.1 4.9-.1zm0 2.2c-3.2 0-3.5 0-4.8.1-2.2.1-3.2 1.1-3.3 3.3C3.8 9 3.8 9.3 3.8 12s0 3 .1 4.2c.1 2.2 1.1 3.2 3.3 3.3 1.3.1 1.6.1 4.8.1s3.5 0 4.8-.1c2.2-.1 3.2-1.1 3.3-3.3.1-1.2.1-1.5.1-4.2s0-3-.1-4.2c-.1-2.2-1.1-3.2-3.3-3.3-1.3-.1-1.6-.1-4.8-.1zm0 3.7a3.9 3.9 0 110 7.8 3.9 3.9 0 010-7.8zm0 2.2a2.5 2.5 0 100 5 2.5 2.5 0 000-5zm4.9-3.9a.9.9 0 110 1.8.9.9 0 010-1.8z"/></svg>Instagram</div><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#000000"><path d="M18.3 5H21l-5.5 6.3L22 19h-5l-3.5-4.7L9.4 19H6.7l5.8-6.7L6 5h5.1l3.2 4.2L18.3 5zM17.1 17.4h1.5L9 6.7H7.4l9.7 10.7z"/></svg>Twitter/X</div><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#2AABEE"><path d="M21.7 4.3l-3.5 16.3c-.3 1.2-.9 1.5-1.9.9l-5-3.8-2.4 2.4c-.3.3-.5.5-1 .5l.4-5.2 9.5-8.7c.4-.4 0-.6-.6-.2L6.4 14.2l-4.9-1.6c-1.1-.3-1.1-1.1.2-1.6l20.6-8c.9-.3 1.7.2 1.4 1.3z"/></svg>Telegram</div><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#0A66C2"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z M4 6a2 2 0 100-4 2 2 0 000 4z"/></svg>LinkedIn</div><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#E60023"><path d="M12 2C6.5 2 2 6.5 2 12c0 4.2 2.5 7.8 6.1 9.5.1-.8.1-2 .3-2.9.3-1 1.9-8 1.9-8s-.5-1-.5-2.4c0-2.3 1.3-4 3.3-4 1.5 0 2.3 1.1 2.3 2.5 0 1.5-1 3.8-1.5 5.9-.4 1.8 1 3.2 2.8 3.2 3.3 0 5.8-3.5 5.8-8.5 0-4.5-3.2-7.6-7.8-7.6-5.3 0-8.4 4-8.4 8.1 0 1.6.6 3.3 1.4 4.2.2.2.2.4.1.6l-.5 2c-.1.3-.3.3-.5.2-2-1-3.2-4-3.2-6.5 0-5.3 3.8-10.1 11.1-10.1 5.8 0 10.3 4.1 10.3 9.7 0 5.8-3.6 10.4-8.7 10.4-1.7 0-3.3-.9-3.8-1.9l-1.1 4c-.4 1.5-1.4 3.3-2.1 4.4.6.2 1.3.3 2 .3 5.5 0 10-4.5 10-10S17.5 2 12 2z"/></svg>Pinterest</div><div class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="#FFFC00"><path d="M12 3c-2.6 0-4.8 2.1-4.8 4.7v.4c-.9.2-1.8.3-2.7.1-.2 0-.4.1-.3.3.6.7 1.4.9 2.1 1-.3.6-.6 1.2-1.1 1.6-.4.3-.5.7-.3 1.1.5.6 1.7.5 2.9.7.4 1 1.2 1.5 2.4 1.5 1.2 0 2.4-.6 3.2-1.6 1.2-.1 2.4 0 2.8-.7.2-.4 0-.8-.3-1.1-.5-.4-.9-.8-1.1-1.5.7-.2 1.5-.4 2.1-1 .1-.1.2-.3.1-.4-.1-.2-.3-.3-.5-.3-.9-.2-1.8-.1-2.6-.1v-.4C16.8 5.1 14.6 3 12 3z"/></svg>Snapchat</div></div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="sec" id="features" style="background:var(--white);">
+  <div class="sec-inner">
+    <div class="sec-head rev">
+      <div class="tag">Platform Highlights</div>
+      <h2 class="sec-title">Everything you need.<br>Nothing you don&rsquo;t.</h2>
+      <p class="sec-sub">All the tools to promote, grow and earn &mdash; in one secure platform built for real results.</p>
+    </div>
+    <div class="feat-grid">
+      <div class="feat-card rev" data-delay="80">
+        <div class="feat-ico" style="background:#eef2ff;"><svg width="22" height="22" viewBox="0 0 24 24" fill="#4338ca"><path d="M12 21s-7-4.44-9.33-7.11A5.67 5.67 0 016 3c1.6 0 2.92.7 3.62 1.85C10.08 3.7 11.4 3 13 3a5.67 5.67 0 017.33 10.89C19 16.56 12 21 12 21z"/></svg></div>
+        <h3>Boost Your Social Reach</h3>
+        <p>Gain authentic engagement &mdash; likes, follows, and comments &mdash; to grow your visibility and credibility online.</p>
+      </div>
+      <div class="feat-card rev" data-delay="130">
+        <div class="feat-ico" style="background:#eff6ff;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div>
+        <h3>Fast, Secure Payments</h3>
+        <p>Instant deposits and withdrawals powered by Paystack &mdash; safe, fast, and always reliable.</p>
+      </div>
+      <div class="feat-card rev" data-delay="180">
+        <div class="feat-ico" style="background:#ecfdf5;"><svg width="22" height="22" viewBox="0 0 24 24" fill="#10b981"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg></div>
+        <h3>Earn Instantly</h3>
+        <p>Complete simple daily tasks and get paid immediately &mdash; no delays, no hidden conditions whatsoever.</p>
+      </div>
+      <div class="feat-card rev" data-delay="230">
+        <div class="feat-ico" style="background:#f8fafc;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round"><path d="M12 2l8 4v6c0 5-3.6 9.5-8 10-4.4-.5-8-5-8-10V6l8-4z"/></svg></div>
+        <h3>Safe &amp; Reliable</h3>
+        <p>All user data and transactions are fully encrypted and protected with enterprise-grade security.</p>
+      </div>
+      <div class="feat-card rev" data-delay="280">
+        <div class="feat-ico" style="background:#eef2ff;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4338ca" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l3-5 4 3 5-9"/></svg></div>
+        <h3>Real-Time Analytics</h3>
+        <p>Monitor your promotions, performance and earnings live &mdash; everything transparent and measurable.</p>
+      </div>
+      <div class="feat-card rev" data-delay="330">
+        <div class="feat-ico" style="background:#fdf4ff;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+        <h3>24/7 Customer Support</h3>
+        <p>Our support team is always available &mdash; anytime, anywhere, on any device, day or night.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BUILT FOR -->
+<section class="built">
+  <div class="built-grid">
+    <div class="rev">
+      <p class="built-label">Everything in one place</p>
+      <h2 class="built-title">Built for <em>earners</em>.<br>Built for <em>brands</em>.</h2>
+      <p class="built-body">Whether you&rsquo;re here to promote your business or earn by completing tasks &mdash; Globals is one smart, secure platform that works for both sides.</p>
+      <div class="btabs">
+        <button class="btab on" id="bt0" onclick="goBuilt(0)">Social Likes</button>
+        <button class="btab"    id="bt1" onclick="goBuilt(1)">Daily Earnings</button>
+        <button class="btab"    id="bt2" onclick="goBuilt(2)">Analytics</button>
+        <button class="btab"    id="bt3" onclick="goBuilt(3)">Referrals</button>
+      </div>
+      <div class="bdots">
+        <div class="bdot on" id="bd0" onclick="goBuilt(0)"></div>
+        <div class="bdot"    id="bd1" onclick="goBuilt(1)"></div>
+        <div class="bdot"    id="bd2" onclick="goBuilt(2)"></div>
+        <div class="bdot"    id="bd3" onclick="goBuilt(3)"></div>
+      </div>
+      <a href="signup.html" class="btn btn-fill" style="margin-top:24px;display:inline-flex;">Start for free &#8594;</a>
+    </div>
+    <div class="rev" data-delay="140">
+      <div class="bcards">
+        <div class="bcard bcard-1 on" id="bc0">
+          <div class="bcard-ico" style="background:rgba(67,56,202,.1);"><svg width="24" height="24" viewBox="0 0 24 24" fill="#4338ca"><path d="M12 21s-7-4.44-9.33-7.11A5.67 5.67 0 016 3c1.6 0 2.92.7 3.62 1.85C10.08 3.7 11.4 3 13 3a5.67 5.67 0 017.33 10.89C19 16.56 12 21 12 21z"/></svg></div>
+          <h3>Social Likes &amp; Follows</h3>
+          <p>Post a task and thousands of real users will like, follow, and engage with your social media accounts across every platform.</p>
+          <div class="btags"><span class="btag" style="background:rgba(67,56,202,.1);color:#4338ca;">Instagram</span><span class="btag" style="background:rgba(0,0,0,.07);color:#111;">TikTok</span><span class="btag" style="background:rgba(24,119,242,.1);color:#1877f2;">Facebook</span><span class="btag" style="background:rgba(37,211,102,.1);color:#16a34a;">WhatsApp</span></div>
+        </div>
+        <div class="bcard bcard-2" id="bc1">
+          <div class="bcard-ico" style="background:rgba(16,185,129,.1);"><svg width="24" height="24" viewBox="0 0 24 24" fill="#10b981"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg></div>
+          <h3>Earn Daily From Tasks</h3>
+          <p>Complete short social media tasks and get credited immediately. Withdraw from &#8358;500 &mdash; no delays, no hidden fees.</p>
+          <div class="btags"><span class="btag" style="background:rgba(16,185,129,.1);color:#059669;">Instant Pay</span><span class="btag" style="background:rgba(245,158,11,.1);color:#d97706;">&#8358;500 min</span></div>
+        </div>
+        <div class="bcard bcard-3" id="bc2">
+          <div class="bcard-ico" style="background:rgba(245,158,11,.1);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l3-5 4 3 5-9"/></svg></div>
+          <h3>Live Campaign Analytics</h3>
+          <p>Track every campaign in real time &mdash; see completions, reach, and ROI as it happens, right from your dashboard.</p>
+          <div class="btags"><span class="btag" style="background:rgba(245,158,11,.1);color:#d97706;">Real-time</span><span class="btag" style="background:rgba(99,102,241,.1);color:#4338ca;">Full Stats</span></div>
+        </div>
+        <div class="bcard bcard-4" id="bc3">
+          <div class="bcard-ico" style="background:rgba(168,85,247,.1);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+          <h3>Referral Rewards</h3>
+          <p>Invite friends and earn a commission on every task they complete &mdash; stack your passive income without extra work.</p>
+          <div class="btags"><span class="btag" style="background:rgba(168,85,247,.1);color:#9333ea;">Passive</span><span class="btag" style="background:rgba(239,68,68,.1);color:#dc2626;">Unlimited</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY GLOBALS -->
+<section class="sec" id="about" style="background:var(--white);">
+  <div class="sec-inner">
+    <div class="sec-head center rev">
+      <div class="tag">Why Globals?</div>
+      <h2 class="sec-title">The smarter way to grow &amp; earn.</h2>
+      <p class="sec-sub">Globals connects advertisers and earners seamlessly &mdash; helping brands grow faster and people earn smarter.</p>
+    </div>
+    <div class="why-grid">
+      <div class="why-card rev" data-delay="80">
+        <div class="why-ico" style="background:linear-gradient(135deg,#4338ca,#6366f1);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M8 7a4 4 0 100 8 4 4 0 000-8zM2 20a10 10 0 0120 0"/></svg></div>
+        <h4>Real &amp; Verified Engagement</h4>
+        <p>Authentic interactions from real users &mdash; no bots, no fake followers, just genuine organic growth.</p>
+      </div>
+      <div class="why-card rev" data-delay="150">
+        <div class="why-ico" style="background:linear-gradient(135deg,#0ea5e9,#06b6d4);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div>
+        <h4>Fast &amp; Secure Payments</h4>
+        <p>Instant deposits and withdrawals via Paystack &mdash; smooth, secure, and always on time.</p>
+      </div>
+      <div class="why-card rev" data-delay="220">
+        <div class="why-ico" style="background:linear-gradient(135deg,#10b981,#34d399);"><svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg></div>
+        <h4>Instant Daily Earnings</h4>
+        <p>Complete quick social media tasks and get credited instantly &mdash; no waiting, no hidden conditions.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="sec how-bg" id="how">
+  <div class="sec-inner">
+    <div class="sec-head center rev">
+      <div class="tag">How It Works</div>
+      <h2 class="sec-title">Up and running in minutes.</h2>
+      <p class="sec-sub">Three effortless steps to start promoting or earning on Globals right now.</p>
+    </div>
+    <div class="how-grid">
+      <div class="how-step rev" data-delay="80">
+        <div class="how-num" style="background:#eef2ff;color:#4338ca;">01</div>
+        <h3>Post</h3>
+        <p>Advertisers post promotion tasks &mdash; WhatsApp, Telegram, Instagram, TikTok, YouTube and more.</p>
+      </div>
+      <div class="how-step rev" data-delay="160">
+        <div class="how-num" style="background:#eff6ff;color:#3b82f6;">02</div>
+        <h3>Engage</h3>
+        <p>Earners complete simple tasks and submit evidence for quick verification and approval.</p>
+      </div>
+      <div class="how-step rev" data-delay="240">
+        <div class="how-num" style="background:#ecfdf5;color:#10b981;">03</div>
+        <h3>Earn</h3>
+        <p>Rewards are credited instantly. Withdraw from &#8358;500 whenever you like &mdash; straight to your bank.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testi-bg">
+  <div class="testi-dots"></div>
+  <div class="testi-glow"></div>
+  <div class="testi-in">
+    <div class="rev" style="text-align:center;margin-bottom:44px;">
+      <div class="testi-eyebrow">&#9733; User Stories</div>
+      <h2 class="testi-title">Real people. Real results.</h2>
+      <p class="testi-sub">Thousands of earners and advertisers trust Globals every single day.</p>
+    </div>
+    <div class="rev" data-delay="100" style="position:relative;">
+      <div class="swiper testi-swiper" id="testiSwiper">
+        <div class="swiper-wrapper">
+<div class="swiper-slide">
+<div class="tc">
+  <div class="tc-quote">&ldquo;</div>
+  <div class="tc-stars"><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg></div>
+  <p class="tc-text">I was skeptical at first but Globals paid me ₦2,400 in my first week just from following accounts and joining WhatsApp groups. The withdrawal was instant — straight to my bank!</p>
+  <div class="tc-author">
+    <svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="22" fill="#ede9fe"/><circle cx="22" cy="17" r="8" fill="#7c3aed"/><ellipse cx="22" cy="35" rx="12" ry="8" fill="#7c3aed" opacity=".5"/></svg>
+    <div><div class="tc-name">Chioma A.</div><div class="tc-loc">Lagos, Nigeria</div></div>
+  </div>
+  <span class="tc-badge" style="background:rgba(99,102,241,.15);color:#a5b4fc;">Earner · Verified</span>
+</div>
+</div>
+<div class="swiper-slide">
+<div class="tc">
+  <div class="tc-quote">&ldquo;</div>
+  <div class="tc-stars"><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#444"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg></div>
+  <p class="tc-text">I used Globals to promote my online business. Got 300+ real Instagram followers in 3 days — all real people actively engaging. My sales actually went up!</p>
+  <div class="tc-author">
+    <svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="22" fill="#dcfce7"/><circle cx="22" cy="17" r="8" fill="#16a34a"/><ellipse cx="22" cy="35" rx="12" ry="8" fill="#16a34a" opacity=".5"/></svg>
+    <div><div class="tc-name">Emeka O.</div><div class="tc-loc">Abuja, Nigeria</div></div>
+  </div>
+  <span class="tc-badge" style="background:rgba(59,130,246,.15);color:#93c5fd;">Advertiser · Verified</span>
+</div>
+</div>
+<div class="swiper-slide">
+<div class="tc">
+  <div class="tc-quote">&ldquo;</div>
+  <div class="tc-stars"><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg></div>
+  <p class="tc-text">I withdrew ₦5,000 last week and it hit my account in under 5 minutes. I do tasks every morning before work — it is literally like having a second income. Globals is the real deal.</p>
+  <div class="tc-author">
+    <svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="22" fill="#fef3c7"/><circle cx="22" cy="17" r="8" fill="#d97706"/><ellipse cx="22" cy="35" rx="12" ry="8" fill="#d97706" opacity=".5"/></svg>
+    <div><div class="tc-name">Fatima B.</div><div class="tc-loc">Kano, Nigeria</div></div>
+  </div>
+  <span class="tc-badge" style="background:rgba(99,102,241,.15);color:#a5b4fc;">Earner · Verified</span>
+</div>
+</div>
+<div class="swiper-slide">
+<div class="tc">
+  <div class="tc-quote">&ldquo;</div>
+  <div class="tc-stars"><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg></div>
+  <p class="tc-text">As a content creator I used Globals to push my TikTok. The engagement was so real — my account grew from 200 to 1,200 followers in two weeks. Highly recommend.</p>
+  <div class="tc-author">
+    <svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="22" fill="#fce7f3"/><circle cx="22" cy="17" r="8" fill="#db2777"/><ellipse cx="22" cy="35" rx="12" ry="8" fill="#db2777" opacity=".5"/></svg>
+    <div><div class="tc-name">Tunde F.</div><div class="tc-loc">Port Harcourt, Nigeria</div></div>
+  </div>
+  <span class="tc-badge" style="background:rgba(236,72,153,.15);color:#f9a8d4;">Creator · Verified</span>
+</div>
+</div>
+<div class="swiper-slide">
+<div class="tc">
+  <div class="tc-quote">&ldquo;</div>
+  <div class="tc-stars"><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg></div>
+  <p class="tc-text">Three months after joining I have withdrawn over ₦40,000. The support team actually responds. I have told everyone I know about this platform!</p>
+  <div class="tc-author">
+    <svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="22" fill="#dbeafe"/><circle cx="22" cy="17" r="8" fill="#1d4ed8"/><ellipse cx="22" cy="35" rx="12" ry="8" fill="#1d4ed8" opacity=".5"/></svg>
+    <div><div class="tc-name">Ngozi K.</div><div class="tc-loc">Enugu, Nigeria</div></div>
+  </div>
+  <span class="tc-badge" style="background:rgba(99,102,241,.15);color:#a5b4fc;">Earner · Verified</span>
+</div>
+</div></div>
+        <div class="swiper-pagination"></div>
+      </div>
+      <div class="swiper-button-prev"></div>
+      <div class="swiper-button-next"></div>
+    </div>
+  </div>
+</section>
+
+<!-- TASKS -->
+<section class="sec tasks-bg" id="tasks">
+  <div class="sec-inner">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;" class="rev">
+      <div><div class="tag">Live Tasks</div><h2 class="sec-title" style="margin-top:8px;">Available Tasks</h2></div>
+      <a href="signup.html" style="font-size:13.5px;font-weight:700;color:var(--brand);">See all &#8594;</a>
+    </div>
+    <div class="task-grid">
+      <article class="task-card rev" data-delay="80">
+        <div class="task-row">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="task-icon" style="background:#fce7f3;"><img src="INSTAGRAM.jpg" alt="Instagram"></div>
+            <div><div class="task-name">Instagram Likes &mdash; 500</div><div class="task-desc">Follow, like, and comment.</div></div>
+          </div>
+          <div><div class="task-price">&#8358;600</div><div class="task-inst">Instant</div></div>
+        </div>
+        <div class="task-foot"><div class="task-id">Task ID: G-5241</div><a href="signup.html" class="btn-sm">Take Task</a></div>
+      </article>
+      <article class="task-card rev" data-delay="150">
+        <div class="task-row">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="task-icon" style="background:#f0fdf4;"><img src="WHATSAPP.jpg" alt="WhatsApp"></div>
+            <div><div class="task-name">WhatsApp Group Invite</div><div class="task-desc">Join the group and send proof.</div></div>
+          </div>
+          <div><div class="task-price">&#8358;300</div><div class="task-inst">Instant</div></div>
+        </div>
+        <div class="task-foot"><div class="task-id">Task ID: G-6239</div><a href="signup.html" class="btn-sm">Take Task</a></div>
+      </article>
+      <article class="task-card rev" data-delay="220">
+        <div class="task-row">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="task-icon" style="background:#f9fafb;"><img src="TIKTOK.jpg" alt="TikTok"></div>
+            <div><div class="task-name">TikTok Follows</div><div class="task-desc">Follow and upload screenshot.</div></div>
+          </div>
+          <div><div class="task-price">&#8358;200</div><div class="task-inst">Instant</div></div>
+        </div>
+        <div class="task-foot"><div class="task-id">Task ID: G-7410</div><a href="signup.html" class="btn-sm">Take Task</a></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section class="sec contact-bg" id="contact">
+  <div class="sec-inner">
+    <div class="sec-head center rev">
+      <div class="tag">Get In Touch</div>
+      <h2 class="sec-title">We&rsquo;re here for you.</h2>
+    </div>
+    <div class="contact-grid">
+      <div class="contact-card rev" data-delay="80" style="background:var(--bg2);border:1px solid var(--border);">
+        <h3>Talk to us</h3>
+        <p style="font-size:14px;color:var(--soft);margin-top:7px;margin-bottom:22px;">Need help? Our team is available 24/7. Reach us via email or phone anytime.</p>
+        <div class="contact-row">
+          <div class="contact-ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4338ca" stroke-width="2"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></div>
+          <div><div class="contact-detail-label">Email</div><div class="contact-detail-val">support@globalstasks.name.ng</div></div>
+        </div>
+        <div class="contact-row">
+          <div class="contact-ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4338ca" stroke-width="2"><path d="M22 16.92V21a1 1 0 01-1.11.99A19.86 19.86 0 013 5.11 1 1 0 014 4h4.09a1 1 0 01.96.74l.7 2.71a1 1 0 01-.24.92L7.7 12.7a12 12 0 006.6 6.6l2.2-2.2a1 1 0 01.92-.24l2.71.7a1 1 0 01.74.96V21z"/></svg></div>
+          <div><div class="contact-detail-label">Phone</div><div class="contact-detail-val">07069932609</div></div>
+        </div>
+      </div>
+      <div class="contact-card rev" data-delay="160" style="background:linear-gradient(135deg,#4338ca,#6366f1);color:#fff;">
+        <h3 style="color:#fff;">Start promoting today</h3>
+        <p style="font-size:14px;color:rgba(255,255,255,.75);margin-top:7px;">Create a campaign, select your budget, and get genuine engagement fast.</p>
+        <div class="pkg-box">
+          <div><div class="pkg-name">Starter Promo</div><div class="pkg-desc">From &#8358;500 &mdash; Likes / Follows / Comments</div></div>
+          <div class="pkg-price">&#8358;500</div>
+        </div>
+        <a href="signup.html" style="display:inline-flex;align-items:center;gap:7px;padding:11px 22px;background:#fff;color:#4338ca;border-radius:12px;font-weight:700;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,.18);">Create campaign &#8594;</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="foot">
+  <div class="foot-g1"></div>
+  <div class="foot-g2"></div>
+  <div class="foot-top">
+    <div class="foot-grid">
+      <div>
+        <div style="display:flex;align-items:center;gap:11px;margin-bottom:14px;">
+          <img src="GLOBALS.jpg" alt="Globals" style="width:42px;height:42px;border-radius:11px;object-fit:cover;border:1px solid rgba(255,255,255,.1);">
+          <div><div class="foot-name">Globals</div><div class="foot-tag">Promote &middot; Engage &middot; Earn</div></div>
+        </div>
+        <p class="foot-desc">Earn through tasks, referrals, and daily challenges. Minimum withdraw &#8358;500. Instant payments via trusted gateways.</p>
+        <div style="margin-top:18px;">
+          <div class="foot-col-title" style="margin-bottom:11px;">Follow Us</div>
+          <div class="foot-soc">
+            <a href="#" class="fsoc" style="background:rgba(24,119,242,.15);" aria-label="Facebook"><svg width="17" height="17" viewBox="0 0 24 24" fill="#1877F2"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg></a>
+            <a href="#" class="fsoc" style="background:rgba(225,48,108,.15);" aria-label="Instagram"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E1306C" stroke-width="2" stroke-linecap="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4.5"/><circle cx="17.5" cy="6.5" r="1" fill="#E1306C"/></svg></a>
+            <a href="#" class="fsoc" style="background:rgba(37,211,102,.15);" aria-label="WhatsApp"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2" stroke-linecap="round"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg></a>
+            <a href="#" class="fsoc" style="background:rgba(255,255,255,.06);" aria-label="TikTok"><svg width="17" height="17" viewBox="0 0 24 24" fill="white"><path d="M19.6 6.7a4.8 4.8 0 01-3.8-4.3V2h-3.4v13.7a2.9 2.9 0 01-2.9 2.5 2.9 2.9 0 01-2.9-2.9 2.9 2.9 0 012.9-2.9c.3 0 .5 0 .8.1V9a6.3 6.3 0 00-.8-.1 6.3 6.3 0 00-6.3 6.3 6.3 6.3 0 006.3 6.3 6.3 6.3 0 006.3-6.3V9a8.2 8.2 0 004.8 1.5V7.1a4.9 4.9 0 01-1-.4z"/></svg></a>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="foot-col-title">Explore</div>
+        <a href="#tasks"    class="foot-link">Available Tasks</a>
+        <a href="#how"      class="foot-link">How It Works</a>
+        <a href="#features" class="foot-link">Features</a>
+        <a href="#about"    class="foot-link">Why Globals?</a>
+        <a href="login.html"  class="foot-link">Login</a>
+        <a href="signup.html" class="foot-link">Sign Up</a>
+      </div>
+      <div>
+        <div class="foot-col-title">Platform</div>
+        <a href="#" class="foot-link">Advertiser Hub</a>
+        <a href="#" class="foot-link">Earner Center</a>
+        <a href="#" class="foot-link">Referral Program</a>
+        <a href="#" class="foot-link">Affiliate Tasks</a>
+        <a href="#" class="foot-link">Spin &amp; Win</a>
+      </div>
+      <div>
+        <div class="foot-col-title">Contact</div>
+        <div class="foot-contact-row"><div class="foot-contact-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2"><path d="M22 16.92V21a1 1 0 01-1.11.99A19.86 19.86 0 013 5.11 1 1 0 014 4h4.09a1 1 0 01.96.74l.7 2.71a1 1 0 01-.24.92L7.7 12.7a12 12 0 006.6 6.6l2.2-2.2a1 1 0 01.92-.24l2.71.7a1 1 0 01.74.96V21z"/></svg></div><a href="tel:07069932609" class="foot-link" style="padding:0;">07069932609</a></div>
+        <div class="foot-contact-row"><div class="foot-contact-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></div><span class="foot-link" style="padding:0;font-size:12.5px;">support@globalstasks.name.ng</span></div>
+        <div style="margin-top:18px;"><div class="foot-col-title" style="margin-bottom:9px;">Partnered with</div><img src="PAYSTACK.jpg" alt="Paystack" style="height:28px;object-fit:contain;opacity:.6;filter:brightness(1.3);"></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot-div"></div>
+  <div class="foot-bottom">
+    <div class="foot-copy">&copy; 2025 Globals. All rights reserved.</div>
+    <div class="foot-legal"><a href="#">Privacy Policy</a><a href="#">Terms</a><a href="#">Cookies</a></div>
+  </div>
+</footer>
+
+<button id="btt" aria-label="Back to top">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M5 15l7-7 7 7"/></svg>
+</button>
+
+<script>
+// NAV
+document.getElementById('hamBtn').addEventListener('click', function() {
+  document.getElementById('mobMenu').classList.toggle('open');
+});
+window.addEventListener('scroll', function() {
+  document.getElementById('btt').classList.toggle('show', window.scrollY > 500);
+});
+document.getElementById('btt').addEventListener('click', function() {
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+
+// REVEAL ON SCROLL
+var obs = new IntersectionObserver(function(entries) {
+  entries.forEach(function(e) {
+    if (!e.isIntersecting) return;
+    var d = parseInt(e.target.dataset.delay) || 0;
+    setTimeout(function() { e.target.classList.add('on'); }, d);
+    obs.unobserve(e.target);
+  });
+}, {threshold: 0.08});
+document.querySelectorAll('.rev').forEach(function(el) { obs.observe(el); });
+
+// SLOT MACHINE — pure CSS height, no JS measurement needed
+(function() {
+  var inner = document.getElementById('slotInner');
+  if (!inner) return;
+  var items = inner.querySelectorAll('span');
+  var count = items.length - 1; // last is clone of first
+  var cur = 0, busy = false;
+  var H = 1.1; // em, matches CSS height:1.1em on .slot
+
+  function next() {
+    if (busy) return;
+    busy = true;
+    cur++;
+    inner.style.transform = 'translateY(-' + (cur * H) + 'em)';
+    setTimeout(function() {
+      if (cur >= count) {
+        inner.style.transition = 'none';
+        inner.style.transform = 'translateY(0)';
+        cur = 0;
+        setTimeout(function() {
+          inner.style.transition = '';
+          busy = false;
+        }, 50);
+      } else {
+        busy = false;
+      }
+    }, 580);
+  }
+  setInterval(next, 2400);
+})();
+
+// BUILT-FOR CARDS
+var bi = 0;
+function goBuilt(i) {
+  for (var j=0;j<4;j++) {
+    document.getElementById('bc'+j).classList.toggle('on', j===i);
+    document.getElementById('bt'+j).classList.toggle('on', j===i);
+    document.getElementById('bd'+j).classList.toggle('on', j===i);
+  }
+  bi = i;
+}
+setInterval(function() { goBuilt((bi+1)%4); }, 3800);
+
+// SWIPER
+new Swiper('#testiSwiper', {
+  slidesPerView: 1, spaceBetween: 18, loop: true, speed: 580,
+  autoplay: {delay: 4800, disableOnInteraction: false},
+  pagination: {el: '.swiper-pagination', clickable: true},
+  navigation: {nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev'},
+  breakpoints: {640: {slidesPerView: 2}, 1024: {slidesPerView: 3}}
+});
+</script>
+</body>
+</html>
