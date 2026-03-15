@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title id="page-title">Store</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:#f4f6fb;min-height:100vh;}
+.screen{display:none;flex-direction:column;min-height:100vh;}
+.screen.active{display:flex;}
+
+/* ── Header ── */
+.store-header{padding:14px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10;box-shadow:0 1px 0 rgba(0,0,0,0.07);}
+.store-logo-wrap{width:44px;height:44px;border-radius:12px;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;}
+.store-logo-wrap img{width:100%;height:100%;object-fit:cover;}
+.store-hname{font-family:'Sora',sans-serif;font-weight:800;font-size:1rem;}
+.store-hsub{font-size:0.72rem;margin-top:1px;opacity:0.7;}
+
+/* ── Body ── */
+.store-body{flex:1;padding:20px 16px 100px;overflow-y:auto;}
+.slabel{font-size:0.68rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#8a96a8;margin:18px 0 8px;}
+.pkg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.pkg-card{background:#fff;border-radius:14px;padding:14px;border:2px solid #e4e8f0;cursor:pointer;transition:all 0.18s;}
+.pkg-card.sel{border-color:#1a6fff;background:#eff6ff;}
+.pkg-name{font-family:'Sora',sans-serif;font-weight:700;font-size:0.82rem;color:#0d1b2e;line-height:1.3;}
+.pkg-sub{font-size:0.7rem;color:#8a96a8;margin-top:3px;}
+.pkg-price{font-family:'Sora',sans-serif;font-weight:800;font-size:1rem;color:#1a6fff;margin-top:8px;}
+.sinput{width:100%;padding:14px 16px;border:1.5px solid #e4e8f0;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:0.9rem;color:#0d1b2e;outline:none;background:#fff;transition:border-color 0.18s;margin-bottom:10px;}
+.sinput:focus{border-color:#1a6fff;}
+.serr{font-size:0.78rem;color:#ef4444;margin:-6px 0 10px;display:none;}
+.scta{width:100%;padding:15px;border-radius:14px;border:none;font-family:'Sora',sans-serif;font-size:0.92rem;font-weight:700;color:#fff;cursor:pointer;transition:opacity 0.18s;}
+.scta:disabled{opacity:0.55;cursor:not-allowed;}
+
+/* ── Summary card ── */
+.sum-card{background:#fff;border-radius:16px;padding:18px;border:1px solid #e4e8f0;margin-bottom:14px;}
+.sum-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f3f9;}
+.sum-row:last-child{border-bottom:none;}
+.sum-key{font-size:0.78rem;color:#8a96a8;}
+.sum-val{font-family:'Sora',sans-serif;font-weight:700;font-size:0.88rem;color:#0d1b2e;}
+.sum-total .sum-val{color:#1a6fff;font-size:1rem;}
+
+/* ── Success ── */
+.success-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;}
+.success-card{background:#fff;border-radius:24px;box-shadow:0 8px 40px rgba(8,20,40,0.1);padding:32px 24px;text-align:center;max-width:360px;width:100%;}
+.pin-box{background:linear-gradient(135deg,#ecfeff,#f0fdff);border:1.5px solid #67e8f9;border-radius:14px;padding:16px;margin:16px 0;}
+.pin-val{font-family:'Sora',sans-serif;font-weight:800;font-size:1.2rem;color:#0e7490;letter-spacing:0.04em;word-break:break-all;}
+
+/* ── Powered by ── */
+.powered{text-align:center;padding:12px;font-size:0.7rem;color:#8a96a8;}
+.powered a{color:#1a6fff;font-weight:700;text-decoration:none;}
+
+/* ── Template: modern ── */
+body.t-modern .store-header{background:linear-gradient(135deg,#1a6fff,#4f80ff);}
+body.t-modern .store-header .store-hname{color:#fff;}
+body.t-modern .store-header .store-hsub{color:rgba(255,255,255,0.8);}
+body.t-modern .scta{background:linear-gradient(135deg,#1a6fff,#4f80ff);}
+body.t-modern .pkg-card.sel{border-color:#1a6fff;}
+
+/* ── Template: classic ── */
+body.t-classic .store-header{background:#0d1b2e;}
+body.t-classic .store-header .store-hname{color:#fff;}
+body.t-classic .store-header .store-hsub{color:rgba(255,255,255,0.6);}
+body.t-classic .scta{background:#0d1b2e;}
+body.t-classic .pkg-card.sel{border-color:#0d1b2e;background:#f4f6fb;}
+body.t-classic .pkg-price{color:#0d1b2e;}
+
+/* ── Template: minimal ── */
+body.t-minimal .store-header{background:#fff;border-bottom:1.5px solid #e4e8f0;}
+body.t-minimal .store-header .store-hname{color:#0d1b2e;}
+body.t-minimal .scta{background:#0d1b2e;}
+body.t-minimal .pkg-card.sel{border-color:#0d1b2e;}
+body.t-minimal .pkg-price{color:#0d1b2e;}
+
+/* ── Tx history ── */
+.tx-card{background:#fff;border-radius:14px;padding:14px 16px;border:1px solid #e4e8f0;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;cursor:pointer;}
+.tx-name{font-family:'Sora',sans-serif;font-weight:700;font-size:0.85rem;color:#0d1b2e;}
+.tx-sub{font-size:0.72rem;color:#8a96a8;margin-top:2px;}
+.tx-amt{font-family:'Sora',sans-serif;font-weight:800;font-size:0.9rem;}
+.tx-amt.ok{color:#16a34a;}
+.tx-amt.fail{color:#ef4444;}
+.tx-amt.pend{color:#d97706;}
+
+/* ── Tx detail overlay ── */
+.overlay{position:fixed;inset:0;background:rgba(8,20,40,0.5);z-index:50;display:none;align-items:flex-end;}
+.overlay.open{display:flex;}
+.sheet{background:#fff;border-radius:24px 24px 0 0;padding:24px;width:100%;max-height:80vh;overflow-y:auto;}
+.sheet-handle{width:36px;height:4px;border-radius:2px;background:#e4e8f0;margin:0 auto 16px;}
+</style>
+</head>
+<body>
+
+<!-- SCREEN 1: Store -->
+<div id="sc-store" class="screen active">
+  <div class="store-header">
+    <div class="store-logo-wrap" id="hdr-logo">🎓</div>
+    <div>
+      <div class="store-hname" id="hdr-name">Loading…</div>
+      <div class="store-hsub" id="hdr-sub">Powered by Globals</div>
+    </div>
+  </div>
+  <div class="store-body">
+    <div id="loading-state" style="text-align:center;padding:60px 0;">
+      <div style="width:40px;height:40px;border:3px solid #e4e8f0;border-top-color:#1a6fff;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 14px;"></div>
+      <p style="color:#8a96a8;font-size:0.85rem;">Loading store…</p>
+    </div>
+    <div id="store-content" style="display:none;">
+      <div class="slabel">Select Package</div>
+      <div class="pkg-grid" id="pkg-grid"></div>
+
+      <div class="slabel" style="margin-top:20px;">Phone Number</div>
+      <input id="cust-phone" class="sinput" type="tel" inputmode="numeric" placeholder="e.g. 08012345678" maxlength="11"/>
+      <p id="err-phone" class="serr">Enter a valid 11-digit Nigerian phone number.</p>
+
+      <div class="slabel">Email Address (for receipt)</div>
+      <input id="cust-email" class="sinput" type="email" placeholder="your@email.com"/>
+      <p id="err-email" class="serr">Enter a valid email address.</p>
+
+      <button class="scta" id="btn-continue" onclick="goToSummary()">Continue</button>
+    </div>
+  </div>
+  <div class="powered">Secured by <a href="https://globalstasks.name.ng" target="_blank">Globals</a></div>
+</div>
+
+<!-- SCREEN 2: Summary -->
+<div id="sc-summary" class="screen">
+  <div class="store-header">
+    <button onclick="showScreen('sc-store')" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;color:inherit;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    </button>
+    <div style="flex:1;text-align:center;">
+      <div class="store-hname" id="hdr2-name">Confirm Order</div>
+    </div>
+    <div style="width:24px;"></div>
+  </div>
+  <div class="store-body">
+    <div class="slabel">Order Summary</div>
+    <div class="sum-card">
+      <div class="sum-row"><span class="sum-key">Service</span><span class="sum-val" id="sum-service">—</span></div>
+      <div class="sum-row"><span class="sum-key">Package</span><span class="sum-val" id="sum-pkg">—</span></div>
+      <div class="sum-row"><span class="sum-key">Phone</span><span class="sum-val" id="sum-phone">—</span></div>
+      <div class="sum-row sum-total"><span class="sum-key" style="font-weight:700;color:#0d1b2e;">Total</span><span class="sum-val" id="sum-total">—</span></div>
+    </div>
+    <button class="scta" id="btn-pay" onclick="startPayment()">Pay Now</button>
+    <p id="pay-err" style="font-size:0.78rem;color:#ef4444;text-align:center;margin-top:10px;display:none;"></p>
+  </div>
+</div>
+
+<!-- SCREEN 3: Processing -->
+<div id="sc-processing" class="screen">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;">
+    <div style="width:56px;height:56px;border:4px solid #e4e8f0;border-top-color:#1a6fff;border-radius:50%;animation:spin 0.9s linear infinite;margin-bottom:20px;"></div>
+    <p style="font-family:'Sora',sans-serif;font-weight:700;font-size:1rem;color:#0d1b2e;margin-bottom:8px;">Processing your order…</p>
+    <p style="font-size:0.82rem;color:#8a96a8;text-align:center;" id="proc-msg">Please wait while we deliver your PIN.</p>
+  </div>
+</div>
+
+<!-- SCREEN 4: Success -->
+<div id="sc-success" class="screen">
+  <div class="success-wrap">
+    <div class="success-card">
+      <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#d1fae5,#a7f3d0);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:2rem;">✅</div>
+      <h3 style="font-family:'Sora',sans-serif;font-weight:800;font-size:1.2rem;color:#0d1b2e;margin-bottom:6px;">Purchase Successful!</h3>
+      <p style="font-size:0.84rem;color:#8a96a8;margin-bottom:16px;" id="succ-msg">Your order has been delivered.</p>
+      <div class="pin-box" id="pin-box" style="display:none;">
+        <p style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#0891b2;margin-bottom:6px;">Your PIN / Token</p>
+        <div class="pin-val" id="pin-val">—</div>
+        <button onclick="copyPin()" id="btn-copy-pin" style="margin-top:10px;width:100%;padding:10px;border-radius:10px;background:#0891b2;border:none;color:#fff;font-family:'Sora',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;">📋 Copy PIN</button>
+      </div>
+      <div style="background:#f4f6fb;border-radius:12px;padding:14px;text-align:left;margin-bottom:16px;" id="succ-details"></div>
+      <button onclick="showScreen('sc-store')" class="scta" style="background:linear-gradient(135deg,#1a6fff,#4f80ff);">Buy Another</button>
+      <div style="margin-top:14px;">
+        <p style="font-size:0.72rem;color:#8a96a8;margin-bottom:8px;">Your Transactions</p>
+        <div id="tx-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TX Detail Sheet -->
+<div class="overlay" id="tx-overlay" onclick="closeTxSheet()">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <h3 style="font-family:'Sora',sans-serif;font-weight:800;font-size:1rem;color:#0d1b2e;margin-bottom:16px;">Transaction Details</h3>
+    <div id="tx-detail-content"></div>
+    <button onclick="closeTxSheet()" style="width:100%;padding:13px;border-radius:12px;background:#f4f6fb;border:1px solid #e4e8f0;font-family:'Sora',sans-serif;font-weight:700;font-size:0.85rem;color:#4a5568;cursor:pointer;margin-top:14px;">Close</button>
+  </div>
+</div>
+
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<script>
+const GLOBALS_API = 'https://globalstasks.name.ng';
+const PAYSTACK_PK = 'pk_live_795c60d1769a1ebef31e9705886a91f84de3144d';
+
+let storeConfig = null;
+let selectedPkg = null;
+let myTransactions = [];
+
+// Extract slug from subdomain
+function getSlug() {
+  const host = location.hostname;
+  const base = 'globalstasks.name.ng';
+  if (host.endsWith('.' + base)) return host.slice(0, host.length - base.length - 1);
+  // Fallback for testing: ?slug=xxx
+  return new URLSearchParams(location.search).get('slug') || '';
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+async function loadStore() {
+  const slug = getSlug();
+  if (!slug) {
+    document.getElementById('loading-state').innerHTML = '<p style="color:#ef4444;">Invalid store URL.</p>';
+    return;
+  }
+  try {
+    const r = await fetch(`${GLOBALS_API}/api/store/config/${slug}`);
+    const d = await r.json();
+    if (!r.ok || d.status !== 'success') {
+      document.getElementById('loading-state').innerHTML = '<p style="color:#ef4444;">Store not found or inactive.</p>';
+      return;
+    }
+    storeConfig = d.store;
+    applyStore();
+  } catch (e) {
+    document.getElementById('loading-state').innerHTML = '<p style="color:#ef4444;">Could not load store. Please try again.</p>';
+  }
+}
+
+const SVC_LABELS = { waec:'WAEC Result Checker', 'waec-registration':'WAEC Registration', jamb:'JAMB', airtime:'Airtime', data:'Data', electricity:'Electricity', dstv:'DSTV', gotv:'GOtv', startimes:'Startimes' };
+
+function applyStore() {
+  const s = storeConfig;
+  document.title = s.businessName;
+  document.getElementById('page-title').textContent = s.businessName;
+  document.getElementById('hdr-name').textContent = s.businessName;
+  document.getElementById('hdr2-name').textContent = s.businessName;
+
+  // Logo
+  const logoWrap = document.getElementById('hdr-logo');
+  if (s.logoUrl) logoWrap.innerHTML = `<img src="${s.logoUrl}" alt="${s.businessName}"/>`;
+
+  // Template
+  document.body.className = 't-' + (s.template || 'modern');
+
+  // Build pkg grid
+  const grid = document.getElementById('pkg-grid');
+  grid.innerHTML = '';
+  const enabledServices = Object.entries(s.services).filter(([,v]) => v.enabled);
+  enabledServices.forEach(([svcId, svc]) => {
+    const div = document.createElement('div');
+    div.className = 'pkg-card';
+    div.dataset.svcId = svcId;
+    div.dataset.price = svc.price;
+    div.dataset.planName = SVC_LABELS[svcId] || svcId;
+    div.dataset.variationCode = svc.variationCode || '';
+    div.innerHTML = `<div class="pkg-name">${SVC_LABELS[svcId] || svcId}</div><div class="pkg-sub">${svc.description||'Instant delivery'}</div><div class="pkg-price">₦${Number(svc.price).toLocaleString()}</div>`;
+    div.onclick = () => selectPkg(div, svcId, svc);
+    grid.appendChild(div);
+  });
+
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('store-content').style.display = 'block';
+}
+
+function selectPkg(el, svcId, svc) {
+  document.querySelectorAll('.pkg-card').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+  selectedPkg = { svcId, svc, el };
+}
+
+function goToSummary() {
+  const phone = document.getElementById('cust-phone').value.trim();
+  const email = document.getElementById('cust-email').value.trim();
+  let ok = true;
+  if (!selectedPkg) { window.alert('Please select a package.'); return; }
+  if (!/^0\d{10}$/.test(phone)) {
+    document.getElementById('err-phone').style.display = 'block'; ok = false;
+  } else { document.getElementById('err-phone').style.display = 'none'; }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    document.getElementById('err-email').style.display = 'block'; ok = false;
+  } else { document.getElementById('err-email').style.display = 'none'; }
+  if (!ok) return;
+
+  document.getElementById('sum-service').textContent = SVC_LABELS[selectedPkg.svcId] || selectedPkg.svcId;
+  document.getElementById('sum-pkg').textContent = selectedPkg.el.dataset.planName;
+  document.getElementById('sum-phone').textContent = phone;
+  document.getElementById('sum-total').textContent = '₦' + Number(selectedPkg.svc.price).toLocaleString();
+  showScreen('sc-summary');
+}
+
+function startPayment() {
+  const phone = document.getElementById('cust-phone').value.trim();
+  const email = document.getElementById('cust-email').value.trim();
+  const btn = document.getElementById('btn-pay');
+  btn.disabled = true;
+  btn.textContent = 'Opening checkout…';
+  document.getElementById('pay-err').style.display = 'none';
+
+  const handler = PaystackPop.setup({
+    key: PAYSTACK_PK,
+    email,
+    amount: Math.round(selectedPkg.svc.price * 100),
+    currency: 'NGN',
+    label: `${storeConfig.businessName} — ${SVC_LABELS[selectedPkg.svcId] || selectedPkg.svcId}`,
+    callback: async (response) => {
+      btn.disabled = false;
+      btn.textContent = 'Pay Now';
+      showScreen('sc-processing');
+      await completePurchase(response.reference, phone, email);
+    },
+    onClose: () => {
+      btn.disabled = false;
+      btn.textContent = 'Pay Now';
+    }
+  });
+  handler.openIframe();
+}
+
+async function completePurchase(psRef, phone, email) {
+  const slug = getSlug();
+  try {
+    const r = await fetch(`${GLOBALS_API}/api/store/purchase/${slug}`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        serviceID: selectedPkg.svcId,
+        variationCode: selectedPkg.svc.variationCode || selectedPkg.svcId,
+        planName: SVC_LABELS[selectedPkg.svcId] || selectedPkg.svcId,
+        merchantPrice: selectedPkg.svc.price,
+        phone, paystackRef: psRef
+      })
+    });
+    const d = await r.json();
+    if (!r.ok) { showError(d.message || 'Purchase failed.'); return; }
+    // Poll Firestore-style via polling endpoint
+    pollOrder(d.requestId, phone);
+  } catch (e) {
+    showError('Network error. Please contact support with ref: ' + psRef);
+  }
+}
+
+async function pollOrder(requestId, phone) {
+  const slug = getSlug();
+  const maxAttempts = 24; // 2 min
+  let attempts = 0;
+  const interval = setInterval(async () => {
+    attempts++;
+    try {
+      const r = await fetch(`${GLOBALS_API}/api/store/order/${requestId}`);
+      const d = await r.json();
+      if (d.status === 'success' && d.order) {
+        clearInterval(interval);
+        const order = d.order;
+        if (order.status === 'success') {
+          showSuccess(order);
+        } else if (order.status === 'failed') {
+          clearInterval(interval);
+          showError(order.failReason || 'Transaction failed. Contact support.');
+        }
+      }
+    } catch (e) {}
+    if (attempts >= maxAttempts) {
+      clearInterval(interval);
+      document.getElementById('proc-msg').textContent = 'Still processing… Check back in a few minutes.';
+    }
+  }, 5000);
+}
+
+function showSuccess(order) {
+  showScreen('sc-success');
+  const svcLabel = SVC_LABELS[order.serviceID] || order.serviceID;
+  document.getElementById('succ-msg').textContent = `${svcLabel} delivered successfully!`;
+  if (order.eduPin) {
+    document.getElementById('pin-box').style.display = 'block';
+    document.getElementById('pin-val').textContent = order.eduPin;
+  }
+  document.getElementById('succ-details').innerHTML = `
+    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e4e8f0;"><span style="font-size:0.75rem;color:#8a96a8;">Phone</span><span style="font-size:0.8rem;font-weight:700;color:#0d1b2e;">${order.customerPhone}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e4e8f0;"><span style="font-size:0.75rem;color:#8a96a8;">Service</span><span style="font-size:0.8rem;font-weight:700;color:#0d1b2e;">${svcLabel}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="font-size:0.75rem;color:#8a96a8;">Amount Paid</span><span style="font-size:0.8rem;font-weight:700;color:#1a6fff;">₦${Number(order.merchantPrice).toLocaleString()}</span></div>
+  `;
+  // Save to local tx list
+  myTransactions.unshift(order);
+  renderTxList();
+}
+
+function showError(msg) {
+  showScreen('sc-summary');
+  const errEl = document.getElementById('pay-err');
+  errEl.textContent = '❌ ' + msg;
+  errEl.style.display = 'block';
+  document.getElementById('btn-pay').disabled = false;
+  document.getElementById('btn-pay').textContent = 'Pay Now';
+}
+
+function copyPin() {
+  const pin = document.getElementById('pin-val').textContent;
+  navigator.clipboard?.writeText(pin).then(() => {
+    const btn = document.getElementById('btn-copy-pin');
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => btn.textContent = '📋 Copy PIN', 2000);
+  });
+}
+
+function renderTxList() {
+  const list = document.getElementById('tx-list');
+  list.innerHTML = '';
+  myTransactions.slice(0,5).forEach(tx => {
+    const svcLabel = SVC_LABELS[tx.serviceID] || tx.serviceID;
+    const card = document.createElement('div');
+    card.className = 'tx-card';
+    card.style.cssText = 'background:#f9fafc;border-radius:12px;padding:12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;';
+    const color = tx.status==='success'?'#16a34a':tx.status==='failed'?'#ef4444':'#d97706';
+    card.innerHTML = `<div><div class="tx-name" style="font-size:0.82rem;">${svcLabel}</div><div class="tx-sub">${tx.customerPhone}</div></div><div style="font-family:'Sora',sans-serif;font-weight:800;font-size:0.85rem;color:${color};">₦${Number(tx.merchantPrice).toLocaleString()}</div>`;
+    card.onclick = () => showTxDetail(tx);
+    list.appendChild(card);
+  });
+}
+
+function showTxDetail(tx) {
+  const svcLabel = SVC_LABELS[tx.serviceID] || tx.serviceID;
+  document.getElementById('tx-detail-content').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;justify-content:space-between;"><span style="font-size:0.75rem;color:#8a96a8;">Status</span><span style="font-weight:700;font-size:0.82rem;color:${tx.status==='success'?'#16a34a':'#ef4444'}">${tx.status?.toUpperCase()}</span></div>
+      <div style="display:flex;justify-content:space-between;"><span style="font-size:0.75rem;color:#8a96a8;">Service</span><span style="font-weight:700;font-size:0.82rem;">${svcLabel}</span></div>
+      <div style="display:flex;justify-content:space-between;"><span style="font-size:0.75rem;color:#8a96a8;">Phone</span><span style="font-weight:700;font-size:0.82rem;">${tx.customerPhone}</span></div>
+      <div style="display:flex;justify-content:space-between;"><span style="font-size:0.75rem;color:#8a96a8;">Amount</span><span style="font-weight:700;font-size:0.82rem;color:#1a6fff;">₦${Number(tx.merchantPrice).toLocaleString()}</span></div>
+      ${tx.eduPin ? `<div style="background:#ecfeff;border-radius:10px;padding:12px;"><p style="font-size:0.68rem;font-weight:700;color:#0891b2;margin-bottom:4px;">PIN / TOKEN</p><p style="font-family:'Sora',sans-serif;font-weight:800;font-size:1rem;color:#0e7490;word-break:break-all;">${tx.eduPin}</p></div>`:''}
+      <div style="display:flex;justify-content:space-between;"><span style="font-size:0.75rem;color:#8a96a8;">Ref</span><span style="font-size:0.7rem;color:#8a96a8;">${tx.requestId||''}</span></div>
+    </div>`;
+  document.getElementById('tx-overlay').classList.add('open');
+}
+function closeTxSheet() { document.getElementById('tx-overlay').classList.remove('open'); }
+
+// Load on startup
+loadStore();
+</script>
+</body>
+</html>
